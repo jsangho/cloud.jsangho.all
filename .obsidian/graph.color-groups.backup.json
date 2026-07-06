@@ -1,0 +1,18 @@
+[
+  {
+    "query": "path:www/ OR path:frontend/",
+    "color": { "a": 1, "rgb": 5873999 }
+  },
+  {
+    "query": "path:sangho/ OR path:backend/",
+    "color": { "a": 1, "rgb": 5142951 }
+  },
+  {
+    "query": "path:vault/",
+    "color": { "a": 1, "rgb": 12234924 }
+  },
+  {
+    "query": "-path:www/ -path:sangho/ -path:vault/ -path:backend/ -path:frontend/",
+    "color": { "a": 1, "rgb": 1548984 }
+  }
+]

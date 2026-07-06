@@ -1,0 +1,28 @@
+{
+  "proseWrap": "preserve",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "proseWrap": "preserve",
+        "printWidth": 120
+      }
+    },
+    {
+      "files": "*.py",
+      "options": {
+        "printWidth": 100
+      }
+    },
+    {
+      "files": ["*.json", "*.yaml", "*.yml"],
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ]
+}

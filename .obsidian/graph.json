@@ -1,0 +1,44 @@
+{
+  "collapse-filter": false,
+  "search": "-path:node_modules/ -path:pytorch_env/ -path:data/",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": false,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:www/ OR path:frontend/",
+      "color": {
+        "a": 1,
+        "rgb": 5873999
+      }
+    },
+    {
+      "query": "path:fastapi/",
+      "color": {
+        "a": 1,
+        "rgb": 11933922
+      }
+    },
+    {
+      "query": "-path:www/ -path:fastapi/ -path:flutter/ -path:data/",
+      "color": {
+        "a": 1,
+        "rgb": 12234924
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": false,
+  "textFadeMultiplier": -3,
+  "nodeSizeMultiplier": 2.85625,
+  "lineSizeMultiplier": 2.3203125,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.45050811767576193,
+  "close": false
+}

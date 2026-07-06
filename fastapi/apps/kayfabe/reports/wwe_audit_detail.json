@@ -1,0 +1,4218 @@
+{
+  "total_wrestlers": 65,
+  "issue_count": 34,
+  "manual_override_names": [
+    "Bo Dallas",
+    "Rey Mysterio"
+  ],
+  "rows": [
+    {
+      "name": "AJ Lee",
+      "slug": "aj-lee",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 4,
+      "catalog_by_belt": {
+        "WWE Divas Championship": 3,
+        "Women's Intercontinental Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Divas Championship": [
+          "Payback — June 16, 2013",
+          "Raw — June 30, 2014",
+          "Night of Champions — September 21, 2014"
+        ],
+        "Women's Intercontinental Championship": [
+          "Elimination Chamber — February 28, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Divas Champion",
+          3
+        ],
+        [
+          "Women's",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "divas": 3,
+        "women's": 1,
+        "intercontinental": 1
+      },
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "AJ Styles",
+      "slug": "aj-styles",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 9,
+      "catalog_by_belt": {
+        "WWE Championship": 2,
+        "United States Championship": 3,
+        "Intercontinental Championship": 1,
+        "Raw Tag Team Championship": 1,
+        "World Tag Team Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "WWE Championship": [
+          "SmackDown Live — September 11, 2016",
+          "SmackDown — November 7, 2017"
+        ],
+        "United States Championship": [
+          "Battleground — July 7, 2017",
+          "Battleground — July 25, 2017",
+          "Extreme Rules — July 14, 2019"
+        ],
+        "Intercontinental Championship": [
+          "SmackDown — June 12, 2020"
+        ],
+        "Raw Tag Team Championship": [
+          "WrestleMania 37 Night 2 — April 11, 2021"
+        ],
+        "World Tag Team Championship": [
+          "SmackDown — October 20, 2025",
+          "SmackDown — December 29, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          2
+        ],
+        [
+          "United States Champion",
+          3
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 2,
+        "united states": 3,
+        "intercontinental": 1,
+        "raw tag": 1,
+        "world tag": 2
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Alex Shelley",
+      "slug": "alex-shelley",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "SmackDown — October 25, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Alexa Bliss",
+      "slug": "alexa-bliss",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 9,
+      "catalog_by_belt": {
+        "SmackDown Women's Championship": 2,
+        "Raw Women's Championship": 3,
+        "Women's Tag Team Championship": 4
+      },
+      "catalog_dates_by_belt": {
+        "SmackDown Women's Championship": [
+          "TLC — December 4, 2016",
+          "Money in the Bank — June 18, 2017"
+        ],
+        "Raw Women's Championship": [
+          "Payback — April 30, 2017",
+          "Raw — August 28, 2017",
+          "Raw — June 17, 2018"
+        ],
+        "Women's Tag Team Championship": [
+          "Raw — August 5, 2019",
+          "Halloween Havoc — October 25, 2020",
+          "Raw — July 31, 2022",
+          "SummerSlam — August 2, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Raw Women's Champion",
+          3
+        ],
+        [
+          "SmackDown Women's Champion",
+          2
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion   Women's",
+          4
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "raw women's": 3,
+        "smackdown women's": 2,
+        "wwe": 1,
+        "women's tag": 4,
+        "money in the bank ladder match": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Andrade",
+      "slug": "andrade",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT TakeOver: Philadelphia — January 26, 2019"
+        ],
+        "United States Championship": [
+          "WrestleMania 35 — April 7, 2019"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "NXT Champion; Speed Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1,
+        "nxt championship": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Angelo Dawkins",
+      "slug": "angelo-dawkins",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1,
+        "Raw Tag Team Championship": 1,
+        "SmackDown Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT TakeOver: XXV — June 1, 2019"
+        ],
+        "Raw Tag Team Championship": [
+          "WrestleMania 35 — April 7, 2019"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania 38 Night 1 — April 2, 2022"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "smackdown tag": 1,
+        "raw tag": 1,
+        "nxt tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Asuka",
+      "slug": "asuka",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 11,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 1,
+        "Raw Women's Championship": 1,
+        "SmackDown Women's Championship": 1,
+        "WWE Women's Championship": 3,
+        "Women's Tag Team Championship": 5
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT TakeOver: Dallas — April 1, 2016"
+        ],
+        "Raw Women's Championship": [
+          "WrestleMania 34 — April 8, 2018"
+        ],
+        "SmackDown Women's Championship": [
+          "TLC — December 16, 2018"
+        ],
+        "WWE Women's Championship": [
+          "Raw — May 11, 2020",
+          "SummerSlam — August 23, 2020",
+          "Night of Champions — May 27, 2023"
+        ],
+        "Women's Tag Team Championship": [
+          "Hell in a Cell — October 6, 2019",
+          "WrestleMania 36 Night 1 — April 5, 2020",
+          "Raw — April 15, 2024",
+          "Raw — May 13, 2025",
+          "Raw — May 11, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Women's Champion",
+          3
+        ],
+        [
+          "Raw Women's Champion",
+          1
+        ],
+        [
+          "SmackDown Women's Champion",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion   Women's",
+          5
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ],
+        [
+          "NXT Women's Champion Mixed Match Challenge",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe women's": 3,
+        "raw women's": 1,
+        "smackdown women's": 1,
+        "wwe": 1,
+        "women's tag": 5,
+        "money in the bank ladder match": 1,
+        "royal rumble match": 1,
+        "nxt women's": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Austin Theory",
+      "slug": "austin-theory",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "United States Championship": 1,
+        "SmackDown Tag Team Championship": 1,
+        "World Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "United States Championship": [
+          "WrestleMania 38 Night 2 — April 3, 2022"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania XL Night 1 — April 6, 2024"
+        ],
+        "World Tag Team Championship": [
+          "Raw — March 30, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion;  Men's",
+          1
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1,
+        "money in the bank ladder match": 1,
+        "smackdown tag": 1,
+        "world tag": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Axiom",
+      "slug": "axiom",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT — April 9, 2024",
+          "NXT No Mercy — September 1, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Tag Team Champion",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "nxt tag": 2
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Bayley",
+      "slug": "bayley",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 5,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 1,
+        "Raw Women's Championship": 1,
+        "SmackDown Women's Championship": 1,
+        "Women's Tag Team Championship": 1,
+        "WWE Women's Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT TakeOver: Respect — October 7, 2015"
+        ],
+        "Raw Women's Championship": [
+          "Elimination Chamber — March 8, 2020"
+        ],
+        "SmackDown Women's Championship": [
+          "WrestleMania 36 Night 1 — April 5, 2020"
+        ],
+        "Women's Tag Team Championship": [
+          "Elimination Chamber — February 17, 2019"
+        ],
+        "WWE Women's Championship": [
+          "WrestleMania XL Night 1 — April 6, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Royal Rumble",
+          1
+        ],
+        [
+          "WWE Women's Champion",
+          1
+        ],
+        [
+          "SmackDown Women's Champion",
+          1
+        ],
+        [
+          "Raw Women's Champion",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Women's Champion;  Women's",
+          1
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "royal rumble": 1,
+        "wwe women's": 1,
+        "smackdown women's": 1,
+        "raw women's": 1,
+        "wwe": 1,
+        "women's tag": 1,
+        "nxt women's": 1,
+        "money in the bank ladder match": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Becky Lynch",
+      "slug": "becky-lynch",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 13,
+      "catalog_by_belt": {
+        "SmackDown Women's Championship": 5,
+        "Raw Women's Championship": 2,
+        "Women's Tag Team Championship": 2,
+        "NXT Women's Championship": 1,
+        "Women's Intercontinental Championship": 3
+      },
+      "catalog_dates_by_belt": {
+        "SmackDown Women's Championship": [
+          "Backlash — September 11, 2016",
+          "Hell in a Cell — September 16, 2018",
+          "WrestleMania 35 — April 7, 2019",
+          "SummerSlam — August 21, 2021",
+          "Raw — April 22, 2024"
+        ],
+        "Raw Women's Championship": [
+          "WrestleMania 35 — April 7, 2019",
+          "SmackDown — October 22, 2021"
+        ],
+        "Women's Tag Team Championship": [
+          "Raw — February 27, 2023",
+          "WrestleMania 41 Night 1 — April 19, 2025"
+        ],
+        "NXT Women's Championship": [
+          "Raw — September 12, 2023"
+        ],
+        "Women's Intercontinental Championship": [
+          "Money in the Bank — June 7, 2025",
+          "Raw on Netflix Anniversary Show — January 5, 2026",
+          "WrestleMania 42 Night 1 — April 18, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Raw Women's Champion",
+          2
+        ],
+        [
+          "SmackDown Women's Champion",
+          5
+        ],
+        [
+          "Women's",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          3
+        ],
+        [
+          "NXT Women's Champion",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion   Women's",
+          2
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "raw women's": 2,
+        "smackdown women's": 5,
+        "women's": 1,
+        "intercontinental": 3,
+        "nxt women's": 1,
+        "wwe": 1,
+        "women's tag": 2,
+        "royal rumble match": 1
+      },
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 3
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 3,
+          "wwe": 0
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Bo Dallas",
+      "slug": "bo-dallas",
+      "wwe_source": "manual",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1,
+        "NXT Championship": 1,
+        "Raw Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Bash in Berlin — August 31, 2024"
+        ],
+        "NXT Championship": [
+          "NXT — June 12, 2013"
+        ],
+        "Raw Tag Team Championship": [
+          "Raw — August 27, 2018"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Championship",
+          1
+        ],
+        [
+          "Raw Tag Team Championship",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1,
+        "raw tag": 1
+      },
+      "count_diff": {
+        "wwe tag": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": true
+    },
+    {
+      "name": "Brad Baylor",
+      "slug": "brad-baylor",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT — February 24, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Tag Team Champion (with Ricky Smokes)",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Brie Bella",
+      "slug": "brie-bella",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "WWE Divas Championship": 1,
+        "Women's Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Divas Championship": [
+          "Night of Champions — November 20, 2011"
+        ],
+        "Women's Tag Team Championship": [
+          "WrestleMania 42 Night 1 — April 18, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ],
+        [
+          "Divas Champion  Diva of the Year",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe": 1,
+        "women's tag": 1,
+        "divas": 1
+      },
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Brock Lesnar",
+      "slug": "brock-lesnar",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 10,
+      "catalog_by_belt": {
+        "WWE Championship": 7,
+        "Universal Championship": 3
+      },
+      "catalog_dates_by_belt": {
+        "WWE Championship": [
+          "King of the Ring — June 23, 2002",
+          "WrestleMania XIX — March 30, 2003",
+          "SummerSlam — August 17, 2014",
+          "WrestleMania 31 — March 29, 2015",
+          "Survivor Series — November 20, 2016",
+          "Crown Jewel — October 31, 2019",
+          "Day 1 — January 1, 2022"
+        ],
+        "Universal Championship": [
+          "SummerSlam — August 20, 2017",
+          "WrestleMania 34 — April 8, 2018",
+          "Extreme Rules — July 14, 2019"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          7
+        ],
+        [
+          "Universal Champion   Men's",
+          3
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 7,
+        "universal": 3,
+        "money in the bank ladder match": 1,
+        "royal rumble match": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Bron Breakker",
+      "slug": "bron-breakker",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "NXT Tag Team Championship": 1,
+        "Intercontinental Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "New Year's Evil — January 4, 2022"
+        ],
+        "NXT Tag Team Championship": [
+          "NXT — February 13, 2024"
+        ],
+        "Intercontinental Championship": [
+          "SummerSlam — August 3, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion;  Dusty Rhodes Tag Team Classic",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "intercontinental": 1,
+        "nxt championship": 1,
+        "nxt tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "CM Punk",
+      "slug": "cmpunk",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 9,
+      "catalog_by_belt": {
+        "ECW Championship": 2,
+        "World Heavyweight Championship": 3,
+        "WWE Championship": 2,
+        "World Tag Team Championship": 1,
+        "Intercontinental Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "ECW Championship": [
+          "ECW — August 27, 2007",
+          "ECW — January 1, 2008"
+        ],
+        "World Heavyweight Championship": [
+          "Money in the Bank — July 17, 2011",
+          "Raw — November 25, 2013",
+          "Saturday Night's Main Event — December 7, 2024"
+        ],
+        "WWE Championship": [
+          "Survivor Series — November 20, 2011",
+          "Royal Rumble — January 27, 2013"
+        ],
+        "World Tag Team Championship": [
+          "ECW — August 4, 2008"
+        ],
+        "Intercontinental Championship": [
+          "Raw — November 8, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          2
+        ],
+        [
+          "World Heavyweight Champion  ECW Champion",
+          5
+        ],
+        [
+          "World Tag Team Champion",
+          1
+        ],
+        [
+          "Intercontinental Champion  &",
+          1
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 2,
+        "world heavyweight": 5,
+        "world tag": 1,
+        "intercontinental": 1,
+        "money in the bank ladder match": 1
+      },
+      "count_diff": {
+        "ecw": {
+          "catalog": 2,
+          "wwe": 0
+        },
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "world heavyweight": {
+          "catalog": 3,
+          "wwe": 5
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Charlotte Flair",
+      "slug": "charlotte-flair",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 19,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 2,
+        "WWE Divas Championship": 1,
+        "Raw Women's Championship": 6,
+        "SmackDown Women's Championship": 7,
+        "Women's Tag Team Championship": 2,
+        "WWE Women's Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT TakeOver: Charlotte — May 29, 2014",
+          "NXT — March 26, 2020"
+        ],
+        "WWE Divas Championship": [
+          "Night of Champions — September 20, 2015"
+        ],
+        "Raw Women's Championship": [
+          "WrestleMania 32 — April 3, 2016",
+          "SummerSlam — August 21, 2016",
+          "Hell in a Cell — October 30, 2016",
+          "Roadblock — December 18, 2016",
+          "Raw — July 18, 2021",
+          "SummerSlam — August 21, 2021"
+        ],
+        "SmackDown Women's Championship": [
+          "SmackDown — November 14, 2017",
+          "SummerSlam — August 19, 2018",
+          "SmackDown — March 26, 2019",
+          "Money in the Bank — May 19, 2019",
+          "Super Show-Down — October 6, 2019",
+          "SmackDown — October 22, 2021",
+          "SmackDown — December 30, 2022"
+        ],
+        "Women's Tag Team Championship": [
+          "Raw — December 20, 2020",
+          "SummerSlam — August 2, 2025"
+        ],
+        "WWE Women's Championship": [
+          "WrestleMania 38 Night 2 — April 3, 2022"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Women’s Champion",
+          1
+        ],
+        [
+          "SmackDown Women's Champion",
+          7
+        ],
+        [
+          "Raw Women's Champion",
+          6
+        ],
+        [
+          "Divas Champion",
+          1
+        ],
+        [
+          "NXT Women's Champion",
+          2
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          2
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe women’s champion": 1,
+        "smackdown women's": 7,
+        "raw women's": 6,
+        "divas": 1,
+        "nxt women's": 2,
+        "wwe": 1,
+        "women's tag": 2,
+        "royal rumble match": 1
+      },
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe women's": {
+          "catalog": 1,
+          "wwe": 0
+        },
+        "wwe women’s champion": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Chris Sabin",
+      "slug": "chris-sabin",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "SmackDown — October 25, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Cody Rhodes",
+      "slug": "cody-rhodes",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 17,
+      "catalog_by_belt": {
+        "World Tag Team Championship": 3,
+        "Intercontinental Championship": 2,
+        "WWE Tag Team Championship": 1,
+        "Raw Tag Team Championship": 4,
+        "SmackDown Tag Team Championship": 2,
+        "Universal Championship": 1,
+        "Undisputed WWE Championship": 3,
+        "WWE Crown Jewel Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "World Tag Team Championship": [
+          "Raw — December 10, 2007",
+          "Night of Champions — June 29, 2008",
+          "Raw — August 11, 2008"
+        ],
+        "Intercontinental Championship": [
+          "SmackDown — August 12, 2011",
+          "Extreme Rules — April 29, 2012"
+        ],
+        "WWE Tag Team Championship": [
+          "Night of Champions — September 19, 2010"
+        ],
+        "Raw Tag Team Championship": [
+          "Night of Champions — September 19, 2010",
+          "Raw — October 14, 2013",
+          "Night of Champions — September 21, 2014",
+          "Fastlane — October 7, 2023"
+        ],
+        "SmackDown Tag Team Championship": [
+          "Night of Champions — September 19, 2010",
+          "Fastlane — October 7, 2023"
+        ],
+        "Universal Championship": [
+          "WrestleMania XL Night 2 — April 7, 2024"
+        ],
+        "Undisputed WWE Championship": [
+          "WrestleMania XL Night 2 — April 7, 2024",
+          "SummerSlam — August 3, 2025",
+          "SmackDown — March 6, 2026"
+        ],
+        "WWE Crown Jewel Championship": [
+          "Crown Jewel — November 2, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Undisputed WWE Champion",
+          3
+        ],
+        [
+          "Universal Champion",
+          1
+        ],
+        [
+          "Crown Jewel Champion",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          2
+        ],
+        [
+          "World Tag Team Champion",
+          3
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          4
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          2
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "undisputed wwe": 3,
+        "universal": 1,
+        "wwe crown jewel": 1,
+        "intercontinental": 2,
+        "world tag": 3,
+        "wwe tag": 1,
+        "raw tag": 4,
+        "smackdown tag": 2,
+        "royal rumble match": 1
+      },
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Dexter Lumis",
+      "slug": "dexter-lumis",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Bash in Berlin — August 31, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Dominik Mysterio",
+      "slug": "dominik-mysterio",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 5,
+      "catalog_by_belt": {
+        "NXT North American Championship": 2,
+        "SmackDown Tag Team Championship": 1,
+        "Intercontinental Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT — July 18, 2023",
+          "NXT — December 19, 2023"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania 39 Night 1 — April 1, 2023"
+        ],
+        "Intercontinental Championship": [
+          "WrestleMania 41 Night 2 — April 20, 2025",
+          "SummerSlam — August 2, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Intercontinental Champion",
+          2
+        ],
+        [
+          "SmackDown Tag Team Champion AAA Mega Champion",
+          1
+        ],
+        [
+          "NXT North American Champion",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "intercontinental": 2,
+        "smackdown tag": 1,
+        "nxt north american": 2
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Dragon Lee",
+      "slug": "dragon-lee",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1,
+        "World Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT No Mercy — September 30, 2023"
+        ],
+        "World Tag Team Championship": [
+          "SmackDown — October 20, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "World Tag Team Champion",
+          1
+        ],
+        [
+          "NXT North American Champion; WWE Speed Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "world tag": 1,
+        "nxt north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Drew McIntyre",
+      "slug": "drew-mcintyre",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 6,
+      "catalog_by_belt": {
+        "Intercontinental Championship": 1,
+        "WWE Tag Team Championship": 1,
+        "Raw Tag Team Championship": 1,
+        "NXT Championship": 1,
+        "WWE Championship": 1,
+        "World Heavyweight Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Intercontinental Championship": [
+          "TLC — December 13, 2009"
+        ],
+        "WWE Tag Team Championship": [
+          "Night of Champions — September 19, 2010"
+        ],
+        "Raw Tag Team Championship": [
+          "Raw — September 3, 2018"
+        ],
+        "NXT Championship": [
+          "NXT TakeOver: Brooklyn III — August 19, 2017"
+        ],
+        "WWE Championship": [
+          "WrestleMania 36 Night 2 — April 5, 2020"
+        ],
+        "World Heavyweight Championship": [
+          "WrestleMania XL Night 2 — April 7, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          1
+        ],
+        [
+          "World Heavyweight Champion;  Men's",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Champion; Raw's Gold Medal of Excellence,  Men's",
+          1
+        ],
+        [
+          "Money in the Bank",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 1,
+        "world heavyweight": 1,
+        "royal rumble match": 1,
+        "intercontinental": 1,
+        "wwe tag": 1,
+        "raw tag": 1,
+        "nxt championship": 1,
+        "money in the bank": 1
+      },
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Ethan Page",
+      "slug": "ethan-page",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "NXT North American Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT Heatwave — July 7, 2024"
+        ],
+        "NXT North American Championship": [
+          "NXT — May 27, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "NXT North American Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1,
+        "nxt north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Finn Bálor",
+      "slug": "finn-balor",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 6,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "Universal Championship": 1,
+        "Intercontinental Championship": 1,
+        "United States Championship": 1,
+        "Undisputed WWE Tag Team Championship": 1,
+        "World Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT TakeOver: R Evolution — February 11, 2015"
+        ],
+        "Universal Championship": [
+          "SummerSlam — August 21, 2016"
+        ],
+        "Intercontinental Championship": [
+          "WrestleMania 34 — April 8, 2018"
+        ],
+        "United States Championship": [
+          "Raw — February 28, 2022"
+        ],
+        "Undisputed WWE Tag Team Championship": [
+          "Payback — September 2, 2023"
+        ],
+        "World Tag Team Championship": [
+          "Raw — June 24, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "First-ever",
+          1
+        ],
+        [
+          "Universal Champion",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "Undisputed WWE Tag Team Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          1
+        ],
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "NXT Champion;  Dusty Rhodes Tag Team Classic",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "first-ever": 1,
+        "universal": 1,
+        "intercontinental": 1,
+        "undisputed tag": 1,
+        "world tag": 1,
+        "united states": 1,
+        "nxt championship": 1
+      },
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Gunther",
+      "slug": "gunther",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "Intercontinental Championship": 1,
+        "World Heavyweight Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "Intercontinental Championship": [
+          "WrestleMania 38 Night 1 — April 2, 2022"
+        ],
+        "World Heavyweight Championship": [
+          "SummerSlam — August 3, 2024",
+          "Raw — June 9, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "World Heavyweight Champion",
+          2
+        ],
+        [
+          "Intercontinental Champion  King of the Ring",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "world heavyweight": 2,
+        "intercontinental": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "IYO SKY",
+      "slug": "iyo-sky",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 5,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 1,
+        "Women's Tag Team Championship": 2,
+        "WWE Women's Championship": 1,
+        "Women's World Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT TakeOver: In Your House — June 7, 2020"
+        ],
+        "Women's Tag Team Championship": [
+          "Raw — September 12, 2022",
+          "WrestleMania 39 Night 2 — April 2, 2023"
+        ],
+        "WWE Women's Championship": [
+          "Night of Champions — June 17, 2023"
+        ],
+        "Women's World Championship": [
+          "Raw — March 3, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Women's World Champion",
+          1
+        ],
+        [
+          "WWE Women's Champion; Ms.",
+          1
+        ],
+        [
+          "Money in the Bank",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Women's Champion",
+          1
+        ],
+        [
+          "NXT",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "women's world": 1,
+        "wwe women's": 1,
+        "money in the bank": 1,
+        "wwe": 1,
+        "women's tag": 2,
+        "nxt women's": 1,
+        "nxt": 1
+      },
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "JD McDonagh",
+      "slug": "jd-mcdonagh",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT Cruiserweight Championship": 1,
+        "World Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Cruiserweight Championship": [
+          "Worlds Collide — January 25, 2020"
+        ],
+        "World Tag Team Championship": [
+          "Raw — June 24, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "World Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Cruiserweight Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "world tag": 1,
+        "nxt cruiserweight champion": 1
+      },
+      "count_diff": {
+        "nxt cruiserweight champion": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt cruiserweight championship": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Jacy Jayne",
+      "slug": "jacy-jayne",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT — May 27, 2025",
+          "NXT — November 18, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Women's Champion",
+          2
+        ],
+        [
+          "NXT",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt women's": 2,
+        "nxt": 1
+      },
+      "count_diff": {
+        "nxt": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Jey Uso",
+      "slug": "jey-uso",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 5,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1,
+        "SmackDown Tag Team Championship": 1,
+        "Raw Tag Team Championship": 1,
+        "Intercontinental Championship": 1,
+        "World Heavyweight Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Raw — March 3, 2014"
+        ],
+        "SmackDown Tag Team Championship": [
+          "Money in the Bank Kickoff — July 18, 2021"
+        ],
+        "Raw Tag Team Championship": [
+          "SmackDown — May 20, 2022"
+        ],
+        "Intercontinental Championship": [
+          "Raw — September 23, 2024"
+        ],
+        "World Heavyweight Championship": [
+          "WrestleMania 41 Night 2 — April 20, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "World Heavyweight Champion;",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion;  Andre the Giant Memorial Battle Royal",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "world heavyweight": 1,
+        "royal rumble match": 1,
+        "intercontinental": 1,
+        "raw tag": 1,
+        "smackdown tag": 1,
+        "wwe tag": 1
+      },
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Jimmy Uso",
+      "slug": "jimmy-uso",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1,
+        "SmackDown Tag Team Championship": 1,
+        "Raw Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Raw — March 3, 2014"
+        ],
+        "SmackDown Tag Team Championship": [
+          "Money in the Bank Kickoff — July 18, 2021"
+        ],
+        "Raw Tag Team Championship": [
+          "SmackDown — May 20, 2022"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "raw tag": 1,
+        "smackdown tag": 1,
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Joe Gacy",
+      "slug": "joe-gacy",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Bash in Berlin — August 31, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "John Cena",
+      "slug": "john-cena",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 27,
+      "catalog_by_belt": {
+        "United States Championship": 5,
+        "Intercontinental Championship": 1,
+        "World Tag Team Championship": 2,
+        "WWE Tag Team Championship": 2,
+        "World Heavyweight Championship": 3,
+        "WWE Championship": 14
+      },
+      "catalog_dates_by_belt": {
+        "United States Championship": [
+          "WrestleMania 20 — March 14, 2004",
+          "WrestleMania 25 — April 5, 2009",
+          "Night of Champions — September 19, 2010",
+          "WrestleMania 29 — April 7, 2013",
+          "WrestleMania 31 — March 29, 2015"
+        ],
+        "Intercontinental Championship": [
+          "Saturday Night's Main Event — November 8, 2025"
+        ],
+        "World Tag Team Championship": [
+          "Raw — January 29, 2006",
+          "ECW — April 1, 2007"
+        ],
+        "WWE Tag Team Championship": [
+          "SmackDown — October 3, 2010",
+          "Raw — April 28, 2019"
+        ],
+        "World Heavyweight Championship": [
+          "Survivor Series — November 18, 2013",
+          "Tables, Ladders & Chairs — December 15, 2013",
+          "Royal Rumble — January 27, 2014"
+        ],
+        "WWE Championship": [
+          "WrestleMania 21 — April 3, 2005",
+          "Royal Rumble — January 29, 2006",
+          "Unforgiven — September 17, 2006",
+          "Breaking Point — September 13, 2009",
+          "Bragging Rights — October 25, 2009",
+          "Elimination Chamber — February 21, 2010",
+          "WrestleMania XXVI — March 28, 2010",
+          "Extreme Rules — May 1, 2011",
+          "Money in the Bank — July 25, 2011",
+          "Night of Champions — September 18, 2011",
+          "WrestleMania 29 — April 7, 2013",
+          "Money in the Bank — June 29, 2014",
+          "Royal Rumble — January 29, 2017",
+          "WrestleMania 41 Night 2 — April 20, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          14
+        ],
+        [
+          "World Heavyweight Champion",
+          3
+        ],
+        [
+          "United States Champion",
+          5
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          2
+        ],
+        [
+          "WWE Tag Team Champion",
+          2
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 14,
+        "world heavyweight": 3,
+        "united states": 5,
+        "intercontinental": 1,
+        "world tag": 2,
+        "wwe tag": 2,
+        "money in the bank ladder match": 1,
+        "royal rumble match": 2
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 2
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Johnny Gargano",
+      "slug": "johnny-gargano",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 4,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1,
+        "WWE Tag Team Championship": 1,
+        "NXT Championship": 1,
+        "NXT North American Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT TakeOver: Toronto — November 19, 2016"
+        ],
+        "WWE Tag Team Championship": [
+          "SmackDown — July 5, 2024"
+        ],
+        "NXT Championship": [
+          "NXT TakeOver: Philadelphia — January 27, 2018"
+        ],
+        "NXT North American Championship": [
+          "NXT TakeOver: New Orleans — April 7, 2018"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "NXT North American Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1,
+        "nxt north american": 1,
+        "nxt tag": 1,
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Karrion Kross",
+      "slug": "karrion-kross",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "NXT Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT TakeOver: XXX — August 22, 2020"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "LA Knight",
+      "slug": "la-knight",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "United States Championship": [
+          "Crown Jewel — November 4, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion; Million Dollar Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Lash Legend",
+      "slug": "lash-legend",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "Women's Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Women's Tag Team Championship": [
+          "SmackDown — February 27, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe": 1,
+        "women's tag": 1
+      },
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Liv Morgan",
+      "slug": "liv-morgan",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 8,
+      "catalog_by_belt": {
+        "Women's World Championship": 3,
+        "Women's Tag Team Championship": 4,
+        "WWE Crown Jewel Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Women's World Championship": [
+          "Money in the Bank — July 2, 2022",
+          "King and Queen of the Ring — May 25, 2024",
+          "WrestleMania 42 Night 1 — April 18, 2026"
+        ],
+        "Women's Tag Team Championship": [
+          "WrestleMania 39 Night 1 — April 1, 2023",
+          "Money in the Bank — July 1, 2023",
+          "WrestleMania 40 Night 1 — April 6, 2024",
+          "Elimination Chamber — March 1, 2025"
+        ],
+        "WWE Crown Jewel Championship": [
+          "Crown Jewel — November 2, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "2024 WWE Women’s",
+          1
+        ],
+        [
+          "Crown Jewel Champion",
+          1
+        ],
+        [
+          "Women's World Champion",
+          3
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion   Women's",
+          4
+        ],
+        [
+          "Money in the Bank",
+          1
+        ],
+        [
+          "Royal Rumble",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "2024 wwe women’s": 1,
+        "wwe crown jewel": 1,
+        "women's world": 3,
+        "wwe": 1,
+        "women's tag": 4,
+        "money in the bank": 1,
+        "royal rumble": 1
+      },
+      "count_diff": {
+        "2024 wwe women’s": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Logan Paul",
+      "slug": "logan-paul",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "United States Championship": 1,
+        "World Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "United States Championship": [
+          "Crown Jewel — November 4, 2023"
+        ],
+        "World Tag Team Championship": [
+          "WrestleMania 40 Night 1 — April 6, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1,
+        "world tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Lyra Valkyria",
+      "slug": "lyra-valkyria",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "Women's Intercontinental Championship": 1,
+        "Women's Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Women's Intercontinental Championship": [
+          "Raw — January 13, 2025"
+        ],
+        "Women's Tag Team Championship": [
+          "WrestleMania 41 Night 1 — April 19, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "First-ever",
+          1
+        ],
+        [
+          "Women's",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "first-ever": 1,
+        "women's": 1,
+        "intercontinental": 1,
+        "women's tag": 1
+      },
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Montez Ford",
+      "slug": "montez-ford",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1,
+        "Raw Tag Team Championship": 1,
+        "SmackDown Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT TakeOver: XXV — June 1, 2019"
+        ],
+        "Raw Tag Team Championship": [
+          "WrestleMania 35 — April 7, 2019"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania 38 Night 1 — April 2, 2022"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "smackdown tag": 1,
+        "raw tag": 1,
+        "nxt tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Myles Borne",
+      "slug": "myles-borne",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT — February 24, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT North American Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Naomi",
+      "slug": "naomi",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "Women's World Championship": 1,
+        "Women's Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Women's World Championship": [
+          "Evolution — July 13, 2025"
+        ],
+        "Women's Tag Team Championship": [
+          "WrestleMania 38 Night 1 — April 3, 2022"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Women's World Champion, SmackDown Women’s Champion",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion, First-ever WrestleMania Women’s Battle Royal",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "women's world": 1,
+        "wwe": 1,
+        "women's tag": 1
+      },
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Nathan Frazer",
+      "slug": "nathan-frazer",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 2,
+        "NXT Heritage Cup": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT — April 9, 2024",
+          "NXT No Mercy — September 1, 2024"
+        ],
+        "NXT Heritage Cup": [
+          "NXT — June 13, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Heritage Cup Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "nxt heritage cup": 1,
+        "nxt tag": 2
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Nia Jax",
+      "slug": "nia-jax",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 5,
+      "catalog_by_belt": {
+        "Women's Tag Team Championship": 3,
+        "WWE Women's Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "Women's Tag Team Championship": [
+          "SmackDown — February 27, 2026",
+          "Elimination Chamber — March 1, 2025",
+          "WrestleMania 41 Night 1 — April 19, 2025"
+        ],
+        "WWE Women's Championship": [
+          "WrestleMania 34 — April 8, 2018",
+          "Night of Champions — September 1, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Women's Champion",
+          2
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion   Queen of the Ring",
+          3
+        ]
+      ],
+      "wwe_counts": {
+        "wwe women's": 2,
+        "wwe": 1,
+        "women's tag": 3
+      },
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Oba Femi",
+      "slug": "oba-femi",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1,
+        "NXT Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT — January 9, 2024"
+        ],
+        "NXT Championship": [
+          "NXT New Year's Evil — January 7, 2025",
+          "NXT Deadline — December 6, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion   Men's Iron Survivor",
+          2
+        ],
+        [
+          "NXT North American Champion  NXT Men's Breakout Tournament",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 2,
+        "nxt north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Paige",
+      "slug": "paige",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 1,
+        "WWE Divas Championship": 1,
+        "Women's Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT — June 20, 2013"
+        ],
+        "WWE Divas Championship": [
+          "Raw — April 7, 2014"
+        ],
+        "Women's Tag Team Championship": [
+          "WrestleMania 42 Night 1 — April 18, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          1
+        ],
+        [
+          "Divas Champion",
+          1
+        ],
+        [
+          "NXT Women's Champion SmackDown General Manager",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe": 1,
+        "women's tag": 1,
+        "divas": 1,
+        "nxt women's": 1
+      },
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Penta",
+      "slug": "penta",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "Intercontinental Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Intercontinental Championship": [
+          "Raw — March 2, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Intercontinental Title",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "intercontinental": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Randy Orton",
+      "slug": "randy-orton",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 21,
+      "catalog_by_belt": {
+        "World Heavyweight Championship": 4,
+        "Intercontinental Championship": 1,
+        "United States Championship": 1,
+        "World Tag Team Championship": 2,
+        "Raw Tag Team Championship": 2,
+        "SmackDown Tag Team Championship": 1,
+        "WWE Championship": 10
+      },
+      "catalog_dates_by_belt": {
+        "World Heavyweight Championship": [
+          "SummerSlam — August 15, 2004",
+          "No Mercy — October 8, 2007",
+          "TLC — December 15, 2013",
+          "Battleground — October 27, 2013"
+        ],
+        "Intercontinental Championship": [
+          "Taboo Tuesday — November 9, 2004"
+        ],
+        "United States Championship": [
+          "The Great American Bash — July 23, 2006"
+        ],
+        "World Tag Team Championship": [
+          "Backlash — April 30, 2006",
+          "Raw — December 10, 2007"
+        ],
+        "Raw Tag Team Championship": [
+          "Extreme Rules — May 19, 2013",
+          "SmackDown — May 20, 2022"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania 34 — April 8, 2018"
+        ],
+        "WWE Championship": [
+          "No Way Out — March 1, 2009",
+          "WrestleMania 25 — April 5, 2009",
+          "Extreme Rules — May 3, 2010",
+          "Night of Champions — September 21, 2014",
+          "Hell in a Cell — October 25, 2014",
+          "WrestleMania 33 — April 2, 2017",
+          "Royal Rumble — January 27, 2019",
+          "Extreme Rules — July 14, 2019",
+          "Hell in a Cell — October 25, 2020",
+          "Backlash — June 14, 2020"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          10
+        ],
+        [
+          "World Heavyweight Champion",
+          4
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          2
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ],
+        [
+          "World Tag Team Champion",
+          2
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 10,
+        "world heavyweight": 4,
+        "intercontinental": 1,
+        "united states": 1,
+        "raw tag": 2,
+        "smackdown tag": 1,
+        "world tag": 2,
+        "royal rumble match": 1,
+        "money in the bank ladder match": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Rey Mysterio",
+      "slug": "reymysterio",
+      "wwe_source": "manual",
+      "fetch_error": null,
+      "catalog_total_reigns": 13,
+      "catalog_by_belt": {
+        "WWE Championship": 1,
+        "World Heavyweight Championship": 2,
+        "Intercontinental Championship": 2,
+        "United States Championship": 3,
+        "WWE Tag Team Championship": 4,
+        "SmackDown Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Championship": [
+          "Raw — April 6, 2011"
+        ],
+        "World Heavyweight Championship": [
+          "WrestleMania 22 — April 2, 2006",
+          "Fatal 4-Way — June 20, 2010"
+        ],
+        "Intercontinental Championship": [
+          "Judgment Day — May 17, 2009",
+          "WrestleMania 25 — April 5, 2009"
+        ],
+        "United States Championship": [
+          "WrestleMania 22 — April 2, 2006",
+          "WrestleMania 34 — April 8, 2018",
+          "WrestleMania 38 Night 1 — April 2, 2022"
+        ],
+        "WWE Tag Team Championship": [
+          "No Way Out — February 18, 2004",
+          "WrestleMania 20 — March 14, 2004",
+          "SmackDown — December 12, 2008",
+          "SmackDown — July 21, 2009"
+        ],
+        "SmackDown Tag Team Championship": [
+          "WrestleMania 39 Night 2 — April 2, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          1
+        ],
+        [
+          "World Heavyweight Champion",
+          2
+        ],
+        [
+          "Intercontinental Champion",
+          2
+        ],
+        [
+          "United States Champion",
+          3
+        ],
+        [
+          "WWE Tag Team Champion",
+          4
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 1,
+        "world heavyweight": 2,
+        "intercontinental": 2,
+        "united states": 3,
+        "wwe tag": 4,
+        "smackdown tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": true
+    },
+    {
+      "name": "Rhea Ripley",
+      "slug": "rhea-ripley",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 8,
+      "catalog_by_belt": {
+        "NXT UK Women's Championship": 1,
+        "NXT Women's Championship": 1,
+        "WWE Women's Championship": 2,
+        "Women's Tag Team Championship": 2,
+        "Women's World Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "NXT UK Women's Championship": [
+          "NXT UK TakeOver: Blackpool — January 12, 2019"
+        ],
+        "NXT Women's Championship": [
+          "NXT TakeOver: New York — April 10, 2019"
+        ],
+        "WWE Women's Championship": [
+          "WrestleMania 37 Night 2 — April 11, 2021",
+          "WrestleMania 39 Night 2 — April 2, 2023"
+        ],
+        "Women's Tag Team Championship": [
+          "Raw — July 18, 2021",
+          "Raw — January 5, 2025"
+        ],
+        "Women's World Championship": [
+          "WrestleMania 39 Night 2 — April 2, 2023",
+          "Raw on Netflix — January 6, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Women's World Champion",
+          2
+        ],
+        [
+          "WWE Women's Champion",
+          2
+        ],
+        [
+          "Royal Rumble",
+          1
+        ],
+        [
+          "WWE",
+          1
+        ],
+        [
+          "Women's Tag Team Champion",
+          2
+        ],
+        [
+          "NXT Women's Champion",
+          1
+        ],
+        [
+          "First-ever",
+          1
+        ],
+        [
+          "NXT UK Women's Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "women's world": 2,
+        "wwe women's": 2,
+        "royal rumble": 1,
+        "wwe": 1,
+        "women's tag": 2,
+        "nxt women's": 1,
+        "first-ever": 1,
+        "nxt uk women's": 1
+      },
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Ricky Smokes",
+      "slug": "ricky-smokes",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT — February 24, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Tag Team Champion (with Brad Baylor)",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Roman Reigns",
+      "slug": "roman-reigns",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 10,
+      "catalog_by_belt": {
+        "WWE Tag Team Championship": 1,
+        "WWE Championship": 4,
+        "United States Championship": 1,
+        "Intercontinental Championship": 1,
+        "Universal Championship": 2,
+        "World Heavyweight Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "WWE Tag Team Championship": [
+          "Extreme Rules — October 14, 2013"
+        ],
+        "WWE Championship": [
+          "Survivor Series — November 22, 2015",
+          "Raw — December 14, 2015",
+          "WrestleMania 32 — April 3, 2016",
+          "WrestleMania 38 Night 2 — April 3, 2022"
+        ],
+        "United States Championship": [
+          "Hell in a Cell — September 25, 2016"
+        ],
+        "Intercontinental Championship": [
+          "Raw — November 20, 2017"
+        ],
+        "Universal Championship": [
+          "WrestleMania 33 — April 2, 2017",
+          "SummerSlam — August 19, 2018"
+        ],
+        "World Heavyweight Championship": [
+          "WrestleMania 42 Night 2 — April 19, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          4
+        ],
+        [
+          "World Heavyweight Champion",
+          1
+        ],
+        [
+          "Universal Champion",
+          2
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion  &",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 4,
+        "world heavyweight": 1,
+        "universal": 2,
+        "intercontinental": 1,
+        "united states": 1,
+        "wwe tag": 1,
+        "royal rumble match": 1
+      },
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Rusev",
+      "slug": "rusev",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "United States Championship": [
+          "Night of Champions — September 21, 2014"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Sami Zayn",
+      "slug": "sami-zayn",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 8,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "Intercontinental Championship": 4,
+        "United States Championship": 2,
+        "Undisputed WWE Tag Team Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT TakeOver: Rival — February 11, 2015"
+        ],
+        "Intercontinental Championship": [
+          "Elimination Chamber — March 8, 2020",
+          "Clash of Champions — September 27, 2020",
+          "SmackDown — February 18, 2022",
+          "WrestleMania XL Night 1 — April 6, 2024"
+        ],
+        "United States Championship": [
+          "WrestleMania 38 Night 1 — April 2, 2022",
+          "WrestleMania 40 Night 2 — April 7, 2024"
+        ],
+        "Undisputed WWE Tag Team Championship": [
+          "WrestleMania 39 Night 1 — April 1, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Intercontinental Champion",
+          4
+        ],
+        [
+          "United States Champion",
+          2
+        ],
+        [
+          "Undisputed WWE Tag Team Champion",
+          1
+        ],
+        [
+          "NXT Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "intercontinental": 4,
+        "united states": 2,
+        "undisputed tag": 1,
+        "nxt championship": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Seth Rollins",
+      "slug": "seth-rollins",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 18,
+      "catalog_by_belt": {
+        "NXT Championship": 1,
+        "Raw Tag Team Championship": 6,
+        "WWE Championship": 2,
+        "United States Championship": 2,
+        "Intercontinental Championship": 2,
+        "Universal Championship": 2,
+        "World Heavyweight Championship": 2,
+        "WWE Crown Jewel Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Championship": [
+          "NXT — July 26, 2012"
+        ],
+        "Raw Tag Team Championship": [
+          "Extreme Rules — May 19, 2013",
+          "SummerSlam — August 20, 2017",
+          "Raw — December 25, 2017",
+          "Raw — October 22, 2018",
+          "SummerSlam — August 19, 2019",
+          "Raw — January 20, 2020"
+        ],
+        "WWE Championship": [
+          "WrestleMania 31 — March 29, 2015",
+          "Money in the Bank — June 19, 2016"
+        ],
+        "United States Championship": [
+          "SummerSlam — August 23, 2015",
+          "Raw — October 10, 2022"
+        ],
+        "Intercontinental Championship": [
+          "WrestleMania 34 — April 8, 2018",
+          "SummerSlam — August 19, 2018"
+        ],
+        "Universal Championship": [
+          "WrestleMania 35 — April 7, 2019",
+          "SummerSlam — August 11, 2019"
+        ],
+        "World Heavyweight Championship": [
+          "Night of Champions — July 1, 2023",
+          "SummerSlam Night 1 — August 2, 2025"
+        ],
+        "WWE Crown Jewel Championship": [
+          "Crown Jewel — October 11, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          2
+        ],
+        [
+          "World Heavyweight Champion",
+          2
+        ],
+        [
+          "Universal Champion",
+          2
+        ],
+        [
+          "Crown Jewel Champion",
+          1
+        ],
+        [
+          "United States Champion",
+          2
+        ],
+        [
+          "Intercontinental",
+          2
+        ],
+        [
+          "Raw Tag Team Champion",
+          6
+        ],
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 2,
+        "world heavyweight": 2,
+        "universal": 2,
+        "wwe crown jewel": 1,
+        "united states": 2,
+        "intercontinental": 2,
+        "raw tag": 6,
+        "nxt championship": 1,
+        "royal rumble match": 1,
+        "money in the bank ladder match": 1
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Sol Ruca",
+      "slug": "sol-ruca",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 1,
+      "catalog_by_belt": {
+        "Women's Intercontinental Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "Women's Intercontinental Championship": [
+          "Clash in Italy — May 31, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Women's",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          1
+        ],
+        [
+          "NXT Women's North American Champion Women's Speed Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "women's": 1,
+        "intercontinental": 1,
+        "nxt women's north american": 1
+      },
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt women's north american": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Solo Sikoa",
+      "slug": "solo-sikoa",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 2,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1,
+        "United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT 2.0 — September 13, 2022"
+        ],
+        "United States Championship": [
+          "WrestleMania 39 Night 2 — April 2, 2023"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "NXT North American Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1,
+        "nxt north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Stephanie Vaquer",
+      "slug": "stephanie-vaquer",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Women's North American Championship": 1,
+        "NXT Women's Championship": 1,
+        "Women's World Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's North American Championship": [
+          "NXT Vengeance Day — February 15, 2025"
+        ],
+        "NXT Women's Championship": [
+          "NXT Roadblock — March 11, 2025"
+        ],
+        "Women's World Championship": [
+          "Wrestlepalooza — September 20, 2025"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "Women's World Champion",
+          1
+        ],
+        [
+          "NXT Women's Champion",
+          1
+        ],
+        [
+          "NXT Women's North American Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "women's world": 1,
+        "nxt women's": 1,
+        "nxt women's north american": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "The Miz",
+      "slug": "the-miz",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 21,
+      "catalog_by_belt": {
+        "WWE Championship": 2,
+        "Intercontinental Championship": 8,
+        "United States Championship": 2,
+        "Raw Tag Team Championship": 5,
+        "SmackDown Tag Team Championship": 2,
+        "World Tag Team Championship": 2
+      },
+      "catalog_dates_by_belt": {
+        "WWE Championship": [
+          "WrestleMania 27 — April 3, 2011",
+          "Money in the Bank — July 17, 2011"
+        ],
+        "Intercontinental Championship": [
+          "WrestleMania 25 — April 5, 2009",
+          "Extreme Rules — June 4, 2012",
+          "Raw — April 11, 2016",
+          "SmackDown — August 23, 2016",
+          "Raw — November 22, 2016",
+          "Raw — June 4, 2018",
+          "Elimination Chamber — February 17, 2019",
+          "WrestleMania 39 Night 2 — April 2, 2023"
+        ],
+        "United States Championship": [
+          "WrestleMania 27 — April 3, 2011",
+          "WrestleMania 32 — April 3, 2016"
+        ],
+        "Raw Tag Team Championship": [
+          "Raw — April 19, 2016",
+          "Raw — December 4, 2016",
+          "Raw — January 22, 2018",
+          "Raw — April 15, 2019",
+          "Raw — February 14, 2020"
+        ],
+        "SmackDown Tag Team Championship": [
+          "SmackDown — February 12, 2021",
+          "WrestleMania 38 Night 1 — April 2, 2022"
+        ],
+        "World Tag Team Championship": [
+          "WrestleMania 27 — April 3, 2011",
+          "WrestleMania 40 Night 1 — April 6, 2024"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Champion",
+          2
+        ],
+        [
+          "Intercontinental Champion",
+          8
+        ],
+        [
+          "United States Champion",
+          2
+        ],
+        [
+          "Raw Tag Team",
+          5
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          2
+        ],
+        [
+          "World Tag Team Champion",
+          2
+        ],
+        [
+          "Money in the Bank Ladder Match",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "wwe championship": 2,
+        "intercontinental": 8,
+        "united states": 2,
+        "raw tag": 5,
+        "smackdown tag": 2,
+        "world tag": 2,
+        "money in the bank ladder match": 2
+      },
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 2
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Tiffany Stratton",
+      "slug": "tiffany-stratton",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Women's Championship": 1,
+        "WWE Women's Championship": 1,
+        "Women's United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Women's Championship": [
+          "NXT Battleground — May 28, 2023"
+        ],
+        "WWE Women's Championship": [
+          "Saturday Night's Main Event — December 6, 2025"
+        ],
+        "Women's United States Championship": [
+          "SmackDown — April 24, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "WWE Women's Champion",
+          1
+        ],
+        [
+          "Women's",
+          1
+        ],
+        [
+          "United States Champion  Women's",
+          1
+        ],
+        [
+          "Money in the Bank",
+          1
+        ],
+        [
+          "NXT Women's Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "wwe women's": 1,
+        "women's": 1,
+        "women's united states": 1,
+        "money in the bank": 1,
+        "nxt women's": 1
+      },
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Tommaso Ciampa",
+      "slug": "tommaso-ciampa",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT Tag Team Championship": 1,
+        "WWE Tag Team Championship": 1,
+        "NXT Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT Tag Team Championship": [
+          "NXT TakeOver: Toronto — November 19, 2016"
+        ],
+        "WWE Tag Team Championship": [
+          "SmackDown — July 5, 2024"
+        ],
+        "NXT Championship": [
+          "NXT — July 18, 2018"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion",
+          1
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1,
+        "nxt tag": 1,
+        "wwe tag": 1
+      },
+      "count_diff": {},
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Tony D'Angelo",
+      "slug": "tony-dangelo",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 3,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1,
+        "NXT Tag Team Championship": 1,
+        "NXT Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT Stand & Deliver — April 1, 2023"
+        ],
+        "NXT Tag Team Championship": [
+          "NXT The Great American Bash — July 30, 2023"
+        ],
+        "NXT Championship": [
+          "NXT Stand & Deliver — April 4, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "NXT Champion",
+          1
+        ],
+        [
+          "NXT North American Champion",
+          1
+        ],
+        [
+          "NXT Tag Team Champion; NXT Heritage Cup Champion",
+          1
+        ]
+      ],
+      "wwe_counts": {
+        "nxt championship": 1,
+        "nxt north american": 1,
+        "nxt heritage cup": 1
+      },
+      "count_diff": {
+        "nxt heritage cup": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt tag": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Trick Williams",
+      "slug": "trick-williams",
+      "wwe_source": "live",
+      "fetch_error": null,
+      "catalog_total_reigns": 4,
+      "catalog_by_belt": {
+        "NXT North American Championship": 1,
+        "NXT Championship": 2,
+        "United States Championship": 1
+      },
+      "catalog_dates_by_belt": {
+        "NXT North American Championship": [
+          "NXT No Mercy — September 30, 2023"
+        ],
+        "NXT Championship": [
+          "NXT Stand & Deliver — April 7, 2024",
+          "NXT — October 1, 2024"
+        ],
+        "United States Championship": [
+          "WrestleMania 42 Night 2 — April 19, 2026"
+        ]
+      },
+      "wwe_highlights": [
+        [
+          "United States Champion",
+          1
+        ],
+        [
+          "NXT Champion",
+          2
+        ]
+      ],
+      "wwe_counts": {
+        "united states": 1,
+        "nxt championship": 2
+      },
+      "count_diff": {
+        "nxt north american": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "uses_manual_wwe": false
+    }
+  ],
+  "issues": [
+    {
+      "name": "AJ Lee",
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Alexa Bliss",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Asuka",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Austin Theory",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Bayley",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Becky Lynch",
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 3
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 3,
+          "wwe": 0
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Bo Dallas",
+      "count_diff": {
+        "wwe tag": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "manual",
+      "uses_manual_wwe": true
+    },
+    {
+      "name": "Brie Bella",
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Brock Lesnar",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "CM Punk",
+      "count_diff": {
+        "ecw": {
+          "catalog": 2,
+          "wwe": 0
+        },
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "world heavyweight": {
+          "catalog": 3,
+          "wwe": 5
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Charlotte Flair",
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe women's": {
+          "catalog": 1,
+          "wwe": 0
+        },
+        "wwe women’s champion": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Cody Rhodes",
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Drew McIntyre",
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Finn Bálor",
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "IYO SKY",
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "JD McDonagh",
+      "count_diff": {
+        "nxt cruiserweight champion": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt cruiserweight championship": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Jacy Jayne",
+      "count_diff": {
+        "nxt": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Jey Uso",
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "John Cena",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 2
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Lash Legend",
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Liv Morgan",
+      "count_diff": {
+        "2024 wwe women’s": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Lyra Valkyria",
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Naomi",
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Nia Jax",
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Paige",
+      "count_diff": {
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Randy Orton",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Rhea Ripley",
+      "count_diff": {
+        "first-ever": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "wwe": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Roman Reigns",
+      "count_diff": {
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Seth Rollins",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "royal rumble match": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Sol Ruca",
+      "count_diff": {
+        "intercontinental": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt women's north american": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's intercontinental": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "The Miz",
+      "count_diff": {
+        "money in the bank ladder match": {
+          "catalog": 0,
+          "wwe": 2
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Tiffany Stratton",
+      "count_diff": {
+        "money in the bank": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "women's": {
+          "catalog": 0,
+          "wwe": 1
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Tony D'Angelo",
+      "count_diff": {
+        "nxt heritage cup": {
+          "catalog": 0,
+          "wwe": 1
+        },
+        "nxt tag": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    },
+    {
+      "name": "Trick Williams",
+      "count_diff": {
+        "nxt north american": {
+          "catalog": 1,
+          "wwe": 0
+        }
+      },
+      "fetch_error": null,
+      "wwe_source": "live",
+      "uses_manual_wwe": false
+    }
+  ]
+}

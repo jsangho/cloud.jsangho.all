@@ -1,0 +1,21 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    avoid_print: error
+    dead_code: warning
+  exclude:
+    - build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_unnecessary_containers: true
+    use_super_parameters: true
+    prefer_single_quotes: true
+    sized_box_for_whitespace: true
+    sort_child_properties_last: true

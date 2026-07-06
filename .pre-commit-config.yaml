@@ -1,0 +1,63 @@
+# 하네스 엔지니어링 게이트 — 커밋 전 모든 린터를 강제 통과시킨다
+# 설치: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      # ── Flutter ──────────────────────────────────────────────
+      - id: flutter-analyze
+        name: "Flutter: analyze"
+        entry: flutter
+        args: [analyze, flutter/]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      - id: dart-format-check
+        name: "Flutter: format check"
+        entry: dart
+        args: [format, --set-exit-if-changed, flutter/]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      # ── Python ───────────────────────────────────────────────
+      - id: ruff-lint
+        name: "Python: ruff lint"
+        entry: ruff
+        args: [check, fastapi/, --config, fastapi/pyproject.toml]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      - id: ruff-format-check
+        name: "Python: ruff format check"
+        entry: ruff
+        args: [format, --check, fastapi/, --config, fastapi/pyproject.toml]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      - id: import-linter
+        name: "Python: import-linter (star topology)"
+        entry: bash
+        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps /c/Users/hi/anaconda3/Scripts/lint-imports.exe"]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      # ── Next.js ──────────────────────────────────────────────
+      - id: eslint
+        name: "Next.js: ESLint"
+        entry: bash
+        args: [-c, "cd www && node node_modules/eslint/bin/eslint.js ."]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      - id: typescript-check
+        name: "Next.js: TypeScript"
+        entry: node
+        args: [www/node_modules/typescript/bin/tsc, --noEmit, -p, www/tsconfig.json]
+        language: system
+        always_run: true
+        pass_filenames: false

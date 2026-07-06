@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# 환경 변수 (보안)
+.env
+.env.*
+!.env.example
+
+# Python 캐시
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+.ruff_cache
+.import_linter_cache
+.mypy_cache
+.pytest_cache
+
+# 가상환경
+apps/.venv
+.venv
+venv
+
+# 문서
+*.md
+CLAUDE.md
+_docs
+**/_docs
+
+# 개발 도구 설정
+.cursorrules
+.importlinter
+.vscode
+.idea
+
+# Docker 파일 자체
+Dockerfile
+.dockerignore
+
+# 테스트
+tests
+**/tests
+
+# 커버리지
+htmlcov
+coverage

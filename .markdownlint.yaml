@@ -1,0 +1,35 @@
+# Star Topology Harness — MD 파일은 온톨로지 노드다.
+# 각 노드는 올바른 frontmatter(type, hub/spoke 선언)를 가져야 한다.
+# 이 린터는 구조적 MD 품질을 강제한다. 링크 토폴로지 검증은 validate_harness.py 가 담당.
+
+default: true
+
+# MD001: 제목 계층은 한 단계씩 내려가야 한다 (h1 → h2 → h3, h1 → h3 금지)
+MD001: true
+
+# MD013: 줄 길이 제한 — 온톨로지 노드 설명이 길어질 수 있으므로 비활성화
+MD013: false
+
+# MD033: 인라인 HTML 허용 — Obsidian 콜아웃 등에서 필요
+MD033: false
+
+# MD041: 첫 줄이 h1이어야 함 — frontmatter가 있으면 그 다음 줄이 h1
+MD041: true
+
+# MD022: 제목 앞뒤 빈 줄 강제 — 가독성 및 파서 호환성
+MD022: true
+
+# MD025: 문서당 h1 하나만 허용 — 허브/스포크 각 노드는 단일 정체성
+MD025: true
+
+# MD032: 리스트 앞뒤 빈 줄 강제
+MD032: true
+
+# MD034: 베어 URL 금지 — 모든 링크는 [[WikiLink]] 또는 [text](url) 형식
+MD034: true
+
+# MD040: 코드 블록에 언어 지정 강제 — 하네스 내 코드 스니펫 명확성
+MD040: true
+
+# MD047: 파일 끝 개행 강제
+MD047: true

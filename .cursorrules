@@ -1,0 +1,97 @@
+# 프로젝트 에이전트 하네스 (Cursor)
+
+이 저장소에서 AI 보조 코딩의 **메인 진입점은 `.cursorrules` 계층**이다.  
+규칙 인덱스: `vault/AGENT.md` (텍스트만 · 그래프 미연결)
+
+하네스(규칙 + 검증 루프)로 묶고, 행동 원칙 보조는 [`CLAUDE.md`](CLAUDE.md)(Karpathy 가이드라인 한글판)를 참고한다.
+
+**트레이드오프:** 속도보다 신중함. 사소한 일은 판단으로 완화한다.
+
+---
+
+## 규칙 계층 (4단) — `.cursorrules` 메인
+
+| 경로 | 역할 | 보조 |
+|------|------|------|
+| [`.cursorrules`](.cursorrules) (루트) | 하네스·우선순위·공통 행동 요약 | [`CLAUDE.md`](CLAUDE.md) |
+| [`fastapi/.cursorrules`](fastapi/.cursorrules) | 백엔드(FastAPI) | [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) |
+| [`www/.cursorrules`](www/.cursorrules) | 프론트엔드(Next.js) | [`www/CLAUDE.md`](www/CLAUDE.md) |
+| [`fastapi/apps/titanic/_docs/.cursorrules`](fastapi/apps/titanic/_docs/.cursorrules) | Titanic 앱 (시블링 템플릿) | [`titanic/_docs/CLAUDE.md`](fastapi/apps/titanic/_docs/CLAUDE.md) |
+
+`fastapi/apps/` 아래 **kayfabe**, **friday13th** 등 앱이 늘면 각 `apps/<app>/_docs/.cursorrules`를 형제(sibling)로 추가한다.  
+`CLAUDE.md`는 같은 경로에 두되 **항상 `.cursorrules`를 먼저** Read한다.
+
+---
+
+## 0. 작업 전 필수 (구현 전)
+
+코드를 **작성·수정·리팩터링하기 전에** 아래를 수행한다. 생략하지 않는다.
+
+1. **작업 디렉터리에 맞는 `.cursorrules`를 Read한다.** (필수)
+   - `fastapi/` → [`fastapi/.cursorrules`](fastapi/.cursorrules)
+   - `www/` → [`www/.cursorrules`](www/.cursorrules)
+   - `fastapi/apps/titanic/` → [titanic `.cursorrules`](fastapi/apps/titanic/_docs/.cursorrules)
+2. **해당 `.cursorrules`가 가리키는 `vault/` 업무 MD를 Read한다.** (`vault/` = docs 서브모듈)
+3. **규칙에 맞춰 구현한다** — `vault/`·`.cursorrules`에 없는 패턴을 추측으로 도입하지 않는다.
+4. 행동 원칙이 헷갈리면 같은 경로의 [`CLAUDE.md`](CLAUDE.md) 보조 문서를 Read한다.
+5. 규칙이 없거나 요구와 충돌하면 **구현을 멈추고** 사용자에게 확인한다.
+
+**우선순위(충돌 시):** 사용자 명시 지침 > `vault/` > 해당 경로 `.cursorrules` > 루트 `.cursorrules` > [`CLAUDE.md`](CLAUDE.md) (보조)
+
+---
+
+## 1. 구현 전 사고
+
+- 가정을 말로 밝힌다. 불확실하면 질문한다.
+- 해석이 여럿이면 조용히 고르지 말고 대안을 제시한다.
+- 더 단순한 해법이 있으면 말한다. 타당하면 요청에 반박해도 된다.
+- 요구가 불명확하면 구현하지 말고, 헷갈리는 지점을 짚어 되묻는다.
+
+상세·스택별 예시 → 하위 `.cursorrules` · 보조 [`CLAUDE.md`](CLAUDE.md)
+
+---
+
+## 2. 단순성 우선
+
+- 요청 범위 밖 기능·추상화·설정 여지를 넣지 않는다.
+- 추측으로 방어 코드만 늘리지 않는다. 필요한 만큼만 쓴다.
+- “시니어가 과하다고 할까?”에 걸리면 단순화한다.
+
+---
+
+## 3. 정밀한 수정
+
+- 요청과 무관한 인접 코드·포맷·주석 정리를 하지 않는다.
+- 망가지지 않은 코드는 리팩토링하지 않는다. 기존 스타일을 유지한다.
+- 무관한 데드 코드는 **보고만** 하고 삭제하지 않는다.
+- **내가 만든 변경**으로 불필요해진 심볼만 제거한다.
+
+**검증:** diff의 각 변경은 사용자 요청과 직접 연결되어야 한다.
+
+---
+
+## 4. 목표 중심 실행
+
+- “돌아가게”가 아니라 **검증 가능한 성공 기준**을 먼저 잡는다.
+- 단계가 길면 짧은 계획과 각 단계 끝의 검증(명령·테스트·수동 확인)을 적는다.
+
+```text
+1. [단계] → 검증: [확인 사항]
+2. [단계] → 검증: [확인 사항]
+```
+
+Karpathy 원문 전체 → 보조 [`CLAUDE.md`](CLAUDE.md) §1–4
+
+---
+
+## 도구와 맥락
+
+- 코드를 바꾸기 전에 **§0 `.cursorrules`**와 관련 소스 파일을 읽거나 검색해 저장소 맥락에 맞춘다.
+- 사용자가 “실행해 달라”고 하거나 검증이 필요하면 터미널·도구로 직접 확인한다. 추측으로 끝내지 않는다.
+- Docker: 루트 [`docker-compose.yaml`](docker-compose.yaml) — `backend`(fastapi), `frontend`(www).
+
+## 문서 중복
+
+- 코딩 패턴·폴더·API는 **`.cursorrules`와 `vault/`에만** 둔다.
+- [`CLAUDE.md`](CLAUDE.md)는 행동 원칙 보조. `.cursorrules`와 겹치면 **`.cursorrules`가 우선**한다.
+- React `useState` 객체 압축 등 에이전트 지침은 [`agent.md`](agent.md)를 본다.

@@ -1,0 +1,53 @@
+<svg width="180" height="180" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="7" fill="#050505"/>
+  <rect width="32" height="32" rx="7" stroke="#3f3f46" stroke-width="0.6"/>
+  <rect width="32" height="32" rx="7" fill="url(#kf-arena)"/>
+  <path d="M0 32V24.5L16 19.8L32 24.5V32H0Z" fill="url(#kf-mat)"/>
+  <path d="M2 32V25.8L16 21.6L30 25.8V32H2Z" fill="#1c1917" opacity="0.55"/>
+  <path d="M1.5 8.2V21.5L4.2 20.8V9.4L1.5 8.2Z" fill="#3f3f46"/>
+  <path d="M30.5 8.2V21.5L27.8 20.8V9.4L30.5 8.2Z" fill="#3f3f46"/>
+  <rect x="3.8" y="7.6" width="2.2" height="13.8" rx="0.4" fill="#52525b"/>
+  <rect x="26" y="7.6" width="2.2" height="13.8" rx="0.4" fill="#52525b"/>
+  <rect x="3.4" y="7.2" width="3" height="2.2" rx="0.35" fill="#a16207"/>
+  <rect x="25.6" y="7.2" width="3" height="2.2" rx="0.35" fill="#a16207"/>
+  <path d="M3.2 10.1C10.5 10.85 21.5 10.85 28.8 10.1L28.55 11.05C21.35 11.75 10.65 11.75 3.45 11.05L3.2 10.1Z" fill="url(#kf-rope-top)"/>
+  <path d="M2.3 13.35C10.1 14.35 21.9 14.35 29.7 13.35L29.4 14.65C21.55 15.55 10.45 15.55 2.6 14.65L2.3 13.35Z" fill="url(#kf-rope-mid)"/>
+  <path d="M1.4 17.1C9.6 18.65 22.4 18.65 30.6 17.1L30.2 18.85C22.15 20.25 9.85 20.25 1.8 18.85L1.4 17.1Z" fill="url(#kf-rope-bot)"/>
+  <path d="M3.2 10.1C10.5 10.85 21.5 10.85 28.8 10.1" stroke="#fecaca" stroke-width="0.35" stroke-linecap="round" opacity="0.55"/>
+  <path d="M2.3 13.35C10.1 14.35 21.9 14.35 29.7 13.35" stroke="#fecaca" stroke-width="0.4" stroke-linecap="round" opacity="0.65"/>
+  <path d="M1.4 17.1C9.6 18.65 22.4 18.65 30.6 17.1" stroke="#fff1f2" stroke-width="0.45" stroke-linecap="round" opacity="0.75"/>
+  <path d="M10.8 13.35L13.1 10.05L16 13.55L18.9 10.05L21.2 13.35L19.55 13.35L16 10.35L12.45 13.35H10.8Z" fill="url(#kf-wwe)" stroke="#7f1d1d" stroke-width="0.2"/>
+  <path d="M16 20.2L14.2 18.8M16 20.2L17.8 18.8" stroke="#57534e" stroke-width="0.45" stroke-linecap="round" opacity="0.5"/>
+  <defs>
+    <radialGradient id="kf-arena" cx="50%" cy="18%" r="72%" gradientUnits="objectBoundingBox">
+      <stop stop-color="#292524" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="#0c0a09" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#050505" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="kf-mat" x1="16" y1="19" x2="16" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#44403c"/>
+      <stop offset="0.45" stop-color="#292524"/>
+      <stop offset="1" stop-color="#0c0a09"/>
+    </linearGradient>
+    <linearGradient id="kf-rope-top" x1="16" y1="9" x2="16" y2="12" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#991b1b"/>
+      <stop offset="0.5" stop-color="#dc2626"/>
+      <stop offset="1" stop-color="#7f1d1d"/>
+    </linearGradient>
+    <linearGradient id="kf-rope-mid" x1="16" y1="12" x2="16" y2="15.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b91c1c"/>
+      <stop offset="0.45" stop-color="#ef4444"/>
+      <stop offset="1" stop-color="#991b1b"/>
+    </linearGradient>
+    <linearGradient id="kf-rope-bot" x1="16" y1="15" x2="16" y2="20" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dc2626"/>
+      <stop offset="0.45" stop-color="#f87171"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="kf-wwe" x1="11" y1="10" x2="21" y2="13.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fafafa"/>
+      <stop offset="0.5" stop-color="#e7e5e4"/>
+      <stop offset="1" stop-color="#d6d3d1"/>
+    </linearGradient>
+  </defs>
+</svg>

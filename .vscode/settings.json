@@ -1,0 +1,23 @@
+{
+  "files.exclude": {
+    "**/.git": true,
+    ".git": true,
+    "pytorch_env": true
+  },
+  "search.exclude": {
+    "**/.git": true
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python.defaultInterpreterPath": "C:\\Users\\hi\\anaconda3\\python.exe",
+  "markdown.validate.enabled": true,
+  "dart.flutterSdkPath": "C:\\Users\\hi\\flutter",
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.project.referencedLibraries": [],
+  "java.compile.nullAnalysis.mode": "disabled",
+  "python.analysis.extraPaths": [
+    "./fastapi/apps"
+  ]
+}

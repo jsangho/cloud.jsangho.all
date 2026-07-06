@@ -1,0 +1,25 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="7" fill="#050505"/>
+  <rect width="32" height="32" rx="7" stroke="#3f3f46" stroke-width="0.6"/>
+  <rect x="4.5" y="8.5" width="23" height="15" rx="1.5" fill="#121212" stroke="#27272a" stroke-width="0.5"/>
+  <circle cx="6" cy="10" r="1.15" fill="#71717a"/>
+  <circle cx="26" cy="10" r="1.15" fill="#71717a"/>
+  <circle cx="6" cy="22" r="1.15" fill="#71717a"/>
+  <circle cx="26" cy="22" r="1.15" fill="#71717a"/>
+  <ellipse cx="16" cy="11.5" rx="10.2" ry="2.15" stroke="#ef4444" stroke-width="1.15" fill="none"/>
+  <ellipse cx="16" cy="15.5" rx="10.2" ry="2.15" stroke="#dc2626" stroke-width="1" fill="none" opacity="0.92"/>
+  <ellipse cx="16" cy="19.5" rx="10.2" ry="2.15" stroke="#b91c1c" stroke-width="0.9" fill="none" opacity="0.8"/>
+  <path d="M9.8 23.2V8.8H12.6L16.1 14.4L19.6 8.8H22.4V23.2H19.5L16.1 17.5L12.7 23.2H9.8Z" fill="url(#kf-gold)" stroke="#78350f" stroke-width="0.35"/>
+  <path d="M16 6.2L17.1 8.4H19.5L17.5 9.8L18.2 12.2L16 10.8L13.8 12.2L14.5 9.8L12.5 8.4H14.9L16 6.2Z" fill="url(#kf-star)" opacity="0.95"/>
+  <defs>
+    <linearGradient id="kf-gold" x1="10" y1="8" x2="22" y2="24" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fef3c7"/>
+      <stop offset="0.45" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="kf-star" x1="12" y1="6" x2="20" y2="12" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+</svg>

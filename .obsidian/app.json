@@ -1,0 +1,33 @@
+{
+  "userIgnoreFilters": [
+    "__pycache__",
+    "**/*.py",
+    "alembic ",
+    "node_modules",
+    "node_modules/",
+    "**/node_modules/**",
+    ".next",
+    "out",
+    ".coverage",
+    ".venv",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "/*.ts",
+    "/*.tsx",
+    "/*.js",
+    "/*.jsx",
+    "/*.css",
+    ".DS_Store",
+    ".env*",
+    "/*.scss",
+    "venv",
+    "/node_modules",
+    "www/node_modules/",
+    "pytorch_env",
+    "pytorch_env/",
+    ".git",
+    ".git/"
+  ],
+  "showUnsupportedFiles": false
+}
