@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# 환경 변수 (보안)
+.env
+.env.*
+!.env.example
+
+# Node / Next.js 빌드 산출물
+node_modules
+.next
+.turbo
+coverage
+
+# 문서
+*.md
+
+# 에디터·개발 도구
+.vscode
+.idea
+.cursorrules
+
+# Docker 파일 자체
+Dockerfile
+.dockerignore
+
+# 로그
+*.log
+npm-debug.log*

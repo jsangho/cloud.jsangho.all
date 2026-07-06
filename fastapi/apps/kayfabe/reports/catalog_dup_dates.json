@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Becky Lynch",
+    "date": "WrestleMania 35 — April 7, 2019",
+    "belts": [
+      "Raw Women's Championship",
+      "SmackDown Women's Championship"
+    ]
+  },
+  {
+    "name": "Cody Rhodes",
+    "date": "Fastlane — October 7, 2023",
+    "belts": [
+      "Raw Tag Team Championship",
+      "SmackDown Tag Team Championship"
+    ]
+  },
+  {
+    "name": "Cody Rhodes",
+    "date": "Night of Champions — September 19, 2010",
+    "belts": [
+      "WWE Tag Team Championship",
+      "Raw Tag Team Championship",
+      "SmackDown Tag Team Championship"
+    ]
+  },
+  {
+    "name": "Cody Rhodes",
+    "date": "WrestleMania XL Night 2 — April 7, 2024",
+    "belts": [
+      "Universal Championship",
+      "Undisputed WWE Championship"
+    ]
+  },
+  {
+    "name": "John Cena",
+    "date": "WrestleMania 29 — April 7, 2013",
+    "belts": [
+      "United States Championship",
+      "WWE Championship"
+    ]
+  },
+  {
+    "name": "Rey Mysterio",
+    "date": "WrestleMania 22 — April 2, 2006",
+    "belts": [
+      "World Heavyweight Championship",
+      "United States Championship"
+    ]
+  },
+  {
+    "name": "Rhea Ripley",
+    "date": "WrestleMania 39 Night 2 — April 2, 2023",
+    "belts": [
+      "WWE Women's Championship",
+      "Women's World Championship"
+    ]
+  },
+  {
+    "name": "The Miz",
+    "date": "WrestleMania 27 — April 3, 2011",
+    "belts": [
+      "WWE Championship",
+      "United States Championship",
+      "World Tag Team Championship"
+    ]
+  }
+]

@@ -1,0 +1,120 @@
+{
+  "ok_count": 64,
+  "mismatches": [
+    {
+      "name": "Cody Rhodes",
+      "slug": "cody-rhodes",
+      "catalog_reigns": [
+        [
+          "World Tag Team Championship",
+          "Raw — December 10, 2007"
+        ],
+        [
+          "World Tag Team Championship",
+          "Night of Champions — June 29, 2008"
+        ],
+        [
+          "World Tag Team Championship",
+          "Raw — August 11, 2008"
+        ],
+        [
+          "Intercontinental Championship",
+          "SmackDown — August 12, 2011"
+        ],
+        [
+          "Intercontinental Championship",
+          "Extreme Rules — April 29, 2012"
+        ],
+        [
+          "WWE Tag Team Championship",
+          "Night of Champions — September 19, 2010"
+        ],
+        [
+          "Raw Tag Team Championship",
+          "Night of Champions — September 19, 2010"
+        ],
+        [
+          "Raw Tag Team Championship",
+          "Raw — October 14, 2013"
+        ],
+        [
+          "Raw Tag Team Championship",
+          "Night of Champions — September 21, 2014"
+        ],
+        [
+          "Raw Tag Team Championship",
+          "Fastlane — October 7, 2023"
+        ],
+        [
+          "SmackDown Tag Team Championship",
+          "Fastlane — October 7, 2023"
+        ],
+        [
+          "Universal Championship",
+          "WrestleMania XL Night 2 — April 7, 2024"
+        ],
+        [
+          "Undisputed WWE Championship",
+          "WrestleMania XL Night 2 — April 7, 2024"
+        ],
+        [
+          "WWE Crown Jewel Championship",
+          "Crown Jewel — November 2, 2024"
+        ],
+        [
+          "Undisputed WWE Championship",
+          "SummerSlam — August 3, 2025"
+        ],
+        [
+          "Undisputed WWE Championship",
+          "SmackDown — March 6, 2026"
+        ]
+      ],
+      "wwe_highlights": [
+        [
+          "Undisputed WWE Champion",
+          3
+        ],
+        [
+          "Universal Champion",
+          1
+        ],
+        [
+          "Crown Jewel Champion",
+          1
+        ],
+        [
+          "Intercontinental Champion",
+          2
+        ],
+        [
+          "World Tag Team Champion",
+          3
+        ],
+        [
+          "WWE Tag Team Champion",
+          1
+        ],
+        [
+          "Raw Tag Team Champion",
+          4
+        ],
+        [
+          "SmackDown Tag Team Champion",
+          2
+        ],
+        [
+          "Royal Rumble Match",
+          1
+        ]
+      ],
+      "diff": {
+        "smackdown tag": {
+          "catalog": 1,
+          "wwe": 2
+        }
+      }
+    }
+  ],
+  "missing_slug": []
+}

@@ -1,0 +1,96 @@
+# 프론트엔드 에이전트 규칙 (www) — 메인
+
+상위 메인: [루트 `.cursorrules`](../.cursorrules)  
+행동 보조: [`CLAUDE.md`](CLAUDE.md) (필요 시 · 충돌 시 본 파일 우선)
+
+**스택:** Next.js (App Router) · React · TypeScript · Tailwind CSS · Radix UI
+
+---
+
+## 0. 코딩 규칙 — `vault/` 필수 (구현 전)
+
+`www/`에서 코드를 **작성·수정·리팩터링하기 전에** 아래를 수행한다.
+
+1. **`www/_claude/REACT_RULES.md`** — React·Next.js 공통 패턴
+2. 기존 컴포넌트·`lib/*-api.ts` 클라이언트 패턴을 Read하고 따른다.
+
+규칙에 없는 패턴을 추측으로 도입하지 않는다.
+
+**우선순위(충돌 시):** 사용자 명시 지침 > `vault/` > 본 파일 > 루트 `.cursorrules` > [`CLAUDE.md`](CLAUDE.md) (보조)
+
+---
+
+## 1. 저장소 구조
+
+```
+www/
+├── app/                 # App Router 페이지·레이아웃
+│   ├── page.tsx         # 메인 (Kayfabe·PLE)
+│   ├── ple/             # PLE 상세
+│   ├── login/
+│   └── lesson/titanic/  # Titanic 학습 페이지
+├── components/          # UI·도메인 컴포넌트
+├── lib/                 # API 클라이언트·유틸
+│   ├── api.ts           # apiBaseUrl · 공통 헬퍼
+│   ├── ple-api.ts
+│   ├── records-api.ts
+│   └── ...
+├── .env.local           # NEXT_PUBLIC_* (git 제외)
+└── Dockerfile
+```
+
+---
+
+## 2. API 연동
+
+- 기본 URL: [`lib/api.ts`](lib/api.ts)의 `apiBaseUrl`  
+  `process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"`
+- 백엔드 경로는 **fastapi 라우터 prefix와 일치**해야 한다.
+  - Kayfabe: `/ple/*`, `/records/*`, `/rankings`, `/championship`, `/title-history/*`
+  - Auth: `/login`, `/signup`, `/users/{id}`
+  - Titanic: `/titanic/*` (`titanicApiBaseUrl` 사용 시 `/api/titanic` 확인)
+- 새 API 호출은 기존 `lib/*-api.ts` 파일 패턴(fetch · 타임아웃 · 에러 파싱)을 따른다.
+
+---
+
+## 3. UI·컴포넌트
+
+- `"use client"`는 상호작용·훅이 필요한 컴포넌트에만 붙인다.
+- 스타일: Tailwind + `app/globals.css` 디자인 토큰. WWE/Kayfabe 테마는 기존 `WweArenaShell`, `font-sport` 등을 재사용한다.
+- shadcn/Radix: `components/ui/` — 기존 variant·className 패턴 유지.
+
+---
+
+## 4. 에이전트 지침
+
+- **useState 객체 압축** 요청 시: [agent.md](../agent.md) 규칙을 따른다.
+- 요청 범위 밖 리팩터·포맷 정리 금지. 동작 변경 없이 요청한 파일만 수정한다.
+
+---
+
+## 5. 실행·검증
+
+```bash
+# 로컬
+cd www && pnpm dev
+
+# Docker (저장소 루트)
+docker compose up --build -d frontend
+```
+
+- `.env.local` 예: `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
+- Docker 내부에서 백엔드 호출 시 네트워크·호스트명을 환경에 맞게 설정한다.
+
+---
+
+## 6. 관련 규칙 링크
+
+| 영역 | 규칙 |
+|------|------|
+| 루트 하네스 | [`.cursorrules`](../.cursorrules) |
+| 백엔드 API·라우트 | [`fastapi/.cursorrules`](../fastapi/.cursorrules) |
+| Titanic 백엔드 | [`fastapi/apps/titanic/_docs/.cursorrules`](../fastapi/apps/titanic/_docs/.cursorrules) |
+
+## 7. 행동 보조
+
+Karpathy 원칙·프론트 적용 예시가 필요할 때만 [`CLAUDE.md`](CLAUDE.md)를 Read한다. 코딩 패턴은 본 파일과 `vault/`가 기준이다.

@@ -1,0 +1,75 @@
+[importlinter]
+root_packages =
+    ontology
+    titanic
+    kayfabe
+    superstar
+    human_resource
+    manager
+    vision
+
+# 하네스 계약 목록 — 위반 시 CI 차단
+include_extra_contracts = True
+contracts =
+    star_topology_hub_only
+    clean_architecture_layers
+    no_spoke_to_spoke
+
+
+# ────────────────────────────────────────────
+# 계약 1: 스포크 간 직접 import 금지
+# 스타 토폴로지의 핵심 규칙 — 스포크는 반드시 허브(ontology)를 통해서만 연결된다.
+# ────────────────────────────────────────────
+[importlinter:contract:no_spoke_to_spoke]
+name = Spoke modules must not import each other directly
+type = forbidden
+source_modules =
+    titanic
+    kayfabe
+    superstar
+    human_resource
+    manager
+    vision
+forbidden_modules =
+    titanic
+    kayfabe
+    superstar
+    human_resource
+    manager
+    vision
+exclude_type_checking_imports = True
+
+
+# ────────────────────────────────────────────
+# 계약 2: 스포크는 허브(ontology)를 import할 수 있다
+# ontology는 공유 커널(shared kernel)로 최하위 레이어에 위치하며,
+# 스포크가 허브의 공통 유틸/컨텍스트를 사용하는 것은 허용한다.
+# 반대로 허브가 스포크를 import하는 것은 금지한다.
+# ────────────────────────────────────────────
+[importlinter:contract:star_topology_hub_only]
+name = Only hub (ontology) may import spoke modules
+type = layers
+layers =
+    titanic | kayfabe | superstar | human_resource | manager | vision
+    ontology
+
+
+# ────────────────────────────────────────────
+# 계약 3: 클린 아키텍처 계층 의존성 방향
+# adapter → app → domain. 역방향 즉시 차단.
+# 각 앱 내부에서 동일하게 적용된다.
+# ────────────────────────────────────────────
+[importlinter:contract:clean_architecture_layers]
+name = Clean Architecture layer ordering within each app
+type = layers
+containers =
+    titanic
+    kayfabe
+    superstar
+    human_resource
+    manager
+    vision
+layers =
+    adapter
+    app
+    domain
