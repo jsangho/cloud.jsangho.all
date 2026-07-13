@@ -40,11 +40,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from admin.adapter.inbound.api import human_resource_router
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from human_resource.adapter.inbound.api import human_resource_router
+from heyman.adapter.inbound.api import manager_router
 from kayfabe.adapter.inbound.api import kayfabe_router
-from manager.adapter.inbound.api import manager_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
