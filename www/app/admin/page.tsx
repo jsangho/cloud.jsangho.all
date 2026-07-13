@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   AreaChart,
@@ -33,7 +34,7 @@ import {
   Calendar,
   Inbox,
   FolderOpen,
-  User,
+  Medal,
   Send,
   Loader2,
   CheckCircle,
@@ -112,7 +113,12 @@ const workTimeData = [
   { h: "21시", v: 3 },
 ];
 
-const NAV_TABS = [
+const NAV_TABS: {
+  label: string;
+  icon: typeof LayoutDashboard;
+  dropdown: boolean;
+  href?: string;
+}[] = [
   { label: "대시보드", icon: LayoutDashboard, dropdown: false },
   { label: "CRM", icon: Briefcase, dropdown: true },
   { label: "물류", icon: Package, dropdown: true },
@@ -122,7 +128,7 @@ const NAV_TABS = [
   { label: "캘린더", icon: Calendar, dropdown: false },
   { label: "이메일", icon: Inbox, dropdown: true },
   { label: "파일 관리", icon: FolderOpen, dropdown: true },
-  { label: "프로필", icon: User, dropdown: false },
+  { label: "결과", icon: Medal, dropdown: false, href: "/results" },
 ];
 
 const CAL_WEEKS = [
@@ -1153,21 +1159,36 @@ export default function AdminDashboard() {
       <div className="border-b border-stone-200/80 dark:border-white/10 bg-white dark:bg-[#0a0a0c]">
         <div className="mx-auto max-w-7xl px-3">
           <div className="flex gap-0.5 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {NAV_TABS.map(({ label, icon: Icon, dropdown }) => (
-              <button
-                key={label}
-                onClick={() => setActiveTab(label)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  activeTab === label
-                    ? "border border-stone-400 bg-stone-600 text-stone-50"
-                    : "border border-transparent text-stone-500 dark:text-stone-400 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-800 dark:hover:text-stone-200"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
-                {dropdown && <ChevronDown className="h-2.5 w-2.5 opacity-60" />}
-              </button>
-            ))}
+            {NAV_TABS.map(({ label, icon: Icon, dropdown, href }) => {
+              const tabClassName = `flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                activeTab === label
+                  ? "border border-stone-400 bg-stone-600 text-stone-50"
+                  : "border border-transparent text-stone-500 dark:text-stone-400 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-800 dark:hover:text-stone-200"
+              }`;
+
+              if (href) {
+                return (
+                  <Link key={label} href={href} className={tabClassName}>
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{label}</span>
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={label}
+                  onClick={() => setActiveTab(label)}
+                  className={tabClassName}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{label}</span>
+                  {dropdown && (
+                    <ChevronDown className="h-2.5 w-2.5 opacity-60" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

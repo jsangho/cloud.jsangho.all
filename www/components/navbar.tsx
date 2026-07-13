@@ -74,7 +74,6 @@ export function Navbar() {
 
   const isPle =
     mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
-  const isResults = mounted && pathname === "/results";
   const isRankings = mounted && pathname === "/rankings";
   const isRecords =
     mounted && (pathname === "/records" || pathname.startsWith("/records/"));
@@ -146,9 +145,6 @@ export function Navbar() {
 
         <div className="hidden items-center gap-1.5 md:flex">
           <PlePickerDialog triggerClassName={navLinkClass(isPle)} />
-          <NavLink href="/results" active={isResults}>
-            결과
-          </NavLink>
           <NavLink
             href="/rankings"
             active={isRankings}
@@ -209,9 +205,6 @@ export function Navbar() {
             <PlePickerDialog
               triggerClassName={cn(navLinkClass(isPle), "w-full justify-start")}
             />
-            <NavLink href="/results" active={isResults} fullWidth>
-              결과
-            </NavLink>
             <NavLink
               href="/rankings"
               active={isRankings}
