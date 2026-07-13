@@ -40,7 +40,7 @@ export { fetchPleAiStats } from "@/lib/ple-ai-stats";
 export type PleBoard = {
   slug: string;
   label: string;
-  month: number;
+  month: number | null;
   year: number;
   status: "upcoming" | "live" | "finished";
   finishedAt?: string | null;

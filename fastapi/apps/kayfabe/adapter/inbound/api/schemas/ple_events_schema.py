@@ -47,7 +47,7 @@ class MatchCardSyncSchema(BaseModel):
 class PleEventSyncSchema(BaseModel):
     slug: str
     label: str
-    month: int
+    month: int | None = None
     year: int = 2026
     status: Literal["upcoming", "live", "finished"] | None = None
     matches: list[MatchCardSyncSchema]
@@ -87,7 +87,7 @@ class MatchBoardSchema(BaseModel):
 class PleBoardSchema(BaseModel):
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: str
     finished_at: datetime | None = Field(default=None, alias="finishedAt")
@@ -122,7 +122,7 @@ class PleAiStatsSchema(BaseModel):
 class PleEventSummarySchema(BaseModel):
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: str
     match_count: int = Field(alias="matchCount")
@@ -133,7 +133,7 @@ class PleEventSummarySchema(BaseModel):
 class PleResultRowSchema(BaseModel):
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     eventAt: datetime | None = None
     status: Literal["upcoming", "live", "finished"] = "upcoming"

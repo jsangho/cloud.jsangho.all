@@ -58,7 +58,7 @@ class MatchCardSyncCommand:
 class PleEventSyncCommand:
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: Literal["upcoming", "live", "finished"] | None
     matches: list[MatchCardSyncCommand]
@@ -139,7 +139,7 @@ class MatchBoardResponse:
 class PleBoardResponse:
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: str
     finished_at: datetime | None
@@ -171,7 +171,7 @@ class PleAiStatsResponse:
 class PleEventSummaryResponse:
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: str
     match_count: int
@@ -229,7 +229,7 @@ class PleMatchReadQuery:
 class PleEventReadQuery:
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     status: str
     finished_at: datetime | None
@@ -244,7 +244,7 @@ PleEventStatus = Literal["upcoming", "live", "finished"]
 class PleResultRowResponse:
     slug: str
     label: str
-    month: int
+    month: int | None
     year: int
     event_at: datetime | None
     status: PleEventStatus

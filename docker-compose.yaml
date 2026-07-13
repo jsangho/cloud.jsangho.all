@@ -18,7 +18,7 @@ services:
         condition: service_started
       neo4j:
         condition: service_healthy
-
+    restart: unless-stopped
   # ② n8n 워크플로우 자동화
   n8n:
     image: n8nio/n8n

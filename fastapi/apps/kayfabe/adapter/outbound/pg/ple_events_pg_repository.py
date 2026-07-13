@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from kayfabe.adapter.outbound.mappers.ple_orm_mapper import (
     card_command_to_json,
     event_to_read,
@@ -71,7 +71,7 @@ class PleEventsPgRepository(PleEventsRepository):
         result = await self.db.execute(
             select(PleEventModel)
             .options(selectinload(PleEventModel.matches))
-            .order_by(PleEventModel.month)
+            .order_by(PleEventModel.month.asc().nulls_last())
         )
         rows = [event_to_read(e) for e in result.scalars().all()]
         logger.info("[PleInfoPgRepository] list_events <- Neon | count=%d", len(rows))
@@ -141,7 +141,7 @@ class PleEventsPgRepository(PleEventsRepository):
         result = await self.db.execute(
             select(PleEventModel)
             .where(PleEventModel.year == year)
-            .order_by(PleEventModel.month.asc())
+            .order_by(PleEventModel.month.asc().nulls_last())
         )
         return [
             PleEventSummaryResponse(

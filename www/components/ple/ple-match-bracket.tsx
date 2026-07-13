@@ -323,12 +323,11 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
 
     async function bootstrap() {
       try {
-        const raw = await fetchPleBoard(slug, boardQuery);
-        if (!raw) throw new Error("no board");
-        let data: PleBoard = raw;
+        let data: PleBoard | null = await fetchPleBoard(slug, boardQuery);
         if (needsStaticResync(data, staticCards)) {
           data = await syncPleFromClient(slug, staticCards);
         }
+        if (!data) throw new Error("no board");
         if (cancelled) return;
         const finished = data.status === "finished";
         patchUi({
@@ -376,12 +375,11 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
 
     async function retryConnect() {
       try {
-        const raw = await fetchPleBoard(slug, boardQuery);
-        if (!raw) throw new Error("no board");
-        let data: PleBoard = raw;
+        let data: PleBoard | null = await fetchPleBoard(slug, boardQuery);
         if (needsStaticResync(data, staticCards)) {
           data = await syncPleFromClient(slug, staticCards);
         }
+        if (!data) throw new Error("no board");
         if (cancelled) return;
         const finished = data.status === "finished";
         patchUi({

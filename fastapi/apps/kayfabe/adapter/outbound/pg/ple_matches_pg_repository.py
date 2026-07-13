@@ -59,7 +59,9 @@ class PleMatchesPgRepository(PleMatchesRepository):
         stmt = (
             select(PleEventModel, PleMatchModel)
             .join(PleMatchModel, PleMatchModel.event_id == PleEventModel.id)
-            .order_by(PleEventModel.month.asc(), PleMatchModel.sort_order.asc())
+            .order_by(
+                PleEventModel.month.asc().nulls_last(), PleMatchModel.sort_order.asc()
+            )
         )
         result = await self.db.execute(stmt)
         rows = [
