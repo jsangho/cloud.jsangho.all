@@ -114,7 +114,7 @@ app.include_router(vision_router, prefix="/api")
 @app.middleware("http")
 async def log_auth_requests(request: Request, call_next):
     """로그인·회원가입 요청이 들어오면 uvicorn 터미널에 먼저 표시합니다."""
-    if request.url.path in ("/login", "/signup") and request.method == "POST":
+    if request.url.path in ("/api/login", "/api/signup") and request.method == "POST":
         logger.info("[API] %s %s", request.method, request.url.path)
     return await call_next(request)
 
