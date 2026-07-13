@@ -88,30 +88,7 @@ services:
     depends_on:
       - pgvector
 
-  # ⑦ 프런트엔드 서비스 (Next.js)
-  frontend:
-    build:
-      context: ./www
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./.env
-    environment:
-      INTERNAL_API_BASE_URL: http://backend:8000
-      N8N_WEBHOOK_URL: http://n8n:5678/webhook/
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-    volumes:
-      - ./www:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - backend
-
-  # ⑧ Cloudflare Tunnel (n8n 공개 URL)
+  # ⑦ Cloudflare Tunnel (n8n 공개 URL)
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
