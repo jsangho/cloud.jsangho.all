@@ -208,3 +208,17 @@ export function getPleStatusBadge(ple: PleEvent): PleStatusBadge {
 export function getPleThemeClass(slug: string): string | undefined {
   return PLE_THEME_CLASS[slug];
 }
+
+/** 그리드 상단에 크게 강조할 이벤트 — 마감임박 우선, 없으면 가장 가까운 예측 가능 이벤트 */
+export function pickFeaturedPle(
+  events: readonly PleEvent[] = WWE_PLE_MONTHLY_ORDER,
+): PleEvent | null {
+  const upcoming = events
+    .map((event) => ({ event, badge: getPleStatusBadge(event) }))
+    .filter(({ badge }) => badge.variant === "deadline" || badge.variant === "open");
+
+  if (upcoming.length === 0) return null;
+
+  const deadline = upcoming.find(({ badge }) => badge.variant === "deadline");
+  return (deadline ?? upcoming[0]).event;
+}

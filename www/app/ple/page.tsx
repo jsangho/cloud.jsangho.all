@@ -6,7 +6,7 @@ export default function PlePage() {
     <WweArenaShell>
       <div className="mx-auto w-full max-w-5xl min-w-0 px-4 py-10">
         <header className="mb-8 text-center">
-          <h1 className="font-kr-hero text-3xl text-stone-900 dark:text-white sm:text-4xl">
+          <h1 className="font-kr-display text-3xl text-stone-900 drop-shadow-[0_0_24px_rgba(224,32,32,0.25)] dark:text-white sm:text-4xl">
             <span className="font-sport tracking-[-0.04em]">2026</span> 월별 PLE
           </h1>
           <p className="mt-3 text-base text-stone-400 sm:text-lg">
@@ -18,7 +18,7 @@ export default function PlePage() {
           </p>
         </header>
         <div className="ple-section-glow rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-50/60 dark:bg-stone-950/60 p-4 sm:p-6">
-          <PleEventGrid variant="large" />
+          <PleEventGrid variant="large" featured />
         </div>
       </div>
     </WweArenaShell>

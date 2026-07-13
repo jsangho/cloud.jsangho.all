@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Oswald } from "next/font/google";
+import { Geist, Geist_Mono, Oswald, Black_Han_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { Navbar } from "@/components/navbar";
@@ -16,6 +16,11 @@ const oswald = Oswald({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-sport",
+});
+const blackHanSans = Black_Han_Sans({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-kr-display",
 });
 
 export const metadata: Metadata = {
@@ -38,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full" suppressHydrationWarning>
       <body
-        className={`${geist.variable} ${geistMono.variable} ${oswald.variable} min-h-full w-full overflow-x-hidden font-sans antialiased bg-white text-stone-900 dark:bg-[#0a0a0c] dark:text-stone-100`}
+        className={`${geist.variable} ${geistMono.variable} ${oswald.variable} ${blackHanSans.variable} min-h-full w-full overflow-x-hidden font-sans antialiased bg-white text-stone-900 dark:bg-[#0a0a0c] dark:text-stone-100`}
       >
         <GoogleSessionProvider>
           <ThemeProvider

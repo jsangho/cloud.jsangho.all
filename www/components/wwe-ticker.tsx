@@ -18,7 +18,7 @@ export function WweTicker() {
       aria-label="실시간 WWE 정보"
     >
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-1.5">
-        <span className="shrink-0 rounded border border-red-500/40 bg-red-100 dark:bg-red-950/50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
+        <span className="wwe-live-badge shrink-0 rounded border border-red-500/40 bg-red-100 dark:bg-red-950/50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
           Live
         </span>
         <div className="relative min-w-0 flex-1 overflow-hidden">
