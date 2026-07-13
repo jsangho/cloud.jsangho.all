@@ -15,7 +15,7 @@ services:
       redis:
         condition: service_started
       pgvector:
-        condition: service_started
+        condition: service_healthy
       neo4j:
         condition: service_healthy
     restart: unless-stopped
@@ -74,6 +74,11 @@ services:
       POSTGRES_DB: vectordb
     volumes:
       - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vectordb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # ⑥ pgAdmin (PostgreSQL 관리 UI)
   pgadmin:
