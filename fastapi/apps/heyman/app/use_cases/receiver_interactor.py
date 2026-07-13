@@ -4,7 +4,6 @@ import json as _json
 import os
 
 import httpx
-
 from heyman.app.dtos.receiver_dto import ReceiverCommand, ReceiverItem
 from heyman.app.ports.input.receiver_use_case import ReceiverUseCase
 from heyman.app.ports.input.watcher_use_case import WatcherUseCase

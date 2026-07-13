@@ -2,6 +2,7 @@ import io
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+
 from titanic.adapter.inbound.api.schemas.crew_hartley_violin_schema import (
     HartleyViolinSchema,
 )

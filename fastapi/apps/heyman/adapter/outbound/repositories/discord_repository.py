@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from heyman.app.dtos.discord_dto import DiscordQuery, DiscordResponse
 from heyman.app.ports.output.discord_repository import DiscordRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class DiscordPgRepository(DiscordRepository):

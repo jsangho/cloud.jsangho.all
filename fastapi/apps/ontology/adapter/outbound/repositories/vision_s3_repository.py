@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 import boto3
+
 from ontology.app.dtos.vision_dto import (
     VisionImageUploadResult,
     VisionQuery,

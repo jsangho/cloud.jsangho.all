@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ultralytics import YOLO
+
 from ontology.app.dtos.face_detection_dto import FaceBoundingBox, FaceDetectionResult
 from ontology.app.ports.output.face_detector_port import FaceDetectorPort
 

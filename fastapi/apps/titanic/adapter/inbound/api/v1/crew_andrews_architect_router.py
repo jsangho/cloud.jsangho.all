@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from titanic.adapter.inbound.api.schemas.crew_andrews_architect_schema import (
     AndrewsArchitectSchema,
 )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import HTTPException
+
 from superstar.app.ports.input.pamela_cook import PamelaCookUseCase
 from superstar.app.ports.output.pamela_cook_repository import PamelaCookRepository
 from superstar.domain.entities.user_model import UserModel

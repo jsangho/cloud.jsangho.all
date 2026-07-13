@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from core.matrix.grid_oracle_database_manager import get_db
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter, Depends
+from core.matrix.grid_oracle_database_manager import get_db
 from superstar.app.ports.input.pamela_cook import PamelaCookUseCase
 from superstar.domain.value_objects.role import UserRole
 

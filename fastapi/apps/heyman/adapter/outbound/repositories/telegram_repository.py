@@ -4,14 +4,13 @@ import json as _json
 import os
 
 import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from heyman.app.dtos.telegram_dto import (
     TelegramQuery,
     TelegramResponse,
     TelegramSendCommand,
 )
 from heyman.app.ports.output.telegram_repository import TelegramRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TelegramPgRepository(TelegramRepository):

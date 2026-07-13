@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 
 import httpx
-
 from heyman.app.dtos.email_dto import EmailDto
 from heyman.app.ports.output.email_gateway import EmailGateway
 

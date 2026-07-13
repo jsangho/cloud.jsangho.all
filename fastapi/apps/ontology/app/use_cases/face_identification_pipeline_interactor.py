@@ -4,6 +4,7 @@ import os
 import tempfile
 
 from PIL import Image
+
 from ontology.app.dtos.face_identification_dto import (
     FaceIdentification,
     FaceIdentificationResult,

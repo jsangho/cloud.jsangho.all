@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends
 from admin.adapter.inbound.api.schemas.piper_dunn_coo_schema import (
     DunnCooSchema,
 )
 from admin.app.dtos.piper_dunn_coo_dto import DunnCooQuery, DunnCooResponse
 from admin.app.ports.input.piper_dunn_coo_use_case import DunnCooUseCase
 from admin.dependencies.piper_dunn_coo_provider import get_dunn_coo
+from fastapi import APIRouter, Depends
 
 """
 재러드 던 (Jared Dunn)

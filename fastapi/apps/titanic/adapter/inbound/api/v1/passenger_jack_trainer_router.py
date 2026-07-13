@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
+
 from titanic.adapter.inbound.api.schemas.passenger_jack_trainer_schema import (
     JackTrainerSchema,
 )

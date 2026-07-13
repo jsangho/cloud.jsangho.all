@@ -1,7 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from admin.app.dtos.piper_dunn_coo_dto import DunnCooQuery, DunnCooResponse
 from admin.app.ports.output.piper_dunn_coo_port import DunnCooPort
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class DunnCooRepository(DunnCooPort):

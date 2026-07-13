@@ -1,10 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from admin.app.dtos.piper_hendricks_ceo_dto import (
     HendricksCeoQuery,
     HendricksCeoResponse,
 )
 from admin.app.ports.output.piper_hendricks_ceo_port import HendricksCeoPort
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class HendricksCeoRepository(HendricksCeoPort):

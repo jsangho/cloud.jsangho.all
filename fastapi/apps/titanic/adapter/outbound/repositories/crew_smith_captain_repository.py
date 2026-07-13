@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from core.matrix.vault_keymaker_secret_manager import Keymaker
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import HTTPException
+from core.matrix.vault_keymaker_secret_manager import Keymaker
 from titanic.app.dtos.crew_smith_captain_dto import (
     ChatResponse,
     SmithCaptainChatCommand,

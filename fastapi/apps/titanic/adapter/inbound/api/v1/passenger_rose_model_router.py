@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from titanic.adapter.inbound.api.schemas.passenger_rose_model_schema import (
     RoseModelSchema,
 )

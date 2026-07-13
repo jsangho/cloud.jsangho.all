@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from heyman.app.dtos.judge_dto import JudgeQuery, JudgeResponse
 from heyman.app.ports.output.judge_repository import JudgeRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class JudgePgRepository(JudgeRepository):

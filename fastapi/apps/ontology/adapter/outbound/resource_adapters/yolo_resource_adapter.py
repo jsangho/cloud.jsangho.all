@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ultralytics import YOLO
+
 from ontology.app.dtos.face_recognition_dto import (
     FacePrediction,
     FaceRecognitionResult,

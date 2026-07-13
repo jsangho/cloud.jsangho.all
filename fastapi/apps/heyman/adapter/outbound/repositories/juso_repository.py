@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
-from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from fastapi import HTTPException
 from heyman.adapter.outbound.orm.juso_orm import JusoContactOrm
 from heyman.app.dtos.juso_dto import ContactListItem, ContactRecordCommand
 from heyman.app.ports.output.juso_repository import JusoRepository
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 
 _BULK_CHUNK_SIZE = 300
 

@@ -9,6 +9,7 @@ from heyman.app.dtos.watcher_dto import (
 from heyman.app.ports.input.watcher_use_case import WatcherUseCase
 from heyman.app.ports.output.receiver_repository import ReceiverRepository
 from heyman.app.ports.output.watcher_repository import WatcherRepository
+
 from ontology.app.ports.input.spam_classifier_use_case import SpamClassifierUseCase
 from ontology.domain.enums.spam_classes import SpamLabel
 

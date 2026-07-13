@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal, Base, engine
+from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import HTTPException
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal, Base, engine
 from titanic.adapter.outbound.orm.passenger_jack_trainer_orm import JackTrainerOrm
 from titanic.adapter.outbound.orm.passenger_rose_model_strategies import RoseModelOrm
 from titanic.app.dtos.crew_james_director_dto import (
