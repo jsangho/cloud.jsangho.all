@@ -6,11 +6,13 @@ from kayfabe.adapter.inbound.api.v1.ple_matches_router import ple_matches_router
 from kayfabe.adapter.inbound.api.v1.title_acquisitions_router import (
     title_acquisitions_router,
 )
+from kayfabe.adapter.inbound.api.v1.wrestler_chat_router import wrestler_chat_router
 
 kayfabe_router = APIRouter(tags=["kayfabe"])
 kayfabe_router.include_router(ple_events_router)
 kayfabe_router.include_router(ple_match_pick_router)
 kayfabe_router.include_router(ple_matches_router)
 kayfabe_router.include_router(title_acquisitions_router)
+kayfabe_router.include_router(wrestler_chat_router)
 
 __all__ = ["kayfabe_router"]
