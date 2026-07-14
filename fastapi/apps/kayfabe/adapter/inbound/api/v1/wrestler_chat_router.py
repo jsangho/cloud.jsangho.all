@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from logging import getLogger
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends
@@ -13,7 +13,7 @@ from kayfabe.app.dtos.wrestler_chat_dto import WrestlerChatCommand, WrestlerChat
 from kayfabe.app.ports.input.wrestler_chat_use_case import WrestlerChatUseCase
 from kayfabe.dependencies.wrestler_chat_provider import get_wrestler_chat_use_case
 
-logger = getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 """
 고릴라 포지션 (Gorilla Position)
