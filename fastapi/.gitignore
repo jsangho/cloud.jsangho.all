@@ -73,6 +73,7 @@ wheels/
 MANIFEST
 .venv/
 venv/
+EXAONE-3.5-7.8B-Instruct-AWQ/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
