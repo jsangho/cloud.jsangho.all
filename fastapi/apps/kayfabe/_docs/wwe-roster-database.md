@@ -115,9 +115,9 @@ PostgreSQL(pgvector 확장 설치됨)에 Alembic 마이그레이션으로 생성
 | name | VARCHAR(150) | NOT NULL | 0/197 | 표시용 링네임 |
 | real_name | VARCHAR(200) | NULL 허용 | 38/197 결측 | |
 | ring_names | TEXT | NULL 허용 | 97/197 결측 | **구분자 없이 이어붙은 문자열**(예: `"Arthur Klauser-SaxonBravo AmericanoElephant Mask..."`). 3번 섹션 가정 참고 |
-| height | VARCHAR(50) | NULL 허용 | 71/197 결측 | 형식 불일치(`"5 ft 7 in"`, `"178cm"`, 범위 표기 `"6 ft 8 in (203 cm) – 6 ft 9 in (206 cm)"` 등 혼재) → INTEGER 변환 금지, 원문 그대로 저장. 실제 최대 길이(정제 후) 기준으로 VARCHAR(20)→VARCHAR(50)로 조정 (적재 시 각주 오염 데이터 정제, 3번 섹션 가정 f 참고) |
-| weight | VARCHAR(30) | NULL 허용 | 91/197 결측 | 형식 불일치(`"156 lb"`, `"220 lbs"`, `"202lb"` 등) → 원문 그대로 저장. VARCHAR(20)→VARCHAR(30)로 조정 (3번 섹션 가정 f 참고) |
-| birth_date | VARCHAR(50) | NULL 허용 | 173/197 결측 | 결측이 압도적으로 많고, 존재하는 값도 `"April 18, 1992"` 형태의 자연어 문자열 → DATE 타입 강제 변환 금지. VARCHAR(30)→VARCHAR(50)로 조정 (3번 섹션 가정 f 참고) |
+| height | VARCHAR(255) | NULL 허용 | 71/197 결측 | 형식 불일치(`"5 ft 7 in"`, `"178cm"`, 범위 표기 `"6 ft 8 in (203 cm) – 6 ft 9 in (206 cm)"` 등 혼재) → INTEGER 변환 금지, 원문 그대로 저장. 적재 스크립트에서 각주 오염을 정제하지만, 컬럼 자체는 넓게(VARCHAR(255)) 잡아 여유를 뒀다 (`20260714_06` 마이그레이션, 3번 섹션 가정 f 참고) |
+| weight | VARCHAR(255) | NULL 허용 | 91/197 결측 | 형식 불일치(`"156 lb"`, `"220 lbs"`, `"202lb"` 등) → 원문 그대로 저장. VARCHAR(255)로 조정 (`20260714_06` 마이그레이션, 3번 섹션 가정 f 참고) |
+| birth_date | VARCHAR(50) | NULL 허용 | 173/197 결측 | 결측이 압도적으로 많고, 존재하는 값도 `"April 18, 1992"` 형태의 자연어 문자열 → DATE 타입 강제 변환 금지. VARCHAR(50)로 조정 (`20260714_05` 마이그레이션, 3번 섹션 가정 f 참고) |
 | birth_place | VARCHAR(150) | NULL 허용 | 31/197 결측 | |
 | resides | VARCHAR(150) | NULL 허용 | **197/197 결측 (전량 NULL)** | 3번 섹션 가정 참고 — 컬럼 존치 여부 판단 필요 |
 | billed_from | VARCHAR(150) | NULL 허용 | 56/197 결측 | |
@@ -168,17 +168,19 @@ PostgreSQL(pgvector 확장 설치됨)에 Alembic 마이그레이션으로 생성
    - f. `height`/`weight`/`birth_date`는 스크래핑 과정에서 위키백과 각주(citation) 텍스트가
      값 뒤에 그대로 붙어버린 행이 일부 있었다(예: Josh Briggs weight `"290 lbJosh Briggs stats on
      WWE.com"`, Jacy Jayne height, Anthony Luke height, Nikkita Lyons birth_date). 원본 CSV 파일
-     자체는 건드리지 않고, **적재 스크립트 단계에서만** 각주 텍스트를 제거했다(값 전체가 각주뿐인
-     경우 NULL 처리: Anthony Luke height, Nikkita Lyons birth_date). 아울러 Hikuleo의 범위 표기
-     height(`"6 ft 8 in (203 cm) – 6 ft 9 in (206 cm)"`, 40자)처럼 정상 데이터인데도 길이가 길어
-     `VARCHAR(20)`/`VARCHAR(30)`을 초과하는 사례가 있어, height는 VARCHAR(50), weight는
-     VARCHAR(30), birth_date는 VARCHAR(50)으로 여유 있게 조정했다(사용자 확인 완료).
+     자체는 건드리지 않고, **적재 스크립트(`apps/kayfabe/scripts/load_wrestlers_csv.py`)
+     단계에서만** 각주 텍스트를 제거했다(값 전체가 각주뿐인 경우 빈 값 처리: Anthony Luke height,
+     Nikkita Lyons birth_date). 아울러 Hikuleo의 범위 표기 height(`"6 ft 8 in (203 cm) – 6 ft 9 in
+     (206 cm)"`, 40자)처럼 정상 데이터인데도 길이가 길어 원래 제한을 초과하는 사례가 있어,
+     `20260714_05`/`20260714_06` 마이그레이션에서 height/weight를 VARCHAR(255), birth_date를
+     VARCHAR(50)으로 여유 있게 조정했다(사용자 확인 완료).
    - g. CSV 197행에는 `name` 기준 완전 중복 행이 8명(총 18행: Anthony Luke, Anya Rune,
      Brogan Finlay, Bronco Nima, Creed Brothers, Hikuleo, Shiloh Hill, Tate Wilder) 존재했다.
-     전수 대조 결과 각 중복 행은 모든 컬럼 값이 완전히 동일한 진짜 중복이라, 적재 후 이름당
-     최소 `id`만 남기고 나머지 10행을 삭제했다(사용자 확인 완료). 최종 적재 건수는
-     **187행**(197 - 10)이다. `name`에 UNIQUE 제약은 추가하지 않았다(현실적으로 동명이인
-     가능성이 있어 스키마 레벨 강제는 이번 범위에서 보류).
+     전수 대조 결과 각 중복 행은 모든 컬럼 값이 완전히 동일한 진짜 중복이다. 적재 스크립트
+     (`apps/kayfabe/scripts/load_wrestlers_csv.py`)가 `name` 기준 upsert(있으면 UPDATE, 없으면
+     INSERT)로 동작해 같은 실행 내 중복 행도 자연스럽게 하나로 수렴한다(사용자 확인 완료).
+     최종 적재 건수는 **187행**(197 - 10)이다. `name`에 UNIQUE 제약은 추가하지 않았다(현실적으로
+     동명이인 가능성이 있어 스키마 레벨 강제는 이번 범위에서 보류).
 7. CSV 데이터를 실제 적재하려면 `ring_names`/`trainer`의 구분자 없는 이어붙임 문제 때문에
    그대로 벌크 insert만 하고 후처리 정제는 별도 단계로 미룰 것. 마이그레이션 자체에서 데이터 정제
    로직을 수행하지 말 것 (스키마 생성과 데이터 정제는 관심사 분리, 단 3-f의 각주 오염 정제는 예외로
