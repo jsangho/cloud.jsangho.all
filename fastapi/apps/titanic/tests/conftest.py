@@ -7,7 +7,7 @@ _here = Path(__file__).parent
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "ollama: 로컬 Ollama(qwen2.5:3b)가 필요한 통합 테스트",
+        "ollama: 로컬 Ollama(exaone3.5:7.8b)가 필요한 통합 테스트",
     )
 
 

@@ -1,5 +1,5 @@
 """
-한국어 전처리(Kiwi) + Ollama(qwen2.5:3b) 스크립트.
+한국어 전처리(Kiwi) + Ollama(exaone3.5:7.8b) 스크립트.
 
 단위 테스트 (mock, Ollama 불필요):
     cd sangho
@@ -34,10 +34,10 @@ def run_korean_ai(user_text):
     nouns = [t.form for t in tokens if t.tag.startswith("NN")]
     print(f"추출된 핵심 명사: {nouns}")
 
-    print("\n--- [2단계] Qwen2.5 3B 모델 추론 중... ---")
+    print("\n--- [2단계] EXAONE 3.5 7.8B 모델 추론 중... ---")
 
     response = ollama.chat(
-        model="qwen2.5:3b",
+        model="exaone3.5:7.8b",
         messages=[
             {
                 "role": "user",
@@ -90,7 +90,7 @@ class TestRunKoreanAi:
 
         mock_kiwi.space.assert_called_once_with(user_text, reset_whitespace=True)
         mock_ollama_chat.assert_called_once_with(
-            model="qwen2.5:3b",
+            model="exaone3.5:7.8b",
             messages=[{"role": "user", "content": "cleaned user text"}],
         )
 
