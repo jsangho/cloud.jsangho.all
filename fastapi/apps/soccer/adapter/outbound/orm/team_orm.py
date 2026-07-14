@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.matrix.grid_oracle_database_manager import Base
+from core.matrix.vault_keymaker_secret_manager import EMBEDDING_DIM
 
 
 class TeamOrm(Base):
@@ -29,4 +31,7 @@ class TeamOrm(Base):
     owner: Mapped[str | None] = mapped_column(String(10), nullable=True)
     stadium_id: Mapped[str | None] = mapped_column(
         String(10), ForeignKey("stadium.stadium_id"), nullable=True
+    )
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBEDDING_DIM), nullable=True
     )

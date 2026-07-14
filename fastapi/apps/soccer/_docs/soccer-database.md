@@ -113,9 +113,15 @@ Alembic 마이그레이션으로 생성한다.
 | address | VARCHAR(60) | |
 | ddd | VARCHAR(10) | |
 | tel | VARCHAR(10) | |
+| embedding | VECTOR(1024) | NULL 허용 |
 
 > 주의: ERD 원본에 `statdium_name`이라는 오탈자(stadium이 아님)가 그대로 표기되어 있다.
 > **컬럼명은 오탈자를 포함하여 원본 그대로 생성**한다 (임의 수정 금지).
+>
+> `embedding`은 ERD에는 없으나 RAG 검색용으로 사용자 요청에 따라 stadium/team/schedule/player
+> 4개 테이블 모두에 추가했다. 차원(1024)은 이 프로젝트 표준
+> `core.matrix.vault_keymaker_secret_manager.EMBEDDING_DIM`(bge-m3)을 따른다
+> (`20260714_03` 마이그레이션, `wrestlers`/`receiver_emails`와 동일 컨벤션).
 
 ### 2.2 schedule (경기 일정)
 
@@ -128,6 +134,9 @@ Alembic 마이그레이션으로 생성한다.
 | awayteam_id | VARCHAR(10) | |
 | home_score | INTEGER | |
 | away_score | INTEGER | |
+| embedding | VECTOR(1024) | NULL 허용 |
+
+> `embedding`은 ERD에는 없으나 RAG 검색용으로 추가했다 (2.1 stadium 절 설명 참고).
 
 관계: `stadium (1) ── (0..N) schedule` (stadium 삭제 시 schedule 처리 정책은 4번 섹션 참고)
 
@@ -149,6 +158,9 @@ Alembic 마이그레이션으로 생성한다.
 | homepage | VARCHAR(50) | |
 | owner | VARCHAR(10) | |
 | stadium_id | VARCHAR(10) | FK → stadium.stadium_id |
+| embedding | VECTOR(1024) | NULL 허용 |
+
+> `embedding`은 ERD에는 없으나 RAG 검색용으로 추가했다 (2.1 stadium 절 설명 참고).
 
 관계: `stadium (1) ── (N) team` (홈구장 참조)
 
@@ -169,6 +181,9 @@ Alembic 마이그레이션으로 생성한다.
 | height | INTEGER | |
 | weight | INTEGER | |
 | team_id | VARCHAR(10) | FK → team.team_id |
+| embedding | VECTOR(1024) | NULL 허용 |
+
+> `embedding`은 ERD에는 없으나 RAG 검색용으로 추가했다 (2.1 stadium 절 설명 참고).
 
 관계: `team (1) ── (0..N) player`
 
@@ -189,6 +204,8 @@ Alembic 마이그레이션으로 생성한다.
 4. `downgrade()` 함수는 `upgrade()`의 역순으로 정확히 drop 하도록 작성할 것
    (FK 참조 테이블을 참조 대상 테이블보다 먼저 drop).
 5. pgvector 관련 벡터 컬럼은 이번 ERD에는 명시되어 있지 않으므로 **임의로 vector 컬럼을 추가하지 말 것.**
+   (단, 이후 사용자가 명시적으로 요청하여 `20260714_03` 마이그레이션에서 4개 테이블 전부에
+   `embedding VECTOR(1024)`를 예외적으로 추가했다 — 2번 섹션 각 표 참고.)
    단, pgvector extension이 설치되어 있는지 여부만 `CREATE EXTENSION IF NOT EXISTS vector;`로 확인/보장하는
    초기 마이그레이션(또는 기존 초기 마이그레이션)이 있는지 점검할 것. 없다면 최초 마이그레이션에
    extension 생성 구문을 포함할 것 (추후 vector 컬럼 확장을 대비).
