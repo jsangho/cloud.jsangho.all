@@ -83,7 +83,7 @@ export function LoginForm() {
       }, requestTimeoutMs);
 
       try {
-        const response = await fetch(`${apiBaseUrl}/signup`, {
+        const response = await fetch(`${apiBaseUrl}/api/signup`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -127,7 +127,7 @@ export function LoginForm() {
     }, requestTimeoutMs);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/login`, {
+      const response = await fetch(`${apiBaseUrl}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
