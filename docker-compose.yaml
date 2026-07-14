@@ -11,6 +11,8 @@ services:
     volumes:
       - ./fastapi:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       redis:
         condition: service_started

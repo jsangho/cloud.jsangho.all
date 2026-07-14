@@ -1,4 +1,4 @@
-"""Ollama(exaone3.5)로 스팸 분류기 파인튜닝용 합성 학습 데이터를 생성한다.
+"""Ollama(exaone3.5:7.8b)로 스팸 분류기 파인튜닝용 합성 학습 데이터를 생성한다.
 
 기존 dataset.jsonl이 있으면 이어서(resume) 라벨별 목표치까지만 추가 생성한다.
 
@@ -16,7 +16,7 @@ from pathlib import Path
 import httpx
 
 _HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-_MODEL = "exaone3.5:2.4b"
+_MODEL = "exaone3.5:7.8b"
 _OUT_PATH = Path(__file__).resolve().parent / "data" / "dataset.jsonl"
 _MAX_ATTEMPTS_PER_LABEL = 700  # 중복·실패 감안한 여유
 

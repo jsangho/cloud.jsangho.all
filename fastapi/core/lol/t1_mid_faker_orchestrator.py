@@ -1,17 +1,17 @@
 """
-exaone3.5:2.4b 오케스트레이터 — Ollama 로컬 LLM 래퍼
+exaone3.5:7.8b 오케스트레이터 — Ollama 로컬 LLM 래퍼
 """
 
 from dataclasses import dataclass, field
 
 import ollama
 
-MODEL_ID = "exaone3.5:2.4b"
+MODEL_ID = "exaone3.5:7.8b"
 
 
 @dataclass
 class FakerOrchestrator:
-    """exaone3.5:2.4b 를 오케스트레이터로 등록·구동한다."""
+    """exaone3.5:7.8b 를 오케스트레이터로 등록·구동한다."""
 
     model: str = MODEL_ID
     system_prompt: str = "당신은 유능한 AI 어시스턴트입니다."
