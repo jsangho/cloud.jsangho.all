@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.matrix.grid_oracle_database_manager import Base
+from core.matrix.vault_keymaker_secret_manager import EMBEDDING_DIM
 
 
 class PlayerOrm(Base):
@@ -30,4 +32,7 @@ class PlayerOrm(Base):
     weight: Mapped[int | None] = mapped_column(Integer, nullable=True)
     team_id: Mapped[str | None] = mapped_column(
         String(10), ForeignKey("team.team_id"), nullable=True
+    )
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBEDDING_DIM), nullable=True
     )

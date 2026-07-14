@@ -113,6 +113,7 @@ Alembic 마이그레이션으로 생성한다.
 | address | VARCHAR(60) | |
 | ddd | VARCHAR(10) | |
 | tel | VARCHAR(10) | |
+| embedding | VECTOR(1024) | N/A (RAG용, pgvector) |
 
 > 주의: ERD 원본에 `statdium_name`이라는 오탈자(stadium이 아님)가 그대로 표기되어 있다.
 > **컬럼명은 오탈자를 포함하여 원본 그대로 생성**한다 (임의 수정 금지).
@@ -128,6 +129,7 @@ Alembic 마이그레이션으로 생성한다.
 | awayteam_id | VARCHAR(10) | |
 | home_score | INTEGER | |
 | away_score | INTEGER | |
+| embedding | VECTOR(1024) | N/A (RAG용, pgvector) |
 
 관계: `stadium (1) ── (0..N) schedule` (stadium 삭제 시 schedule 처리 정책은 4번 섹션 참고)
 
@@ -149,6 +151,7 @@ Alembic 마이그레이션으로 생성한다.
 | homepage | VARCHAR(50) | |
 | owner | VARCHAR(10) | |
 | stadium_id | VARCHAR(10) | FK → stadium.stadium_id |
+| embedding | VECTOR(1024) | N/A (RAG용, pgvector) |
 
 관계: `stadium (1) ── (N) team` (홈구장 참조)
 
@@ -169,6 +172,7 @@ Alembic 마이그레이션으로 생성한다.
 | height | INTEGER | |
 | weight | INTEGER | |
 | team_id | VARCHAR(10) | FK → team.team_id |
+| embedding | VECTOR(1024) | N/A (RAG용, pgvector) |
 
 관계: `team (1) ── (0..N) player`
 
@@ -188,10 +192,12 @@ Alembic 마이그레이션으로 생성한다.
    (schedule과 player는 순서 무관, 단 각각 stadium/team보다는 뒤에 생성)
 4. `downgrade()` 함수는 `upgrade()`의 역순으로 정확히 drop 하도록 작성할 것
    (FK 참조 테이블을 참조 대상 테이블보다 먼저 drop).
-5. pgvector 관련 벡터 컬럼은 이번 ERD에는 명시되어 있지 않으므로 **임의로 vector 컬럼을 추가하지 말 것.**
-   단, pgvector extension이 설치되어 있는지 여부만 `CREATE EXTENSION IF NOT EXISTS vector;`로 확인/보장하는
-   초기 마이그레이션(또는 기존 초기 마이그레이션)이 있는지 점검할 것. 없다면 최초 마이그레이션에
-   extension 생성 구문을 포함할 것 (추후 vector 컬럼 확장을 대비).
+5. RAG 검색을 위해 4개 테이블(`stadium`, `schedule`, `team`, `player`) 모두에
+   `embedding VECTOR(1024)` 컬럼을 추가한다 (NULL 허용, 프로젝트에 이미 구축된
+   `core.matrix.vault_keymaker_secret_manager.Keymaker`(Ollama `bge-m3`, 로컬) 기준 차원).
+   `CREATE EXTENSION IF NOT EXISTS vector;`는 이 컬럼을 추가하는 마이그레이션보다 먼저(또는 같은
+   마이그레이션 내에서 테이블 생성 이전에) 실행되어야 한다.
+   임베딩 값을 채우는 배치는 `apps/soccer/scripts/backfill_embeddings.py`로 별도 실행한다.
 6. 모든 VARCHAR 길이와 컬럼명은 위 스키마 정의를 **그대로** 따를 것 (오탈자 포함).
 7. FK 제약 조건에 대한 `ON DELETE` 정책이 ERD에 명시되어 있지 않으므로,
    기본값(`NO ACTION`)을 사용하되, 이 부분은 가정임을 마이그레이션 파일 주석으로 명시할 것.
@@ -243,6 +249,7 @@ Alembic 마이그레이션으로 생성한다.
        `player.team_id → team.team_id`)
 - [ ] `alembic upgrade head` / `alembic downgrade -1` 왕복 시 에러가 없는가?
 - [ ] pgvector extension 확인/생성 구문이 누락 없이 포함되어 있는가?
+- [ ] 4개 테이블 모두에 `embedding VECTOR(1024)` 컬럼이 NULL 허용으로 생성되었는가?
 - [ ] 마이그레이션 파일에 가정 사항(ON DELETE 정책 등)이 주석으로 남아 있는가?
 - [ ] DB가 호스트에 직접 설치되지 않고 **Docker 컨테이너**로만 실행되는가?
 - [ ] `docker-compose.yml`에 healthcheck, named volume이 포함되어 있는가?

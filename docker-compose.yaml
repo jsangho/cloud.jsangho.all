@@ -66,6 +66,7 @@ services:
   # ⑤ pgvector (PostgreSQL + pgvector 확장)
   pgvector:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
@@ -83,6 +84,7 @@ services:
   # ⑥ pgAdmin (PostgreSQL 관리 UI)
   pgadmin:
     image: dpage/pgadmin4
+    restart: unless-stopped
     ports:
       - "5050:80"
     environment:
