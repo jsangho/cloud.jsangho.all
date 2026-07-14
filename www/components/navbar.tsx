@@ -80,6 +80,8 @@ export function Navbar() {
   const isChampionship =
     mounted &&
     (pathname === "/championship" || pathname.startsWith("/championship/"));
+  const isChat =
+    mounted && (pathname === "/chat" || pathname.startsWith("/chat/"));
   const isLesson =
     mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
   const isAdmin = mounted && pathname === "/admin";
@@ -145,6 +147,9 @@ export function Navbar() {
 
         <div className="hidden items-center gap-1.5 md:flex">
           <PlePickerDialog triggerClassName={navLinkClass(isPle)} />
+          <NavLink href="/records" active={isRecords}>
+            기록
+          </NavLink>
           <NavLink
             href="/rankings"
             active={isRankings}
@@ -158,11 +163,11 @@ export function Navbar() {
           >
             순위표
           </NavLink>
-          <NavLink href="/records" active={isRecords}>
-            기록
-          </NavLink>
           <NavLink href="/championship" active={isChampionship}>
             챔피언십
+          </NavLink>
+          <NavLink href="/chat" active={isChat}>
+            대화
           </NavLink>
         </div>
 
@@ -205,6 +210,9 @@ export function Navbar() {
             <PlePickerDialog
               triggerClassName={cn(navLinkClass(isPle), "w-full justify-start")}
             />
+            <NavLink href="/records" active={isRecords} fullWidth>
+              기록
+            </NavLink>
             <NavLink
               href="/rankings"
               active={isRankings}
@@ -219,11 +227,11 @@ export function Navbar() {
             >
               순위표
             </NavLink>
-            <NavLink href="/records" active={isRecords} fullWidth>
-              기록
-            </NavLink>
             <NavLink href="/championship" active={isChampionship} fullWidth>
               챔피언십
+            </NavLink>
+            <NavLink href="/chat" active={isChat} fullWidth>
+              대화
             </NavLink>
             <NavLink href="/lesson" active={isLesson} fullWidth>
               Lesson
