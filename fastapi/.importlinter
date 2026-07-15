@@ -7,6 +7,7 @@ root_packages =
     human_resource
     manager
     vision
+    soccer
 
 # 하네스 계약 목록 — 위반 시 CI 차단
 include_extra_contracts = True
@@ -30,6 +31,7 @@ source_modules =
     human_resource
     manager
     vision
+    soccer
 forbidden_modules =
     titanic
     kayfabe
@@ -37,6 +39,7 @@ forbidden_modules =
     human_resource
     manager
     vision
+    soccer
 exclude_type_checking_imports = True
 
 
@@ -50,7 +53,7 @@ exclude_type_checking_imports = True
 name = Only hub (ontology) may import spoke modules
 type = layers
 layers =
-    titanic | kayfabe | superstar | human_resource | manager | vision
+    titanic | kayfabe | superstar | human_resource | manager | vision | soccer
     ontology
 
 
@@ -69,6 +72,7 @@ containers =
     human_resource
     manager
     vision
+    soccer
 layers =
     adapter
     app
