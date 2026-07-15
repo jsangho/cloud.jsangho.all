@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-
 from titanic.adapter.inbound.api.schemas.crew_walter_roaster_schema import (
     WalterRoasterOpenfileResponse,
     WalterRoasterPassengerItem,

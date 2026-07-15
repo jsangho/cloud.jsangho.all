@@ -10,14 +10,13 @@ _APPS_DIR = Path(__file__).resolve().parents[2]
 if str(_APPS_DIR) not in sys.path:
     sys.path.insert(0, str(_APPS_DIR))
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from soccer.adapter.outbound.orm.player_orm import PlayerOrm
 from soccer.adapter.outbound.orm.schedule_orm import ScheduleOrm
 from soccer.adapter.outbound.orm.stadium_orm import StadiumOrm
 from soccer.adapter.outbound.orm.team_orm import TeamOrm
 from sqlalchemy import select
-
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 
 def _stadium_text(row: StadiumOrm) -> str:

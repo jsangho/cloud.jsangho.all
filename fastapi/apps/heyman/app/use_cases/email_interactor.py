@@ -4,11 +4,10 @@ import json as _json
 import os
 
 import httpx
+from core.lol.t1_mid_faker_orchestrator import FakerOrchestrator
 from heyman.app.dtos.email_dto import EmailDto
 from heyman.app.ports.input.email_use_case import EmailUseCase
 from heyman.app.ports.output.email_gateway import EmailGateway
-
-from core.lol.t1_mid_faker_orchestrator import FakerOrchestrator
 
 _FAKER_PROMPT = (
     "T1 미드라이너 이상혁(페이커)의 플레이 스타일, 대표 챔피언, "

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-
 from titanic.adapter.inbound.api.schemas.passenger_cal_tester_schema import (
     CalTesterSchema,
 )

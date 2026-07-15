@@ -1,7 +1,7 @@
-from fastapi import Depends
+from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.grid_oracle_database_manager import get_db
+from fastapi import Depends
 from kayfabe.adapter.outbound.pg.title_acquisitions_pg_repository import (
     TitleAcquisitionsPgRepository,
 )

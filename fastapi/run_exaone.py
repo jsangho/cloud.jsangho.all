@@ -14,7 +14,10 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 messages = [
-    {"role": "user", "content": "너의 모델명, 파라미터 크기, 개발사를 한 문장으로 소개하고, 3 곱하기 7은 얼마인지 알려줘."}
+    {
+        "role": "user",
+        "content": "너의 모델명, 파라미터 크기, 개발사를 한 문장으로 소개하고, 3 곱하기 7은 얼마인지 알려줘.",
+    }
 ]
 input_ids = tokenizer.apply_chat_template(
     messages, add_generation_prompt=True, return_tensors="pt"

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
+from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -14,8 +15,6 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from core.matrix.grid_oracle_database_manager import Base
 
 
 class PleEventStatus(StrEnum):

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
 from heyman.adapter.inbound.api.schemas.email_schema import SendEmailRequest
 from heyman.app.ports.input.email_use_case import EmailUseCase
 from heyman.dependencies.email_provider import get_email_use_case
+
+from fastapi import APIRouter, Depends
 
 email_router = APIRouter(prefix="/email", tags=["email"])
 

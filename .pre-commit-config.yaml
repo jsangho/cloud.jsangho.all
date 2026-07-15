@@ -40,7 +40,7 @@ repos:
       - id: import-linter
         name: "Python: import-linter (star topology)"
         entry: bash
-        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps /c/Users/hi/anaconda3/Scripts/lint-imports.exe"]
+        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps lint-imports"]
         language: system
         always_run: true
         pass_filenames: false

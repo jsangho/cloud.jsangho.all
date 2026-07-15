@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from core.matrix.grid_oracle_database_manager import Base
+from core.matrix.vault_keymaker_secret_manager import EMBEDDING_DIM
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
-
-from core.matrix.grid_oracle_database_manager import Base
-from core.matrix.vault_keymaker_secret_manager import EMBEDDING_DIM
 
 
 class ScheduleOrm(Base):

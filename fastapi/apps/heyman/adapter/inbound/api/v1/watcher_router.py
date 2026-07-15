@@ -1,4 +1,3 @@
-from fastapi import APIRouter, Depends
 from heyman.adapter.inbound.api.schemas.watcher_schema import (
     WatcherFilterRequest,
     WatcherFilterResponse,
@@ -8,6 +7,8 @@ from heyman.app.dtos.receiver_dto import ReceiverCommand
 from heyman.app.dtos.watcher_dto import WatcherQuery, WatcherResponse
 from heyman.app.ports.input.watcher_use_case import WatcherUseCase
 from heyman.dependencies.watcher_provider import get_watcher_use_case
+
+from fastapi import APIRouter, Depends
 
 watcher_router = APIRouter(prefix="/watcher", tags=["watcher"])
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
+
 from kayfabe.app.dtos.ple_events_dto import MyselfQuery, MyselfResponse
 from kayfabe.app.dtos.ple_matches_dto import (
     CompetitorListResponse,

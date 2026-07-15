@@ -1,7 +1,7 @@
-from fastapi import Depends
+from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.grid_oracle_database_manager import get_db
+from fastapi import Depends
 from kayfabe.adapter.outbound.pg.ple_events_pg_repository import PleEventsPgRepository
 from kayfabe.app.ports.input.ple_events_use_case import PleEventsUseCase
 from kayfabe.app.ports.output.ple_events_repository import PleEventsRepository

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-
 from titanic.adapter.inbound.api.schemas.crew_james_director_schema import (
     JamesDirectorFileuploadResponse,
     JamesDirectorMyselfSchema,
