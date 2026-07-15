@@ -18,25 +18,19 @@ type ChatState = {
   lastPayload: ChatMessage[] | null;
 };
 
-const INITIAL_ASSISTANT: ChatMessage = {
-  role: "assistant",
-  text:
-    "안녕하세요, 축구 스카우트 머니볼입니다. " +
-    "경기장, 구단, 경기 일정, 선수 정보까지 무엇이든 물어보세요.",
-  ts: new Date().toISOString(),
-};
-
-const initialState: ChatState = {
-  messages: [INITIAL_ASSISTANT],
-  isLoading: false,
-  errorMessage: null,
-  lastPayload: null,
-};
+const INITIAL_ASSISTANT_TEXT =
+  "안녕하세요, 축구 스카우트 머니볼입니다. " +
+  "경기장, 구단, 경기 일정, 선수 정보까지 무엇이든 물어보세요.";
 
 const CHAT_REQUEST_FAILED = "메시지를 전송하지 못했습니다.";
 
 export function SoccerChat({ className }: { className?: string }) {
-  const [state, setState] = useState<ChatState>(initialState);
+  const [state, setState] = useState<ChatState>(() => ({
+    messages: [{ role: "assistant", text: INITIAL_ASSISTANT_TEXT, ts: new Date().toISOString() }],
+    isLoading: false,
+    errorMessage: null,
+    lastPayload: null,
+  }));
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -197,7 +191,9 @@ export function SoccerChat({ className }: { className?: string }) {
                     </p>
                   )}
                   <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-                  <p className="mt-1.5 text-[11px] text-stone-500">{formatTime(msg.ts)}</p>
+                  <p className="mt-1.5 text-[11px] text-stone-500" suppressHydrationWarning>
+                    {formatTime(msg.ts)}
+                  </p>
                 </div>
               </div>
             );
