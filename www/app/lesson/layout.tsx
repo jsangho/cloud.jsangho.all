@@ -12,11 +12,8 @@ const TITANIC_LIST_HREF = "/lesson/titanic/titaniclist";
 const SMITH_SAILOR_HREF = "/lesson/titanic/smith-sailor";
 const VISION_HREF = "/lesson/titanic/vision";
 const OBJECT_DETECTION_HREF = "/lesson/titanic/vision/object-detection";
-export default function LessonLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const VISION_RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
+export default function LessonLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isTitanic = pathname === TITANIC_HREF;
   const isDataCollection = pathname === DATA_COLLECTION_HREF;
@@ -24,9 +21,9 @@ export default function LessonLayout({
   const isSmithSailor = pathname === SMITH_SAILOR_HREF;
   const isVision = pathname === VISION_HREF;
   const isObjectDetection = pathname === OBJECT_DETECTION_HREF;
-  const isLessonSection =
-    isTitanic || isDataCollection || isTitanicList || isSmithSailor;
-  const isVisionSection = isVision || isObjectDetection;
+  const isVisionRagChat = pathname === VISION_RAG_CHAT_HREF;
+  const isLessonSection = isTitanic || isDataCollection || isTitanicList || isSmithSailor;
+  const isVisionSection = isVision || isObjectDetection || isVisionRagChat;
 
   const [expanded, setExpanded] = useState(false);
   const [visionExpanded, setVisionExpanded] = useState(false);
@@ -39,10 +36,10 @@ export default function LessonLayout({
   }, [isDataCollection, isTitanicList, isSmithSailor]);
 
   useEffect(() => {
-    if (isObjectDetection) {
+    if (isObjectDetection || isVisionRagChat) {
       setVisionExpanded(true);
     }
-  }, [isObjectDetection]);
+  }, [isObjectDetection, isVisionRagChat]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -53,9 +50,7 @@ export default function LessonLayout({
       <div
         className={cn(
           "flex items-center rounded-lg text-sm font-medium transition-colors",
-          isLessonSection
-            ? "bg-stone-100 text-stone-950"
-            : "text-stone-600 dark:text-stone-300",
+          isLessonSection ? "bg-stone-100 text-stone-950" : "text-stone-600 dark:text-stone-300",
         )}
       >
         <Link
@@ -83,10 +78,7 @@ export default function LessonLayout({
           )}
         >
           <ChevronRight
-            className={cn(
-              "size-4 transition-transform duration-200",
-              expanded && "rotate-90",
-            )}
+            className={cn("size-4 transition-transform duration-200", expanded && "rotate-90")}
             aria-hidden
           />
         </button>
@@ -136,9 +128,7 @@ export default function LessonLayout({
       <div
         className={cn(
           "flex items-center rounded-lg text-sm font-medium transition-colors",
-          isVisionSection
-            ? "bg-stone-100 text-stone-950"
-            : "text-stone-600 dark:text-stone-300",
+          isVisionSection ? "bg-stone-100 text-stone-950" : "text-stone-600 dark:text-stone-300",
         )}
       >
         <Link
@@ -176,18 +166,32 @@ export default function LessonLayout({
       </div>
 
       {visionExpanded && (
-        <Link
-          href={OBJECT_DETECTION_HREF}
-          aria-current={isObjectDetection ? "page" : undefined}
-          className={cn(
-            "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-            isObjectDetection
-              ? "bg-stone-100/90 font-semibold text-stone-950"
-              : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-          )}
-        >
-          객체 탐지
-        </Link>
+        <>
+          <Link
+            href={OBJECT_DETECTION_HREF}
+            aria-current={isObjectDetection ? "page" : undefined}
+            className={cn(
+              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
+              isObjectDetection
+                ? "bg-stone-100/90 font-semibold text-stone-950"
+                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
+            )}
+          >
+            객체 탐지
+          </Link>
+          <Link
+            href={VISION_RAG_CHAT_HREF}
+            aria-current={isVisionRagChat ? "page" : undefined}
+            className={cn(
+              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
+              isVisionRagChat
+                ? "bg-stone-100/90 font-semibold text-stone-950"
+                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
+            )}
+          >
+            RAG 챗봇
+          </Link>
+        </>
       )}
     </nav>
   );
@@ -236,20 +240,14 @@ export default function LessonLayout({
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">
-            타이타닉
-          </span>
+          <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">타이타닉</span>
         </div>
 
         {children}
       </div>
 
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-[60] md:hidden"
-          role="dialog"
-          aria-modal="true"
-        >
+        <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             className="absolute inset-0 bg-black/55"
@@ -258,9 +256,7 @@ export default function LessonLayout({
           />
           <aside className="absolute left-0 top-0 h-full w-[18rem] border-r border-stone-200/70 dark:border-stone-800/70 bg-white/90 dark:bg-stone-950/90 px-3 py-6 backdrop-blur">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                타이타닉
-              </span>
+              <span className="text-sm font-bold text-stone-900 dark:text-stone-100">타이타닉</span>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}

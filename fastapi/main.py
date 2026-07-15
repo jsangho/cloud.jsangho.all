@@ -39,6 +39,7 @@ from core.matrix.grid_oracle_database_manager import (
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from heyman.adapter.inbound.api import manager_router
 from pydantic import BaseModel, Field
+from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,6 +110,7 @@ app.include_router(human_resource_router, prefix="/api")
 app.include_router(manager_router, prefix="/api")
 app.include_router(ontology_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(soccer_router, prefix="/api")
 
 
 @app.middleware("http")

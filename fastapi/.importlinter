@@ -6,6 +6,7 @@ root_packages =
     superstar
     admin
     heyman
+    soccer
 
 # 하네스 계약 목록 — 위반 시 CI 차단
 include_extra_contracts = True
@@ -28,12 +29,14 @@ source_modules =
     superstar
     admin
     heyman
+    soccer
 forbidden_modules =
     titanic
     kayfabe
     superstar
     admin
     heyman
+    soccer
 exclude_type_checking_imports = True
 
 
@@ -47,7 +50,7 @@ exclude_type_checking_imports = True
 name = Only hub (ontology) may import spoke modules
 type = layers
 layers =
-    titanic | kayfabe | superstar | admin | heyman
+    titanic | kayfabe | superstar | admin | heyman | soccer
     ontology
 
 
@@ -65,6 +68,7 @@ containers =
     superstar
     admin
     heyman
+    soccer
 layers =
     adapter
     app
