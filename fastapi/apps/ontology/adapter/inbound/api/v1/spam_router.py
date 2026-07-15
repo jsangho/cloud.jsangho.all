@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-
 from ontology.adapter.inbound.api.schemas.spam_schema import (
     SpamClassifyRequest,
     SpamClassifyResponse,

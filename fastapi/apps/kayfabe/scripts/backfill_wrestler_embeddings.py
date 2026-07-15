@@ -10,10 +10,10 @@ _APPS_DIR = Path(__file__).resolve().parents[2]
 if str(_APPS_DIR) not in sys.path:
     sys.path.insert(0, str(_APPS_DIR))
 
-from sqlalchemy import select
-
 from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from sqlalchemy import select
+
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 
 

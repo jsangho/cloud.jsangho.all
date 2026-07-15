@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-
 from ontology.adapter.inbound.api.schemas.vision_schema import VisionMyselfSchema
 from ontology.app.dtos.face_identification_dto import FaceIdentificationResult
 from ontology.app.dtos.vision_dto import (

@@ -28,13 +28,6 @@ if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
 from admin.adapter.inbound.api import human_resource_router
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from heyman.adapter.inbound.api import manager_router
-from pydantic import BaseModel, Field
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.matrix.grid_oracle_database_manager import (
     attach_neon_sql_logging,
     configure_db_logging,
@@ -44,6 +37,13 @@ from core.matrix.grid_oracle_database_manager import (
     init_db,
 )
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from heyman.adapter.inbound.api import manager_router
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from kayfabe.adapter.inbound.api import kayfabe_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router

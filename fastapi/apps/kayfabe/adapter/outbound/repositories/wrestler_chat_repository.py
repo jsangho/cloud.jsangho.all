@@ -4,10 +4,10 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 from kayfabe.app.dtos.wrestler_chat_dto import WrestlerChatCommand, WrestlerChatTurnDto
 from kayfabe.app.ports.output.wrestler_chat_port import WrestlerChatPort

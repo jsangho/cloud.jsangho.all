@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import time
 
+from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
 from kayfabe.app.dtos.ple_events_dto import (
     MatchSnapshotQuery,

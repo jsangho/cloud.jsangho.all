@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from core.matrix.grid_oracle_database_manager import Base
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
@@ -13,8 +14,6 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
-
-from core.matrix.grid_oracle_database_manager import Base
 
 
 class XGBoostStrategy:

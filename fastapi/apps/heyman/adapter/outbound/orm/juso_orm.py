@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-
-from core.matrix.grid_oracle_database_manager import Base
 
 
 class JusoContactOrm(Base):

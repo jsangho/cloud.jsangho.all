@@ -3,8 +3,9 @@ from __future__ import annotations
 import csv
 import io
 
-from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from fastapi import HTTPException
 
 CONTACTS_REQUIRED_COLUMNS = ("Name", "First Name")  # 둘 중 하나면 통과
 

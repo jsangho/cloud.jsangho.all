@@ -12,9 +12,9 @@ if str(_APPS_DIR) not in sys.path:
 
 import asyncio
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 from sqlalchemy import select
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 
 _CSV_PATH = Path(__file__).resolve().parents[1] / "_docs" / "wwe_active_roster.csv"

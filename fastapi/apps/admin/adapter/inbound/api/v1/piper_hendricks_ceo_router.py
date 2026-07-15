@@ -9,6 +9,7 @@ from admin.app.ports.input.piper_hendricks_ceo_use_case import (
     HendricksCeoUseCase,
 )
 from admin.dependencies.piper_hendricks_ceo_provider import get_hendricks_ceo
+
 from fastapi import APIRouter, Depends
 
 """

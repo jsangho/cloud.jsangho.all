@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from titanic.adapter.inbound.api.v1.crew_andrews_architect_router import (
     andrews_architect_router,
 )

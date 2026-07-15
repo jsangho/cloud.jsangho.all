@@ -1,4 +1,3 @@
-from fastapi import APIRouter, Depends
 from heyman.adapter.inbound.api.schemas.telegram_schema import (
     TelegramMyselfSchema,
     TelegramSendRequest,
@@ -10,6 +9,8 @@ from heyman.app.dtos.telegram_dto import (
 )
 from heyman.app.ports.input.telegram_use_case import TelegramUseCase
 from heyman.dependencies.telegram_provider import get_telegram_use_case
+
+from fastapi import APIRouter, Depends
 
 telegram_router = APIRouter(prefix="/telegram", tags=["telegram"])
 

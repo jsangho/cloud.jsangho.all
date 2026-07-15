@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from heyman.adapter.inbound.api.schemas.juso_schema import (
     JusoFileuploadResponse,
     JusoMyselfSchema,
@@ -14,6 +13,8 @@ from heyman.app.dtos.juso_dto import (
 )
 from heyman.app.ports.input.juso_use_case import JusoUseCase
 from heyman.dependencies.juso_provider import get_juso_use_case
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 juso_router = APIRouter(prefix="/juso", tags=["juso"])
 

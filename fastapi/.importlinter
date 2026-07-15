@@ -4,9 +4,8 @@ root_packages =
     titanic
     kayfabe
     superstar
-    human_resource
-    manager
-    vision
+    admin
+    heyman
 
 # 하네스 계약 목록 — 위반 시 CI 차단
 include_extra_contracts = True
@@ -27,16 +26,14 @@ source_modules =
     titanic
     kayfabe
     superstar
-    human_resource
-    manager
-    vision
+    admin
+    heyman
 forbidden_modules =
     titanic
     kayfabe
     superstar
-    human_resource
-    manager
-    vision
+    admin
+    heyman
 exclude_type_checking_imports = True
 
 
@@ -50,7 +47,7 @@ exclude_type_checking_imports = True
 name = Only hub (ontology) may import spoke modules
 type = layers
 layers =
-    titanic | kayfabe | superstar | human_resource | manager | vision
+    titanic | kayfabe | superstar | admin | heyman
     ontology
 
 
@@ -66,9 +63,8 @@ containers =
     titanic
     kayfabe
     superstar
-    human_resource
-    manager
-    vision
+    admin
+    heyman
 layers =
     adapter
     app

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from fastapi import HTTPException
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal, Base, engine
 from heyman.adapter.outbound.orm.email_orm import EmailOrm
 from heyman.app.dtos.email_dto import EmailDto
 from heyman.app.ports.output.email_repository import EmailRepository
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal, Base, engine
+from fastapi import HTTPException
 
 
 async def _ensure_email_table() -> None:

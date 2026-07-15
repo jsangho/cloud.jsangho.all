@@ -17,9 +17,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from pgvector.sqlalchemy import Vector
-
 from alembic import op
+from pgvector.sqlalchemy import Vector
 
 revision: str = "20260714_01"
 down_revision: str | None = "20260713_02"

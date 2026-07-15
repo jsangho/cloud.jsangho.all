@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
 from heyman.adapter.inbound.api.schemas.discord_schema import DiscordMyselfSchema
 from heyman.app.dtos.discord_dto import DiscordQuery, DiscordResponse
 from heyman.app.ports.input.discord_use_case import DiscordUseCase
 from heyman.dependencies.discord_provider import get_discord_use_case
+
+from fastapi import APIRouter, Depends
 
 discord_router = APIRouter(prefix="/discord", tags=["discord"])
 

@@ -8,10 +8,10 @@ from admin.app.ports.output.piper_gilfoyle_sys_port import GilfoyleSysPort
 from admin.app.use_cases.piper_gilfoyle_sys_interactor import (
     GilfoyleSysInteractor,
 )
-from fastapi import Depends
+from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.matrix.grid_oracle_database_manager import get_db
+from fastapi import Depends
 
 
 def get_gilfoyle_sys_repository(

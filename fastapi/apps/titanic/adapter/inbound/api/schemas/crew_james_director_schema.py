@@ -4,9 +4,9 @@ import csv
 import io
 from dataclasses import asdict
 
-from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from fastapi import HTTPException
 from titanic.app.dtos.crew_james_director_dto import BookingCommand, PersonCommand
 
 JAMES_DIRECTOR_REQUIRED_COLUMNS = (

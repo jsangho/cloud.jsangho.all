@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends
 from fastapi.responses import StreamingResponse
 
+from fastapi import APIRouter, Body, Depends
 from kayfabe.adapter.inbound.api.schemas.wrestler_chat_schema import (
     WrestlerChatSchema,
 )
