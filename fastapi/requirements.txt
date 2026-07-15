@@ -20,7 +20,7 @@ alembic==1.18.4
 neo4j==6.2.0
 
 # LLM / Agent / NLP
-google-generativeai==0.8.6
+google-genai==2.11.0
 huggingface_hub==1.23.0
 transformers==5.13.0
 mcp==1.28.1
@@ -30,6 +30,11 @@ langchain==0.3.25
 langchain-community==0.3.24
 langsmith==0.2.6
 langgraph==0.2.70
+
+# PEFT / QLoRA (bitsandbytes NF4 4bit + LoRA)
+peft==0.19.1
+bitsandbytes==0.49.2
+accelerate==1.14.0
 
 # Vision (YOLO)
 opencv-python-headless==5.0.0.93
