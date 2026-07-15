@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 
-from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,12 @@ from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 from kayfabe.app.dtos.wrestler_chat_dto import WrestlerChatCommand, WrestlerChatTurnDto
 from kayfabe.app.ports.output.wrestler_chat_port import WrestlerChatPort
+from ontology.app.dtos.exaone_generation_dto import ExaoneGenerationCommand
+from ontology.app.ports.input.exaone_generation_use_case import (
+    ExaoneGenerationUseCase,
+)
+
+logger = logging.getLogger("uvicorn.error")
 
 GORILLA_PERSONA = (
     "당신은 WWE 백스테이지 '고릴라 포지션'을 지키는 베테랑 프로듀서입니다. "
@@ -23,8 +29,18 @@ MAX_PROMPT_MESSAGES = 8
 
 
 class WrestlerChatRepository(WrestlerChatPort):
-    def __init__(self, session: AsyncSession) -> None:
+    """kayfabe(스포크)의 RAG 리포지토리.
+
+    검색(임베딩 유사도)과 프롬프트 구성은 kayfabe가 직접 소유하고, 실제 텍스트
+    생성은 ontology(허브)의 ExaoneGenerationUseCase에 위임한다 — 스포크 ↔ 스포크
+    직접 의존을 만들지 않기 위해 생성 능력은 허브를 경유한다.
+    """
+
+    def __init__(
+        self, session: AsyncSession, generation_use_case: ExaoneGenerationUseCase
+    ) -> None:
         self.session = session
+        self._generation_use_case = generation_use_case
 
     async def stream_chat(self, command: WrestlerChatCommand) -> AsyncIterator[str]:
         user_messages = [m for m in command.messages if m.role == "user"]
@@ -33,10 +49,23 @@ class WrestlerChatRepository(WrestlerChatPort):
             return
 
         question = user_messages[-1].text
+        logger.info("[kayfabe.wrestler_chat] 질문 수신 | question=%r", question)
+
         context = await self._retrieve_context(question)
         prompt = self._build_prompt(command.messages, context)
-        async for chunk in self._stream_gemini(prompt):
+
+        logger.info(
+            "[kayfabe.wrestler_chat] ontology 허브로 위임 | prompt_len=%d", len(prompt)
+        )
+        chunk_count = 0
+        async for chunk in self._generation_use_case.stream_generate(
+            ExaoneGenerationCommand(prompt=prompt)
+        ):
+            chunk_count += 1
             yield chunk
+        logger.info(
+            "[kayfabe.wrestler_chat] 답변 스트리밍 완료 | chunks=%d", chunk_count
+        )
 
     async def _retrieve_context(self, question: str) -> str:
         query_embedding = await asyncio.to_thread(get_keymaker().embed_text, question)
@@ -47,6 +76,11 @@ class WrestlerChatRepository(WrestlerChatPort):
             .limit(TOP_K)
         )
         wrestlers = (await self.session.scalars(stmt)).all()
+        logger.info(
+            "[kayfabe.wrestler_chat] RAG 검색 완료 | top_k=%d | 결과=%s",
+            TOP_K,
+            [w.name for w in wrestlers],
+        )
         if not wrestlers:
             return "(일치하는 선수 정보 없음)"
         return "\n".join(self._describe(w) for w in wrestlers)
@@ -80,48 +114,3 @@ class WrestlerChatRepository(WrestlerChatPort):
             f"{GORILLA_PERSONA}\n\n"
             f"[선수 정보]\n{context}\n\n" + "\n".join(lines) + "\n고릴라 포지션:"
         )
-
-    async def _stream_gemini(self, prompt: str) -> AsyncIterator[str]:
-        model = self._require_gemini_model()
-        loop = asyncio.get_running_loop()
-        queue: asyncio.Queue[str | None] = asyncio.Queue()
-        _ERROR_PREFIX = "__WRESTLER_CHAT_ERROR__"
-
-        def _produce() -> None:
-            try:
-                response = model.generate_content(prompt, stream=True)
-                for chunk in response:
-                    text = getattr(chunk, "text", None) or ""
-                    if text:
-                        loop.call_soon_threadsafe(queue.put_nowait, text)
-            except Exception as e:  # noqa: BLE001
-                loop.call_soon_threadsafe(queue.put_nowait, f"{_ERROR_PREFIX}{e}")
-            finally:
-                loop.call_soon_threadsafe(queue.put_nowait, None)
-
-        loop.run_in_executor(None, _produce)
-
-        while True:
-            item = await queue.get()
-            if item is None:
-                break
-            if item.startswith(_ERROR_PREFIX):
-                raise self._to_http_exception(item[len(_ERROR_PREFIX) :])
-            yield item
-
-    def _require_gemini_model(self):
-        keymaker = get_keymaker()
-        if not keymaker.is_gemini_ready():
-            raise HTTPException(
-                status_code=503,
-                detail="GEMINI_API_KEY가 설정되지 않았습니다. .env 에 키를 넣어 주세요.",
-            )
-        return keymaker.get_gemini_model()
-
-    def _to_http_exception(self, err: str) -> HTTPException:
-        if "429" in err or "quota" in err.lower() or "ResourceExhausted" in err:
-            return HTTPException(
-                status_code=429,
-                detail="Gemini API 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.",
-            )
-        return HTTPException(status_code=502, detail=f"Gemini 호출 실패: {err}")

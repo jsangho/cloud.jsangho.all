@@ -36,6 +36,15 @@ _COLUMNS = (
     "finisher",
 )
 
+# Wikipedia 각주(citation) 텍스트가 값 뒤에 그대로 붙어버린 행 정제.
+# 값 전체가 각주뿐인 경우 빈 문자열로 비운다 (20260714_06 마이그레이션 코멘트 참고).
+_CITATION_FIXES: dict[tuple[str, str], str] = {
+    ("Jacy Jayne", "height"): "5 ft 6 in",
+    ("Anthony Luke", "height"): "",
+    ("Josh Briggs", "weight"): "290 lb",
+    ("Nikkita Lyons", "birth_date"): "",
+}
+
 
 def _clean(value: str) -> str | None:
     value = value.strip()
@@ -45,6 +54,11 @@ def _clean(value: str) -> str | None:
 async def main() -> None:
     with _CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
         rows = list(csv.DictReader(f))
+
+    for row in rows:
+        for (name, field), clean_value in _CITATION_FIXES.items():
+            if row["name"] == name:
+                row[field] = clean_value
 
     inserted = 0
     updated = 0
