@@ -9,7 +9,7 @@ from ontology.app.dtos.spam_classification_dto import SpamClassificationDto
 from ontology.app.ports.output.spam_label_classifier import SpamLabelClassifier
 from ontology.domain.enums.spam_classes import SpamLabel
 
-_MODEL_ID = "exaone3.5:7.8b"
+_MODEL_ID = "qwen2.5:1.5b"
 
 _PROMPT_TEMPLATE = """당신은 이메일 스팸 분류기입니다. 아래 여섯 라벨 중 정확히 하나만 선택하세요.
 
@@ -30,7 +30,7 @@ _PROMPT_TEMPLATE = """당신은 이메일 스팸 분류기입니다. 아래 여�
 
 
 class OllamaSpamClassifier(SpamLabelClassifier):
-    """Ollama 로컬 LLM(exaone3.5:7.8b)으로 스팸을 zero-shot 분류하는 어댑터."""
+    """Ollama 로컬 LLM(qwen2.5:1.5b)으로 스팸을 zero-shot 분류하는 어댑터."""
 
     def __init__(self, host: str | None = None) -> None:
         self._host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")

@@ -12,11 +12,11 @@ from ontology.app.ports.output.exaone_generation_port import ExaoneGenerationPor
 
 logger = logging.getLogger("uvicorn.error")
 
-_MODEL_ID = "exaone3.5:7.8b"
+_MODEL_ID = "qwen2.5:1.5b"
 
 
 class OllamaExaoneGenerator(ExaoneGenerationPort):
-    """Ollama 로컬 LLM(exaone3.5:7.8b)으로 텍스트를 스트리밍 생성하는 어댑터."""
+    """Ollama 로컬 LLM(qwen2.5:1.5b)으로 텍스트를 스트리밍 생성하는 어댑터."""
 
     def __init__(self, host: str | None = None) -> None:
         self._host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")

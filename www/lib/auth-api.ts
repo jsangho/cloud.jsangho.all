@@ -35,7 +35,7 @@ export async function fetchUserProfile(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {
-    const response = await fetch(`${apiBaseUrl}/users/${userId}`, {
+    const response = await fetch(`${apiBaseUrl}/api/users/${userId}`, {
       signal: controller.signal,
     });
     if (!response.ok) return null;
