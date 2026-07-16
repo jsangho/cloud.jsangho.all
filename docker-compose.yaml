@@ -99,7 +99,6 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - pgvector
-    restart: unless-stopped
 
   # ⑦ Cloudflare Tunnel (api.jsangho.cloud → backend, n8n.jsangho.cloud → n8n)
   cloudflared:
