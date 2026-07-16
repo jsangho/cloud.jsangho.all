@@ -169,3 +169,4 @@ result = await asyncio.to_thread(use_case.analyze_intent, question)
 | `_claude/CLAUDE.md` | 백엔드 구현 세부 지침 |
 | [`apps/kayfabe/_docs/CLAUDE.md`](apps/kayfabe/_docs/CLAUDE.md) | Kayfabe 도메인 · CQRS · ERD |
 | [`apps/titanic/_docs/CLAUDE.md`](apps/titanic/_docs/CLAUDE.md) | Titanic 앱 구조 (템플릿) |
+| [`_docs/docker-rules.md`](_docs/docker-rules.md) | Docker 컨테이너(DB·백엔드 등) 생성 전 기존 리소스 확인 규칙 |
