@@ -99,16 +99,8 @@ services:
     depends_on:
       - pgvector
 
-  # ⑦ Cloudflare Tunnel (n8n 공개 URL)
+  # ⑦ Cloudflare Tunnel (api.jsangho.cloud → backend, n8n.jsangho.cloud → n8n)
   cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - n8n
-    restart: unless-stopped
-
-  # ⑧ Cloudflare Tunnel (api.jsangho.cloud → backend)
-  cloudflared-api:
     image: cloudflare/cloudflared:latest
     user: "0:0"
     command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
@@ -116,6 +108,7 @@ services:
       - ${HOME}/.cloudflared-docker:/etc/cloudflared:ro
     depends_on:
       - backend
+      - n8n
     restart: unless-stopped
 
 volumes:
