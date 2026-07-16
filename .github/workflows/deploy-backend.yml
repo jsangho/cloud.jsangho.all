@@ -1,0 +1,22 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "fastapi/**"
+      - "docker-compose.yaml"
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest and redeploy backend
+        run: |
+          cd ~/project/cloud.jsangho.all
+          git fetch origin
+          git checkout main
+          git pull origin main
+          docker compose build backend
+          docker compose up -d backend
+          docker compose restart backend
