@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-CATALOG_REVISION = 19
+CATALOG_REVISION = 20
 
 # (belt_name, won_at) — won_at: 실제 획득 이벤트·방송·날짜
 # 키는 개인 링네임만 사용한다.
@@ -69,6 +69,7 @@ REAL_TITLE_ACQUISITIONS: dict[str, list[tuple[str, str]]] = {
         ("United States Championship", "WrestleMania 38 Night 2 — April 3, 2022"),
         ("SmackDown Tag Team Championship", "WrestleMania XL Night 1 — April 6, 2024"),
         ("World Tag Team Championship", "Raw — March 30, 2026"),
+        ("World Tag Team Championship", "Raw — July 6, 2026"),
     ],
     "Axiom": [
         ("NXT Tag Team Championship", "NXT — April 9, 2024"),
@@ -130,6 +131,7 @@ REAL_TITLE_ACQUISITIONS: dict[str, list[tuple[str, str]]] = {
         ("NXT Championship", "New Year's Evil — January 4, 2022"),
         ("NXT Tag Team Championship", "NXT — February 13, 2024"),
         ("Intercontinental Championship", "SummerSlam — August 3, 2024"),
+        ("World Tag Team Championship", "Raw — July 6, 2026"),
     ],
     "CM Punk": [
         ("ECW Championship", "ECW — August 27, 2007"),
@@ -144,6 +146,7 @@ REAL_TITLE_ACQUISITIONS: dict[str, list[tuple[str, str]]] = {
             "World Heavyweight Championship",
             "Saturday Night's Main Event — December 7, 2024",
         ),
+        ("Undisputed WWE Championship", "Raw — July 6, 2026"),
     ],
     "Charlotte Flair": [
         ("NXT Women's Championship", "NXT TakeOver: Charlotte — May 29, 2014"),
@@ -309,6 +312,9 @@ REAL_TITLE_ACQUISITIONS: dict[str, list[tuple[str, str]]] = {
     ],
     "Karrion Kross": [
         ("NXT Championship", "NXT TakeOver: XXX — August 22, 2020"),
+    ],
+    "Kendal Grey": [
+        ("NXT Women's Championship", "NXT The Great American Bash — June 28, 2026"),
     ],
     "LA Knight": [
         ("United States Championship", "Crown Jewel — November 4, 2023"),

@@ -1,4 +1,4 @@
-"""WWE 현역 챔피언 카탈로그 (thesmackdownhotel.com · 2026-06-28 기준)."""
+"""WWE 현역 챔피언 카탈로그 (thesmackdownhotel.com · 2026-07-12 기준)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ ChampionshipTier = Literal["main", "secondary", "tag", "other"]
 BrandId = Literal["raw", "smackdown", "nxt", "global"]
 BrandAccent = Literal["red", "blue", "gold", "purple"]
 
-CHAMPIONSHIP_AS_OF = "2026-06-28"
+CHAMPIONSHIP_AS_OF = "2026-07-12"
 
 
 class _TitleReignEntry(TypedDict, total=False):
@@ -65,9 +65,9 @@ WWE_BRAND_CHAMPIONS: list[_BrandRosterEntry] = [
             },
             {
                 "belt_name": "World Tag Team Championship",
-                "team_name": "The Street Profits",
-                "champions": ["Angelo Dawkins", "Montez Ford"],
-                "won_at": "2026-06-22",
+                "team_name": "The Vision",
+                "champions": ["Bron Breakker", "Austin Theory"],
+                "won_at": "2026-07-06",
                 "won_event": "Raw",
                 "tier": "tag",
             },
@@ -81,9 +81,9 @@ WWE_BRAND_CHAMPIONS: list[_BrandRosterEntry] = [
         "titles": [
             {
                 "belt_name": "Undisputed WWE Championship",
-                "champions": ["Sami Zayn"],
-                "won_at": "2026-06-27",
-                "won_event": "Night of Champions",
+                "champions": ["CM Punk"],
+                "won_at": "2026-07-06",
+                "won_event": "Raw",
                 "tier": "main",
             },
             {
@@ -131,9 +131,9 @@ WWE_BRAND_CHAMPIONS: list[_BrandRosterEntry] = [
             },
             {
                 "belt_name": "NXT Women's Championship",
-                "champions": ["Lola Vice"],
-                "won_at": "2026-04-04",
-                "won_event": "Stand & Deliver",
+                "champions": ["Kendal Grey"],
+                "won_at": "2026-06-28",
+                "won_event": "NXT The Great American Bash",
                 "tier": "main",
             },
             {

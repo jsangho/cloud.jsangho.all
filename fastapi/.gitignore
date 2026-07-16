@@ -111,7 +111,7 @@ apps/vision/tests/*.jpg
 apps/vision/tests/runs/
 apps/vision/resources/models/*.pt
 
-# --- Crawler/scraper output (generated JSONL, not source) ---
+# --- Ontology crawler/scraper data dumps (generated, not source) ---
 apps/ontology/resources/crawled/
 apps/ontology/resources/scraped/
 
