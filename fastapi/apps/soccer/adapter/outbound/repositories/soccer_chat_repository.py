@@ -76,11 +76,26 @@ class SoccerChatRepository(SoccerChatPort):
         schedules = await self._search(ScheduleOrm, query_embedding)
         players = await self._search(PlayerOrm, query_embedding)
 
+        team_names = await self._team_name_lookup()
+        stadium_names = await self._stadium_name_lookup()
+
         sections = [
-            ("경기장", [self._describe_stadium(r) for r in stadiums]),
-            ("구단", [self._describe_team(r) for r in teams]),
-            ("경기 일정", [self._describe_schedule(r) for r in schedules]),
-            ("선수", [self._describe_player(r) for r in players]),
+            (
+                "경기장",
+                [self._describe_stadium(r, team_names) for r in stadiums],
+            ),
+            (
+                "구단",
+                [self._describe_team(r, stadium_names) for r in teams],
+            ),
+            (
+                "경기 일정",
+                [self._describe_schedule(r, team_names) for r in schedules],
+            ),
+            (
+                "선수",
+                [self._describe_player(r, team_names) for r in players],
+            ),
         ]
         blocks = [
             f"[{label}]\n" + "\n".join(lines) for label, lines in sections if lines
@@ -105,35 +120,50 @@ class SoccerChatRepository(SoccerChatPort):
         )
         return rows
 
-    def _describe_stadium(self, r: StadiumOrm) -> str:
+    async def _team_name_lookup(self) -> dict[str, str]:
+        rows = (
+            await self.session.execute(select(TeamOrm.team_id, TeamOrm.team_name))
+        ).all()
+        return {team_id: team_name for team_id, team_name in rows if team_name}
+
+    async def _stadium_name_lookup(self) -> dict[str, str]:
+        rows = (
+            await self.session.execute(
+                select(StadiumOrm.stadium_id, StadiumOrm.statdium_name)
+            )
+        ).all()
+        return {
+            stadium_id: statdium_name
+            for stadium_id, statdium_name in rows
+            if statdium_name
+        }
+
+    def _describe_stadium(self, r: StadiumOrm, team_names: dict[str, str]) -> str:
         fields = [
             ("경기장명", r.statdium_name),
-            ("홈팀", r.hometeam_id),
+            ("홈팀", team_names.get(r.hometeam_id, r.hometeam_id)),
             ("좌석수", r.seat_count),
             ("주소", r.address),
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
 
-    def _describe_team(self, r: TeamOrm) -> str:
+    def _describe_team(self, r: TeamOrm, stadium_names: dict[str, str]) -> str:
         fields = [
             ("구단명", r.team_name),
             ("영문명", r.e_team_name),
             ("연고지", r.region_name),
             ("창단연도", r.orig_yyyy),
-            ("홈구장", r.stadium_id),
+            ("홈구장", stadium_names.get(r.stadium_id, r.stadium_id)),
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
 
-    def _describe_schedule(self, r: ScheduleOrm) -> str:
+    def _describe_schedule(self, r: ScheduleOrm, team_names: dict[str, str]) -> str:
+        home = team_names.get(r.hometeam_id, r.hometeam_id)
+        away = team_names.get(r.awayteam_id, r.awayteam_id)
         fields = [
             ("일자", r.sche_date),
             ("구분", r.gubun),
-            (
-                "대진",
-                f"{r.hometeam_id} vs {r.awayteam_id}"
-                if r.hometeam_id or r.awayteam_id
-                else None,
-            ),
+            ("대진", f"{home} vs {away}" if home or away else None),
             (
                 "스코어",
                 f"{r.home_score}:{r.away_score}" if r.home_score is not None else None,
@@ -141,14 +171,14 @@ class SoccerChatRepository(SoccerChatPort):
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
 
-    def _describe_player(self, r: PlayerOrm) -> str:
+    def _describe_player(self, r: PlayerOrm, team_names: dict[str, str]) -> str:
         fields = [
             ("이름", r.player_name),
             ("영문명", r.e_player_name),
             ("별명", r.nickname),
             ("포지션", r.position),
             ("국적", r.nation),
-            ("소속팀", r.team_id),
+            ("소속팀", team_names.get(r.team_id, r.team_id)),
             ("등번호", r.back_no),
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
