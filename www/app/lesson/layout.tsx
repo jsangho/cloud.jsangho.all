@@ -12,7 +12,7 @@ const TITANIC_LIST_HREF = "/lesson/titanic/titaniclist";
 const SMITH_SAILOR_HREF = "/lesson/titanic/smith-sailor";
 const VISION_HREF = "/lesson/titanic/vision";
 const OBJECT_DETECTION_HREF = "/lesson/titanic/vision/object-detection";
-const VISION_RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
+const RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
 export default function LessonLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isTitanic = pathname === TITANIC_HREF;
@@ -21,9 +21,9 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
   const isSmithSailor = pathname === SMITH_SAILOR_HREF;
   const isVision = pathname === VISION_HREF;
   const isObjectDetection = pathname === OBJECT_DETECTION_HREF;
-  const isVisionRagChat = pathname === VISION_RAG_CHAT_HREF;
+  const isRagChat = pathname === RAG_CHAT_HREF;
   const isLessonSection = isTitanic || isDataCollection || isTitanicList || isSmithSailor;
-  const isVisionSection = isVision || isObjectDetection || isVisionRagChat;
+  const isVisionSection = isVision || isObjectDetection;
 
   const [expanded, setExpanded] = useState(false);
   const [visionExpanded, setVisionExpanded] = useState(false);
@@ -36,10 +36,10 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
   }, [isDataCollection, isTitanicList, isSmithSailor]);
 
   useEffect(() => {
-    if (isObjectDetection || isVisionRagChat) {
+    if (isObjectDetection) {
       setVisionExpanded(true);
     }
-  }, [isObjectDetection, isVisionRagChat]);
+  }, [isObjectDetection]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -179,20 +179,21 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
           >
             객체 탐지
           </Link>
-          <Link
-            href={VISION_RAG_CHAT_HREF}
-            aria-current={isVisionRagChat ? "page" : undefined}
-            className={cn(
-              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-              isVisionRagChat
-                ? "bg-stone-100/90 font-semibold text-stone-950"
-                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            )}
-          >
-            RAG 챗봇
-          </Link>
         </>
       )}
+
+      <Link
+        href={RAG_CHAT_HREF}
+        aria-current={isRagChat ? "page" : undefined}
+        className={cn(
+          "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          isRagChat
+            ? "bg-stone-100 text-stone-950 hover:bg-stone-50"
+            : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
+        )}
+      >
+        RAG 챗봇
+      </Link>
     </nav>
   );
 

@@ -19,7 +19,7 @@ type ChatState = {
 };
 
 const INITIAL_ASSISTANT_TEXT =
-  "안녕하세요, 축구 스카우트 머니볼입니다. " +
+  "안녕하세요, 축구 스카우트 soccer입니다. " +
   "경기장, 구단, 경기 일정, 선수 정보까지 무엇이든 물어보세요.";
 
 const CHAT_REQUEST_FAILED = "메시지를 전송하지 못했습니다.";
@@ -187,7 +187,7 @@ export function SoccerChat({ className }: { className?: string }) {
                 >
                   {msg.role === "assistant" && (
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
-                      Moneyball
+                      Soccer
                     </p>
                   )}
                   <p className="whitespace-pre-wrap break-words">{msg.text}</p>
@@ -223,7 +223,7 @@ export function SoccerChat({ className }: { className?: string }) {
       <form onSubmit={handleSubmit} className="mx-auto w-full max-w-3xl shrink-0">
         <div className="rounded-[1.75rem] border border-stone-300/70 dark:border-stone-600/70 bg-stone-100/70 dark:bg-stone-950/70 px-3 py-2 shadow-lg shadow-black/20 backdrop-blur-sm">
           <label htmlFor="soccer-chat-input" className="sr-only">
-            머니볼에게 메시지 보내기
+            soccer에게 메시지 보내기
           </label>
           <textarea
             ref={textareaRef}
