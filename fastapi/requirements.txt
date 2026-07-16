@@ -51,6 +51,8 @@ boto3==1.43.40
 
 # Utils
 python-dotenv==1.2.2
+redis==8.0.1
+beautifulsoup4==4.15.0
 
 # Dev / Test / Lint
 pytest>=8.0
