@@ -100,38 +100,54 @@ export function DatasetCollectionPipeline() {
       </div>
 
       <form onSubmit={run} className="space-y-3">
-        <div>
-          <label
-            htmlFor="dataset-collection-website"
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
-            사이트 주소
-          </label>
-          <input
-            id="dataset-collection-website"
-            type="url"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            placeholder="https://example.com"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="dataset-collection-instruction"
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
-            자연어 명령어
-          </label>
-          <input
-            id="dataset-collection-instruction"
-            type="text"
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            placeholder="예: 이 페이지에서 가격 정보만 추출해줘"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </div>
+        {tab === "crawler" && (
+          <div>
+            <label
+              htmlFor="dataset-collection-website"
+              className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              사이트 주소 · 크롤러가 fetch할 대상
+            </label>
+            <input
+              id="dataset-collection-website"
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://example.com"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+            {instruction && (
+              <p className="mt-1.5 text-xs text-zinc-400">
+                스크래퍼 탭에서 입력한 명령어(&quot;{instruction}&quot;)도 이
+                실행에 함께 전달됩니다.
+              </p>
+            )}
+          </div>
+        )}
+
+        {tab === "scraper" && (
+          <div>
+            <label
+              htmlFor="dataset-collection-instruction"
+              className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              자연어 명령어 · 스크래퍼가 추출할 대상
+            </label>
+            <input
+              id="dataset-collection-instruction"
+              type="text"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              placeholder="예: 이 페이지에서 가격 정보만 추출해줘"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+            <p className="mt-1.5 text-xs text-zinc-400">
+              대상 사이트:{" "}
+              {website || "(비어있음 — 레디스 큐에서 자동으로 다음 작업 선택)"}
+            </p>
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={loading}
@@ -147,18 +163,23 @@ export function DatasetCollectionPipeline() {
           ) : (
             <PlayCircle className="size-4" aria-hidden />
           )}
-          {loading ? "실행 중..." : "실행"}
+          {loading
+            ? "실행 중..."
+            : tab === "crawler"
+              ? "크롤링 실행"
+              : "스크래핑 실행"}
         </button>
       </form>
 
       <p className="text-sm text-zinc-500">
-        사이트 주소를 입력하면 그 페이지를 바로 크롤링·스크래핑합니다. 비워두면
-        레디스 큐(
+        {tab === "crawler"
+          ? "크롤러는 사이트 주소로 단일 페이지를 fetch해 원본 HTML을 수집합니다. 비워두면 레디스 큐에서 다음 작업을 꺼내 크롤링합니다."
+          : "스크래퍼는 크롤러가 가져온 HTML에서 제목·메타·본문을 구조화 추출하고, 자연어 명령어가 본문에 등장하는지 확인합니다."}{" "}
+        (내부적으로는 크롤링 후 바로 스크래핑까지 이어서 실행됩니다: 레디스 큐{" "}
         <code className="rounded bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs">
           ontology:crawl:jobs
         </code>
-        )에서 다음 작업을 꺼내 실행합니다. 자연어 명령어는 스크래핑 시
-        키워드로 함께 전달되어 결과에 등장 여부가 표시됩니다.
+        )
       </p>
 
       {error && (
