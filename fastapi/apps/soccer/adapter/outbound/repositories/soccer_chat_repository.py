@@ -180,6 +180,7 @@ class SoccerChatRepository(SoccerChatPort):
             ("국적", r.nation),
             ("소속팀", team_names.get(r.team_id, r.team_id)),
             ("등번호", r.back_no),
+            ("생년월일", r.birth_date),
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
 
