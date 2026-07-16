@@ -42,6 +42,7 @@ services:
   # ③ Neo4j (Graph DB)
   neo4j:
     image: neo4j:5
+    restart: unless-stopped
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -59,6 +60,7 @@ services:
   # ④ Redis (Cache / Queue)
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -103,6 +105,17 @@ services:
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - n8n
+    restart: unless-stopped
+
+  # ⑧ Cloudflare Tunnel (api.jsangho.cloud → backend)
+  cloudflared-api:
+    image: cloudflare/cloudflared:latest
+    user: "0:0"
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ${HOME}/.cloudflared-docker:/etc/cloudflared:ro
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
