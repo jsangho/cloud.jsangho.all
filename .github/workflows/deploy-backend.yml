@@ -6,6 +6,7 @@ on:
     paths:
       - "fastapi/**"
       - "docker-compose.yaml"
+  workflow_dispatch: {}
 
 jobs:
   deploy:
