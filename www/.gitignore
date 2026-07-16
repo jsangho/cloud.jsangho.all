@@ -9,6 +9,7 @@ node_modules
 .env.local
 .DS_Store
 *.tsbuildinfo
+next-env.d.ts
 
 # Claude Code (symlink — Vercel 빌드 불가)
 _claude/

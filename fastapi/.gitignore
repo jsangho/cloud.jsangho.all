@@ -111,6 +111,10 @@ apps/vision/tests/*.jpg
 apps/vision/tests/runs/
 apps/vision/resources/models/*.pt
 
+# --- Crawler/scraper output (generated JSONL, not source) ---
+apps/ontology/resources/crawled/
+apps/ontology/resources/scraped/
+
 # --- Misc local tooling ---
 .aws/credentials
 .azure/
