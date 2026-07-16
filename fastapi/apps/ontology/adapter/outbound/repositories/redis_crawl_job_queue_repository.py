@@ -26,6 +26,12 @@ class RedisCrawlJobQueueRepository(CrawlJobQueuePort):
             decode_responses=True,
         )
 
+    async def push_job(self, job: CrawlJob) -> None:
+        payload = json.dumps(
+            {"website": job.website, "keyword": job.keyword}, ensure_ascii=False
+        )
+        await self._client.lpush(_QUEUE_KEY, payload)
+
     async def pop_next_job(self) -> CrawlJob | None:
         raw = await self._client.rpop(_QUEUE_KEY)
         if raw is None:

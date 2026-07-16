@@ -26,12 +26,18 @@ class CrawlerInteractor(CrawlerUseCase):
         self, website: str | None = None, keyword: str | None = None
     ) -> CrawlResult | None:
         if website:
-            job = CrawlJob(website=website, keyword=keyword or "")
-        else:
-            job = await self._queue.pop_next_job()
-            if job is None:
-                logger.info("[ontology.crawler] 대기 중인 크롤링 작업 없음")
-                return None
+            new_job = CrawlJob(website=website, keyword=keyword or "")
+            await self._queue.push_job(new_job)
+            logger.info(
+                "[ontology.crawler] 새 작업 레디스 큐에 저장 | website=%s | keyword=%s",
+                new_job.website,
+                new_job.keyword,
+            )
+
+        job = await self._queue.pop_next_job()
+        if job is None:
+            logger.info("[ontology.crawler] 대기 중인 크롤링 작업 없음")
+            return None
 
         logger.info(
             "[ontology.crawler] 크롤링 시작 | website=%s | keyword=%s",

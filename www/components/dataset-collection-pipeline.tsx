@@ -101,27 +101,39 @@ export function DatasetCollectionPipeline() {
 
       <form onSubmit={run} className="space-y-3">
         {tab === "crawler" && (
-          <div>
-            <label
-              htmlFor="dataset-collection-website"
-              className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
-              사이트 주소 · 크롤러가 fetch할 대상
-            </label>
-            <input
-              id="dataset-collection-website"
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://example.com"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-            {instruction && (
-              <p className="mt-1.5 text-xs text-zinc-400">
-                스크래퍼 탭에서 입력한 명령어(&quot;{instruction}&quot;)도 이
-                실행에 함께 전달됩니다.
-              </p>
-            )}
+          <div className="space-y-3">
+            <div>
+              <label
+                htmlFor="dataset-collection-website"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                사이트 주소 · 크롤러가 fetch할 대상
+              </label>
+              <input
+                id="dataset-collection-website"
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://example.com"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="dataset-collection-keyword"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                키워드 · 사이트 주소와 함께 레디스 큐에 저장됩니다
+              </label>
+              <input
+                id="dataset-collection-keyword"
+                type="text"
+                value={instruction}
+                onChange={(e) => setInstruction(e.target.value)}
+                placeholder="예: 이 페이지에서 가격 정보만 추출해줘"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </div>
           </div>
         )}
 
@@ -173,7 +185,7 @@ export function DatasetCollectionPipeline() {
 
       <p className="text-sm text-zinc-500">
         {tab === "crawler"
-          ? "크롤러는 사이트 주소로 단일 페이지를 fetch해 원본 HTML을 수집합니다. 비워두면 레디스 큐에서 다음 작업을 꺼내 크롤링합니다."
+          ? "사이트 주소와 키워드를 입력하면 먼저 레디스 큐에 저장한 뒤, 큐에서 다음 작업을 꺼내 단일 페이지를 fetch해 원본 HTML을 수집합니다. 비워두면 큐에 있던 기존 작업을 바로 꺼내 크롤링합니다."
           : "스크래퍼는 크롤러가 가져온 HTML에서 제목·메타·본문을 구조화 추출하고, 자연어 명령어가 본문에 등장하는지 확인합니다."}{" "}
         (내부적으로는 크롤링 후 바로 스크래핑까지 이어서 실행됩니다: 레디스 큐{" "}
         <code className="rounded bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs">
