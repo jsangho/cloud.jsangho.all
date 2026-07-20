@@ -8,7 +8,6 @@ import { openOAuthPopup } from "@/lib/oauth-popup";
 import { readNextPath } from "./login-form";
 
 const COMING_SOON_LABELS: Record<string, string> = {
-  kakao: "카카오",
   apple: "애플",
   instagram: "인스타그램",
 };
@@ -103,7 +102,7 @@ function InstagramIcon() {
 
 const SNS_PROVIDERS = [
   { key: "naver", label: "네이버 로그인", Icon: NaverIcon, onClick: null },
-  { key: "kakao", label: "카카오 로그인", Icon: KakaoIcon, onClick: handleComingSoon },
+  { key: "kakao", label: "카카오 로그인", Icon: KakaoIcon, onClick: null },
   { key: "google", label: "구글 로그인", Icon: GoogleIcon, onClick: null },
   { key: "apple", label: "애플 로그인", Icon: AppleIcon, onClick: handleComingSoon },
   {
@@ -114,7 +113,7 @@ const SNS_PROVIDERS = [
   },
 ] as const;
 
-type OAuthProvider = "google" | "naver";
+type OAuthProvider = "google" | "naver" | "kakao";
 
 export function SnsLoginButtons() {
   const router = useRouter();
@@ -147,6 +146,7 @@ export function SnsLoginButtons() {
   const functionalHandlers: Record<string, () => void> = {
     google: () => startOAuthLogin("google"),
     naver: () => startOAuthLogin("naver"),
+    kakao: () => startOAuthLogin("kakao"),
   };
 
   return (
