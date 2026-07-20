@@ -1,6 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { apiBaseUrl } from "@/lib/api";
+import { useAuth } from "@/context/auth-context";
+import { completeOAuthLogin } from "@/lib/auth-api";
+import { openOAuthPopup } from "@/lib/oauth-popup";
 import { readNextPath } from "./login-form";
 
 const COMING_SOON_LABELS: Record<string, string> = {
@@ -11,16 +15,6 @@ const COMING_SOON_LABELS: Record<string, string> = {
 
 function handleComingSoon(providerKey: string) {
   alert(`${COMING_SOON_LABELS[providerKey]} 로그인은 준비 중입니다.`);
-}
-
-function handleGoogleLogin() {
-  const next = encodeURIComponent(readNextPath());
-  window.location.href = `${apiBaseUrl}/api/auth/google/login?next=${next}`;
-}
-
-function handleNaverLogin() {
-  const next = encodeURIComponent(readNextPath());
-  window.location.href = `${apiBaseUrl}/api/auth/naver/login?next=${next}`;
 }
 
 function NaverIcon() {
@@ -120,12 +114,41 @@ const SNS_PROVIDERS = [
   },
 ] as const;
 
-const FUNCTIONAL_HANDLERS: Record<string, () => void> = {
-  google: handleGoogleLogin,
-  naver: handleNaverLogin,
-};
+type OAuthProvider = "google" | "naver";
 
 export function SnsLoginButtons() {
+  const router = useRouter();
+  const { login: saveAuthUser } = useAuth();
+
+  async function finishPopupLogin(token: string | null, next: string | null) {
+    const profile = token ? await completeOAuthLogin(token) : null;
+    if (!token || !profile) {
+      alert("소셜 로그인에 실패했습니다.");
+      return;
+    }
+    saveAuthUser({ ...profile, token });
+    router.replace(next?.startsWith("/") ? next : "/");
+  }
+
+  function startOAuthLogin(provider: OAuthProvider) {
+    const next = encodeURIComponent(readNextPath());
+    const url = `${apiBaseUrl}/api/auth/${provider}/login?next=${next}`;
+
+    // 팝업이 차단된 브라우저에서는 기존 방식(전체 페이지 리다이렉트)으로 폴백한다.
+    const opened = openOAuthPopup(
+      url,
+      (resultToken, resultNext) => void finishPopupLogin(resultToken, resultNext),
+    );
+    if (!opened) {
+      window.location.href = url;
+    }
+  }
+
+  const functionalHandlers: Record<string, () => void> = {
+    google: () => startOAuthLogin("google"),
+    naver: () => startOAuthLogin("naver"),
+  };
+
   return (
     <div className="mt-6">
       <div className="flex items-center gap-3">
@@ -142,7 +165,7 @@ export function SnsLoginButtons() {
             key={key}
             type="button"
             aria-label={label}
-            onClick={FUNCTIONAL_HANDLERS[key] ?? (() => onClick?.(key))}
+            onClick={functionalHandlers[key] ?? (() => onClick?.(key))}
             className="flex size-11 items-center justify-center overflow-hidden rounded-full border border-stone-300/80 dark:border-stone-700/80 shadow-md shadow-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
           >
             <Icon />

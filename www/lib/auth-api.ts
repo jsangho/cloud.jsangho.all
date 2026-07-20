@@ -49,6 +49,12 @@ export function decodeJwtUserId(token: string): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
+export async function completeOAuthLogin(token: string): Promise<AuthProfile | null> {
+  const userId = decodeJwtUserId(token);
+  if (userId == null) return null;
+  return fetchUserProfile(userId, token);
+}
+
 export async function fetchUserProfile(userId: number, token: string): Promise<AuthProfile | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);

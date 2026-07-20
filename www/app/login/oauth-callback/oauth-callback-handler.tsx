@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { decodeJwtUserId, fetchUserProfile } from "@/lib/auth-api";
+import { completeOAuthLogin } from "@/lib/auth-api";
+import { OAUTH_POPUP_MESSAGE_TYPE } from "@/lib/oauth-popup";
 
 export function OAuthCallbackHandler() {
   const router = useRouter();
@@ -11,11 +12,21 @@ export function OAuthCallbackHandler() {
   const { login: saveAuthUser } = useAuth();
 
   useEffect(() => {
-    async function finishLogin() {
-      const token = searchParams.get("token");
-      const userId = token ? decodeJwtUserId(token) : null;
+    const token = searchParams.get("token");
+    const next = searchParams.get("next");
 
-      const profile = token && userId != null ? await fetchUserProfile(userId, token) : null;
+    // 팝업으로 열린 경우: 로그인 처리는 opener(원래 창)에 맡기고 결과만 전달한 뒤 닫는다.
+    if (window.opener && window.opener !== window) {
+      window.opener.postMessage(
+        { type: OAUTH_POPUP_MESSAGE_TYPE, token, next },
+        window.location.origin,
+      );
+      window.close();
+      return;
+    }
+
+    async function finishLogin() {
+      const profile = token ? await completeOAuthLogin(token) : null;
       if (!token || !profile) {
         alert("소셜 로그인에 실패했습니다.");
         router.replace("/login");
@@ -23,8 +34,6 @@ export function OAuthCallbackHandler() {
       }
 
       saveAuthUser({ ...profile, token });
-
-      const next = searchParams.get("next");
       router.replace(next?.startsWith("/") ? next : "/");
     }
 
