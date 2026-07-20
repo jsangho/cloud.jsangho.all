@@ -160,7 +160,7 @@ export function SnsLoginButtons() {
         <span className="h-px flex-1 bg-stone-300/70 dark:bg-stone-700/70" />
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-3">
+      <div className="mt-4 flex items-center justify-between">
         {SNS_PROVIDERS.map(({ key, label, Icon, onClick }) => (
           <button
             key={key}
