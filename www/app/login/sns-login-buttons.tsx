@@ -4,7 +4,6 @@ import { apiBaseUrl } from "@/lib/api";
 import { readNextPath } from "./login-form";
 
 const COMING_SOON_LABELS: Record<string, string> = {
-  naver: "네이버",
   kakao: "카카오",
   apple: "애플",
   instagram: "인스타그램",
@@ -17,6 +16,11 @@ function handleComingSoon(providerKey: string) {
 function handleGoogleLogin() {
   const next = encodeURIComponent(readNextPath());
   window.location.href = `${apiBaseUrl}/api/auth/google/login?next=${next}`;
+}
+
+function handleNaverLogin() {
+  const next = encodeURIComponent(readNextPath());
+  window.location.href = `${apiBaseUrl}/api/auth/naver/login?next=${next}`;
 }
 
 function NaverIcon() {
@@ -104,7 +108,7 @@ function InstagramIcon() {
 }
 
 const SNS_PROVIDERS = [
-  { key: "naver", label: "네이버 로그인", Icon: NaverIcon, onClick: handleComingSoon },
+  { key: "naver", label: "네이버 로그인", Icon: NaverIcon, onClick: null },
   { key: "kakao", label: "카카오 로그인", Icon: KakaoIcon, onClick: handleComingSoon },
   { key: "google", label: "구글 로그인", Icon: GoogleIcon, onClick: null },
   { key: "apple", label: "애플 로그인", Icon: AppleIcon, onClick: handleComingSoon },
@@ -115,6 +119,11 @@ const SNS_PROVIDERS = [
     onClick: handleComingSoon,
   },
 ] as const;
+
+const FUNCTIONAL_HANDLERS: Record<string, () => void> = {
+  google: handleGoogleLogin,
+  naver: handleNaverLogin,
+};
 
 export function SnsLoginButtons() {
   return (
@@ -133,7 +142,7 @@ export function SnsLoginButtons() {
             key={key}
             type="button"
             aria-label={label}
-            onClick={key === "google" ? handleGoogleLogin : () => onClick?.(key)}
+            onClick={FUNCTIONAL_HANDLERS[key] ?? (() => onClick?.(key))}
             className="flex size-11 items-center justify-center overflow-hidden rounded-full border border-stone-300/80 dark:border-stone-700/80 shadow-md shadow-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
           >
             <Icon />
