@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends
 from superstar.app.ports.input.pamela_cook import PamelaCookUseCase
+from superstar.domain.services.jwt_token import create_access_token
 from superstar.domain.value_objects.role import UserRole
 
 pamela_cook_router = APIRouter(tags=["pamela-cook"])
@@ -27,6 +28,7 @@ class LoginResponse(BaseModel):
     nickname: str
     email: str
     role: UserRole
+    token: str = Field(description="인증에 사용할 JWT 액세스 토큰")
 
 
 def get_pamela_cook(db: AsyncSession = Depends(get_db)) -> PamelaCookUseCase:
@@ -47,11 +49,20 @@ async def login(
 ):
     login_id = req.user_id.strip()
     user = await use_case.login_user(login_id=login_id, password=req.password)
+    role = UserRole(user.role)
+    token = create_access_token(
+        user_id=user.id,
+        login_id=user.login_id or login_id,
+        nickname=user.nickname,
+        email=user.email,
+        role=role.value,
+    )
     return LoginResponse(
         message="로그인됐습니다.",
         id=user.id,
         login_id=user.login_id or login_id,
         nickname=user.nickname,
         email=user.email,
-        role=UserRole(user.role),
+        role=role,
+        token=token,
     )

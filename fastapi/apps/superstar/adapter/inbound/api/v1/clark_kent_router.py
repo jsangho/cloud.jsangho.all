@@ -1,0 +1,54 @@
+from __future__ import annotations
+
+from urllib.parse import urlencode
+
+from core.matrix.grid_oracle_database_manager import get_db
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import RedirectResponse
+from superstar.app.ports.input.clark_kent import ClarkKentUseCase
+from superstar.domain.services.jwt_token import create_access_token
+from superstar.domain.value_objects.role import UserRole
+
+clark_kent_router = APIRouter(tags=["clark-kent"])
+
+
+def get_clark_kent(db: AsyncSession = Depends(get_db)) -> ClarkKentUseCase:
+    from superstar.adapter.outbound.google_oauth_client import GoogleOAuthClient
+    from superstar.adapter.outbound.pg.clark_kent_pg_repository import (
+        ClarkKentPgRepository,
+    )
+    from superstar.app.use_cases.clark_kent_interactor import ClarkKentInteractor
+
+    return ClarkKentInteractor(GoogleOAuthClient(), ClarkKentPgRepository(db))
+
+
+@clark_kent_router.get("/auth/google/login")
+async def google_login(
+    next_path: str = Query(default="/", alias="next"),
+    use_case: ClarkKentUseCase = Depends(get_clark_kent),
+):
+    return RedirectResponse(use_case.build_authorize_url(next_path=next_path))
+
+
+@clark_kent_router.get("/auth/google/callback")
+async def google_callback(
+    code: str,
+    state: str = Query(default="/"),
+    use_case: ClarkKentUseCase = Depends(get_clark_kent),
+):
+    user = await use_case.login_with_google(code=code)
+    token = create_access_token(
+        user_id=user.id,
+        login_id=user.login_id or "",
+        nickname=user.nickname,
+        email=user.email,
+        role=UserRole(user.role).value,
+    )
+
+    frontend_url = get_keymaker().get_secret("FRONTEND_URL", "http://localhost:3000")
+    next_path = state if state.startswith("/") else "/"
+    params = urlencode({"token": token, "next": next_path})
+    return RedirectResponse(f"{frontend_url}/login/oauth-callback?{params}")

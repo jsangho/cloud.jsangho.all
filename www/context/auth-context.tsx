@@ -20,6 +20,8 @@ export type AuthUser = {
   nickname: string;
   email: string;
   role: string;
+  /** 서버가 검증하는 JWT 액세스 토큰 — 보호된 API 호출 시 Authorization 헤더로 전달 */
+  token: string;
 };
 
 type AuthContextValue = {
@@ -41,7 +43,9 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof u.nickname === "string" &&
     u.nickname.length > 0 &&
     typeof u.email === "string" &&
-    typeof u.role === "string"
+    typeof u.role === "string" &&
+    typeof u.token === "string" &&
+    u.token.length > 0
   );
 }
 
@@ -67,10 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUser(parsed);
 
-        const fresh = await fetchUserProfile(parsed.id);
-        if (cancelled || !fresh) return;
-        setUser(fresh);
-        persistUser(fresh);
+        const fresh = await fetchUserProfile(parsed.id, parsed.token);
+        if (cancelled) return;
+        if (!fresh) {
+          // 토큰이 만료·무효 — 세션 종료
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          setUser(null);
+          return;
+        }
+        const nextUser: AuthUser = { ...fresh, token: parsed.token };
+        setUser(nextUser);
+        persistUser(nextUser);
       } catch {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       } finally {
@@ -94,10 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(
-    () => ({ user, isReady, login, logout }),
-    [user, isReady, login, logout],
-  );
+  const value = useMemo(() => ({ user, isReady, login, logout }), [user, isReady, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

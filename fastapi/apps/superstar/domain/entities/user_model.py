@@ -14,6 +14,8 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="user")
+    oauth_provider: Mapped[str | None] = mapped_column(String, nullable=True)
+    oauth_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     def to_log_dict(self) -> dict[str, object]:
         return {
