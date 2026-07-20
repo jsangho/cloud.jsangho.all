@@ -1,4 +1,4 @@
-"""wwe_active_roster.csv를 wrestlers 테이블로 적재한다 (name 기준 upsert)."""
+"""wwe_active_roster_cleaned.csv를 wrestlers 테이블로 적재한다 (name 기준 upsert)."""
 
 from __future__ import annotations
 
@@ -17,54 +17,130 @@ from sqlalchemy import select
 
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 
-_CSV_PATH = Path(__file__).resolve().parents[1] / "_docs" / "wwe_active_roster.csv"
+_CSV_PATH = (
+    Path(__file__).resolve().parents[1] / "_docs" / "wwe_active_roster_cleaned.csv"
+)
 
-_COLUMNS = (
-    "wikipedia_title",
+_CSV_HEADER = (
     "name",
     "real_name",
     "ring_names",
+    "Stable&Team",
     "height",
     "weight",
     "birth_date",
     "birth_place",
-    "resides",
     "billed_from",
     "trainer",
-    "debut",
-    "retired",
     "finisher",
 )
 
-# Wikipedia 각주(citation) 텍스트가 값 뒤에 그대로 붙어버린 행 정제.
-# 값 전체가 각주뿐인 경우 빈 문자열로 비운다 (20260714_06 마이그레이션 코멘트 참고).
-_CITATION_FIXES: dict[tuple[str, str], str] = {
-    ("Jacy Jayne", "height"): "5 ft 6 in",
-    ("Anthony Luke", "height"): "",
-    ("Josh Briggs", "weight"): "290 lb",
-    ("Nikkita Lyons", "birth_date"): "",
+_COLUMNS = (
+    "name",
+    "real_name",
+    "ring_names",
+    "stable_team",
+    "height",
+    "weight",
+    "birth_date",
+    "birth_place",
+    "billed_from",
+    "trainer",
+    "finisher",
+)
+
+# 원본 CSV 145~146행: Tank Ledger의 trainer 값(`"WWE Performance Center...`)에 닫는 따옴표가
+# 누락되어, 표준 CSV 파서가 다음 줄(Tate Wilder 전체 행)까지 하나의 필드로 삼켜버린다.
+# 원본 CSV는 건드리지 않고, 파싱 직후 알려진 값으로 두 행을 수동 분리한다
+# (wwe-roster-database.md 3번 섹션 가정 h 참고).
+_MERGED_ROW_FIX: dict[str, list[list[str]]] = {
+    "Tank Ledger": [
+        [
+            "Tank Ledger",
+            "Joe Spivak",
+            "Tank Ledger",
+            "Hank & Tank",
+            "180cm",
+            "136kg",
+            "1999-10-11",
+            "Chicago, Illinois",
+            "Chicago, Illinois",
+            "WWE Performance Center",
+            "Baba Bomb | Fisherman's Spinebuster",
+        ],
+        [
+            "Tate Wilder",
+            "Case Hatch",
+            "Tate Wilder",
+            "",
+            "182cm",
+            "104kg",
+            "19997-09-06",
+            "Gilbert, Arizona, United States",
+            "Gilbert, Arizona, United States",
+            "WWE Performance Center",
+            "Wild Ride",
+        ],
+    ]
 }
 
 
-def _clean(value: str) -> str | None:
+def _clean(value: str | None) -> str | None:
+    if value is None:
+        return None
     value = value.strip()
     return value or None
 
 
-async def main() -> None:
+def _read_rows() -> list[tuple[str | None, list[str]]]:
     with _CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
-        rows = list(csv.DictReader(f))
+        raw_rows = list(csv.reader(f))
 
-    for row in rows:
-        for (name, field), clean_value in _CITATION_FIXES.items():
-            if row["name"] == name:
-                row[field] = clean_value
+    header, *body = raw_rows
+    if tuple(header) != _CSV_HEADER:
+        raise ValueError(f"unexpected CSV header: {header}")
+
+    rows: list[tuple[str | None, list[str]]] = []
+    brand: str | None = None
+    for r in body:
+        if not r or all(not cell.strip() for cell in r):
+            continue
+        if len(r) == 1 and r[0].startswith("#"):
+            brand = r[0][1:]
+            continue
+        if len(r) != len(_CSV_HEADER):
+            fix = _MERGED_ROW_FIX.get(r[0])
+            if fix is None:
+                raise ValueError(f"malformed CSV row (unexpected column count): {r}")
+            rows.extend((brand, fixed) for fixed in fix)
+            continue
+        rows.append((brand, r))
+    return rows
+
+
+async def main() -> None:
+    rows = _read_rows()
+    csv_names = {cells[0].strip() for _brand, cells in rows}
 
     inserted = 0
     updated = 0
+    removed = 0
     async with AsyncSessionLocal() as session:
-        for row in rows:
-            values = {col: _clean(row[col]) for col in _COLUMNS}
+        # 이전 CSV(wwe_active_roster.csv)에만 있던 선수는 신규 CSV에 없으므로 삭제한다
+        # (소스 CSV 자체가 교체된 것이므로 upsert만으로는 이전 로스터가 남아 잔존한다).
+        stale = (
+            await session.scalars(
+                select(WrestlerOrm).where(WrestlerOrm.name.not_in(csv_names))
+            )
+        ).all()
+        for row in stale:
+            await session.delete(row)
+            removed += 1
+
+        for brand, cells in rows:
+            record = dict(zip(_COLUMNS, cells, strict=True))
+            record["brand"] = brand
+            values = {col: _clean(val) for col, val in record.items()}
             existing = await session.scalar(
                 select(WrestlerOrm).where(WrestlerOrm.name == values["name"])
             )
@@ -78,7 +154,8 @@ async def main() -> None:
         await session.commit()
 
     print(
-        f"wrestlers: {inserted} inserted, {updated} updated (of {len(rows)} CSV rows)"
+        f"wrestlers: {inserted} inserted, {updated} updated, {removed} removed "
+        f"(of {len(rows)} CSV rows)"
     )
 
 

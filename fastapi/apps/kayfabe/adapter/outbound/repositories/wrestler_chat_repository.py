@@ -90,13 +90,13 @@ class WrestlerChatRepository(WrestlerChatPort):
             ("이름", w.name),
             ("본명", w.real_name),
             ("링네임", w.ring_names),
+            ("소속 스테이블/팀", w.stable_team),
+            ("브랜드", w.brand),
             ("신장", w.height),
             ("체중", w.weight),
             ("출신", w.birth_place),
             ("연고지", w.billed_from),
             ("트레이너", w.trainer),
-            ("데뷔", w.debut),
-            ("은퇴", w.retired),
             ("피니셔", w.finisher),
         ]
         parts = [f"{label}: {value}" for label, value in fields if value]
