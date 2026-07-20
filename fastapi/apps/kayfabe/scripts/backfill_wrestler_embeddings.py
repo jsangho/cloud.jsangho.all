@@ -22,13 +22,13 @@ def _wrestler_text(row: WrestlerOrm) -> str:
         row.name,
         f"본명 {row.real_name}" if row.real_name else None,
         f"링네임 {row.ring_names}" if row.ring_names else None,
+        f"소속 스테이블/팀 {row.stable_team}" if row.stable_team else None,
+        f"브랜드 {row.brand}" if row.brand else None,
         f"신장 {row.height}" if row.height else None,
         f"체중 {row.weight}" if row.weight else None,
         f"출신 {row.birth_place}" if row.birth_place else None,
         f"연고지 {row.billed_from}" if row.billed_from else None,
         f"트레이너 {row.trainer}" if row.trainer else None,
-        f"데뷔 {row.debut}" if row.debut else None,
-        f"은퇴 {row.retired}" if row.retired else None,
         f"피니셔 {row.finisher}" if row.finisher else None,
     ]
     return " ".join(p for p in parts if p)

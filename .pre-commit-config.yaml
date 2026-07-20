@@ -24,7 +24,7 @@ repos:
       - id: ruff-lint
         name: "Python: ruff lint"
         entry: ruff
-        args: [check, fastapi/, --config, fastapi/pyproject.toml]
+        args: [check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false
@@ -32,7 +32,7 @@ repos:
       - id: ruff-format-check
         name: "Python: ruff format check"
         entry: ruff
-        args: [format, --check, fastapi/, --config, fastapi/pyproject.toml]
+        args: [format, --check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false

@@ -1,3 +1,6 @@
 pytorch_env/
+.venv/
 .env
 data/
+__pycache__/
+*.py[cod]
