@@ -18,7 +18,7 @@ function handleComingSoon(providerKey: string) {
 
 function NaverIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-9" aria-hidden>
       <rect width="24" height="24" rx="12" fill="#03C75A" />
       <path d="M13.6 12.6 10.2 7.5H7.5v9h2.9v-5.1l3.4 5.1h2.7v-9h-2.9z" fill="#fff" />
     </svg>
@@ -27,7 +27,7 @@ function NaverIcon() {
 
 function KakaoIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-9" aria-hidden>
       <rect width="24" height="24" rx="12" fill="#FEE500" />
       <path
         d="M12 6.5c-3.31 0-6 2.07-6 4.63 0 1.63 1.1 3.06 2.76 3.89-.12.44-.44 1.6-.5 1.85-.08.31.11.31.24.22.1-.07 1.62-1.1 2.28-1.55.39.06.8.09 1.22.09 3.31 0 6-2.07 6-4.63S15.31 6.5 12 6.5z"
@@ -39,7 +39,7 @@ function KakaoIcon() {
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-9" aria-hidden>
       <rect width="24" height="24" rx="12" fill="#fff" />
       <path
         fill="#4285F4"
@@ -63,7 +63,7 @@ function GoogleIcon() {
 
 function AppleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-9" aria-hidden>
       <rect width="24" height="24" rx="12" className="fill-stone-900 dark:fill-stone-50" />
       <path
         className="fill-stone-50 dark:fill-stone-900"
@@ -75,7 +75,7 @@ function AppleIcon() {
 
 function InstagramIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-9" aria-hidden>
       <defs>
         <linearGradient id="ig-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#FEE411" />
@@ -167,7 +167,7 @@ export function SnsLoginButtons() {
             type="button"
             aria-label={label}
             onClick={functionalHandlers[key] ?? (() => onClick?.(key))}
-            className="flex size-11 items-center justify-center overflow-hidden rounded-full border border-stone-300/80 dark:border-stone-700/80 shadow-md shadow-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+            className="flex size-14 items-center justify-center overflow-hidden rounded-full border border-stone-300/80 dark:border-stone-700/80 shadow-md shadow-black/10 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
           >
             <Icon />
           </button>
