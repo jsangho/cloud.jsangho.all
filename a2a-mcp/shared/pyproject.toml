@@ -1,0 +1,15 @@
+[project]
+name = "a2a-shared"
+version = "0.1.0"
+description = "A2A 메시지 스키마 및 공통 타입 (에이전트 간 단일 소스)"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/a2a_shared"]

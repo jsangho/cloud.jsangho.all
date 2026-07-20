@@ -196,7 +196,7 @@ class VectorRepository(Protocol):
 ## 8. 패키지 의존성
 
 ```toml
-# fastapi/pyproject.toml 추가
+# pyproject.toml 추가
 neo4j = ">=5.0"
 qdrant-client = ">=1.9"
 ```

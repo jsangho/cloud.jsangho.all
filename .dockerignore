@@ -1,6 +1,8 @@
 # Git
 .git
 .gitignore
+.gitmodules
+.github
 
 # 환경 변수 (보안)
 .env
@@ -19,9 +21,14 @@ __pycache__
 .pytest_cache
 
 # 가상환경
-apps/.venv
 .venv
+**/.venv
 venv
+pytorch_env/
+
+# 로컬 LLM 가중치 (이미지에 안 넣음 — 온프레미스 볼륨/외부 스토리지 사용)
+fastapi/Qwen2.5-1.5B-Instruct/
+fastapi/EXAONE*/
 
 # 문서
 *.md
@@ -34,9 +41,20 @@ _docs
 .importlinter
 .vscode
 .idea
+.obsidian
+.claude
+.markdownlint.yaml
+.prettierrc
+
+# fastapi 빌드 컨텍스트에 불필요한 다른 스택
+www/
+flutter/
+scripts/
+data/
 
 # Docker 파일 자체
 Dockerfile
+fastapi/Dockerfile
 .dockerignore
 
 # 테스트

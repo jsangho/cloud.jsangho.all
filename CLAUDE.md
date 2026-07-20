@@ -106,8 +106,8 @@ dart format .         # 포매팅
 ### Python 작업 후
 
 ```bash
-ruff check fastapi/ --config fastapi/pyproject.toml --fix
-ruff format fastapi/ --config fastapi/pyproject.toml
+ruff check fastapi/ --config pyproject.toml --fix
+ruff format fastapi/ --config pyproject.toml
 cd fastapi && lint-imports   # 스타 토폴로지 계약 검증
 ```
 
@@ -144,15 +144,15 @@ pre-commit run --all-files
 
 ### 원칙
 
-1. **코드 변경은 빌드 불필요** — 볼륨 마운트(`./fastapi:/app`)로 즉시 반영된다.
+1. **코드 변경은 빌드 불필요** — 볼륨 마운트(`.:/app`, 저장소 루트 전체)로 즉시 반영된다.
 
-2. **새 패키지는 exec로 먼저 테스트** — requirements.txt를 바로 수정하지 말고, 실행 중인 컨테이너에 직접 설치해서 확인한다.
+2. **새 패키지는 exec로 먼저 테스트** — `pyproject.toml`을 바로 수정하지 말고, 실행 중인 컨테이너에 직접 설치해서 확인한다.
    ```bash
-   docker compose exec <service> pip install <package>
+   docker compose exec <service> uv pip install <package>
    ```
 
-3. **빌드는 명시적 요청 시에만** — `docker build` / `docker compose build` / `--build` 옵션은 사용자가 **"빌드해줘"** 라고 직접 말했을 때만 실행한다. 패키지가 추가됐거나 requirements.txt가 바뀌었다는 이유로 AI가 임의로 빌드를 실행하거나 제안하지 않는다.
+3. **빌드는 명시적 요청 시에만** — `docker build` / `docker compose build` / `--build` 옵션은 사용자가 **"빌드해줘"** 라고 직접 말했을 때만 실행한다. 패키지가 추가됐거나 `pyproject.toml`/`uv.lock`이 바뀌었다는 이유로 AI가 임의로 빌드를 실행하거나 제안하지 않는다.
 
-4. **requirements.txt 수정은 가능, 빌드는 금지** — 파일에 패키지를 반영하는 작업은 해도 되지만, 그 직후 자동으로 빌드까지 이어가지 않는다. 빌드 시점은 사용자가 결정한다.
+4. **`pyproject.toml`/`uv.lock` 수정은 가능, 빌드는 금지** — 파일에 패키지를 반영하는 작업(`uv add` 등)은 해도 되지만, 그 직후 자동으로 빌드까지 이어가지 않는다. 빌드 시점은 사용자가 결정한다.
 
 5. **임시 설치 소멸 안내** — 컨테이너를 내렸다 올리면 exec로 설치한 패키지는 사라진다. 필요할 때 한 번 알려줘도 되지만, 그것을 이유로 먼저 빌드하지 않는다.
