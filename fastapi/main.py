@@ -50,6 +50,7 @@ from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
 from superstar.adapter.inbound.api import user_router
+from superstar.adapter.inbound.api.v1.nick_fury_router import nick_fury_router
 from titanic.adapter.inbound.api import titanic_router
 
 keymaker = get_keymaker()
@@ -87,7 +88,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Jsangho Main Page", lifespan=lifespan, default_response_class=JSONResponse
+    title="Jsangho Main Page",
+    lifespan=lifespan,
+    default_response_class=JSONResponse,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 app.add_middleware(
@@ -103,6 +109,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(nick_fury_router)
 app.include_router(titanic_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")
