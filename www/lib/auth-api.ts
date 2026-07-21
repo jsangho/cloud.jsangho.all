@@ -11,6 +11,7 @@ type UserProfileJson = {
   nickname?: string;
   email?: string;
   role?: string;
+  oauthProvider?: string | null;
 };
 
 export function parseUserProfile(data: UserProfileJson | null): AuthProfile | null {
@@ -26,6 +27,7 @@ export function parseUserProfile(data: UserProfileJson | null): AuthProfile | nu
     nickname,
     email,
     role,
+    oauthProvider: data.oauthProvider?.trim() || undefined,
   };
 }
 

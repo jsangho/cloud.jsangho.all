@@ -25,6 +25,7 @@ class UserProfileResponse(BaseModel):
     nickname: str
     email: str
     role: UserRole
+    oauth_provider: str | None = Field(default=None, alias="oauthProvider")
 
 
 def get_murder_list(db: AsyncSession = Depends(get_db)) -> MurderListUseCase:
@@ -54,4 +55,5 @@ async def get_user_profile(
         nickname=user.nickname,
         email=user.email,
         role=UserRole(user.role),
+        oauth_provider=user.oauth_provider,
     )

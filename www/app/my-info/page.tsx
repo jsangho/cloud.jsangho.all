@@ -23,6 +23,17 @@ const initialStatsState: MyInfoPageState = {
   statsUnavailable: false,
 };
 
+const OAUTH_PROVIDER_LABELS: Record<string, string> = {
+  naver: "네이버",
+  kakao: "카카오",
+  google: "구글",
+};
+
+function oauthProviderLabel(provider: string | undefined): string {
+  if (!provider) return "이메일";
+  return OAUTH_PROVIDER_LABELS[provider] ?? provider;
+}
+
 export default function MyInfoPage() {
   const router = useRouter();
   const { user, isReady } = useAuth();
@@ -93,6 +104,10 @@ export default function MyInfoPage() {
           <InfoRow label="닉네임" value={user.nickname} />
           <InfoRow label="이메일" value={user.email} />
           <InfoRow label="역할" value={user.role} />
+          <InfoRow
+            label="로그인 방식"
+            value={oauthProviderLabel(user.oauthProvider)}
+          />
         </dl>
 
         <section className="mt-6 border-t border-stone-200/70 dark:border-stone-700/70 pt-6">

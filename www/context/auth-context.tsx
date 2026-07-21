@@ -20,6 +20,8 @@ export type AuthUser = {
   nickname: string;
   email: string;
   role: string;
+  /** SNS 로그인 제공자(naver/kakao/google) — 이메일/비밀번호 로그인이면 undefined */
+  oauthProvider?: string;
   /** 서버가 검증하는 JWT 액세스 토큰 — 보호된 API 호출 시 Authorization 헤더로 전달 */
   token: string;
 };
