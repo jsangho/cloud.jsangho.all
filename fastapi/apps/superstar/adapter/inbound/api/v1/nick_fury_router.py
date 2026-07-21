@@ -16,6 +16,7 @@ from superstar.domain.value_objects.role import UserRole
 nick_fury_router = APIRouter(tags=["docs-gate"], include_in_schema=False)
 
 DOCS_COOKIE_NAME = "kayfabe_docs_session"
+DOCS_SESSION_SECONDS = 15 * 60
 
 
 def _safe_next(next_path: str) -> str:
@@ -115,6 +116,7 @@ async def docs_login_submit(
         secure=True,
         samesite="lax",
         path="/",
+        max_age=DOCS_SESSION_SECONDS,
     )
     return response
 
