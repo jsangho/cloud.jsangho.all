@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from core.entities.user_model import UserModel
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,6 @@ from kayfabe.adapter.outbound.orm.ple_orm import (
 from kayfabe.app.dtos.ple_events_dto import MyselfQuery, MyselfResponse
 from kayfabe.app.dtos.ple_match_pick_dto import LeaderboardQuery
 from kayfabe.app.ports.output.ple_match_pick_repository import PleMatchPickRepository
-from superstar.domain.entities.user_model import UserModel
 
 logger = LAYER_LOG
 

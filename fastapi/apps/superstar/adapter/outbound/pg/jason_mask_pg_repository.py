@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from core.entities.user_model import UserModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from superstar.app.ports.input.jason_mask_schema import JasonMaskSchema
 from superstar.app.ports.output.jason_mask_repository import JasonMaskRepository
-from superstar.domain.entities.user_model import UserModel
 
 
 class JasonMaskPgRepository(JasonMaskRepository):

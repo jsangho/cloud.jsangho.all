@@ -4,3 +4,4 @@ pytorch_env/
 data/
 __pycache__/
 *.py[cod]
+*.pem

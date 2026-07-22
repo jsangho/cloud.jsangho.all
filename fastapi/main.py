@@ -43,6 +43,9 @@ from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.adapter.inbound.api import auth_router
+from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
+from auth.adapter.inbound.api.jwks_router import jwks_router
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from kayfabe.adapter.inbound.api import kayfabe_router
@@ -50,7 +53,6 @@ from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
 from superstar.adapter.inbound.api import user_router
-from superstar.adapter.inbound.api.v1.nick_fury_router import nick_fury_router
 from titanic.adapter.inbound.api import titanic_router
 
 keymaker = get_keymaker()
@@ -109,7 +111,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(nick_fury_router)
+app.include_router(docs_gate_router)
+app.include_router(jwks_router)
+app.include_router(auth_router, prefix="/api")
 app.include_router(titanic_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")

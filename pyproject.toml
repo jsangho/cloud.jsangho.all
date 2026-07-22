@@ -39,6 +39,7 @@ dependencies = [
     "redis==8.0.1",
     "beautifulsoup4==4.15.0",
     "pyjwt==2.10.1",
+    "cryptography",
 ]
 
 [project.optional-dependencies]
@@ -113,6 +114,7 @@ known-first-party = [
     "titanic",
     "kayfabe",
     "superstar",
+    "auth",
     "human_resource",
     "imitation_game",
     "inception",

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from core.entities.user_model import UserModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from superstar.app.ports.output.murder_list_repository import MurderListRepository
-from superstar.domain.entities.user_model import UserModel
 
 
 class MurderListPgRepository(MurderListRepository):

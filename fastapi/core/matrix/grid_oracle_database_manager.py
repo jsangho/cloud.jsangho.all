@@ -187,10 +187,7 @@ async def init_db() -> None:
     except ImportError:
         pass
 
-    try:
-        import user.domain.entities.user_model  # noqa: F401
-    except ImportError:
-        pass
+    import core.entities.user_model  # noqa: F401
 
     await warmup_db_pool()
 

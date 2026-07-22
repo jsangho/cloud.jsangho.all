@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from core.entities.user_model import UserModel
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -40,7 +41,6 @@ from kayfabe.app.services.ple_scoring import (
     competitor_count_from_card,
     derive_match_point_value,
 )
-from superstar.domain.entities.user_model import UserModel
 
 logger = LAYER_LOG
 

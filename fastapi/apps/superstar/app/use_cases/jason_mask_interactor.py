@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from core.security.password import hash_password
+
 from fastapi import HTTPException
 from superstar.app.ports.input.jason_mask import JasonMaskUseCase
 from superstar.app.ports.input.jason_mask_schema import JasonMaskSchema
 from superstar.app.ports.output.jason_mask_repository import JasonMaskRepository
-from superstar.domain.services.password import hash_password
 
 
 class JasonMaskInteractor(JasonMaskUseCase):

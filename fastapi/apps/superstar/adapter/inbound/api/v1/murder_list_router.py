@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
-
 from core.matrix.grid_oracle_database_manager import get_db
+from core.security.dependencies import get_current_user, require_self_or_admin
+from core.security.role import UserRole
+from core.security.token_verifier import TokenPayload
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends
-from superstar.adapter.inbound.api.bearer_auth import (
-    require_auth,
-    require_self_or_admin,
-)
 from superstar.app.ports.input.murder_list import MurderListUseCase
-from superstar.domain.value_objects.role import UserRole
 
 murder_list_router = APIRouter(tags=["murder-list"])
 
@@ -45,7 +41,7 @@ def get_murder_list(db: AsyncSession = Depends(get_db)) -> MurderListUseCase:
 async def get_user_profile(
     user_id: int,
     use_case: MurderListUseCase = Depends(get_murder_list),
-    claims: dict[str, Any] = Depends(require_auth),
+    claims: TokenPayload = Depends(get_current_user),
 ):
     require_self_or_admin(user_id=user_id, claims=claims)
     user = await use_case.get_user_by_id(user_id=user_id)

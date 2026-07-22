@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from core.entities.user_model import UserModel
+
 from fastapi import HTTPException
 from superstar.app.ports.input.murder_list import MurderListUseCase
 from superstar.app.ports.output.murder_list_repository import MurderListRepository
-from superstar.domain.entities.user_model import UserModel
 
 
 class MurderListInteractor(MurderListUseCase):

@@ -7,6 +7,7 @@ root_packages =
     admin
     heyman
     soccer
+    auth
 
 # 하네스 계약 목록 — 위반 시 CI 차단
 include_extra_contracts = True
@@ -14,6 +15,7 @@ contracts =
     star_topology_hub_only
     clean_architecture_layers
     no_spoke_to_spoke
+    auth_isolation
 
 
 # ────────────────────────────────────────────
@@ -30,6 +32,7 @@ source_modules =
     admin
     heyman
     soccer
+    auth
 forbidden_modules =
     titanic
     kayfabe
@@ -37,6 +40,7 @@ forbidden_modules =
     admin
     heyman
     soccer
+    auth
 exclude_type_checking_imports = True
 
 
@@ -69,7 +73,28 @@ containers =
     admin
     heyman
     soccer
+    auth
 layers =
     adapter
     app
     domain
+
+
+# ────────────────────────────────────────────
+# 계약 4: auth는 그 누구도 import할 수 없다 (허브 ontology 포함)
+# 검증이 필요하면 core.security만 사용한다 — core는 root_packages 밖의
+# 공유 커널이라 이 계약의 source_modules에 넣지 않아도(넣을 수도 없음) 이미 열려 있다.
+# ────────────────────────────────────────────
+[importlinter:contract:auth_isolation]
+name = auth is not importable by any other app (including the hub)
+type = forbidden
+source_modules =
+    ontology
+    titanic
+    kayfabe
+    superstar
+    admin
+    heyman
+    soccer
+forbidden_modules =
+    auth

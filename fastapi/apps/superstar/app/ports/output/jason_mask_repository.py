@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from core.entities.user_model import UserModel
+
 from superstar.app.ports.input.jason_mask_schema import JasonMaskSchema
-from superstar.domain.entities.user_model import UserModel
 
 
 class JasonMaskRepository(ABC):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from superstar.domain.value_objects.role import UserRole
+from core.security.role import UserRole
 
 
 @dataclass(frozen=True)

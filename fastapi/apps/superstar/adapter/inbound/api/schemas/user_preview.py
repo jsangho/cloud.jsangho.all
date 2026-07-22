@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from superstar.domain.value_objects.role import UserRole
+from core.security.role import UserRole
 
 
 def format_preview_signup(
