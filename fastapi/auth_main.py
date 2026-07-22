@@ -22,12 +22,26 @@ if _APPS_DIR not in sys.path:
 from auth.adapter.inbound.api import auth_router
 from auth.adapter.inbound.api.jwks_router import jwks_router
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="jsangho Auth Gateway",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://jsangho.cloud",
+        "https://www.jsangho.cloud",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router, prefix="/auth")

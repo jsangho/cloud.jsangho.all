@@ -1,6 +1,10 @@
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
+/** apps/auth 단독 게이트웨이. 로그인/리프레시/OAuth는 여기로 간다. */
+export const authBaseUrl =
+  process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001";
+
 export const titanicApiBaseUrl = `${apiBaseUrl}/api/titanic`;
 export const pleEventsBaseUrl = `${apiBaseUrl}/api/ple_events`;
 export const pleMatchPicksBaseUrl = `${apiBaseUrl}/api/ple-match-picks`;

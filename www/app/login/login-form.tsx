@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { IdCard, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { useAuth, type AuthUser } from "@/context/auth-context";
 import { parseUserProfile } from "@/lib/auth-api";
-import { apiBaseUrl, getRequestTimeoutMessage, isAbortError, requestTimeoutMs } from "@/lib/api";
+import { apiBaseUrl, authBaseUrl, getRequestTimeoutMessage, isAbortError, requestTimeoutMs } from "@/lib/api";
 import { LoginBackdrop } from "./login-backdrop";
 import { SnsLoginButtons } from "./sns-login-buttons";
 
@@ -123,7 +123,7 @@ export function LoginForm() {
     }, requestTimeoutMs);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/login`, {
+      const response = await fetch(`${authBaseUrl}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
