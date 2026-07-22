@@ -1,4 +1,4 @@
-import { apiBaseUrl, requestTimeoutMs } from "@/lib/api";
+import { authBaseUrl, requestTimeoutMs } from "@/lib/api";
 import type { AuthUser } from "@/context/auth-context";
 
 export type AuthProfile = Omit<AuthUser, "token">;
@@ -61,7 +61,7 @@ export async function fetchUserProfile(userId: number, token: string): Promise<A
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {
-    const response = await fetch(`${apiBaseUrl}/api/users/${userId}`, {
+    const response = await fetch(`${authBaseUrl}/auth/users/${userId}`, {
       signal: controller.signal,
       headers: { Authorization: `Bearer ${token}` },
     });

@@ -52,7 +52,6 @@ from kayfabe.adapter.inbound.api import kayfabe_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
-from superstar.adapter.inbound.api import user_router
 from titanic.adapter.inbound.api import titanic_router
 
 keymaker = get_keymaker()
@@ -115,7 +114,6 @@ app.include_router(docs_gate_router)
 app.include_router(jwks_router)
 app.include_router(auth_router, prefix="/api")
 app.include_router(titanic_router, prefix="/api")
-app.include_router(user_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")
 app.include_router(human_resource_router, prefix="/api")
 app.include_router(manager_router, prefix="/api")
@@ -126,8 +124,8 @@ app.include_router(soccer_router, prefix="/api")
 
 @app.middleware("http")
 async def log_auth_requests(request: Request, call_next):
-    """로그인·회원가입 요청이 들어오면 uvicorn 터미널에 먼저 표시합니다."""
-    if request.url.path in ("/api/login", "/api/signup") and request.method == "POST":
+    """로그인 요청이 들어오면 uvicorn 터미널에 먼저 표시합니다."""
+    if request.url.path == "/api/login" and request.method == "POST":
         logger.info("[API] %s %s", request.method, request.url.path)
     return await call_next(request)
 

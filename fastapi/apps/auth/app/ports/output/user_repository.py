@@ -35,3 +35,14 @@ class UserRepository(ABC):
         provider: str,
         oauth_id: str,
     ) -> UserModel: ...
+
+    @abstractmethod
+    async def create_user(
+        self,
+        *,
+        login_id: str,
+        nickname: str,
+        email: str,
+        password_hash: str,
+        role: str,
+    ) -> UserModel: ...

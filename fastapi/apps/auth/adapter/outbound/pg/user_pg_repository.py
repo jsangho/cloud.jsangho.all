@@ -73,3 +73,24 @@ class UserPgRepository(UserRepository):
         await self._session.commit()
         await self._session.refresh(user)
         return user
+
+    async def create_user(
+        self,
+        *,
+        login_id: str,
+        nickname: str,
+        email: str,
+        password_hash: str,
+        role: str,
+    ) -> UserModel:
+        user = UserModel(
+            login_id=login_id,
+            nickname=nickname,
+            email=email,
+            password_hash=password_hash,
+            role=role,
+        )
+        self._session.add(user)
+        await self._session.commit()
+        await self._session.refresh(user)
+        return user
