@@ -19,8 +19,11 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
-from auth.adapter.inbound.api import auth_router
 from auth.adapter.inbound.api.jwks_router import jwks_router
+from auth.adapter.inbound.api.login_router import login_router
+from auth.adapter.inbound.api.logout_router import logout_router
+from auth.adapter.inbound.api.oauth_callback_router import oauth_callback_router
+from auth.adapter.inbound.api.refresh_router import refresh_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -44,7 +47,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/auth")
+app.include_router(login_router, prefix="/auth")
+app.include_router(logout_router, prefix="/auth")
+app.include_router(refresh_router, prefix="/auth")
+# oauth_callback_router의 경로 자체가 이미 "/auth/{provider}/..."로 시작하므로
+# 여기서 추가로 prefix="/auth"를 주면 "/auth/auth/..." 이중 프리픽스가 된다.
+app.include_router(oauth_callback_router)
 app.include_router(jwks_router)
 
 

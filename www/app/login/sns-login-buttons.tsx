@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { apiBaseUrl } from "@/lib/api";
+import { authBaseUrl } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
 import { completeOAuthLogin } from "@/lib/auth-api";
 import { openOAuthPopup } from "@/lib/oauth-popup";
@@ -132,7 +132,7 @@ export function SnsLoginButtons() {
 
   function startOAuthLogin(provider: OAuthProvider) {
     const next = encodeURIComponent(readNextPath());
-    const url = `${apiBaseUrl}/api/auth/${provider}/login?next=${next}`;
+    const url = `${authBaseUrl}/auth/${provider}/login?next=${next}`;
 
     // 팝업이 차단된 브라우저에서는 기존 방식(전체 페이지 리다이렉트)으로 폴백한다.
     const opened = openOAuthPopup(
