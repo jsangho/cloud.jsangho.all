@@ -20,12 +20,17 @@ Claude Code 작업 지시서 — `superstar` 내장 인증을 `apps/auth`로 분
 - `core/matrix/grid_oracle_database_manager.py`의 `init_db()`에 있던 죽은 참조(`import user.domain.entities.user_model` — 존재한 적 없는 `user` 패키지, try/except로 항상 무시됨)를 `core.entities.user_model`로 고쳤다. `users` 테이블이 `Base.metadata`에 실제로 등록되는 건 이번이 처음이다.
 - 로그인/OAuth 콜백 응답에 `refreshToken` 필드가 새로 추가됐다(리프레시 로테이션, 2.6). 프런트(`www/`)는 아직 이 필드를 안 쓴다 — 이번 범위 밖.
 
-**검증 완료:** `ruff check`/`ruff format` 통과, `lint-imports`(신규 `auth_isolation` 계약 포함 4개 계약 전부 KEPT — kayfabe 위반도 사라짐), 실제 RSA 키페어로 발급→검증 왕복·`aud` 불일치 거부·서명 변조 거부·`alg=none` 위조 거부·JWKS n/e 계산까지 스모크 테스트 통과.
+**검증 완료:** `ruff check`/`ruff format` 통과, `lint-imports`(신규 `auth_isolation` 계약 포함 4개 계약 전부 KEPT — kayfabe 위반도 사라짐), 실제 RSA 키페어로 발급→검증 왕복·`aud` 불일치 거부·서명 변조 거부·`alg=none` 위조 거부·JWKS n/e 계산까지 스모크 테스트 통과. 이후 `uv add cryptography`로 `uv.lock`도 잠갔고, 운영 컨테이너(`cloudjsanghoall-backend-1`)에서 `cryptography`/`pyjwt` import 확인 완료. 실제 `.env`에 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`/`SERVICE_AUD`도 채워 넣고(로컬 `.env`만 — 서버 `.env`는 아직) 그 키로 발급→검증 왕복까지 재확인.
+
+**2.5 완료:** `fastapi/auth_main.py` 생성 — `login`/`logout`/`refresh`/`oauth_callback`(prefix `/auth`)·`jwks`(prefix 없음)·`/healthz`만 mount하는 단독 엔트리포인트. `heyman`/`ontology` 등 무거운 앱을 안 거치니 로컬에서 바로 뜬다. `docker-compose.yaml` 서비스 등록은 아직 안 함(2.8과 함께 보류).
+- 로컬에서 `python auth_main.py`로 실제 기동해 확인: `/healthz` 200, `/.well-known/jwks.json`이 실제 `.env`의 공개키와 일치하는 JWK 반환, `GET /auth/auth/google/login`이 `.env`의 실제 `GOOGLE_CLIENT_ID`/`GOOGLE_OAUTH_REDIRECT_URI`로 정확한 Google authorize URL을 307 리다이렉트. `POST /auth/login`/`POST /auth/refresh`는 로컬에 DB/Redis가 없어(`pgvector`/`redis`는 도커 네트워크 내부 호스트명, 이 PC엔 도커 자체가 없음) DB/Redis 연결 시도까지는 도달하고 그 지점에서 실패 — 라우팅·DI·리포지토리 배선은 이렇게 확인됨.
+- **버그 발견 및 수정:** `auth_main.py`에 `main.py`가 갖고 있던 Windows `WindowsSelectorEventLoopPolicy` 설정이 빠져 있어서 psycopg 비동기 연결이 항상 실패했다(`ProactorEventLoop`는 psycopg async와 호환 안 됨). `main.py`와 똑같은 이유로 `python -m uvicorn auth_main:app`이 아니라 `python auth_main.py`로 직접 실행해야 정책이 적용된다(CLI로 띄우면 uvicorn이 앱을 import하기 전에 이미 이벤트 루프를 만들어서 정책 설정이 늦는다). `pyproject.toml` per-file-ignores에 `auth_main.py`도 `main.py`와 같은 이유로 `E402` 추가.
 
 **아직 안 한 것:**
-- `pyproject.toml`에 `cryptography`(RS256에 필수, `pyjwt`가 내부적으로 필요)를 추가했지만 **`uv.lock`은 건드리지 않았다** — `uv run lint-imports`를 실행했더니 무관한 `decord`/nvidia 패키지 마커까지 딸려오는 광범위한 재계산이 일어나서 되돌렸다. `uv add cryptography` 또는 `uv lock`을 직접 실행해서 사용자 환경 기준으로 잠가야 한다(빌드는 하지 않음, 리포의 Docker 워크플로 규칙대로).
-- 2.7 키 생성 스크립트(`scripts/generate_jwt_keys.sh`)는 아직 안 만들었다 — 테스트는 임시 키로만 했다. 실제 `.env`에 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`를 넣어야 서버가 실제로 뜬다.
+- 2.7 키 생성 스크립트(`scripts/generate_jwt_keys.sh`)는 아직 안 만들었다 — 로컬 `.env`엔 이미 실제 키가 들어갔지만, 스크립트 자체는 미작성.
+- 운영 서버(`DESKTOP-9E3A4EC`) `.env`에는 아직 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`가 없다. 로컬에서 검증한 키를 그대로 쓸지, 서버용으로 새로 발급할지 결정 필요.
 - pytest 테스트 코드는 작성하지 않았다(스모크 테스트 스크립트로만 검증). 완료 기준의 pytest 항목은 미완.
+- 로그인/OAuth 콜백까지 DB가 있는 환경(운영 컨테이너 등)에서 엔드투엔드로 확인한 적은 아직 없다 — 이번엔 라우팅·DI 배선까지만 로컬에서 확인.
 - ~~`superstar`에 pre-existing 미사용 중복 파일 3개~~ → 정리 완료. `jason_mask_use_case.py`/`murder_list_use_case.py`/`pamela_cook_use_case.py`(무참조 확인 후 삭제)와 이관으로 빈 `domain/{entities,services,value_objects}/` 디렉터리 3개를 제거했다. `ruff`/`lint-imports` 재확인 통과.
 - `superstar → auth` docs 게이트 쿠키 이름이 여전히 `kayfabe_docs_session`이다(원본 그대로 유지 — 이름 자체를 바꾸는 건 이번 범위 밖).
 - `kayfabe.adapter.outbound.pg.ple_events_pg_repository`를 단독 import하면 `kayfabe.adapter.outbound.mappers` 패키지의 순환 참조로 `ImportError`가 난다(기존부터 있던 구조적 문제, 이번 변경과 무관 — `main.py` 정상 로드 순서에서는 안 터지는 것으로 보이나 확인 필요).
