@@ -21,6 +21,23 @@ services:
       neo4j:
         condition: service_healthy
     restart: unless-stopped
+  # ①-2 인증 게이트웨이 (auth) — apps/auth 단독 엔트리포인트, 포트 미노출.
+  #     cloudflared 라우팅은 아직 없음(auth.jsangho.cloud 보류 중).
+  auth:
+    build:
+      context: .
+      dockerfile: fastapi/Dockerfile
+    env_file:
+      - ./.env
+    volumes:
+      - .:/app
+    command: uvicorn auth_main:app --host 0.0.0.0 --port 9000
+    depends_on:
+      redis:
+        condition: service_started
+      pgvector:
+        condition: service_healthy
+    restart: unless-stopped
   # ② n8n 워크플로우 자동화
   n8n:
     image: n8nio/n8n

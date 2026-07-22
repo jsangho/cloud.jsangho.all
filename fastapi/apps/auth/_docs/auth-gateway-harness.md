@@ -22,13 +22,19 @@ Claude Code 작업 지시서 — `superstar` 내장 인증을 `apps/auth`로 분
 
 **검증 완료:** `ruff check`/`ruff format` 통과, `lint-imports`(신규 `auth_isolation` 계약 포함 4개 계약 전부 KEPT — kayfabe 위반도 사라짐), 실제 RSA 키페어로 발급→검증 왕복·`aud` 불일치 거부·서명 변조 거부·`alg=none` 위조 거부·JWKS n/e 계산까지 스모크 테스트 통과. 이후 `uv add cryptography`로 `uv.lock`도 잠갔고, 운영 컨테이너(`cloudjsanghoall-backend-1`)에서 `cryptography`/`pyjwt` import 확인 완료. 실제 `.env`에 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`/`SERVICE_AUD`도 채워 넣고(로컬 `.env`만 — 서버 `.env`는 아직) 그 키로 발급→검증 왕복까지 재확인.
 
-**2.5 완료:** `fastapi/auth_main.py` 생성 — `login`/`logout`/`refresh`/`oauth_callback`(prefix `/auth`)·`jwks`(prefix 없음)·`/healthz`만 mount하는 단독 엔트리포인트. `heyman`/`ontology` 등 무거운 앱을 안 거치니 로컬에서 바로 뜬다. `docker-compose.yaml` 서비스 등록은 아직 안 함(2.8과 함께 보류).
+**2.5 완료:** `fastapi/auth_main.py` 생성 — `login`/`logout`/`refresh`/`oauth_callback`(prefix `/auth`)·`jwks`(prefix 없음)·`/healthz`만 mount하는 단독 엔트리포인트. `heyman`/`ontology` 등 무거운 앱을 안 거치니 로컬에서 바로 뜬다.
 - 로컬에서 `python auth_main.py`로 실제 기동해 확인: `/healthz` 200, `/.well-known/jwks.json`이 실제 `.env`의 공개키와 일치하는 JWK 반환, `GET /auth/auth/google/login`이 `.env`의 실제 `GOOGLE_CLIENT_ID`/`GOOGLE_OAUTH_REDIRECT_URI`로 정확한 Google authorize URL을 307 리다이렉트. `POST /auth/login`/`POST /auth/refresh`는 로컬에 DB/Redis가 없어(`pgvector`/`redis`는 도커 네트워크 내부 호스트명, 이 PC엔 도커 자체가 없음) DB/Redis 연결 시도까지는 도달하고 그 지점에서 실패 — 라우팅·DI·리포지토리 배선은 이렇게 확인됨.
 - **버그 발견 및 수정:** `auth_main.py`에 `main.py`가 갖고 있던 Windows `WindowsSelectorEventLoopPolicy` 설정이 빠져 있어서 psycopg 비동기 연결이 항상 실패했다(`ProactorEventLoop`는 psycopg async와 호환 안 됨). `main.py`와 똑같은 이유로 `python -m uvicorn auth_main:app`이 아니라 `python auth_main.py`로 직접 실행해야 정책이 적용된다(CLI로 띄우면 uvicorn이 앱을 import하기 전에 이미 이벤트 루프를 만들어서 정책 설정이 늦는다). `pyproject.toml` per-file-ignores에 `auth_main.py`도 `main.py`와 같은 이유로 `E402` 추가.
 
+**2.8 1단계 완료:** `docker-compose.yaml`에 `auth` 서비스 등록 — `backend`와 같은 이미지(`fastapi/Dockerfile`)·같은 `./.env`(사용자 확인: 지금은 분리하지 않고 공유, 원본 문서의 `.env.auth`/`.env.backend` 완전 분리는 보류), `command: uvicorn auth_main:app --host 0.0.0.0 --port 9000`, **`ports:` 매핑 없음**. `redis`/`pgvector` `depends_on` 추가(`neo4j`는 auth에 불필요해서 제외). YAML 문법은 로컬에서 `yaml.safe_load`로 확인(이 PC에 도커가 없어 `docker compose config`로는 검증 못 함). **아직 빌드·기동은 안 함** — 리포의 Docker 워크플로 규칙대로 빌드는 사용자가 명시적으로 요청할 때만.
+- 다음 단계: 서버(`DESKTOP-9E3A4EC`)에 이 커밋 배포 → 서버 `.env`에 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` 추가 → `docker compose up --build -d auth`로 기동 확인 → 그 다음에야 2.8 2단계(cloudflared 라우팅) 진행.
+
+**2.7 완료:** `scripts/generate_jwt_keys.sh` 작성 — 원본 지시서 스니펫(`openssl genrsa`/`openssl rsa -pubout`)에 더해, 실제 `token_issuer.py`/`token_verifier.py`가 `.env`에서 읽는 형식(PEM 개행을 문자 그대로의 `\n`으로 이스케이프한 한 줄)까지 바로 출력하도록 확장했다 — 원본 스니펫은 PEM 파일만 만들고 이 변환은 안 했음. 기존 키 파일이 있으면 덮어쓰지 않고 에러로 중단하는 가드 추가. 스크래치 디렉터리에서 실행 → 이스케이프된 값을 `\n`으로 되돌려 `cryptography.load_pem_private_key`로 로드 → 실제로 `jwt.encode(algorithm="RS256")`까지 왕복 검증 완료(원본 PEM과 바이트 단위 일치 확인). PEM 파일은 루트/`fastapi` 양쪽 `.gitignore`에 이미 `*.pem`으로 걸려있어 커밋 걱정 없음.
+
+**서버 `.env` 키 교체 완료 (2026-07-22):** 서버(`DESKTOP-9E3A4EC`, `ssh messi@ssh.jsangho.cloud:/home/messi/project/cloud.jsangho.all`) `.env`에 이미 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` 값이 들어있던 것을 발견(문서 기록과 불일치 — 이전 세션에서 채운 것으로 추정, 원인 불명). 사용자 확인 후 로컬 키 재사용 대신 **서버 전용으로 새로 발급해서 덮어씀** — `scripts/generate_jwt_keys.sh`를 서버로 복사해 `/tmp` 임시 디렉터리에서 직접 실행(개인키가 dev PC로 나가지 않게), `.env`의 기존 두 줄만 안전하게 치환(다른 값은 건드리지 않음), 임시 PEM·헬퍼 스크립트는 즉시 삭제. 현재 서버에 배포된 `main` 브랜치는 아직 RS256 마이그레이션 커밋을 포함하지 않아(이번 세션 커밋들은 로컬 `ho`에만 있음) 이 값을 읽는 코드가 서버에 없다 — 지금 당장 컨테이너 재시작 등은 불필요.
+
 **아직 안 한 것:**
-- 2.7 키 생성 스크립트(`scripts/generate_jwt_keys.sh`)는 아직 안 만들었다 — 로컬 `.env`엔 이미 실제 키가 들어갔지만, 스크립트 자체는 미작성.
-- 운영 서버(`DESKTOP-9E3A4EC`) `.env`에는 아직 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY`가 없다. 로컬에서 검증한 키를 그대로 쓸지, 서버용으로 새로 발급할지 결정 필요.
+- 서버가 이 커밋들을 받으려면 `ho→main` 커밋/푸시가 먼저 필요(사용자가 작업 마무리 후 일괄 커밋 예정). 그 전까지는 `docker compose up --build -d auth` 등 서버 배포 단계를 진행할 수 없다.
 - pytest 테스트 코드는 작성하지 않았다(스모크 테스트 스크립트로만 검증). 완료 기준의 pytest 항목은 미완.
 - 로그인/OAuth 콜백까지 DB가 있는 환경(운영 컨테이너 등)에서 엔드투엔드로 확인한 적은 아직 없다 — 이번엔 라우팅·DI 배선까지만 로컬에서 확인.
 - ~~`superstar`에 pre-existing 미사용 중복 파일 3개~~ → 정리 완료. `jason_mask_use_case.py`/`murder_list_use_case.py`/`pamela_cook_use_case.py`(무참조 확인 후 삭제)와 이관으로 빈 `domain/{entities,services,value_objects}/` 디렉터리 3개를 제거했다. `ruff`/`lint-imports` 재확인 통과.
