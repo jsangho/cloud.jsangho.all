@@ -22,7 +22,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
   # ①-2 인증 게이트웨이 (auth) — apps/auth 단독 엔트리포인트, 포트 미노출.
-  #     cloudflared 라우팅은 아직 없음(auth.jsangho.cloud 보류 중).
+  #     cloudflared는 auth_net의 고정 IP(172.28.0.2:9000)로 직접 라우팅한다.
   auth:
     build:
       context: .
@@ -32,6 +32,10 @@ services:
     volumes:
       - .:/app
     command: uvicorn auth_main:app --host 0.0.0.0 --port 9000
+    networks:
+      default: {}
+      auth_net:
+        ipv4_address: 172.28.0.2
     depends_on:
       redis:
         condition: service_started
@@ -122,3 +126,10 @@ volumes:
   redis_data:
   pgvector_data:
   pgadmin_data:
+
+networks:
+  default: {}
+  auth_net:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
