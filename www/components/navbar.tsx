@@ -72,18 +72,13 @@ export function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const isPle =
-    mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
+  const isPle = mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
   const isRankings = mounted && pathname === "/rankings";
-  const isRecords =
-    mounted && (pathname === "/records" || pathname.startsWith("/records/"));
+  const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
   const isChampionship =
-    mounted &&
-    (pathname === "/championship" || pathname.startsWith("/championship/"));
-  const isChat =
-    mounted && (pathname === "/chat" || pathname.startsWith("/chat/"));
-  const isLesson =
-    mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
+    mounted && (pathname === "/championship" || pathname.startsWith("/championship/"));
+  const isChat = mounted && (pathname === "/chat" || pathname.startsWith("/chat/"));
+  const isLesson = mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
   const isAdmin = mounted && pathname === "/admin";
   const isLogin = mounted && pathname === "/login";
   const isMyInfo = mounted && pathname === "/my-info";
@@ -110,10 +105,7 @@ export function Navbar() {
         type="button"
         variant="outline"
         size="sm"
-        className={cn(
-          navLinkClass(false),
-          mobileOpen && "w-full justify-start",
-        )}
+        className={cn(navLinkClass(false), mobileOpen && "w-full justify-start")}
         onClick={handleLogout}
       >
         로그아웃
@@ -131,9 +123,7 @@ export function Navbar() {
       active={isLogin}
       champion
       fullWidth={mobileOpen}
-      icon={
-        <LogIn className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
-      }
+      icon={<LogIn className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
     >
       로그인
     </NavLink>
@@ -155,12 +145,7 @@ export function Navbar() {
             href="/rankings"
             active={isRankings}
             champion
-            icon={
-              <Trophy
-                className="h-3.5 w-3.5 shrink-0 text-amber-400"
-                aria-hidden
-              />
-            }
+            icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
           >
             순위표
           </NavLink>
@@ -206,13 +191,8 @@ export function Navbar() {
 
       {mobileOpen && (
         <div className="border-t border-stone-200/80 dark:border-white/10 px-4 py-3 md:hidden">
-          <nav
-            className="mx-auto flex w-full max-w-5xl flex-col gap-2"
-            aria-label="모바일 메뉴"
-          >
-            <PlePickerDialog
-              triggerClassName={cn(navLinkClass(isPle), "w-full justify-start")}
-            />
+          <nav className="mx-auto flex w-full max-w-5xl flex-col gap-2" aria-label="모바일 메뉴">
+            <PlePickerDialog triggerClassName={cn(navLinkClass(isPle), "w-full justify-start")} />
             <NavLink href="/records" active={isRecords} fullWidth>
               기록
             </NavLink>
@@ -221,12 +201,7 @@ export function Navbar() {
               active={isRankings}
               champion
               fullWidth
-              icon={
-                <Trophy
-                  className="h-3.5 w-3.5 shrink-0 text-amber-400"
-                  aria-hidden
-                />
-              }
+              icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
             >
               순위표
             </NavLink>

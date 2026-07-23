@@ -2,12 +2,13 @@
 
 import { useCallback, useRef, useState } from "react";
 import { Upload } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { authHeader } from "@/lib/api";
 
-type UploadState =
-  | { kind: "empty" }
-  | { kind: "ready"; fileName: string; text: string };
+type UploadState = { kind: "empty" } | { kind: "ready"; fileName: string; text: string };
 
 export function ContactsCsvUpload() {
+  const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,40 +16,42 @@ export function ContactsCsvUpload() {
   const [uploadedCount, setUploadedCount] = useState<number | null>(null);
   const [state, setState] = useState<UploadState>({ kind: "empty" });
 
-  const uploadFile = useCallback(async (file: File) => {
-    setError(null);
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setError(null);
+      setUploading(true);
+      try {
+        const form = new FormData();
+        form.append("file", file);
 
-      const res = await fetch("/api/contacts/upload", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const detail =
-          (data &&
-            typeof data === "object" &&
-            "detail" in data &&
-            (data as Record<string, unknown>).detail) ||
-          "업로드에 실패했습니다.";
-        throw new Error(String(detail));
+        const res = await fetch("/api/contacts/upload", {
+          method: "POST",
+          headers: authHeader(user?.token),
+          body: form,
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          const detail =
+            (data &&
+              typeof data === "object" &&
+              "detail" in data &&
+              (data as Record<string, unknown>).detail) ||
+            "업로드에 실패했습니다.";
+          throw new Error(String(detail));
+        }
+        const count =
+          data && typeof data === "object" && "count" in data
+            ? Number((data as Record<string, unknown>).count)
+            : null;
+        setUploadedCount(Number.isFinite(count) ? count : null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "업로드 중 오류가 발생했습니다.");
+      } finally {
+        setUploading(false);
       }
-      const count =
-        data && typeof data === "object" && "count" in data
-          ? Number((data as Record<string, unknown>).count)
-          : null;
-      setUploadedCount(Number.isFinite(count) ? count : null);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "업로드 중 오류가 발생했습니다.",
-      );
-    } finally {
-      setUploading(false);
-    }
-  }, []);
+    },
+    [user],
+  );
 
   const ingestFile = useCallback(
     (file: File | undefined) => {
@@ -154,11 +157,7 @@ export function ContactsCsvUpload() {
                   : "border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60",
             ].join(" ")}
           >
-            <Upload
-              className="mb-3 size-10 text-zinc-400"
-              strokeWidth={1.25}
-              aria-hidden
-            />
+            <Upload className="mb-3 size-10 text-zinc-400" strokeWidth={1.25} aria-hidden />
             <p className="text-base font-medium text-zinc-800 dark:text-zinc-200">
               {uploading ? "서버로 전송 중..." : "파일을 이 영역에 끌어다 놓기"}
             </p>
@@ -175,9 +174,7 @@ export function ContactsCsvUpload() {
             <div className="w-full border-t border-zinc-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase tracking-wide text-zinc-400">
-            <span className="bg-white dark:bg-stone-900 px-3 dark:text-zinc-400">
-              또는
-            </span>
+            <span className="bg-white dark:bg-stone-900 px-3 dark:text-zinc-400">또는</span>
           </div>
         </div>
 
@@ -231,8 +228,7 @@ export function ContactsCsvUpload() {
             불러온 파일: {state.fileName}
           </p>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {summary.lines.toLocaleString("ko-KR")}줄 ·{" "}
-            {summary.bytes.toLocaleString("ko-KR")}
+            {summary.lines.toLocaleString("ko-KR")}줄 · {summary.bytes.toLocaleString("ko-KR")}
             바이트
           </p>
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-3 text-xs text-zinc-700 dark:text-zinc-300">

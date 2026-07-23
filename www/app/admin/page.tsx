@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useAuth } from "@/context/auth-context";
+import { authHeader } from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -47,12 +48,7 @@ import {
   MailOpen,
 } from "lucide-react";
 import { ContactsCsvUpload } from "@/components/contacts-csv-upload";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // ── 데이터 ────────────────────────────────────────────────────────────────────
 
@@ -178,13 +174,7 @@ const TT = {
 
 // ── 공통 카드 ─────────────────────────────────────────────────────────────────
 
-function Card({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
       className={`rounded-xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-50/70 dark:bg-stone-950/70 ${className}`}
@@ -250,16 +240,14 @@ function CalendarCard() {
             </div>
             {ev.avatars > 0 && (
               <div className="mt-1.5 flex gap-1">
-                {Array.from({ length: Math.min(ev.avatars, 3) }).map(
-                  (_, ai) => (
-                    <div
-                      key={ai}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-red-700/80 text-[9px] font-bold text-white"
-                    >
-                      A
-                    </div>
-                  ),
-                )}
+                {Array.from({ length: Math.min(ev.avatars, 3) }).map((_, ai) => (
+                  <div
+                    key={ai}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-red-700/80 text-[9px] font-bold text-white"
+                  >
+                    A
+                  </div>
+                ))}
                 {ev.avatars > 3 && (
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-stone-700 text-[9px] text-stone-300">
                     +{ev.avatars - 3}
@@ -288,9 +276,7 @@ function TotalMembersCard() {
           <ArrowUpRight className="h-3 w-3" /> 12%
         </span>
       </div>
-      <p className="mb-0.5 text-3xl font-bold tracking-tight text-stone-50">
-        2,521
-      </p>
+      <p className="mb-0.5 text-3xl font-bold tracking-tight text-stone-50">2,521</p>
       <p className="mb-3 text-[10px] text-stone-400">2024년 6월 29일 기준</p>
       <ResponsiveContainer width="100%" height={36}>
         <BarChart
@@ -327,17 +313,8 @@ function AvgTimeCard() {
         <span className="text-[10px] text-stone-500">전일 대비</span>
       </div>
       <ResponsiveContainer width="100%" height={64}>
-        <LineChart
-          data={workTimeData}
-          margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
-        >
-          <Line
-            type="monotone"
-            dataKey="v"
-            stroke="#ef4444"
-            strokeWidth={2}
-            dot={false}
-          />
+        <LineChart data={workTimeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          <Line type="monotone" dataKey="v" stroke="#ef4444" strokeWidth={2} dot={false} />
           <Tooltip {...TT} />
         </LineChart>
       </ResponsiveContainer>
@@ -394,9 +371,7 @@ function RevenueCard() {
               key={t}
               onClick={() => setPeriod(t)}
               className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                period === t
-                  ? "bg-red-600 text-white"
-                  : "text-stone-500 hover:text-stone-300"
+                period === t ? "bg-red-600 text-white" : "text-stone-500 hover:text-stone-300"
               }`}
             >
               {t}
@@ -405,21 +380,14 @@ function RevenueCard() {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={160}>
-        <AreaChart
-          data={revenueData}
-          margin={{ top: 4, right: 4, bottom: 0, left: -12 }}
-        >
+        <AreaChart data={revenueData} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
           <defs>
             <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#dc2626" stopOpacity={0.35} />
               <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="rgba(255,255,255,0.04)"
-            vertical={false}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
           <XAxis
             dataKey="m"
             tick={{ fontSize: 9, fill: "#78716c" }}
@@ -432,17 +400,8 @@ function RevenueCard() {
             tickLine={false}
             tickFormatter={(v: number) => `${v / 1000}k`}
           />
-          <Tooltip
-            {...TT}
-            formatter={(v: number) => [`$${v.toLocaleString()}`, "매출"]}
-          />
-          <Area
-            type="monotone"
-            dataKey="v"
-            stroke="#ef4444"
-            strokeWidth={2}
-            fill="url(#revGrad)"
-          />
+          <Tooltip {...TT} formatter={(v: number) => [`$${v.toLocaleString()}`, "매출"]} />
+          <Area type="monotone" dataKey="v" stroke="#ef4444" strokeWidth={2} fill="url(#revGrad)" />
         </AreaChart>
       </ResponsiveContainer>
     </Card>
@@ -462,9 +421,7 @@ function LeadsManagementCard() {
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-              tab === t
-                ? "bg-red-600 text-white"
-                : "text-stone-400 hover:text-stone-200"
+              tab === t ? "bg-red-600 text-white" : "text-stone-400 hover:text-stone-200"
             }`}
           >
             {t}
@@ -478,10 +435,7 @@ function LeadsManagementCard() {
           { label: "실패", count: "47", color: "text-red-400" },
           { label: "성공", count: "38", color: "text-emerald-400" },
         ].map(({ label, count, color }) => (
-          <div
-            key={label}
-            className="rounded-lg border border-stone-700/50 bg-stone-900/50 p-3"
-          >
+          <div key={label} className="rounded-lg border border-stone-700/50 bg-stone-900/50 p-3">
             <p className="mb-1 text-[10px] text-stone-500">{label}</p>
             <p className={`text-xl font-bold ${color}`}>{count}</p>
             <p className="text-[10px] text-stone-600">건</p>
@@ -499,9 +453,7 @@ function RetentionRateCard() {
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-stone-100">유지율</h3>
-          <p className="text-[10px] font-medium text-amber-400">
-            95% +12% 전월 대비
-          </p>
+          <p className="text-[10px] font-medium text-amber-400">95% +12% 전월 대비</p>
         </div>
         <div className="flex gap-1">
           {["중소기업", "스타트업", "대기업"].map((t) => (
@@ -567,14 +519,10 @@ function TeamActivityCard() {
                 <config.Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-stone-100">
-                  {item.label}
-                </p>
+                <p className="truncate text-xs font-medium text-stone-100">{item.label}</p>
                 <p className="text-[10px] text-stone-500">{item.sub}</p>
               </div>
-              <span className="shrink-0 text-[10px] font-medium text-stone-500">
-                {item.time}
-              </span>
+              <span className="shrink-0 text-[10px] font-medium text-stone-500">{item.time}</span>
             </div>
           );
         })}
@@ -590,6 +538,7 @@ type Suggestion = { name: string; email: string };
 
 function EmailComposeCard() {
   const { status } = useSession();
+  const { user } = useAuth();
   const isGoogleLinked = status === "authenticated";
 
   const [to, setTo] = useState("");
@@ -605,7 +554,9 @@ function EmailComposeCard() {
     clearTimeout(debounceRef.current);
     if (!value) return;
     debounceRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/contacts?q=${encodeURIComponent(value)}`);
+      const res = await fetch(`/api/contacts?q=${encodeURIComponent(value)}`, {
+        headers: authHeader(user?.token),
+      });
       if (res.ok) setSuggestions(await res.json());
     }, 300);
   };
@@ -621,7 +572,10 @@ function EmailComposeCard() {
     try {
       const res = await fetch("/api/email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader(user?.token),
+        },
         body: JSON.stringify({ to, subject, body }),
       });
       setSendState(res.ok ? "success" : "error");
@@ -696,9 +650,7 @@ function EmailComposeCard() {
           <div className="relative">
             <input
               type="text"
-              placeholder={
-                isGoogleLinked ? "이름 또는 이메일 입력" : "example@gmail.com"
-              }
+              placeholder={isGoogleLinked ? "이름 또는 이메일 입력" : "example@gmail.com"}
               value={to}
               onChange={(e) => handleToChange(e.target.value)}
               onBlur={() => setTimeout(() => setSuggestions([]), 150)}
@@ -712,12 +664,8 @@ function EmailComposeCard() {
                     onMouseDown={() => selectSuggestion(s)}
                     className="flex cursor-pointer flex-col px-3 py-2.5 hover:bg-stone-800"
                   >
-                    <span className="text-xs font-medium text-stone-100">
-                      {s.name}
-                    </span>
-                    <span className="text-[11px] text-stone-400">
-                      {s.email}
-                    </span>
+                    <span className="text-xs font-medium text-stone-100">{s.name}</span>
+                    <span className="text-[11px] text-stone-400">{s.email}</span>
                   </li>
                 ))}
               </ul>
@@ -781,6 +729,7 @@ function EmailComposeCard() {
 // ── 텔레그램 작성 ─────────────────────────────────────────────────────────────
 
 function TelegramComposeCard() {
+  const { user } = useAuth();
   const [chatId, setChatId] = useState("");
   const [message, setMessage] = useState("");
   const [sendState, setSendState] = useState<SendState>("idle");
@@ -794,7 +743,10 @@ function TelegramComposeCard() {
     try {
       const res = await fetch("/api/telegram", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader(user?.token),
+        },
         body: JSON.stringify({ chatId, message }),
       });
       setSendState(res.ok ? "success" : "error");
@@ -812,16 +764,12 @@ function TelegramComposeCard() {
     <Card className="w-full p-6">
       <div className="mb-5 flex items-center gap-2">
         <SendHorizonal className="h-4 w-4 text-stone-400" />
-        <h2 className="text-sm font-semibold text-stone-100">
-          텔레그램 메시지
-        </h2>
+        <h2 className="text-sm font-semibold text-stone-100">텔레그램 메시지</h2>
       </div>
 
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-[11px] text-stone-500">
-            Chat ID
-          </label>
+          <label className="mb-1 block text-[11px] text-stone-500">Chat ID</label>
           <input
             type="text"
             placeholder="@username 또는 숫자 Chat ID"
@@ -832,9 +780,7 @@ function TelegramComposeCard() {
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] text-stone-500">
-            메시지
-          </label>
+          <label className="mb-1 block text-[11px] text-stone-500">메시지</label>
           <textarea
             rows={8}
             placeholder="전송할 메시지를 입력하세요 (HTML 태그 지원)"
@@ -888,6 +834,7 @@ type ReceiverEmail = {
 };
 
 function ReceiverPanel() {
+  const { user } = useAuth();
   const [emails, setEmails] = useState<ReceiverEmail[]>([]);
   const [selected, setSelected] = useState<ReceiverEmail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -895,7 +842,9 @@ function ReceiverPanel() {
   const fetchEmails = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/receiver");
+      const res = await fetch("/api/receiver", {
+        headers: authHeader(user?.token),
+      });
       if (res.ok) setEmails(await res.json());
     } finally {
       setLoading(false);
@@ -911,11 +860,10 @@ function ReceiverPanel() {
     if (!email.is_read) {
       const res = await fetch(`/api/receiver/${email.id}/read`, {
         method: "PATCH",
+        headers: authHeader(user?.token),
       });
       if (res.ok) {
-        setEmails((prev) =>
-          prev.map((e) => (e.id === email.id ? { ...e, is_read: true } : e)),
-        );
+        setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, is_read: true } : e)));
       }
     }
   };
@@ -929,9 +877,7 @@ function ReceiverPanel() {
         <div className="flex items-center justify-between border-b border-stone-700/50 px-4 py-3">
           <div className="flex items-center gap-2">
             <Inbox className="h-4 w-4 text-stone-400" />
-            <span className="text-sm font-semibold text-stone-100">
-              받은편지함
-            </span>
+            <span className="text-sm font-semibold text-stone-100">받은편지함</span>
             {unreadCount > 0 && (
               <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                 {unreadCount}
@@ -951,9 +897,7 @@ function ReceiverPanel() {
             <Loader2 className="h-5 w-5 animate-spin text-stone-500" />
           </div>
         ) : emails.length === 0 ? (
-          <div className="py-12 text-center text-[11px] text-stone-600">
-            받은 메일이 없습니다.
-          </div>
+          <div className="py-12 text-center text-[11px] text-stone-600">받은 메일이 없습니다.</div>
         ) : (
           <ul className="divide-y divide-stone-800 overflow-y-auto max-h-[600px]">
             {emails.map((email) => (
@@ -1011,9 +955,7 @@ function ReceiverPanel() {
                     : selected.from_email}
                 </span>
                 <span>·</span>
-                <span>
-                  {new Date(selected.receiver_at).toLocaleString("ko-KR")}
-                </span>
+                <span>{new Date(selected.receiver_at).toLocaleString("ko-KR")}</span>
               </div>
             </div>
             <div
@@ -1042,13 +984,16 @@ type ContactItem = {
 };
 
 function AddressBookPanel() {
+  const { user } = useAuth();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [resetting, setResetting] = useState(false);
 
   const fetchContacts = async () => {
     try {
-      const res = await fetch("/api/contacts/list");
+      const res = await fetch("/api/contacts/list", {
+        headers: authHeader(user?.token),
+      });
       if (res.ok) setContacts(await res.json());
     } catch {}
   };
@@ -1066,7 +1011,10 @@ function AddressBookPanel() {
     if (!window.confirm("연락처를 모두 삭제하시겠습니까?")) return;
     setResetting(true);
     try {
-      await fetch("/api/contacts/list", { method: "DELETE" });
+      await fetch("/api/contacts/list", {
+        method: "DELETE",
+        headers: authHeader(user?.token),
+      });
       setContacts([]);
     } finally {
       setResetting(false);
@@ -1115,18 +1063,10 @@ function AddressBookPanel() {
         <ul className="max-h-[360px] divide-y divide-stone-800 overflow-y-auto">
           {contacts.map((c) => (
             <li key={c.id} className="flex flex-col gap-0.5 py-2.5">
-              <span className="text-[12px] font-medium text-stone-100">
-                {c.name}
-              </span>
-              {c.org_name && (
-                <span className="text-[10px] text-stone-400">{c.org_name}</span>
-              )}
-              {c.email && (
-                <span className="text-[10px] text-stone-500">{c.email}</span>
-              )}
-              {c.phone && (
-                <span className="text-[10px] text-stone-500">{c.phone}</span>
-              )}
+              <span className="text-[12px] font-medium text-stone-100">{c.name}</span>
+              {c.org_name && <span className="text-[10px] text-stone-400">{c.org_name}</span>}
+              {c.email && <span className="text-[10px] text-stone-500">{c.email}</span>}
+              {c.phone && <span className="text-[10px] text-stone-500">{c.phone}</span>}
             </li>
           ))}
         </ul>
@@ -1135,9 +1075,7 @@ function AddressBookPanel() {
       <Dialog open={uploadOpen} onOpenChange={handleUploadClose}>
         <DialogContent className="max-w-2xl border-stone-700/60 bg-stone-950">
           <DialogHeader>
-            <DialogTitle className="text-stone-100">
-              주소록 CSV 업로드
-            </DialogTitle>
+            <DialogTitle className="text-stone-100">주소록 CSV 업로드</DialogTitle>
           </DialogHeader>
           <ContactsCsvUpload />
         </DialogContent>
@@ -1154,9 +1092,7 @@ export default function AdminDashboard() {
   const isAdmin = isReady && user?.role === "admin";
 
   const [activeTab, setActiveTab] = useState("대시보드");
-  const [emailSubTab, setEmailSubTab] = useState<
-    "이메일" | "텔레그램" | "받은편지함"
-  >("이메일");
+  const [emailSubTab, setEmailSubTab] = useState<"이메일" | "텔레그램" | "받은편지함">("이메일");
   const [showAddressBook, setShowAddressBook] = useState(false);
 
   useEffect(() => {
@@ -1196,16 +1132,10 @@ export default function AdminDashboard() {
               }
 
               return (
-                <button
-                  key={label}
-                  onClick={() => setActiveTab(label)}
-                  className={tabClassName}
-                >
+                <button key={label} onClick={() => setActiveTab(label)} className={tabClassName}>
                   <Icon className="h-3.5 w-3.5" />
                   <span>{label}</span>
-                  {dropdown && (
-                    <ChevronDown className="h-2.5 w-2.5 opacity-60" />
-                  )}
+                  {dropdown && <ChevronDown className="h-2.5 w-2.5 opacity-60" />}
                 </button>
               );
             })}
@@ -1277,12 +1207,8 @@ export default function AdminDashboard() {
             {/* 페이지 헤더 */}
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-5">
               <div>
-                <h1 className="text-base font-bold text-stone-50 sm:text-lg">
-                  CRM 대시보드
-                </h1>
-                <p className="text-[11px] text-stone-400">
-                  팀의 성장 현황을 확인하세요
-                </p>
+                <h1 className="text-base font-bold text-stone-50 sm:text-lg">CRM 대시보드</h1>
+                <p className="text-[11px] text-stone-400">팀의 성장 현황을 확인하세요</p>
               </div>
               <div className="flex items-center gap-2">
                 <button className="flex items-center gap-1.5 rounded-lg border border-stone-600/70 bg-stone-800/45 px-2.5 py-1.5 text-[11px] text-stone-200 transition-colors hover:bg-stone-700/65">

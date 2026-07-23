@@ -1,9 +1,7 @@
-export const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 /** apps/auth 단독 게이트웨이. 로그인/리프레시/OAuth는 여기로 간다. */
-export const authBaseUrl =
-  process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001";
+export const authBaseUrl = process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001";
 
 export const titanicApiBaseUrl = `${apiBaseUrl}/api/titanic`;
 export const pleEventsBaseUrl = `${apiBaseUrl}/api/ple_events`;
@@ -31,10 +29,7 @@ type ApiErrorBody = {
   message?: string;
 };
 
-export function parseApiError(
-  data: ApiErrorBody | null,
-  status: number,
-): string {
+export function parseApiError(data: ApiErrorBody | null, status: number): string {
   const detail = data?.detail;
   if (typeof detail === "string") {
     return detail;
@@ -55,4 +50,9 @@ export function isAbortError(error: unknown): boolean {
 
 export function getRequestTimeoutMessage(): string {
   return `서버 응답이 ${requestTimeoutMs / 1000}초 이상 걸려 요청을 중단했습니다. 백엔드가 켜져 있는지 확인해 주세요.`;
+}
+
+/** 어드민 전용 Next.js API 라우트 호출 시 붙이는 Authorization 헤더 */
+export function authHeader(token: string | undefined): HeadersInit {
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
