@@ -9,7 +9,9 @@ Claude Code 작업 지시서 — `superstar` 내장 인증을 `apps/auth`로 분
 
 ---
 
-## 구현 현황 (2026-07-22 기준)
+## 구현 현황 (2026-07-22 기준, 2026-07-23 재검증)
+
+> **먼저 읽을 것:** 이 절은 원본 지시서(2.1~2.9) 실행 당시 기록이다. 같은 날 이후 별도 세션에서 범위가 더 확장됐고(회원가입/프로필 재이관, `auth.jsangho.cloud` 실 라우팅) 그 내용은 이 절 끝의 **"0-1. 범위 확장"**에 있다 — 최종 상태를 알고 싶으면 그쪽을 우선 참고.
 
 2.1(auth 골격+이관) · 2.2(core/security) · 2.3(UserModel core 이동) · 2.9(.importlinter)를 **한 커밋으로 묶어 완료**했다 — HS256→RS256은 하드 컷오버라 로그인이 RS256을 발급하는 순간 기존 HS256 검증부(`bearer_auth`, `nick_fury_router`)가 전부 깨지기 때문에, 발급·검증·엔티티 이동을 분리 커밋할 수 없었다. `docs_gate_router`(구 `nick_fury_router`) 이동도 같은 이유로 이번 커밋에 포함됐다 — 로그인이 `pamela_cook_router`(auth로 이동)의 `get_pamela_cook` 팩토리를 직접 import하고 있어서 분리 불가능했다.
 
@@ -33,14 +35,40 @@ Claude Code 작업 지시서 — `superstar` 내장 인증을 `apps/auth`로 분
 
 **서버 `.env` 키 교체 완료 (2026-07-22):** 서버(`DESKTOP-9E3A4EC`, `ssh messi@ssh.jsangho.cloud:/home/messi/project/cloud.jsangho.all`) `.env`에 이미 `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` 값이 들어있던 것을 발견(문서 기록과 불일치 — 이전 세션에서 채운 것으로 추정, 원인 불명). 사용자 확인 후 로컬 키 재사용 대신 **서버 전용으로 새로 발급해서 덮어씀** — `scripts/generate_jwt_keys.sh`를 서버로 복사해 `/tmp` 임시 디렉터리에서 직접 실행(개인키가 dev PC로 나가지 않게), `.env`의 기존 두 줄만 안전하게 치환(다른 값은 건드리지 않음), 임시 PEM·헬퍼 스크립트는 즉시 삭제. 현재 서버에 배포된 `main` 브랜치는 아직 RS256 마이그레이션 커밋을 포함하지 않아(이번 세션 커밋들은 로컬 `ho`에만 있음) 이 값을 읽는 코드가 서버에 없다 — 지금 당장 컨테이너 재시작 등은 불필요.
 
+**2.8 1단계 실배포 완료 (2026-07-22):** `ho`→`main`/`messi` 커밋·푸시(`1b0eb11`) 후 서버에서 `git pull`, `docker compose up --build -d auth`로 실제 기동. 빌드는 `fastapi/Dockerfile`이 백엔드와 동일 이미지라 torch/CUDA 등 무거운 의존성까지 전부 새로 받음(직전에 빌드 캐시를 전량 정리했던 여파, 약 5분 소요, 디스크는 101GB/1007GB로 여유 있게 완료). 컨테이너 내부(`docker compose exec auth python -c ...`, 이미지에 `curl` 없음)에서 확인:
+- `GET /healthz` → `{"ok":true}`
+- `GET /.well-known/jwks.json` → 새로 발급한 키의 JWK(`kid: jsangho-auth-1`) 정상 반환
+- `GET /auth/auth/google/login` → 307, 실제 `GOOGLE_CLIENT_ID`/`redirect_uri=https://api.jsangho.cloud/api/auth/google/callback`로 정확히 리다이렉트
+- `POST /auth/login`(존재하지 않는 `userId`) → `401 "ID 또는 비밀번호가 올바르지 않습니다."` — DB(pgvector) 조회까지 실제로 도달함을 확인(로컬에서는 DB가 없어 여기까지 못 봤던 부분). 완료 기준 §3 첫 항목(`/healthz` 200) 및 로그인 경로 DB 연동을 운영 컨테이너에서 처음으로 실증.
+
 **아직 안 한 것:**
-- 서버가 이 커밋들을 받으려면 `ho→main` 커밋/푸시가 먼저 필요(사용자가 작업 마무리 후 일괄 커밋 예정). 그 전까지는 `docker compose up --build -d auth` 등 서버 배포 단계를 진행할 수 없다.
-- pytest 테스트 코드는 작성하지 않았다(스모크 테스트 스크립트로만 검증). 완료 기준의 pytest 항목은 미완.
-- 로그인/OAuth 콜백까지 DB가 있는 환경(운영 컨테이너 등)에서 엔드투엔드로 확인한 적은 아직 없다 — 이번엔 라우팅·DI 배선까지만 로컬에서 확인.
-- ~~`superstar`에 pre-existing 미사용 중복 파일 3개~~ → 정리 완료. `jason_mask_use_case.py`/`murder_list_use_case.py`/`pamela_cook_use_case.py`(무참조 확인 후 삭제)와 이관으로 빈 `domain/{entities,services,value_objects}/` 디렉터리 3개를 제거했다. `ruff`/`lint-imports` 재확인 통과.
+- pytest 테스트 코드는 작성하지 않았다(스모크 테스트 스크립트 + 실제 프로덕션 왕복 확인으로만 검증). 완료 기준의 pytest 항목은 미완.
 - `superstar → auth` docs 게이트 쿠키 이름이 여전히 `kayfabe_docs_session`이다(원본 그대로 유지 — 이름 자체를 바꾸는 건 이번 범위 밖).
 - `kayfabe.adapter.outbound.pg.ple_events_pg_repository`를 단독 import하면 `kayfabe.adapter.outbound.mappers` 패키지의 순환 참조로 `ImportError`가 난다(기존부터 있던 구조적 문제, 이번 변경과 무관 — `main.py` 정상 로드 순서에서는 안 터지는 것으로 보이나 확인 필요).
-- 2.8(실제 컨테이너/서브도메인 분리, `auth.jsangho.cloud`)은 계획대로 손대지 않았다.
+- `auth_main.py` 상단 docstring이 "아직 docker-compose 서비스로는 등록하지 않았다 — 로컬 검증용"이라고 남아 있는데, 아래 2.8 2단계 이후로는 사실이 아니다(실제로 등록·배포·라우팅까지 끝남). 코드 주석 정리는 이번 문서 업데이트 범위 밖으로 남겨둔다.
+
+---
+
+## 0-1. 범위 확장 (2026-07-22, 같은 날 후속 커밋 5개)
+
+> 아래는 위 "구현 현황" 작성 시점 이후 **별도 세션에서 사용자 확인을 거쳐 진행된 후속 작업**이다. 원본 지시서(2.0/2.4)가 "회원가입·프로필은 superstar 잔존, 2.8 2단계는 별도 확인 후 진행"이라고 못박은 것과 방향이 다르므로, 이 섹션에서 무엇이 원안과 달라졌는지 명시한다.
+
+**2.8 2단계 완료 — `auth.jsangho.cloud` 실제 라우팅 (`6de929f`):** `docker-compose.yaml`의 `auth` 서비스에 전용 브리지 네트워크 `auth_net`(172.28.0.2:9000 고정 IP)를 추가했다. 호스트 포트를 노출하지 않으면서(절대 규칙 준수) cloudflared가 컨테이너 재생성으로 IP가 흔들리지 않고 라우팅할 수 있게 하기 위함. 서버 `/etc/cloudflared/config.yml`에 `auth.jsangho.cloud` 호스트명이 등록되어 현재 실제로 서비스 중이다(2.8 원안의 "별도 커밋/작업으로 진행, 그때 다시 사용자 확인" 절차를 이 커밋에서 수행).
+
+**www 로그인 연동 (`881728e`):** `auth_main.py`에 CORS 미들웨어 추가(`main.py`와 달리 원래 없었음, `jsangho.cloud`/`www.jsangho.cloud`/로컬 오리진 허용). `www/lib/api.ts`에 `authBaseUrl` 상수 신설, 이메일/비밀번호 로그인 호출을 `auth.jsangho.cloud/auth/login`으로 전환. 이 시점엔 회원가입·프로필은 아직 `api.jsangho.cloud`(구 경로) 유지 — 실제 브라우저 로그인으로 프로덕션 왕복 확인.
+
+**SNS(Google/Kakao/Naver) 로그인 연동 (`2219cbb`):** `auth_main.py`의 이중 prefix 버그 수정 — `oauth_callback_router` 자체 경로가 이미 `/auth/{provider}/...`로 시작하는데 `prefix="/auth"`를 추가로 주면 `/auth/auth/...`가 되던 문제. `oauth_callback_router`는 prefix 없이 mount하도록 변경. `www`의 SNS 로그인 버튼도 `authBaseUrl`로 전환. OAuth 콜백 redirect_uri를 `api.jsangho.cloud`→`auth.jsangho.cloud`로 바꾼 `.env`/각 provider 콘솔 설정은 서버에서 직접 했고 이 리포에는 추적되지 않는다(`.env`는 gitignore). 3개 provider 모두 프로덕션에서 실제 로그인 왕복 확인 완료.
+
+**회원가입·프로필 조회를 `auth`로 재이관 (`696cbfa`) — 원안(2.0/2.4)을 뒤집는 결정:** 원본 지시서는 `jason_mask`(회원가입)/`murder_list`(프로필 조회)를 "인증이 아니라 유저 도메인 로직"으로 보고 `superstar`에 잔존시켰다. 이 커밋에서 그 결정을 재검토해 뒤집었다 — www가 인증 관련 모든 것을 `auth.jsangho.cloud` 한 곳에서만 접근하게 하려는 목적. 구체적으로:
+- `auth`의 `UserRepository`/`UserPgRepository`에 `create_user` 추가(기존 `create_oauth_user`와 나란히).
+- `SignupUseCase`/`SignupInteractor`, `ProfileUseCase`/`ProfileInteractor` 신설(`auth`의 기존 DI 팩토리 컨벤션 `dependencies/auth_provider.py` 그대로 따름).
+- `auth_main.py`에만 `/auth/signup`, `/auth/users/{id}`로 mount(`main.py`의 공용 `auth_router` 집계에는 포함하지 않음 — `main.py`/`api.jsangho.cloud` 쪽 회원가입·프로필 경로는 제거됨).
+- `superstar`에서 `jason_mask`/`murder_list` 관련 코드 전부 삭제(라우터·리포지토리·유스케이스·포트 전부) — **더 이상 "잔존"이 아니라 완전히 없어짐.** 아래 2.0 매핑표·2.4 절의 해당 서술은 이 커밋 이후 사실과 다르다.
+- `www`의 회원가입(`login-form.tsx`)·프로필 조회(`lib/auth-api.ts`)도 `authBaseUrl`로 전환.
+- 프로덕션에서 회원가입→로그인→프로필 조회, 중복 가입 거부, 구 `api.jsangho.cloud` 경로 404 확인까지 실제 검증됨.
+- `.importlinter` 변경 불필요(`auth`가 이미 등록된 root package이고 토폴로지 위반 없음) — 커밋 메시지에도 명시.
+
+> **결과적으로 2.0 매핑표의 `jason_mask_router.py`/`murder_list_router.py` 행("superstar에 잔존")과 2.4의 관련 서술, §3 완료 기준의 "superstar에 남은 jason_mask/murder_list 라우터가 core.security.dependencies를 통해서만 인증 검증을 받음" 항목은 이 후속 결정으로 대상 자체가 사라져 더 이상 유효하지 않다. 표는 원본 지시서 기록 보존 차원에서 그대로 두고, 실제 최종 상태는 이 섹션을 우선한다.**
 
 ---
 
@@ -314,16 +342,18 @@ forbidden_modules =
 
 ## 3. 완료 기준 (Acceptance Criteria)
 
-- [ ] `uvicorn auth_main:app` 단독 기동 성공, `/healthz` 200.
-- [ ] `uvicorn main:app` 기동 시 `JWT_PRIVATE_KEY` 없이 정상 동작(import 에러 없음).
-- [ ] `auth`에서 발급한 토큰을 `core.security.token_verifier.verify_token`이 공개키만으로 검증 통과.
-- [ ] `aud`가 다른 토큰은 검증 실패(401/403)하는 테스트 존재.
-- [ ] 만료 토큰, 서명 변조 토큰, `alg=none`/`HS256` 강제 토큰 각각 거부하는 테스트 존재.
-- [ ] 리프레시 토큰 재사용 시 세션 전체 폐기되는 테스트 존재.
-- [ ] `kayfabe`가 더 이상 `superstar`(또는 `auth`)를 직접 import하지 않음 — `core`의 `UserModel`을 사용.
-- [ ] `superstar`에 남은 `jason_mask`/`murder_list` 라우터가 `core.security.dependencies`를 통해서만 인증 검증을 받음.
-- [ ] `lint-imports` 통과(`auth-isolation` 계약 포함, 기존 3개 계약도 회귀 없음).
-- [ ] `pytest` 전체 통과. 기존 테스트 회귀 없음.
+> 2026-07-23 재검증: `lint-imports`/`ruff check`/`ruff format --check`를 직접 재실행해 확인. 나머지는 코드 존재·grep·git 커밋 로그 기준으로 확인(자동화 테스트로 재확인한 것은 아님 — 아래 각 항목 참고).
+
+- [x] `uvicorn auth_main:app` 단독 기동 성공, `/healthz` 200. — 로컬 확인 + 프로덕션 컨테이너에서도 확인됨(위 2026-07-22 기록).
+- [x] `uvicorn main:app` 기동 시 `JWT_PRIVATE_KEY` 없이 정상 동작(import 에러 없음). — `grep -rl JWT_PRIVATE_KEY`로 `apps/auth` 밖 참조 없음을 확인(2026-07-23). `main.py`는 실제 프로덕션에서 계속 서비스 중.
+- [x] `auth`에서 발급한 토큰을 `core.security.token_verifier.verify_token`이 공개키만으로 검증 통과. — 스모크 테스트로 확인(자동화 pytest 아님).
+- [ ] `aud`가 다른 토큰은 검증 실패(401/403)하는 테스트 존재. — 동작 자체는 스모크 테스트로 확인됨(위 2026-07-22 "검증 완료" 참고)이나, **저장된 pytest 파일은 없음** — 미완.
+- [ ] 만료 토큰, 서명 변조 토큰, `alg=none`/`HS256` 강제 토큰 각각 거부하는 테스트 존재. — 동일하게 스모크 테스트로만 확인, pytest 파일 없음 — 미완.
+- [ ] 리프레시 토큰 재사용 시 세션 전체 폐기되는 테스트 존재. — `refresh_token_repository.py`의 `consume()`/`revoke_all_for_sub()` 로직은 구현돼 있으나 테스트 파일 없음 — 미완.
+- [x] `kayfabe`가 더 이상 `superstar`(또는 `auth`)를 직접 import하지 않음 — `core`의 `UserModel`을 사용. — `ple_match_pick_pg_repository.py`/`ple_events_pg_repository.py` grep으로 `core.entities.user_model`만 import함을 확인(2026-07-23).
+- [~] ~~`superstar`에 남은 `jason_mask`/`murder_list` 라우터가 `core.security.dependencies`를 통해서만 인증 검증을 받음.~~ — **대상 소멸로 무효화.** `696cbfa`(0-1절 참고)에서 두 라우터 자체가 `superstar`에서 완전히 삭제되고 `auth`로 이관됐다(`signup_router.py`/`profile_router.py`). `superstar`에 남은 파일에서 grep 확인(2026-07-23) — 관련 코드 없음.
+- [x] `lint-imports` 통과(`auth-isolation` 계약 포함, 기존 3개 계약도 회귀 없음). — 2026-07-23 직접 재실행: "Contracts: 4 kept, 0 broken."
+- [ ] `pytest` 전체 통과. 기존 테스트 회귀 없음. — `apps/auth`용 테스트 파일 자체가 없음(`find`로 확인, 2026-07-23). 타 앱(titanic/ontology) 테스트는 이 작업과 무관하게 존재하나 auth 관련 회귀 검증 수단은 없음.
 
 ---
 
