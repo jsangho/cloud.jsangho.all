@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hermes-tools": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/messi/.hermes/hermes-agent && exec venv/bin/python3 -m agent.transports.hermes_tools_mcp_server"
+      ],
+      "env": {}
+    }
+  }
+}
