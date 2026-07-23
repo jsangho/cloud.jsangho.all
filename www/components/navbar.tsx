@@ -88,6 +88,7 @@ export function Navbar() {
   const isLogin = mounted && pathname === "/login";
   const isMyInfo = mounted && pathname === "/my-info";
   const showAuth = mounted && isReady;
+  const isUserAdmin = mounted && isReady && user?.role === "admin";
 
   function handleLogout() {
     logout();
@@ -176,9 +177,11 @@ export function Navbar() {
           <NavLink href="/lesson" active={isLesson}>
             Lesson
           </NavLink>
-          <NavLink href="/admin" active={isAdmin}>
-            관리자
-          </NavLink>
+          {isUserAdmin && (
+            <NavLink href="/admin" active={isAdmin}>
+              관리자
+            </NavLink>
+          )}
           {authControls}
           <ThemeToggle />
         </div>
@@ -236,9 +239,11 @@ export function Navbar() {
             <NavLink href="/lesson" active={isLesson} fullWidth>
               Lesson
             </NavLink>
-            <NavLink href="/admin" active={isAdmin} fullWidth>
-              관리자
-            </NavLink>
+            {isUserAdmin && (
+              <NavLink href="/admin" active={isAdmin} fullWidth>
+                관리자
+              </NavLink>
+            )}
             {authControls}
             <div className="pt-1">
               <WeatherWidget />

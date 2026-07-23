@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useAuth } from "@/context/auth-context";
 import {
   AreaChart,
   Area,
@@ -1147,11 +1149,29 @@ function AddressBookPanel() {
 // ── 페이지 ────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
+  const router = useRouter();
+  const { user, isReady } = useAuth();
+  const isAdmin = isReady && user?.role === "admin";
+
   const [activeTab, setActiveTab] = useState("대시보드");
   const [emailSubTab, setEmailSubTab] = useState<
     "이메일" | "텔레그램" | "받은편지함"
   >("이메일");
   const [showAddressBook, setShowAddressBook] = useState(false);
+
+  useEffect(() => {
+    if (isReady && !isAdmin) {
+      router.replace("/");
+    }
+  }, [isReady, isAdmin, router]);
+
+  if (!isReady || !isAdmin) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white text-stone-500 dark:bg-[#0a0a0c] dark:text-stone-400">
+        불러오는 중...
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0c] text-stone-900 dark:text-stone-100">
