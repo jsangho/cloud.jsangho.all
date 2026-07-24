@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import io
-import os
 from typing import Any, ClassVar
 
 import timm
 import torch
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from PIL import Image, UnidentifiedImageError
 from timm.data import ImageNetInfo
 
@@ -21,7 +21,7 @@ _TOP_K = 5
 
 
 def _confidence_threshold() -> float:
-    return float(os.getenv("CLASSIFIER_CONFIDENCE_THRESHOLD", "0.5"))
+    return float(get_keymaker().get_secret("CLASSIFIER_CONFIDENCE_THRESHOLD", "0.5"))
 
 
 class ConvNextImageClassifier(ImageLabelClassifier):

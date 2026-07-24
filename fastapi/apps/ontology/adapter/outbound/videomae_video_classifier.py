@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import io
-import os
 from typing import Any, ClassVar
 
 import numpy as np
 import torch
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from decord import VideoReader, cpu
 from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
 
@@ -25,7 +25,9 @@ _NUM_FRAMES = 16
 
 
 def _confidence_threshold() -> float:
-    return float(os.getenv("VIDEO_CLASSIFIER_CONFIDENCE_THRESHOLD", "0.5"))
+    return float(
+        get_keymaker().get_secret("VIDEO_CLASSIFIER_CONFIDENCE_THRESHOLD", "0.5")
+    )
 
 
 class VideoMaeVideoClassifier(VideoLabelClassifier):

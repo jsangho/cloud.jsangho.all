@@ -106,10 +106,12 @@ dart format .         # 포매팅
 ### Python 작업 후
 
 ```bash
-ruff check fastapi/ --config pyproject.toml --fix
-ruff format fastapi/ --config pyproject.toml
-cd fastapi && lint-imports   # 스타 토폴로지 계약 검증
+uv run ruff check fastapi/ --config pyproject.toml --fix
+uv run ruff format fastapi/ --config pyproject.toml
+cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports   # 스타 토폴로지 계약 검증
 ```
+
+> `uv run` 없이 `ruff`/`lint-imports`를 그냥 실행하면 PATH상 다른 Python(예: Anaconda)의 전역 설치가 먼저 잡혀 잘못된 버전이 돌거나 `ontology` 패키지를 못 찾을 수 있다. 항상 `uv run`으로 프로젝트 venv를 명시한다.
 
 ### Next.js 작업 후
 

@@ -27,6 +27,7 @@ import soccer.adapter.outbound.orm.schedule_orm  # noqa: E402, F401
 import soccer.adapter.outbound.orm.stadium_orm  # noqa: E402, F401
 import soccer.adapter.outbound.orm.team_orm  # noqa: E402, F401
 from core.matrix.grid_oracle_database_manager import DATABASE_URL, Base  # noqa: E402
+from core.matrix.vault_keymaker_secret_manager import get_keymaker  # noqa: E402
 
 import kayfabe.adapter.outbound.orm.championship_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.ple_orm  # noqa: E402, F401
@@ -47,7 +48,7 @@ target_metadata = Base.metadata
 
 
 def _sync_database_url() -> str:
-    url = (DATABASE_URL or os.getenv("DATABASE_URL", "")).strip()
+    url = (DATABASE_URL or get_keymaker().get_secret("DATABASE_URL")).strip()
     if not url:
         raise RuntimeError("DATABASE_URL is not set in backend/.env")
     if url.startswith("postgresql+asyncpg://"):

@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import sys
 from collections.abc import AsyncGenerator
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from dotenv import load_dotenv
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -22,8 +21,6 @@ from fastapi import HTTPException
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-load_dotenv()
 
 APP_LOG = logging.getLogger("uvicorn.error")
 LAYER_LOG = APP_LOG
@@ -42,7 +39,7 @@ class Base(DeclarativeBase):
 
 
 def _neon_sql_log_enabled() -> bool:
-    return os.getenv("NEON_SQL_LOG", "").strip().lower() in (
+    return get_keymaker().get_secret("NEON_SQL_LOG").lower() in (
         "1",
         "true",
         "yes",
@@ -100,7 +97,7 @@ def _strip_unsupported_asyncpg_query_params(url: str) -> str:
     return urlunparse(parsed._replace(query=new_query))
 
 
-_raw_url = os.getenv("DATABASE_URL", "").strip()
+_raw_url = get_keymaker().get_secret("DATABASE_URL")
 DATABASE_URL = (
     _strip_unsupported_asyncpg_query_params(_async_database_url(_raw_url))
     if _raw_url
