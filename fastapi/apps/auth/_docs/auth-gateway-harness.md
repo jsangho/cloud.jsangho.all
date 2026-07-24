@@ -351,7 +351,7 @@ forbidden_modules =
 - [ ] 만료 토큰, 서명 변조 토큰, `alg=none`/`HS256` 강제 토큰 각각 거부하는 테스트 존재. — 동일하게 스모크 테스트로만 확인, pytest 파일 없음 — 미완.
 - [ ] 리프레시 토큰 재사용 시 세션 전체 폐기되는 테스트 존재. — `refresh_token_repository.py`의 `consume()`/`revoke_all_for_sub()` 로직은 구현돼 있으나 테스트 파일 없음 — 미완.
 - [x] `kayfabe`가 더 이상 `superstar`(또는 `auth`)를 직접 import하지 않음 — `core`의 `UserModel`을 사용. — `ple_match_pick_pg_repository.py`/`ple_events_pg_repository.py` grep으로 `core.entities.user_model`만 import함을 확인(2026-07-23).
-- [~] ~~`superstar`에 남은 `jason_mask`/`murder_list` 라우터가 `core.security.dependencies`를 통해서만 인증 검증을 받음.~~ — **대상 소멸로 무효화.** `696cbfa`(0-1절 참고)에서 두 라우터 자체가 `superstar`에서 완전히 삭제되고 `auth`로 이관됐다(`signup_router.py`/`profile_router.py`). `superstar`에 남은 파일에서 grep 확인(2026-07-23) — 관련 코드 없음.
+- ~~`superstar`에 남은 `jason_mask`/`murder_list` 라우터가 `core.security.dependencies`를 통해서만 인증 검증을 받음.~~ — **대상 소멸로 무효화.** `696cbfa`(0-1절 참고)에서 두 라우터 자체가 `superstar`에서 완전히 삭제되고 `auth`로 이관됐다(`signup_router.py`/`profile_router.py`). `superstar`에 남은 파일에서 grep 확인(2026-07-23) — 관련 코드 없음.
 - [x] `lint-imports` 통과(`auth-isolation` 계약 포함, 기존 3개 계약도 회귀 없음). — 2026-07-23 직접 재실행: "Contracts: 4 kept, 0 broken."
 - [ ] `pytest` 전체 통과. 기존 테스트 회귀 없음. — `apps/auth`용 테스트 파일 자체가 없음(`find`로 확인, 2026-07-23). 타 앱(titanic/ontology) 테스트는 이 작업과 무관하게 존재하나 auth 관련 회귀 검증 수단은 없음.
 
