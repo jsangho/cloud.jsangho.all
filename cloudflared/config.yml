@@ -1,0 +1,8 @@
+tunnel: d75d02d2-c561-4d0f-8d53-d69168e7b607
+credentials-file: /etc/cloudflared/d75d02d2-c561-4d0f-8d53-d69168e7b607.json
+ingress:
+  - hostname: api.jsangho.cloud
+    service: http://backend:8000
+  - hostname: auth.jsangho.cloud
+    service: http://172.28.0.2:9000
+  - service: http_status:404

@@ -26,15 +26,30 @@ services:
   nginx:
     image: nginx:1.27-alpine
     container_name: nginx
-    restart: unless-stopped
+    restart: alwats
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Nginx가 6시간마다 설정을 불러오게 처리 (인증서 갱신 반영용)
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
     depends_on:
       - backend
     networks:
       - default
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: always
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # 12시간마다 자동 갱신 시도
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   # ①-2 인증 게이트웨이 (auth) — apps/auth 단독 엔트리포인트, 포트 미노출.
   #     cloudflared는 auth_net의 고정 IP(172.28.0.2:9000)로 직접 라우팅한다.
@@ -57,6 +72,21 @@ services:
       pgvector:
         condition: service_healthy
     restart: unless-stopped
+
+  # ①-3 Cloudflare Tunnel (EC2용, api.jsangho.cloud / auth.jsangho.cloud 라우팅)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    networks:
+      default: {}
+      auth_net: {}
+    depends_on:
+      - backend
+      - auth
 
   # ② n8n 워크플로우 자동화
   n8n:
