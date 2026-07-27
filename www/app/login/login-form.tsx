@@ -21,12 +21,12 @@ const initialState: LoginPageState = {
   isSubmitting: false,
 };
 
-function authFailureAlert(isSignup: boolean, error: unknown) {
+function authFailureAlert(isSignup: boolean, error: unknown, serverMessage?: string) {
   if (isAbortError(error)) {
     alert(getRequestTimeoutMessage());
     return;
   }
-  alert(isSignup ? "회원가입에 실패했습니다." : "로그인에 실패했습니다.");
+  alert(serverMessage || (isSignup ? "회원가입에 실패했습니다." : "로그인에 실패했습니다."));
 }
 
 export function readNextPath(): string {
@@ -95,7 +95,10 @@ export function LoginForm() {
         });
 
         if (!response.ok) {
-          authFailureAlert(true, null);
+          const errorBody = (await response.json().catch(() => null)) as {
+            detail?: string;
+          } | null;
+          authFailureAlert(true, null, errorBody?.detail);
           return;
         }
 
@@ -141,10 +144,11 @@ export function LoginForm() {
         email?: string;
         role?: string;
         token?: string;
+        detail?: string;
       } | null;
 
       if (!response.ok) {
-        authFailureAlert(false, null);
+        authFailureAlert(false, null, data?.detail);
         return;
       }
 
