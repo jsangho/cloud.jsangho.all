@@ -27,7 +27,8 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
-from admin.adapter.inbound.api import human_resource_router
+from admin.adapter.inbound.api import human_resource_router, pdf_loader_router
+from core.matrix.grid_architect_graph_manager import dispose_neo4j_driver
 from core.matrix.grid_oracle_database_manager import (
     attach_neon_sql_logging,
     configure_db_logging,
@@ -86,6 +87,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await dispose_engine()
+        await dispose_neo4j_driver()
 
 
 app = FastAPI(
@@ -116,6 +118,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(titanic_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")
 app.include_router(human_resource_router, prefix="/api")
+app.include_router(pdf_loader_router, prefix="/api")
 app.include_router(manager_router, prefix="/api")
 app.include_router(ontology_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
