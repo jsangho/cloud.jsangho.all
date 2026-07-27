@@ -4,8 +4,8 @@ services:
     build:
       context: .
       dockerfile: fastapi/Dockerfile
-    ports:
-      - "8000:8000"
+    # ports:                 # Nginx 프록시를 통해 80 포트로 접근하므로 외부 노출 차단
+    #   - "8000:8000"
     env_file:
       - ./.env
     volumes:
@@ -21,6 +21,21 @@ services:
       neo4j:
         condition: service_healthy
     restart: unless-stopped
+
+  # ①-1 Nginx 리버스 프록시 (추가됨)
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - backend
+    networks:
+      - default
+
   # ①-2 인증 게이트웨이 (auth) — apps/auth 단독 엔트리포인트, 포트 미노출.
   #     cloudflared는 auth_net의 고정 IP(172.28.0.2:9000)로 직접 라우팅한다.
   auth:
@@ -42,6 +57,7 @@ services:
       pgvector:
         condition: service_healthy
     restart: unless-stopped
+
   # ② n8n 워크플로우 자동화
   n8n:
     image: n8nio/n8n
@@ -101,6 +117,7 @@ services:
       POSTGRES_DB: vectordb
     volumes:
       - pgvector_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d vectordb"]
       interval: 5s
