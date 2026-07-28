@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import os
 
+from ontology.adapter.outbound.embedding_router_generator import (
+    EmbeddingRouterGenerator,
+)
 from ontology.adapter.outbound.gemini_router_generator import GeminiRouterGenerator
 from ontology.adapter.outbound.ollama_qwen_router_generator import (
     OllamaQwenRouterGenerator,
@@ -14,13 +17,19 @@ from ontology.app.use_cases.semantic_routing_interactor import (
 
 _PROVIDER_ENV = "SEMANTIC_ROUTING_PROVIDER"
 
+_CLASSIFIER_FACTORIES = {
+    "ollama": OllamaQwenRouterGenerator,
+    "gemini": GeminiRouterGenerator,
+    "embedding": EmbeddingRouterGenerator,
+}
+
 
 def _build_classifier() -> SemanticRoutingPort:
-    """Ollama가 없는 환경(운영 서버 등)에서는 `SEMANTIC_ROUTING_PROVIDER=gemini`로
-    전환한다. 기본값은 기존 로컬 개발 동작(Ollama)을 그대로 유지한다."""
-    if os.environ.get(_PROVIDER_ENV, "ollama").strip().lower() == "gemini":
-        return GeminiRouterGenerator()
-    return OllamaQwenRouterGenerator()
+    """Ollama가 없는 환경(운영 서버 등)에서는 `SEMANTIC_ROUTING_PROVIDER`로 전환한다.
+    기본값은 기존 로컬 개발 동작(Ollama)을 그대로 유지한다."""
+    provider = os.environ.get(_PROVIDER_ENV, "ollama").strip().lower()
+    factory = _CLASSIFIER_FACTORIES.get(provider, OllamaQwenRouterGenerator)
+    return factory()
 
 
 def get_semantic_routing_use_case() -> SemanticRoutingUseCase:
