@@ -1,6 +1,6 @@
 # LANGCHAIN-MORNINGSTAR-STRATEGY.md
 
-Morningstar 사례([[langchain-harness]] 참고)를 이 리포에 적용하기 위한 전략 문서. 코드는 아직 없다 — 구현은 별도 요청 시 진행한다.
+Morningstar 사례([langchain-harness](./langchain-harness.md) 참고)를 이 리포에 적용하기 위한 전략 문서. 코드는 아직 없다 — 구현은 별도 요청 시 진행한다.
 
 ---
 
