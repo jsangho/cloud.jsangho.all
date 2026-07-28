@@ -51,6 +51,7 @@ class GeminiRouterGenerator(SemanticRoutingPort):
                 system_instruction=ROUTING_SYSTEM_PROMPT,
                 response_mime_type="application/json",
                 response_schema=_ROUTING_RESPONSE_SCHEMA,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
         logger.info(

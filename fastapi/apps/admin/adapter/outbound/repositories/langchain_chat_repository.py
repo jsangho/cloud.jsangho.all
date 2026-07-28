@@ -28,7 +28,9 @@ class LangchainChatRepository(LangchainChatPort):
     def __init__(self, semantic_routing_use_case: SemanticRoutingUseCase) -> None:
         self._semantic_routing_use_case = semantic_routing_use_case
         self._model = ChatGoogleGenerativeAI(
-            model=_MODEL_ID, google_api_key=get_keymaker().get_gemini_api_key()
+            model=_MODEL_ID,
+            google_api_key=get_keymaker().get_gemini_api_key(),
+            thinking_budget=0,
         )
 
     async def generate(self, command: LangchainChatCommand) -> LangchainChatResult:
