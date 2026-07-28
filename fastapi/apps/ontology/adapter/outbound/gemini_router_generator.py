@@ -14,7 +14,7 @@ from ontology.app.ports.output.semantic_routing_port import SemanticRoutingPort
 
 logger = logging.getLogger("uvicorn.error")
 
-_MODEL_ID = "gemini-2.5-flash"
+_MODEL_ID = "gemini-3.5-flash"
 
 _ROUTING_RESPONSE_SCHEMA = {
     "type": "OBJECT",
