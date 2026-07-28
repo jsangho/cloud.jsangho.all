@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { stripTrailingSlash } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function resolveBackendBase(): string {
-  return (
+  return stripTrailingSlash(
     process.env.INTERNAL_API_BASE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    "http://127.0.0.1:8000"
+      process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+      "http://127.0.0.1:8000",
   );
 }
 

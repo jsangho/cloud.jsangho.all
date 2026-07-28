@@ -8,9 +8,7 @@ import { PleAiScoreboard } from "@/components/ple-ai-scoreboard";
 import { KayfabeMark } from "@/components/kayfabe-logo";
 import { PleEventGrid } from "@/components/ple-event-grid";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+import { apiBaseUrl } from "@/lib/api";
 
 interface SampleDataItem {
   [key: string]: string | number | boolean | null;

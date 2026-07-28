@@ -1,7 +1,16 @@
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+/** 환경변수에 trailing slash가 섞여 들어와도 `${base}/path` 조합 시 `//`가 되지 않도록 방어 */
+export function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+export const apiBaseUrl = stripTrailingSlash(
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000",
+);
 
 /** apps/auth 단독 게이트웨이. 로그인/리프레시/OAuth는 여기로 간다. */
-export const authBaseUrl = process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001";
+export const authBaseUrl = stripTrailingSlash(
+  process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001",
+);
 
 export const titanicApiBaseUrl = `${apiBaseUrl}/api/titanic`;
 export const pleEventsBaseUrl = `${apiBaseUrl}/api/ple_events`;
