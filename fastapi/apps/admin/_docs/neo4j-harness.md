@@ -64,5 +64,7 @@ CREATE (a)-[:IS_FRIENDS_WITH]->(b)
 | 문서 | 역할 |
 |------|------|
 | `fastapi/CLAUDE.md` | 백엔드 행동 지침(레이어·경로 규칙) |
+| `apps/admin/_docs/langgraph-harness.md` | 이 데이터 모델을 GraphRAG(지식 그래프·하이브리드 검색)로 확장하는 설계 |
+| `apps/admin/_docs/neo4j-strategy.md` | Docker `neo4j` 서비스 설정(플러그인·메모리·버전 고정) 확장 전략 |
 | `docker-compose.yaml` (`neo4j` 서비스) | 실제 컨테이너 설정 |
 | `.env.example` (`NEO4J_*`) | 접속 정보 키 목록 |

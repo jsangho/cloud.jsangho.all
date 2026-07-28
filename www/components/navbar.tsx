@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LogIn, Menu, Trophy, X } from "lucide-react";
+import { LogIn, Menu, ShoppingBag, Trophy, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { KayfabeLogo } from "@/components/kayfabe-logo";
 import { PlePickerDialog } from "@/components/ple-picker-dialog";
@@ -74,9 +74,8 @@ export function Navbar() {
 
   const isPle = mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
   const isRankings = mounted && pathname === "/rankings";
+  const isShop = mounted && (pathname === "/shop" || pathname.startsWith("/shop/"));
   const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
-  const isChampionship =
-    mounted && (pathname === "/championship" || pathname.startsWith("/championship/"));
   const isChat = mounted && (pathname === "/chat" || pathname.startsWith("/chat/"));
   const isLesson = mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
   const isAdmin = mounted && pathname === "/admin";
@@ -149,8 +148,12 @@ export function Navbar() {
           >
             순위표
           </NavLink>
-          <NavLink href="/championship" active={isChampionship}>
-            챔피언십
+          <NavLink
+            href="/shop"
+            active={isShop}
+            icon={<ShoppingBag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+          >
+            상점
           </NavLink>
           <NavLink href="/chat" active={isChat}>
             대화
@@ -205,8 +208,13 @@ export function Navbar() {
             >
               순위표
             </NavLink>
-            <NavLink href="/championship" active={isChampionship} fullWidth>
-              챔피언십
+            <NavLink
+              href="/shop"
+              active={isShop}
+              fullWidth
+              icon={<ShoppingBag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+            >
+              상점
             </NavLink>
             <NavLink href="/chat" active={isChat} fullWidth>
               대화

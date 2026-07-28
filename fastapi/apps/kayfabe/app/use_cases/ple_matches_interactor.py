@@ -18,6 +18,10 @@ from kayfabe.app.services.records_scoring import (
     derive_match_record_from_orm,
     normalize_name,
 )
+from kayfabe.app.services.wwe_roster_catalog import (
+    WWE_ROSTER_NAMES,
+    get_roster_entry,
+)
 
 logger = LAYER_LOG
 
@@ -32,14 +36,15 @@ class PleMatchesInteractor(PleMatchesUseCase):
 
     async def list_competitors(self, *, q: str | None = None) -> CompetitorListResponse:
         logger.info(
-            "[PleMatchesInteractor] list_competitors -> Repository q=%s", q or "-"
+            "[PleMatchesInteractor] list_competitors -> RosterCatalog q=%s", q or "-"
         )
-        names = await self._records.list_competitor_names()
+        names = list(WWE_ROSTER_NAMES)
         if q:
             needle = q.strip().lower()
             names = [n for n in names if needle in n.lower()]
         logger.info(
-            "[PleMatchesInteractor] list_competitors <- Repository count=%d", len(names)
+            "[PleMatchesInteractor] list_competitors <- RosterCatalog count=%d",
+            len(names),
         )
         return CompetitorListResponse(names=names)
 
@@ -101,13 +106,21 @@ class PleMatchesInteractor(PleMatchesUseCase):
             champion_appearances=champion_appearances,
         )
 
+        roster_entry = get_roster_entry(normalized)
+
         logger.info(
             "[PleMatchesInteractor] get_competitor_profile <- name=%s matches=%d",
             normalized,
             len(matches),
         )
         return CompetitorProfileResponse(
-            name=normalized, matches=matches, summary=summary
+            name=normalized,
+            matches=matches,
+            summary=summary,
+            real_name=roster_entry["real_name"] if roster_entry else None,
+            height_cm=roster_entry["height_cm"] if roster_entry else None,
+            weight_kg=roster_entry["weight_kg"] if roster_entry else None,
+            birth_date=roster_entry["birth_date"] if roster_entry else None,
         )
 
     async def introduce_myself(self, query: MyselfQuery) -> MyselfResponse:

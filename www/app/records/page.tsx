@@ -3,20 +3,29 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
+import { ChampionBeltBadges } from "@/components/records/champion-belt-badges";
+import { RecordsSubnav } from "@/components/records/records-subnav";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
+import { fetchChampionshipBoard } from "@/lib/championship-api";
 import { fetchCompetitorNames } from "@/lib/records-api";
 import { cn } from "@/lib/utils";
+import {
+  buildChampionBeltMap,
+  type ChampionBeltInfo,
+} from "@/lib/wwe-current-champions";
 
 type RecordsPageState = {
   query: string;
   names: string[];
   loading: boolean;
+  championMap: Map<string, ChampionBeltInfo[]>;
 };
 
 const initialState: RecordsPageState = {
   query: "",
   names: [],
   loading: true,
+  championMap: new Map(),
 };
 
 export default function RecordsPage() {
@@ -40,6 +49,18 @@ export default function RecordsPage() {
       clearTimeout(timer);
     };
   }, [state.query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const board = await fetchChampionshipBoard();
+      if (cancelled || !board) return;
+      patchState({ championMap: buildChampionBeltMap(board.brands) });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const emptyMessage = useMemo(() => {
     if (state.loading) return null;
@@ -67,6 +88,8 @@ export default function RecordsPage() {
             을 확인할 수 있습니다.
           </p>
         </header>
+
+        <RecordsSubnav active="players" />
 
         <section className="ple-section-glow mb-6 rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-50/60 dark:bg-stone-950/60 p-4 backdrop-blur-sm sm:rounded-3xl sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -110,8 +133,11 @@ export default function RecordsPage() {
                     href={`/records/${encodeURIComponent(name)}`}
                     className="records-competitor-card group block rounded-xl border px-4 py-3.5"
                   >
-                    <div className="truncate text-sm font-bold text-stone-900 dark:text-white transition-colors group-hover:text-amber-50 dark:group-hover:text-amber-50">
-                      {name}
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-bold text-stone-900 dark:text-white transition-colors group-hover:text-amber-50 dark:group-hover:text-amber-50">
+                        {name}
+                      </span>
+                      <ChampionBeltBadges belts={state.championMap.get(name) ?? []} />
                     </div>
                     <div className="mt-1 text-xs font-medium text-stone-500 transition-colors group-hover:text-amber-200/70">
                       상세 기록 보기 →

@@ -9,6 +9,7 @@ import type {
   CompetitorMatchRecord,
 } from "@/lib/records-api";
 import type { TitleAcquisition } from "@/lib/title-history-api";
+import { formatChampionshipDate } from "@/lib/wwe-current-champions";
 
 type FilterResult = "all" | CompetitorMatchRecord["result"];
 type FilterFormat = "all" | "singles" | "multi";
@@ -108,9 +109,35 @@ function isTitleMatchTitle(title: string): boolean {
   return /championship|챔피언십/i.test(title);
 }
 
-function CompetitorProfileHeader({ name }: { name: string }) {
+function ProfileStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-stone-300/60 dark:border-stone-700/60 bg-stone-100/40 dark:bg-stone-950/40 px-3 py-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
+        {label}
+      </span>{" "}
+      <span className="text-xs font-semibold text-stone-800 dark:text-stone-100">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function CompetitorProfileHeader({
+  name,
+  realName,
+  birthDate,
+  heightCm,
+  weightKg,
+}: {
+  name: string;
+  realName?: string | null;
+  birthDate?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+}) {
   const info = resolveCompetitorInfo(name);
   const members = info.members.map((m) => m.ringName).filter(Boolean);
+  const hasProfileStats = !!(realName || birthDate || heightCm || weightKg);
 
   return (
     <section className="rounded-2xl border border-stone-300/70 dark:border-stone-700/70 bg-gradient-to-br from-stone-100/80 dark:from-stone-950/80 to-stone-50/40 dark:to-stone-900/40 p-5">
@@ -129,6 +156,17 @@ function CompetitorProfileHeader({ name }: { name: string }) {
             <p className="mt-1.5 text-xs font-medium leading-relaxed text-stone-400">
               멤버 {members.join(" · ")}
             </p>
+          ) : null}
+
+          {hasProfileStats ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {realName ? <ProfileStat label="실제이름" value={realName} /> : null}
+              {birthDate ? (
+                <ProfileStat label="생년월일" value={formatChampionshipDate(birthDate)} />
+              ) : null}
+              {heightCm ? <ProfileStat label="키" value={`${heightCm}cm`} /> : null}
+              {weightKg ? <ProfileStat label="몸무게" value={`${weightKg}kg`} /> : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -299,7 +337,13 @@ export function CompetitorRecordView({
 
   return (
     <div className="space-y-4">
-      <CompetitorProfileHeader name={profile.name} />
+      <CompetitorProfileHeader
+        name={profile.name}
+        realName={profile.realName}
+        birthDate={profile.birthDate}
+        heightCm={profile.heightCm}
+        weightKg={profile.weightKg}
+      />
 
       <section className="rounded-2xl border border-amber-700/40 bg-amber-950/10 p-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
