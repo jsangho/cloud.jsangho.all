@@ -16,6 +16,18 @@ logger = logging.getLogger("uvicorn.error")
 
 _MODEL_ID = "gemini-3.5-flash"
 
+_ROUTING_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "destination": {
+            "type": "STRING",
+            "enum": ["crud", "exaone_rag", "gemini"],
+        },
+        "entities": {"type": "ARRAY", "items": {"type": "STRING"}},
+    },
+    "required": ["destination", "entities"],
+}
+
 
 class GeminiRouterGenerator(SemanticRoutingPort):
     """Ollama가 없는 환경(운영 서버 등)을 위한 Gemini 기반 의도 분류 어댑터.
@@ -38,6 +50,7 @@ class GeminiRouterGenerator(SemanticRoutingPort):
             config=types.GenerateContentConfig(
                 system_instruction=ROUTING_SYSTEM_PROMPT,
                 response_mime_type="application/json",
+                response_schema=_ROUTING_RESPONSE_SCHEMA,
             ),
         )
         logger.info(

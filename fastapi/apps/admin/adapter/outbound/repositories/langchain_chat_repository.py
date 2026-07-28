@@ -59,4 +59,4 @@ class LangchainChatRepository(LangchainChatPort):
         logger.info("[admin.langchain_chat] LangChain 호출 시작 | model=%s", _MODEL_ID)
         response = await self._model.ainvoke(history)
         logger.info("[admin.langchain_chat] LangChain 호출 종료 | model=%s", _MODEL_ID)
-        return LangchainChatResult(reply=str(response.content))
+        return LangchainChatResult(reply=response.text)
