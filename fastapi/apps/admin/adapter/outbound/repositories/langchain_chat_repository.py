@@ -27,11 +27,14 @@ class LangchainChatRepository(LangchainChatPort):
 
     def __init__(self, semantic_routing_use_case: SemanticRoutingUseCase) -> None:
         self._semantic_routing_use_case = semantic_routing_use_case
-        self._model = ChatGoogleGenerativeAI(
+        model = ChatGoogleGenerativeAI(
             model=_MODEL_ID,
             google_api_key=get_keymaker().get_gemini_api_key(),
             thinking_budget=0,
         )
+        # 최신 정보(스포츠 결과 등)를 학습 데이터가 아니라 실시간 검색으로 답하도록
+        # Google Search grounding을 붙인다.
+        self._model = model.bind_tools([{"google_search": {}}])
 
     async def generate(self, command: LangchainChatCommand) -> LangchainChatResult:
         user_messages = [m for m in command.messages if m.role == "user"]
