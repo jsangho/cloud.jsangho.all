@@ -28,6 +28,10 @@ export type CompetitorProfile = {
   name: string;
   matches: CompetitorMatchRecord[];
   summary: CompetitorSummary;
+  realName?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  birthDate?: string | null;
 };
 
 export async function fetchCompetitorNames(q?: string): Promise<string[]> {

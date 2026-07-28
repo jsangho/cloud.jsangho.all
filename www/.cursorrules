@@ -46,7 +46,7 @@ www/
 - 기본 URL: [`lib/api.ts`](lib/api.ts)의 `apiBaseUrl`  
   `process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"`
 - 백엔드 경로는 **fastapi 라우터 prefix와 일치**해야 한다.
-  - Kayfabe: `/ple/*`, `/records/*`, `/rankings`, `/championship`, `/title-history/*`
+  - Kayfabe: `/ple/*`, `/records/*` (`/records/champions` 포함), `/rankings`, `/shop`, `/title-history/*`
   - Auth: `/login`, `/signup`, `/users/{id}`
   - Titanic: `/titanic/*` (`titanicApiBaseUrl` 사용 시 `/api/titanic` 확인)
 - 새 API 호출은 기존 `lib/*-api.ts` 파일 패턴(fetch · 타임아웃 · 에러 파싱)을 따른다.

@@ -90,5 +90,9 @@ class CompetitorProfileResponseSchema(BaseModel):
     name: str
     matches: list[CompetitorMatchRecordSchema]
     summary: CompetitorSummarySchema
+    real_name: str | None = Field(default=None, alias="realName")
+    height_cm: float | None = Field(default=None, alias="heightCm")
+    weight_kg: float | None = Field(default=None, alias="weightKg")
+    birth_date: str | None = Field(default=None, alias="birthDate")
 
     model_config = ConfigDict(populate_by_name=True)

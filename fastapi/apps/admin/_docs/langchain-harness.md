@@ -106,5 +106,6 @@ OpenAI GPT-4, Hugging Face 모델 등 다양한 대규모 언어 모델과 원�
 | 문서 | 역할 |
 |------|------|
 | `fastapi/CLAUDE.md` | 백엔드 행동 지침(레이어·경로 규칙) |
+| `apps/admin/_docs/langgraph-harness.md` | LangChain 선형 체인 → LangGraph(분기·루프·상태 관리) 확장 설계 |
 | `apps/admin/_docs/neo4j-harness.md` | 그래프 DB(Neo4j) 데이터 모델 |
 | `apps/admin/app/use_cases/pdf_loader_interactor.py` | 현재 구현된 PDF 텍스트 추출 파이프라인(LangChain 미사용) |

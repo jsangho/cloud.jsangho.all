@@ -1,10 +1,20 @@
-import type { ChampionshipTier, TitleReign } from "@/lib/championship-api";
+import type {
+  BrandRoster,
+  ChampionshipTier,
+  TitleReign,
+} from "@/lib/championship-api";
 
 export type {
   ChampionshipTier,
   TitleReign,
   BrandRoster,
 } from "@/lib/championship-api";
+
+export type ChampionBeltInfo = {
+  beltName: string;
+  tier: ChampionshipTier;
+  accent: BrandRoster["accent"];
+};
 
 export const TIER_LABELS: Record<ChampionshipTier, string> = {
   main: "메인 챔피언십",
@@ -28,6 +38,23 @@ export function formatChampionshipDate(iso: string): string {
     month: "long",
     day: "numeric",
   }).format(new Date(y, m - 1, d));
+}
+
+/** 선수 이름 → 보유 중인 벨트 목록 (기록 페이지에서 챔피언 뱃지 표시용) */
+export function buildChampionBeltMap(
+  brands: BrandRoster[],
+): Map<string, ChampionBeltInfo[]> {
+  const map = new Map<string, ChampionBeltInfo[]>();
+  for (const brand of brands) {
+    for (const title of brand.titles) {
+      for (const champion of title.champions) {
+        const belts = map.get(champion) ?? [];
+        belts.push({ beltName: title.beltName, tier: title.tier, accent: brand.accent });
+        map.set(champion, belts);
+      }
+    }
+  }
+  return map;
 }
 
 export function groupTitlesByTier(titles: TitleReign[]) {

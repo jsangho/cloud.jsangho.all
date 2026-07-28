@@ -70,12 +70,20 @@ class CompetitorProfileResponse:
     name: str
     matches: list[CompetitorMatchRecordResponse]
     summary: CompetitorSummaryResponse
+    real_name: str | None = None
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    birth_date: str | None = None
 
     def to_schema(self):
         return CompetitorProfileResponseSchema(
             name=self.name,
             matches=[m.to_schema() for m in self.matches],
             summary=self.summary.to_schema(),
+            real_name=self.real_name,
+            height_cm=self.height_cm,
+            weight_kg=self.weight_kg,
+            birth_date=self.birth_date,
         )
 
 

@@ -205,6 +205,13 @@ export function getPleStatusBadge(ple: PleEvent): PleStatusBadge {
   return { label: "예측 가능", variant: "open" };
 }
 
+/** 이벤트까지 남은 일수 (오늘 0, 지났으면 음수, 날짜 미정이면 null) */
+export function getPleCountdownDays(ple: PleEvent): number | null {
+  const eventDate = parsePleStartDate(ple);
+  if (!eventDate) return null;
+  return daysUntil(eventDate);
+}
+
 export function getPleThemeClass(slug: string): string | undefined {
   return PLE_THEME_CLASS[slug];
 }
