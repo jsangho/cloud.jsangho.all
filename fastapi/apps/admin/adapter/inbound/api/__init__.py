@@ -1,3 +1,4 @@
+from admin.adapter.inbound.api.v1.langchain_router import langchain_router
 from admin.adapter.inbound.api.v1.pdf_loader_router import pdf_loader_router
 from admin.adapter.inbound.api.v1.piper_bighetti_hr_router import (
     bighetti_hr_router,
@@ -22,4 +23,4 @@ human_resource_router.include_router(dinesh_dash_router)
 human_resource_router.include_router(dunn_coo_router)
 human_resource_router.include_router(gilfoyle_sys_router)
 
-__all__ = ["human_resource_router", "pdf_loader_router"]
+__all__ = ["human_resource_router", "pdf_loader_router", "langchain_router"]

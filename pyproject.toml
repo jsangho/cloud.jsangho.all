@@ -41,6 +41,9 @@ dependencies = [
     "pyjwt==2.10.1",
     "cryptography",
     "neo4j-graphrag>=1.18.0",
+    "langchain-core>=1.5.1",
+    "langchain-google-genai>=4.3.2",
+    "langgraph>=1.2.9",
 ]
 
 [project.optional-dependencies]

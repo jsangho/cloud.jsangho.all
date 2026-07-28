@@ -73,7 +73,35 @@ OpenAI GPT-4, Hugging Face 모델 등 다양한 대규모 언어 모델과 원�
 
 ---
 
-## 4. 관련 문서
+## 4. Claude 하네스 체크리스트 (LangChain 작업 시)
+
+이 리포에서 LangChain 관련 작업(도입 검토·코드 작성)을 요청받으면, 코드를 쓰기 전에 아래를 확인한다.
+
+### 4-1. 도입 여부부터 확인
+
+- `pyproject.toml`에 `langchain*` 패키지가 실제로 있는지 §0 기준으로 다시 확인한다. 없다면 지금은 "도입"이 아니라 "검토" 단계라는 것을 전제하고, 사용자 확인 없이 `uv add langchain*`을 실행하지 않는다.
+- 기존 LLM 호출 경로(`get_keymaker()` + `google-generativeai`, `gemini_generator.py`)를 LangChain으로 **교체**하는 것인지, 신규 파이프라인에만 **추가**하는 것인지 질문한다. 전자는 §3-1(성능)·§3-2(러닝커브) 비용이 훨씬 크다.
+
+### 4-2. 헥사고날 경계 판단
+
+- LangChain의 체인·에이전트·리트리버 객체는 외부 프레임워크 의존성이므로 `adapter/outbound/`에만 둔다. `domain/`이나 `app/`에서 `import langchain*`이 보이면 멈추고 확인한다(`fastapi/CLAUDE.md` §2).
+- PDF 로딩(`pdf_loader_interactor.py`) → 청킹 → LLM 호출 → `neo4j-graphrag` 저장 파이프라인에 얹는 경우, 기존 UseCase/Interactor 시그니처는 유지하고 내부 구현만 교체하는 선에서 그친다(§0의 "체이닝 레이어로 얹는 경우" 참고).
+
+### 4-3. 장단점 대비 실익 확인 (§2, §3)
+
+- 실시간·대량 데이터 처리 요구가 있다면(§3-1) LangChain 오버헤드가 실익보다 큰지 먼저 따진다.
+- "다양한 LLM 통합"(§2-1)이 실제 요구사항인지 확인한다 — 현재 이 리포는 Gemini 단일 프로바이더만 쓰므로, 멀티 모델 필요성이 없으면 LangChain 도입 근거가 약하다.
+- 고도로 특화된 유즈케이스(§3-3)라면 LangChain 없이 직접 구현하는 편이 더 단순할 수 있다는 점을 사용자에게 알린다(루트 `CLAUDE.md` §2, 단순성 우선).
+
+### 4-4. 실행 순서
+
+1. 사용자에게 도입 범위(전체 교체 vs 신규 파이프라인 한정)를 먼저 확인한다.
+2. 의존성은 `uv add`로만 반영하고, `pyproject.toml`/`uv.lock`이 바뀌었다는 이유로 임의로 빌드하지 않는다(루트 `CLAUDE.md` Docker 워크플로우 규칙).
+3. 코드 작성 후 `uv run ruff check --fix` / `ruff format` / `lint-imports`를 실행하고 통과를 확인한 뒤 완료 보고한다(루트 `CLAUDE.md` §5).
+
+---
+
+## 5. 관련 문서
 
 | 문서 | 역할 |
 |------|------|
