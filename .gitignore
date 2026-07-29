@@ -5,3 +5,8 @@ data/
 __pycache__/
 *.py[cod]
 *.pem
+.env
+.mcp.json
+.env
+.mcp.json
+.superpowers/

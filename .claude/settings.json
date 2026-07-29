@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send 'Claude Code' 'Claude가 응답을 기다리고 있습니다'"
+          }
+        ]
+      }
+    ]
+  }
+}
+
