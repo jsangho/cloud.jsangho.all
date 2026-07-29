@@ -1,0 +1,21 @@
+- [Auto-memory mechanics](auto_memory_mechanics.md) — this MEMORY.md auto-loads only its first 200 lines (index-only, hooks are the search surface); the home-dir path is a symlink into this repo, so no copying is needed — but memory is unreadable if WSL is off
+- [Commit/push syncs branches](git_commit_push_syncs_branches.md) — "커밋하고 푸시해줘" = commit/push to ho, then ff-sync main+messi, then *merge* (not ff) into aws
+- [Submodules & never-commit list](repo_submodules.md) — fastapi/, www/, _docs/ are separate repos: commit inside first, then the root pointer; never commit .env/*.pem/data/
+- [jsangho.cloud server topology & SSH access](server_remote_access_jsangho.md) — stack runs on AWS EC2 (`ssh aws-ec2`, unified alias on Windows+WSL), not the old DESKTOP-9E3A4EC theory; pgAdmin/pgvector need an SSH tunnel (`-L 5050:localhost:5050 -L 5432:localhost:5432`)
+- [Env vars & files](infra_env_vars.md) — which .env serves what, required key list, and JWT_SECRET_KEY is deprecated HS256-era dead weight
+- [n8n route pending](project_n8n_route_pending.md) — n8n stopped intentionally, add route only when asked
+- [LangChain chat grounding pending](project_langchain_chat_grounding_pending.md) — stale-answer fix deferred by user 2026-07-28; needs billing for Google Search grounding or RAG routing
+
+- [Hexagonal layering](arch_hexagonal_layers.md) — domain must not import framework/infra; app dir shape; two entrypoints (main.py:8000, auth_main.py:9000 unexposed)
+- [Star topology & ontology hub](arch_star_topology.md) — spoke-to-spoke imports are banned and blocked by lint-imports; route shared code through `ontology`
+- [Package path notation](arch_path_convention.md) — apps drop `jsangho`/`apps`, but core MUST be `jsangho.core.`; stop and ask on mismatch
+- [Docs placement](arch_docs_placement.md) — new .md goes in the right `_docs/`, never at repo or app root
+- [Test conftest pattern](pattern_test_conftest.md) — per-app tests/conftest.py injects apps/ into sys.path; copy it verbatim for a new app
+- [Error handling](pattern_error_handling.md) — no custom AppError layer exists: backend raises HTTPException, frontend uses parseApiError
+- [Code style per stack](convention_code_style.md) — ruff 88/py313, TS 2-space/100/semicolons/no-any, dart format; async only when awaiting; Korean Conventional Commits
+
+- [Harness gates](workflow_harness_gates.md) — lint/format/type commands that MUST run after writing code, per stack; never report done with a failing gate
+- [Docker dev workflow](workflow_docker_dev.md) — never build unless the user says "빌드해줘"; code changes need no build; test new packages via `docker compose exec`
+- [uv run is mandatory](debug_uv_run_path.md) — bare ruff/lint-imports picks up global Anaconda Python and fails weirdly
+- [Double-slash 404](debug_double_slash_404.md) — trailing slash in API base URL produced `//weather/seoul`; always normalize env-supplied base URLs (fixed in 64ccb2f)
+- [nano corrupts YAML on the server](debug_nano_yaml_corruption.md) — pasting eats `- ` markers and adds autoindent; use flow style, sed the indent, `ingress validate` before restarting cloudflared
