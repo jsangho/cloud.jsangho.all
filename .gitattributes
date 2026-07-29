@@ -1,0 +1,8 @@
+# 줄바꿈 정규화 — 저장소에는 항상 LF로 저장한다.
+# eol=lf 로 워킹트리까지 LF로 고정해, Windows git(core.autocrlf=true)과
+# WSL git(미설정=false)이 같은 워킹트리를 다르게 보는 문제를 막는다.
+* text=auto eol=lf
+
+# 바이너리 — 변환 금지 (git 자동 판별에 의존하지 않고 명시)
+*.png binary
+*.jpg binary
