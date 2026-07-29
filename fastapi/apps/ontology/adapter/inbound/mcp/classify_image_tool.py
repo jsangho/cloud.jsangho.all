@@ -52,3 +52,7 @@ async def classify_image(image_path: str) -> dict:
         "is_confident": result.is_confident,
         "top5": [{"label": p.label, "score": p.score} for p in result.top5],
     }
+
+
+if __name__ == "__main__":
+    mcp.run()

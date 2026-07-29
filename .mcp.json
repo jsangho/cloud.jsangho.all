@@ -8,6 +8,34 @@
         "cd /home/messi/.hermes/hermes-agent && exec venv/bin/python3 -m agent.transports.hermes_tools_mcp_server"
       ],
       "env": {}
+    },
+    "github": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "exec /home/ho/bin/github-mcp-server stdio" 
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "gmail": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@gongrzhe/server-gmail-autoauth-mcp"]
+    },
+    "ontology-vision": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd /home/ho/projects/cloud.jsangho.all/fastapi && exec uv run python -m ontology.adapter.inbound.mcp.classify_image_tool"
+      ],
+      "env": {
+        "PYTHONPATH": "apps:.",
+        "PYTHONUTF8": "1"
+      }
     }
   }
 }
