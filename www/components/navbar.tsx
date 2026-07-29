@@ -10,7 +10,8 @@ import { PlePickerDialog } from "@/components/ple-picker-dialog";
 import { WeatherWidget } from "@/components/weather-widget";
 import { WweTicker } from "@/components/wwe-ticker";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { authDisplayName, useAuth } from "@/context/auth-context";
+import { UserNavBadge } from "@/components/user-nav-badge";
+import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
 function navLinkClass(active: boolean, champion = false) {
@@ -109,12 +110,7 @@ export function Navbar() {
       >
         로그아웃
       </Button>
-      <span
-        className="max-w-[8rem] truncate px-1 text-sm font-semibold text-stone-900 dark:text-stone-100"
-        title={authDisplayName(user)}
-      >
-        {authDisplayName(user)}
-      </span>
+      <UserNavBadge user={user} />
     </>
   ) : (
     <NavLink

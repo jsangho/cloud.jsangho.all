@@ -21,6 +21,16 @@ export function formatAccuracy(value: number) {
   return `${pct}%`;
 }
 
+/**
+ * 보유 포인트 = 적중한 예측의 배점 합계(순위표 `score`)와 같다.
+ * 요청 실패는 `null`, 채점된 예측이 없어 순위 집계에서 빠진 사용자는 `0`.
+ */
+export async function fetchMyPoints(nickname: string): Promise<number | null> {
+  const data = await fetchRankings({ nickname, limit: 1 });
+  if (data === null) return null;
+  return data.myRank?.score ?? 0;
+}
+
 export async function fetchRankings(options?: {
   limit?: number;
   nickname?: string;
