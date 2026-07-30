@@ -28,6 +28,21 @@ allowed-tools:
 
 ## 시작 전 필수 확인
 
+**서버 `fastapi/.env` 에 인프라 키 5개가 있어야 한다.** compose 는 명령 대상이
+`backend`·`auth` 뿐이어도 파일 전체를 먼저 검증한다. pgvector·neo4j·pgadmin·n8n 이
+모두 `./fastapi/.env` 를 `env_file` 로 읽으므로, 키가 없으면 빈 값으로 기동해 인증이 깨진다.
+
+```bash
+ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES_PASSWORD|NEO4J_AUTH|PGADMIN_DEFAULT_EMAIL|PGADMIN_DEFAULT_PASSWORD|N8N_ENCRYPTION_KEY)=" .env'
+```
+
+`5` 가 나와야 한다. 그보다 적으면 배포를 멈추고 사용자에게 알린다 — `.env` 는 git 제외라
+로컬에서 채워 줄 수 없다. `POSTGRES_PASSWORD` 는 `DATABASE_URL` 의 비밀번호와,
+`NEO4J_AUTH` 는 `neo4j/<NEO4J_PASSWORD>` 와 값이 같아야 한다.
+
+서버에 예전 `fastapi/.env.infra` 가 남아 있으면 지금은 아무도 읽지 않는다. 지워도 되지만
+배포 흐름에서 건드리지 않는다.
+
 **서버 `docker-compose.yaml`에 커밋되지 않은 수정이 있다.** `aws` 브랜치에 `restart: alwats` 오타가 커밋돼 있고, 서버에서만 `always`로 고쳐 쓰는 상태다.
 
 ```bash

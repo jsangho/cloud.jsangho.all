@@ -4,6 +4,10 @@
 !.env.example
 !.env.sample
 !.env.template
+# .env.<대상>.example 도 값 없는 템플릿이므로 추적한다.
+!.env.*.example
+!.env.*.sample
+!.env.*.template
 *.pem
 *.key
 *.p12

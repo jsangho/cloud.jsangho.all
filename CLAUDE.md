@@ -194,12 +194,25 @@ Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 
 | 파일 | 용도 |
 |------|------|
-| `fastapi/.env` | Docker Compose `env_file` — 백엔드·auth·n8n 공용. **git 제외** |
+| `fastapi/.env` | Docker Compose `env_file` — **스택 전체**(backend·auth·pgvector·neo4j·pgadmin·n8n)가 읽는 단일 파일. **git 제외** |
 | `fastapi/.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
 | `www/.env.local` | 프론트 `NEXT_PUBLIC_*`. **git 제외** |
 
 필수 키 목록은 `fastapi/.env.example`를 Read한다. `docker-compose.yaml`은 루트에 있고
 `env_file`만 `./fastapi/.env`를 가리킨다 — compose는 스택 전체를 묶으므로 옮기지 않는다.
+
+**env 파일은 하나로 유지한다.** 인프라 이미지가 직접 읽는 값
+(`POSTGRES_PASSWORD`·`NEO4J_AUTH`·`PGADMIN_*`·`N8N_ENCRYPTION_KEY`)도 `.env`에 함께 둔다.
+값을 맞춰야 하는 쌍이 있다: `POSTGRES_PASSWORD` ↔ `DATABASE_URL`·`PGVECTOR_PASSWORD`,
+`NEO4J_AUTH` ↔ `NEO4J_PASSWORD`. 한쪽만 바꾸면 인증이 깨진다.
+
+**감수한 트레이드오프**: `env_file`은 전부-또는-전무라서 DB·n8n 컨테이너에도
+`JWT_PRIVATE_KEY`·`GEMINI_API_KEY` 같은 앱 비밀값이 주입된다. 특히 n8n 워크플로는 이
+값들을 `$env`로 읽을 수 있다. 파일 개수를 줄이려고 이 노출을 받아들인 구성이므로,
+분리하자는 제안을 다시 꺼내기 전에 사용자에게 확인한다.
+
+**compose의 `${}` 치환을 쓰지 않는 이유**: `${}`는 루트 `.env`만 읽는데 `.env`가
+`fastapi/`로 옮겨져 빈 값이 된다. 인프라 서비스도 `env_file`로 주입한다.
 
 ---
 
