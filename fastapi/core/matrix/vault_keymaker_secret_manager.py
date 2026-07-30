@@ -13,7 +13,7 @@ from urllib.request import urlopen
 SEOUL_LAT = 37.5665
 SEOUL_LON = 126.978
 OPENWEATHER_CURRENT_URL = "https://api.openweathermap.org/data/2.5/weather"
-EMBEDDING_MODEL_ID = "bge-m3"
+EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 EMBEDDING_DIM = 1024
 
 
@@ -38,6 +38,7 @@ class Keymaker:
         self._dotenv_loaded = False
         self._gemini_model: Any = None
         self._gemini_model_id = "gemini-2.5-flash"
+        self._embedding_model: Any = None
 
     @classmethod
     def instance(cls, env_path: Path | None = None) -> Keymaker:
@@ -100,18 +101,23 @@ class Keymaker:
         self.load_env()
         return self._gemini_model is not None
 
-    def embed_text(self, text: str) -> list[float]:
-        """bge-m3(Ollama, 로컬)로 텍스트를 벡터화합니다 (동기 호출)."""
-        import httpx
+    def _get_embedding_model(self) -> Any:
+        """bge-m3를 프로세스당 한 번만 로드합니다 (약 2.3GB — 호출마다 로드 금지)."""
+        if self._embedding_model is None:
+            from sentence_transformers import SentenceTransformer
 
-        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-        response = httpx.post(
-            f"{host}/api/embed",
-            json={"model": EMBEDDING_MODEL_ID, "input": text},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        return list(response.json()["embeddings"][0])
+            self._embedding_model = SentenceTransformer(EMBEDDING_MODEL_ID)
+        return self._embedding_model
+
+    def embed_text(self, text: str) -> list[float]:
+        """bge-m3(sentence-transformers, 인프로세스)로 텍스트를 벡터화합니다.
+
+        Ollama 데몬에 의존하지 않는다 — EC2에는 Ollama가 없다. `normalize_embeddings`
+        를 켜야 기존에 적재된 벡터(norm=1)와 같은 좌표계가 된다.
+        CPU 바운드이므로 호출 측에서 `asyncio.to_thread`로 넘긴다.
+        """
+        vector = self._get_embedding_model().encode(text, normalize_embeddings=True)
+        return [float(x) for x in vector]
 
     # --- OpenWeatherMap ---
 
