@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
+from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
+
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import StreamingResponse
 from ontology.adapter.inbound.api.schemas.gemini_schema import GeminiAskSchema
@@ -26,6 +28,6 @@ async def ask(
 ) -> StreamingResponse:
     logger.info("[ontology/gemini/ask] question=%s", schema.question)
     command = GeminiGenerationCommand(prompt=schema.question)
-    return StreamingResponse(
-        use_case.stream_generate(command), media_type="text/plain; charset=utf-8"
+    return await open_guarded_text_stream(
+        use_case.stream_generate(command), label="ontology/gemini/ask"
     )

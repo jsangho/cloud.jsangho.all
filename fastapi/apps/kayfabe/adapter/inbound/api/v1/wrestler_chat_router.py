@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
+from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
 from fastapi.responses import StreamingResponse
 
 from fastapi import APIRouter, Body, Depends
@@ -34,6 +35,6 @@ async def chat(
             WrestlerChatTurnDto(role=msg.role, text=msg.text) for msg in schema.messages
         ),
     )
-    return StreamingResponse(
-        use_case.stream_chat(command), media_type="text/plain; charset=utf-8"
+    return await open_guarded_text_stream(
+        use_case.stream_chat(command), label="wwe-chat/chat"
     )
