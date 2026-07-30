@@ -20,8 +20,8 @@ DEFAULT_GEMINI_MODEL_ID = "gemini-3.5-flash"
 
 
 def default_backend_env_path() -> Path:
-    """`backend/.env` — 이 파일: `apps/matrix/app/keymaker.py` 기준."""
-    return Path(__file__).resolve().parent.parent.parent.parent / ".env"
+    """`fastapi/.env` — 이 파일(`fastapi/core/matrix/…`)에서 3단계 위가 `fastapi/`."""
+    return Path(__file__).resolve().parents[2] / ".env"
 
 
 class Keymaker:

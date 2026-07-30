@@ -194,11 +194,12 @@ Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 
 | 파일 | 용도 |
 |------|------|
-| `.env` (루트) | Docker Compose `env_file` — 백엔드·auth·n8n 공용. **git 제외** |
-| `.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
+| `fastapi/.env` | Docker Compose `env_file` — 백엔드·auth·n8n 공용. **git 제외** |
+| `fastapi/.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
 | `www/.env.local` | 프론트 `NEXT_PUBLIC_*`. **git 제외** |
 
-필수 키 목록은 `.env.example`를 Read한다.
+필수 키 목록은 `fastapi/.env.example`를 Read한다. `docker-compose.yaml`은 루트에 있고
+`env_file`만 `./fastapi/.env`를 가리킨다 — compose는 스택 전체를 묶으므로 옮기지 않는다.
 
 ---
 
