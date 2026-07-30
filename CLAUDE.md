@@ -96,13 +96,6 @@
 
 > 코드 작성 후 반드시 실행한다. 에러는 무시하지 않고 수정 후 완료 보고한다.
 
-### Flutter 작업 후
-
-```bash
-dart analyze          # 린트 (avoid_print 위반 시 에러)
-dart format .         # 포매팅
-```
-
 ### Python 작업 후
 
 ```bash
@@ -113,13 +106,7 @@ cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports   # 스타 토폴
 
 > `uv run` 없이 `ruff`/`lint-imports`를 그냥 실행하면 PATH상 다른 Python(예: Anaconda)의 전역 설치가 먼저 잡혀 잘못된 버전이 돌거나 `ontology` 패키지를 못 찾을 수 있다. 항상 `uv run`으로 프로젝트 venv를 명시한다.
 
-### Next.js 작업 후
-
-```bash
-cd www && pnpm lint        # ESLint (no-console, no-explicit-any 위반 시 에러)
-cd www && pnpm type-check  # TypeScript strict 검사
-cd www && pnpm format      # Prettier
-```
+> Flutter · Next.js 게이트는 각 스택 문서에 있다 → [`flutter/CLAUDE.md`](flutter/CLAUDE.md) · [`www/CLAUDE.md`](www/CLAUDE.md)
 
 ### 전체 게이트 (pre-commit)
 
@@ -165,56 +152,15 @@ pre-commit run --all-files
 
 Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 
-| 스택 | 경로 | 내용 |
-|------|------|------|
-| 백엔드 | `fastapi/` | FastAPI · Python 3.13 · SQLAlchemy 2.0 async · SQLModel · Alembic. 모듈러 모놀리식(`apps/<앱>`) + 스타 토폴로지 |
-| 프론트 | `www/` | Next.js App Router · React · TypeScript · Tailwind · Radix |
-| 앱 | `flutter/` | Flutter |
-| 인프라 | `docker-compose.yaml` | pgvector(PostgreSQL 16) · Neo4j 5 · Redis 7 · n8n · pgAdmin · cloudflared |
-
 - 백엔드 엔트리포인트는 둘이다: `main.py`(포트 8000) · `auth_main.py`(인증 게이트웨이, 포트 9000·미노출).
 - 앱 목록·API prefix·허브(`ontology`)/스포크 관계는 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §6 참조.
 
 ---
 
-## 명령어
-
-린트·포매팅은 §5 하네스에 있다. 아래는 실행·테스트·빌드.
-
-```bash
-# 개발 서버 — 프론트
-cd www && pnpm dev                    # http://localhost:3000
-
-# 개발 서버 — 백엔드 (Docker 권장)
-docker compose up -d backend          # http://127.0.0.1:8000/docs
-
-# 인프라만 기동
-docker compose up -d pgvector redis neo4j
-
-# 테스트 (백엔드)
-uv run pytest fastapi/apps/titanic/tests
-
-# 빌드 — 프론트
-cd www && pnpm build
-
-# DB 마이그레이션
-cd fastapi && uv run alembic revision --autogenerate -m "..."
-cd fastapi && uv run alembic upgrade head
-```
-
-> Python 명령은 항상 `uv run`을 붙인다(§5 주석 참조). 컨테이너 빌드는 사용자가 "빌드해줘"라고 말했을 때만 실행한다(Docker 워크플로우 §3).
-
----
-
 ## 코딩 컨벤션
 
-| 스택 | 규칙 |
-|------|------|
-| Python | 들여쓰기 4칸(PEP8). ruff `line-length = 88`, `target-version = py313`, 룰셋 `E,F,I,N,UP,B,C4`. 포매터는 `ruff format` |
-| TS/TSX | 들여쓰기 2칸, `printWidth 100`, LF, **세미콜론 사용**(Prettier 기본값). `any` 금지·`type` 별칭 우선 등 상세는 [`.claude/rules/typescript.md`](.claude/rules/typescript.md) |
-| Dart | `dart format` 결과가 정답. `avoid_print` 위반은 에러 |
-| JSON/YAML | 들여쓰기 2칸 |
-
+- 린터·포매터 설정이 정답이다: `pyproject.toml`(ruff) · `.prettierrc` · `flutter/analysis_options.yaml`. `.pre-commit-config.yaml`가 전부 기계적으로 강제한다.
+- TS/TSX 상세 규칙(`any` 금지 · `type` 별칭 우선 등)은 [`.claude/rules/typescript.md`](.claude/rules/typescript.md).
 - **비동기**: Python에서 `async def` / `def` 선택 기준은 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §9. `await`할 대상이 없으면 `async`를 붙이지 않는다.
 - **에러 처리**: 전용 `AppError` 계층은 없다. 백엔드는 FastAPI `HTTPException`을 쓰고, 프론트는 `lib/api.ts`의 `parseApiError` 계열을 거쳐 사용자 문구로 변환한다.
 - **네이밍**: 백엔드 레이어별 파일·클래스 명명 규칙은 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §4 표를 따른다.
@@ -224,10 +170,8 @@ cd fastapi && uv run alembic upgrade head
 ## 테스트
 
 - **프레임워크**: pytest + pytest-asyncio (`[dependency-groups] dev`). www에는 테스트 러너가 없고 `pnpm lint` · `pnpm type-check`가 그 자리를 대신한다.
-- **위치·패턴**: `fastapi/apps/<앱>/tests/` 아래 `test_*.py`. 헥사고날 레이어를 그대로 미러링한다 (`tests/domain/`, `tests/app/use_cases/`, `tests/adapter/outbound/mappers/`).
 - **sys.path**: 앱별 `tests/conftest.py`가 `apps/`를 `sys.path`에 넣어 `titanic.*` 임포트를 활성화한다. 새 앱에 테스트를 추가할 때 이 conftest 패턴을 복사한다.
 - **마커**: `ollama` — 로컬 Ollama가 필요한 통합 테스트. 기본 실행에서 빠뜨릴 수 있게 표시한다.
-- Flutter는 `flutter/test/`(현재 `widget_test.dart` 하나).
 - 참고 구현: `fastapi/apps/titanic/tests/` — 구조 템플릿으로 삼는다.
 
 ---
@@ -254,19 +198,13 @@ cd fastapi && uv run alembic upgrade head
 | `.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
 | `www/.env.local` | 프론트 `NEXT_PUBLIC_*`. **git 제외** |
 
-필수 키 (전체 목록은 `.env.example`):
-
-- DB·캐시: `DATABASE_URL` · `PGVECTOR_URL` · `PGVECTOR_PASSWORD` · `REDIS_URL`
-- 그래프: `NEO4J_URI` · `NEO4J_USER` · `NEO4J_PASSWORD`
-- 인증(RS256): `JWT_PRIVATE_KEY`(auth 컨테이너 전용) · `JWT_PUBLIC_KEY`(전 컨테이너 공용) · `SERVICE_AUD`
-- LLM: `GEMINI_API_KEY`
-- 프론트: `NEXT_PUBLIC_API_BASE_URL` · `NEXT_PUBLIC_AUTH_BASE_URL`
+필수 키 목록은 `.env.example`를 Read한다.
 
 ---
 
 ## 주의사항
 
-- **`fastapi/` · `www/` · `_docs/` 는 git 서브모듈이다** (각각 별도 저장소). 이 디렉터리 안의 변경은 해당 서브모듈에서 커밋한 뒤, 루트에서 포인터를 커밋해야 반영된다.
+- **`fastapi/` · `www/` · `_docs/` 는 서브모듈이 아니다** — 루트 저장소에 일반 파일로 추적된다. 루트에서 한 번 커밋하면 끝이다. `.gitmodules`에 세 항목이 남아 있지만 gitlink는 존재하지 않는 잔재이므로 무시한다.
 - **커밋 금지 대상**: `.env` · `*.pem` · `data/` · `.venv/` · `pytorch_env/` (`.gitignore` 기준). 키·비밀번호를 코드나 문서에 하드코딩하지 않는다.
 - **`JWT_SECRET_KEY`는 deprecated** — HS256 시절 값이며 RS256 전환 후 쓰지 않는다. 새 코드에서 참조하지 않는다.
 - **스포크 ↔ 스포크 직접 import 금지** — 앱 간 의존은 허브(`ontology`)를 통한다. 위반은 `lint-imports`가 차단한다 (§5).
