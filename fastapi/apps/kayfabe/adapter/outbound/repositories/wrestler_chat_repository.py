@@ -11,9 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 from kayfabe.app.dtos.wrestler_chat_dto import WrestlerChatCommand, WrestlerChatTurnDto
 from kayfabe.app.ports.output.wrestler_chat_port import WrestlerChatPort
-from ontology.app.dtos.exaone_generation_dto import ExaoneGenerationCommand
-from ontology.app.ports.input.exaone_generation_use_case import (
-    ExaoneGenerationUseCase,
+from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
+from ontology.app.ports.input.gemini_generation_use_case import (
+    GeminiGenerationUseCase,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -32,12 +32,12 @@ class WrestlerChatRepository(WrestlerChatPort):
     """kayfabe(스포크)의 RAG 리포지토리.
 
     검색(임베딩 유사도)과 프롬프트 구성은 kayfabe가 직접 소유하고, 실제 텍스트
-    생성은 ontology(허브)의 ExaoneGenerationUseCase에 위임한다 — 스포크 ↔ 스포크
+    생성은 ontology(허브)의 GeminiGenerationUseCase에 위임한다 — 스포크 ↔ 스포크
     직접 의존을 만들지 않기 위해 생성 능력은 허브를 경유한다.
     """
 
     def __init__(
-        self, session: AsyncSession, generation_use_case: ExaoneGenerationUseCase
+        self, session: AsyncSession, generation_use_case: GeminiGenerationUseCase
     ) -> None:
         self.session = session
         self._generation_use_case = generation_use_case
@@ -59,7 +59,7 @@ class WrestlerChatRepository(WrestlerChatPort):
         )
         chunk_count = 0
         async for chunk in self._generation_use_case.stream_generate(
-            ExaoneGenerationCommand(prompt=prompt)
+            GeminiGenerationCommand(prompt=prompt)
         ):
             chunk_count += 1
             yield chunk

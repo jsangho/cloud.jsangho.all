@@ -8,18 +8,18 @@ from soccer.app.use_cases.soccer_chat_interactor import SoccerChatInteractor
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
-from ontology.app.ports.input.exaone_generation_use_case import (
-    ExaoneGenerationUseCase,
+from ontology.app.ports.input.gemini_generation_use_case import (
+    GeminiGenerationUseCase,
 )
-from ontology.dependencies.exaone_generation_provider import (
-    get_exaone_generation_use_case,
+from ontology.dependencies.gemini_generation_provider import (
+    get_gemini_generation_use_case,
 )
 
 
 def get_soccer_chat_repository(
     db: AsyncSession = Depends(get_db),
-    generation_use_case: ExaoneGenerationUseCase = Depends(
-        get_exaone_generation_use_case
+    generation_use_case: GeminiGenerationUseCase = Depends(
+        get_gemini_generation_use_case
     ),
 ) -> SoccerChatPort:
     return SoccerChatRepository(session=db, generation_use_case=generation_use_case)
