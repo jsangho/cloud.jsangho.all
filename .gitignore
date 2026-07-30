@@ -10,3 +10,7 @@ __pycache__/
 .env
 .mcp.json
 .superpowers/
+
+# Claude Code 로컬 전용 설정 (권한 규칙·머신 절대경로)
+.claude/settings.local.json
+
