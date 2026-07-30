@@ -15,6 +15,8 @@ SEOUL_LON = 126.978
 OPENWEATHER_CURRENT_URL = "https://api.openweathermap.org/data/2.5/weather"
 EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 EMBEDDING_DIM = 1024
+# gemini-2.5-flash는 신규 사용자에게 404를 반환한다 (2026-07 기준).
+DEFAULT_GEMINI_MODEL_ID = "gemini-3.5-flash"
 
 
 def default_backend_env_path() -> Path:
@@ -37,7 +39,7 @@ class Keymaker:
         self._env_path = env_path or default_backend_env_path()
         self._dotenv_loaded = False
         self._gemini_model: Any = None
-        self._gemini_model_id = "gemini-2.5-flash"
+        self._gemini_model_id = DEFAULT_GEMINI_MODEL_ID
         self._embedding_model: Any = None
 
     @classmethod
@@ -63,8 +65,8 @@ class Keymaker:
             self._bootstrap_gemini()
 
     def _resolve_gemini_model_id(self) -> str:
-        model = (os.getenv("GEMINI_MODEL") or "gemini-2.5-flash").strip()
-        return model or "gemini-2.5-flash"
+        model = (os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL_ID).strip()
+        return model or DEFAULT_GEMINI_MODEL_ID
 
     def _bootstrap_gemini(self) -> None:
         key = (os.getenv("GEMINI_API_KEY") or "").strip()
