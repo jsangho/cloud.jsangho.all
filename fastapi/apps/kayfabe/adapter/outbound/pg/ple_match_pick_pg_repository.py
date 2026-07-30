@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from core.entities.user_model import UserModel
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
-from sqlalchemy import case, func, select
+from sqlalchemy import Float, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kayfabe.adapter.outbound.orm.ple_orm import (
@@ -61,19 +61,25 @@ class PleMatchPickPgRepository(PleMatchPickRepository):
             .subquery()
         )
 
+    @staticmethod
+    def _rank_order(agg):
+        """순위 정렬 기준 — 적중률 내림차순.
+
+        적중률은 인터랙터의 `correct / graded`와 같은 정의다. `_aggregated_subquery`가
+        `HAVING graded > 0`으로 걸러 주므로 0으로 나눌 일은 없다.
+        동률은 배점 합계 → 적중 수 → 닉네임 순으로 갈라 순서를 결정적으로 만든다.
+        """
+        accuracy_expr = cast(agg.c.correct, Float) / agg.c.graded
+        return (
+            accuracy_expr.desc(),
+            agg.c.score.desc(),
+            agg.c.correct.desc(),
+            agg.c.nickname.asc(),
+        )
+
     async def list_ranked(self, limit: int) -> list[LeaderboardQuery]:
         agg = self._aggregated_subquery()
-        rank_col = (
-            func.rank()
-            .over(
-                order_by=(
-                    agg.c.score.desc(),
-                    agg.c.correct.desc(),
-                    agg.c.nickname.asc(),
-                )
-            )
-            .label("rank")
-        )
+        rank_col = func.rank().over(order_by=self._rank_order(agg)).label("rank")
 
         stmt = (
             select(
@@ -105,29 +111,28 @@ class PleMatchPickPgRepository(PleMatchPickRepository):
 
     async def get_ranked_by_nickname(self, nickname: str) -> LeaderboardQuery | None:
         agg = self._aggregated_subquery()
-        rank_col = (
-            func.rank()
-            .over(
-                order_by=(
-                    agg.c.score.desc(),
-                    agg.c.correct.desc(),
-                    agg.c.nickname.asc(),
-                )
-            )
-            .label("rank")
-        )
-
-        stmt = (
+        # 윈도우 함수는 같은 SELECT의 WHERE보다 나중에 평가된다. 닉네임 필터를
+        # rank()와 같은 SELECT에 두면 필터로 남은 한 행만 보고 순위를 매겨 항상
+        # 1위가 나온다. 그래서 전체 집합에 순위를 매긴 서브쿼리를 만든 뒤 바깥에서 거른다.
+        ranked = (
             select(
-                rank_col,
+                func.rank().over(order_by=self._rank_order(agg)).label("rank"),
                 agg.c.nickname,
                 agg.c.score,
                 agg.c.correct,
                 agg.c.graded,
             )
             .select_from(agg)
-            .where(agg.c.nickname == nickname)
+            .subquery()
         )
+
+        stmt = select(
+            ranked.c.rank,
+            ranked.c.nickname,
+            ranked.c.score,
+            ranked.c.correct,
+            ranked.c.graded,
+        ).where(ranked.c.nickname == nickname)
 
         result = await self.db.execute(stmt)
         row = result.first()

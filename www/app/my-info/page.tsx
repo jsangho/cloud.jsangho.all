@@ -91,6 +91,13 @@ export default function MyInfoPage() {
 
   const { statsLoading, stats, statsUnavailable } = statsState;
 
+  // 보유 포인트는 순위표 score(적중 배점 합계)와 같은 값이라 별도 요청이 필요하지 않다.
+  const pointsValue = statsLoading
+    ? "불러오는 중…"
+    : statsUnavailable
+      ? "확인할 수 없음"
+      : `${(stats?.score ?? 0).toLocaleString("ko-KR")} P`;
+
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
       <div className="rounded-3xl border border-stone-300/70 dark:border-stone-700/70 bg-stone-50/80 dark:bg-stone-950/58 p-6 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-8">
@@ -108,6 +115,7 @@ export default function MyInfoPage() {
             label="로그인 방식"
             value={oauthProviderLabel(user.oauthProvider)}
           />
+          <InfoRow label="획득 포인트" value={pointsValue} highlight />
         </dl>
 
         <section className="mt-6 border-t border-stone-200/70 dark:border-stone-700/70 pt-6">

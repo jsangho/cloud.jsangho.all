@@ -11,6 +11,7 @@
   "python-envs.defaultPackageManager": "ms-python.python:conda",
   "python.defaultInterpreterPath": "C:\\Users\\hi\\anaconda3\\python.exe",
   "markdown.validate.enabled": true,
+  "markdown.validate.referenceLinks.enabled": "ignore",
   "dart.flutterSdkPath": "C:\\Users\\hi\\flutter",
   "java.import.gradle.enabled": true,
   "java.import.gradle.wrapper.enabled": true,

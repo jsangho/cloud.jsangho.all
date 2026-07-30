@@ -24,6 +24,7 @@ description: ConvNeXt Nano(timm) 이미지 분류 파이프라인 구축·디버
 | API 스키마 | `fastapi/apps/ontology/adapter/inbound/api/schemas/image_classifier_schema.py` |
 | API 라우터 | `fastapi/apps/ontology/adapter/inbound/api/v1/image_classifier_router.py` (`POST /api/ontology/image-classifier/classify`) |
 | MCP 도구 | `fastapi/apps/ontology/adapter/inbound/mcp/classify_image_tool.py` (`classify_image`) |
+| MCP 서버 등록 | 저장소 루트 `.mcp.json` → `ontology-vision` (stdio) |
 | 검증 스크립트 | `fastapi/apps/ontology/tests/image_classifier_interactor_test.py` |
 
 ## 표준 워크플로우
@@ -41,8 +42,10 @@ description: ConvNeXt Nano(timm) 이미지 분류 파이프라인 구축·디버
 - **`pretrained=True` 다운로드 실패**: HF Hub 네트워크 문제. `HF_HOME` 또는 기본 캐시(`~/.cache/huggingface/hub/`)에 이미 받은 스냅샷이 있으면 오프라인으로도 로드된다(`local_files_only`는 별도 설정 안 해도 캐시 우선 사용됨). 사내망에서 막혀 있으면 `HF_TOKEN` 설정 또는 사전 다운로드 필요.
 - **`UnidentifiedImageError`**: `ConvNextImageClassifier._classify_sync`에서 `ValueError`로 변환해 라우터가 422를 반환하도록 이미 처리돼 있음 — 새 진입점을 추가할 때도 이 예외를 그대로 잡아 422로 매핑할 것.
 - **MCP 도구 직접 테스트**: `mcp.list_tools()` / `mcp.call_tool("classify_image", {"image_path": "..."})`로 FastAPI 서버 없이도 단독 검증 가능 (`FastMCP` 인스턴스가 프로세스 내에서 바로 동작).
+- **stdio 서버 단독 기동**: `cd fastapi && PYTHONPATH=apps:. PYTHONUTF8=1 uv run python -m ontology.adapter.inbound.mcp.classify_image_tool`. `PYTHONPATH`에 `apps`(→ `ontology.*`)와 `.`(→ `core.*`) 둘 다 필요하다 — 하나라도 빠지면 import 단계에서 죽는다. 기동 자체는 ~9초(torch import)이고, ConvNeXt 가중치는 첫 `classify_image` 호출 때 lazy 로딩된다.
 
 ## 알려진 한계 (구현하지 않은 부분)
 
-- **MCP 서버 실서비스 노출**: 이 `classify_image` 도구는 `admin` 앱의 기존 MCP 도구들(`piper_*_tools.py`)과 마찬가지로 **아직 어디에도 마운트되어 있지 않다** — `mcp.jsangho.cloud` Cloudflare Tunnel로 실제로 라우팅하려면, 이 저장소에 아직 없는 "MCP 서버 프로세스를 어떻게 띄우고 노출할지"(stdio? streamable-http를 FastAPI에 mount? 별도 프로세스?)에 대한 결정이 먼저 필요하다. 이건 이 기능만의 문제가 아니라 저장소 전체의 미해결 사항.
+- **원격 노출(`mcp.jsangho.cloud`)**: 로컬 개발 한정으로 **stdio 경로만 결정**됐다 — 루트 `.mcp.json`의 `ontology-vision` 항목이 `uv run python -m ...`으로 별도 프로세스를 띄우고, Claude Code가 stdio로 붙는다. 반면 Cloudflare Tunnel로 원격 라우팅하는 건 여전히 미결정이다: streamable-http로 바꿔 FastAPI `backend`에 mount할지, 독립 서비스로 띄울지 정해진 바 없다. 이건 이 기능만의 문제가 아니라 저장소 전체의 미해결 사항(`admin` 앱의 `piper_*_tools.py`도 동일하게 미노출 상태).
+- **`piper_*_tools.py` 미등록**: `admin` 앱의 MCP 도구 5종은 `if __name__ == "__main__": mcp.run()` 실행부가 없어 `.mcp.json`에 등록되어 있지 않다. 등록하려면 `classify_image_tool.py`와 같은 패턴을 추가하면 된다.
 - **Docker Compose 별도 서비스**: 이 저장소는 앱마다 별도 컨테이너를 두지 않고 하나의 `backend` 컨테이너(단일 FastAPI 프로세스)에 모든 hexagonal 앱을 몰아넣는 구조다. 따라서 `image-classifier`용 별도 `services:` 항목은 필요 없다 — `pyproject.toml`에 `timm`을 추가한 것으로 충분하며, 기존 `backend` 이미지를 재빌드(`docker compose build backend`, 사용자가 명시적으로 요청할 때만)하면 자동으로 포함된다.

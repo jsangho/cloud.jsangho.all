@@ -2,10 +2,45 @@
   "mcpServers": {
     "hermes-tools": {
       "type": "stdio",
-      "command": "bash",
+      "command": "wsl.exe",
       "args": [
-        "-c",
-        "cd /home/messi/.hermes/hermes-agent && exec venv/bin/python3 -m agent.transports.hermes_tools_mcp_server"
+        "-d",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "cd /home/ho/.hermes/hermes-agent && exec venv/bin/python3 -m agent.transports.hermes_tools_mcp_server"
+      ],
+      "env": {}
+    },
+    "github": {
+      "type": "stdio",
+      "command": "wsl.exe",
+      "args": [
+        "-d",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "exec env GITHUB_PERSONAL_ACCESS_TOKEN=\"$GITHUB_TOKEN\" /home/ho/bin/github-mcp-server stdio"
+      ],
+      "env": {}
+    },
+    "gmail": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@gongrzhe/server-gmail-autoauth-mcp"]
+    },
+    "ontology-vision": {
+      "type": "stdio",
+      "command": "wsl.exe",
+      "args": [
+        "-d",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "cd /home/ho/projects/cloud.jsangho.all/fastapi && exec env PYTHONPATH=apps:. PYTHONUTF8=1 uv run python -m ontology.adapter.inbound.mcp.classify_image_tool"
       ],
       "env": {}
     }

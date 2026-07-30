@@ -96,13 +96,6 @@
 
 > 코드 작성 후 반드시 실행한다. 에러는 무시하지 않고 수정 후 완료 보고한다.
 
-### Flutter 작업 후
-
-```bash
-dart analyze          # 린트 (avoid_print 위반 시 에러)
-dart format .         # 포매팅
-```
-
 ### Python 작업 후
 
 ```bash
@@ -113,13 +106,7 @@ cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports   # 스타 토폴
 
 > `uv run` 없이 `ruff`/`lint-imports`를 그냥 실행하면 PATH상 다른 Python(예: Anaconda)의 전역 설치가 먼저 잡혀 잘못된 버전이 돌거나 `ontology` 패키지를 못 찾을 수 있다. 항상 `uv run`으로 프로젝트 venv를 명시한다.
 
-### Next.js 작업 후
-
-```bash
-cd www && pnpm lint        # ESLint (no-console, no-explicit-any 위반 시 에러)
-cd www && pnpm type-check  # TypeScript strict 검사
-cd www && pnpm format      # Prettier
-```
+> Flutter · Next.js 게이트는 각 스택 문서에 있다 → [`flutter/CLAUDE.md`](flutter/CLAUDE.md) · [`www/CLAUDE.md`](www/CLAUDE.md)
 
 ### 전체 게이트 (pre-commit)
 
@@ -158,3 +145,74 @@ pre-commit run --all-files
 4. **`pyproject.toml`/`uv.lock` 수정은 가능, 빌드는 금지** — 파일에 패키지를 반영하는 작업(`uv add` 등)은 해도 되지만, 그 직후 자동으로 빌드까지 이어가지 않는다. 빌드 시점은 사용자가 결정한다.
 
 5. **임시 설치 소멸 안내** — 컨테이너를 내렸다 올리면 exec로 설치한 패키지는 사라진다. 필요할 때 한 번 알려줘도 되지만, 그것을 이유로 먼저 빌드하지 않는다.
+
+---
+
+## 프로젝트 개요
+
+Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
+
+- 백엔드 엔트리포인트는 둘이다: `main.py`(포트 8000) · `auth_main.py`(인증 게이트웨이, 포트 9000·미노출).
+- 앱 목록·API prefix·허브(`ontology`)/스포크 관계는 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §6 참조.
+
+---
+
+## 코딩 컨벤션
+
+- 린터·포매터 설정이 정답이다: `pyproject.toml`(ruff) · `.prettierrc` · `flutter/analysis_options.yaml`. `.pre-commit-config.yaml`가 전부 기계적으로 강제한다.
+- TS/TSX 상세 규칙(`any` 금지 · `type` 별칭 우선 등)은 [`.claude/rules/typescript.md`](.claude/rules/typescript.md).
+- **비동기**: Python에서 `async def` / `def` 선택 기준은 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §9. `await`할 대상이 없으면 `async`를 붙이지 않는다.
+- **에러 처리**: 전용 `AppError` 계층은 없다. 백엔드는 FastAPI `HTTPException`을 쓰고, 프론트는 `lib/api.ts`의 `parseApiError` 계열을 거쳐 사용자 문구로 변환한다.
+- **네이밍**: 백엔드 레이어별 파일·클래스 명명 규칙은 [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) §4 표를 따른다.
+
+---
+
+## 테스트
+
+- **프레임워크**: pytest + pytest-asyncio (`[dependency-groups] dev`). www에는 테스트 러너가 없고 `pnpm lint` · `pnpm type-check`가 그 자리를 대신한다.
+- **sys.path**: 앱별 `tests/conftest.py`가 `apps/`를 `sys.path`에 넣어 `titanic.*` 임포트를 활성화한다. 새 앱에 테스트를 추가할 때 이 conftest 패턴을 복사한다.
+- **마커**: `ollama` — 로컬 Ollama가 필요한 통합 테스트. 기본 실행에서 빠뜨릴 수 있게 표시한다.
+- 참고 구현: `fastapi/apps/titanic/tests/` — 구조 템플릿으로 삼는다.
+
+---
+
+## 브랜치 전략
+
+| 브랜치 | 역할 |
+|--------|------|
+| `ho` | **작업 브랜치.** 기본으로 여기서 커밋한다 |
+| `main` | 기본 브랜치 (`origin/HEAD`) |
+| `messi` | `ho`와 동기화하는 미러 브랜치 |
+| `aws` | AWS 배포 관련 |
+
+- 커밋·푸시 요청 시: `ho`에 커밋·푸시한 뒤 `main`·`messi`를 fast-forward로 맞춘다.
+- 커밋·푸시는 사용자가 요청했을 때만 한다.
+
+---
+
+## 환경 변수
+
+| 파일 | 용도 |
+|------|------|
+| `.env` (루트) | Docker Compose `env_file` — 백엔드·auth·n8n 공용. **git 제외** |
+| `.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
+| `www/.env.local` | 프론트 `NEXT_PUBLIC_*`. **git 제외** |
+
+필수 키 목록은 `.env.example`를 Read한다.
+
+---
+
+## 주의사항
+
+- **`fastapi/` · `www/` · `_docs/` 는 서브모듈이 아니다** — 루트 저장소에 일반 파일로 추적된다. 루트에서 한 번 커밋하면 끝이다. `.gitmodules`에 세 항목이 남아 있지만 gitlink는 존재하지 않는 잔재이므로 무시한다.
+- **커밋 금지 대상**: `.env` · `*.pem` · `data/` · `.venv/` · `pytorch_env/` (`.gitignore` 기준). 키·비밀번호를 코드나 문서에 하드코딩하지 않는다.
+- **`JWT_SECRET_KEY`는 deprecated** — HS256 시절 값이며 RS256 전환 후 쓰지 않는다. 새 코드에서 참조하지 않는다.
+- **스포크 ↔ 스포크 직접 import 금지** — 앱 간 의존은 허브(`ontology`)를 통한다. 위반은 `lint-imports`가 차단한다 (§5).
+- **`alembic/` 은 ruff 검사 제외 대상**이다. 자동 생성 파일을 임의로 손보지 않는다.
+- **`fastapi/core/` 의 import 경로는 `jsangho.core.`** 로 시작한다 (§0-3). 경로 표기가 어긋나면 코드를 쓰기 전에 멈추고 확인한다.
+
+## 커밋 메시지 규칙
+- Conventional Commits 형식 사용 (feat:, fix:, docs:, refactor:)
+- 제목은 50자 이내
+- 한국어로 작성
+- 예시: feat: 사용자 로그인 기능 추가
