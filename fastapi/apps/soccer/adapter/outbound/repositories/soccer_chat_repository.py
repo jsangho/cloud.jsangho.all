@@ -271,6 +271,9 @@ class SoccerChatRepository(SoccerChatPort):
             ("소속팀", team_names.get(r.team_id, r.team_id)),
             ("등번호", r.back_no),
             ("생년월일", r.birth_date),
+            # 임베딩에는 들어가 있으나 표시에서 빠져 LLM이 못 보던 필드.
+            ("신장", f"{r.height}cm" if r.height else None),
+            ("체중", f"{r.weight}kg" if r.weight else None),
         ]
         return "- " + " / ".join(f"{k}: {v}" for k, v in fields if v)
 
