@@ -5,9 +5,15 @@
 .github
 
 # 환경 변수 (보안)
+# Docker 무시 패턴은 gitignore와 달리 컨텍스트 루트에 고정되므로, 하위 경로용
+# `**/` 형태를 반드시 함께 둔다 — Dockerfile이 `COPY fastapi/ fastapi/` 를 하기
+# 때문에 이게 없으면 fastapi/.env 가 이미지에 그대로 들어간다.
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 
 # Python 캐시
 __pycache__

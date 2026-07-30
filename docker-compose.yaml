@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./.env
+      - ./fastapi/.env
     volumes:
       - .:/app
       # bge-m3(약 2.2GB) 등 HF 모델 캐시. 볼륨이 없으면 컨테이너를 재생성할 때마다
@@ -31,7 +31,7 @@ services:
       context: .
       dockerfile: fastapi/Dockerfile
     env_file:
-      - ./.env
+      - ./fastapi/.env
     volumes:
       - .:/app
     command: uvicorn auth_main:app --host 0.0.0.0 --port 9000
@@ -51,7 +51,7 @@ services:
     ports:
       - "5678:5678"
     env_file:
-      - ./.env
+      - ./fastapi/.env
     environment:
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
