@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/scripts/protect-files.sh\"",
+            "shell": "bash"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
