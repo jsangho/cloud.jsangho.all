@@ -10,6 +10,9 @@ services:
       - ./.env
     volumes:
       - .:/app
+      # bge-m3(약 2.2GB) 등 HF 모델 캐시. 볼륨이 없으면 컨테이너를 재생성할 때마다
+      # 다시 내려받아 첫 임베딩 호출이 매우 느려진다.
+      - hf_cache:/root/.cache/huggingface
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -126,6 +129,7 @@ volumes:
   redis_data:
   pgvector_data:
   pgadmin_data:
+  hf_cache:
 
 networks:
   default: {}
