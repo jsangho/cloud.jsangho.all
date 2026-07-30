@@ -11,21 +11,14 @@ from kayfabe.app.dtos.ple_match_pick_dto import (
     RankingsResponse,
 )
 from kayfabe.app.ports.input.ple_match_pick_use_case import PleMatchPickUseCase
-from kayfabe.app.ports.output.ple_events_repository import PleEventsRepository
 from kayfabe.app.ports.output.ple_match_pick_repository import PleMatchPickRepository
 
 logger = logging.getLogger("uvicorn.error")
 
 
 class PleMatchPickInteractor(PleMatchPickUseCase):
-    def __init__(
-        self,
-        *,
-        repository: PleMatchPickRepository,
-        ple_repository: PleEventsRepository,
-    ) -> None:
+    def __init__(self, *, repository: PleMatchPickRepository) -> None:
         self._ranking_repository = repository
-        self._ple_repository = ple_repository
 
     @staticmethod
     def _to_row_dto(row: LeaderboardQuery) -> RankingRowResponse:
@@ -50,7 +43,6 @@ class PleMatchPickInteractor(PleMatchPickUseCase):
             nickname or "-",
         )
         capped = min(max(limit, 1), 500)
-        await self._ple_repository.refresh_all_match_point_values()
         raw_rows = await self._ranking_repository.list_ranked(capped)
         rows = [self._to_row_dto(r) for r in raw_rows]
 

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import logging
 
+from admin.adapter.outbound.repositories.reasoning_graph_repository import (
+    ReasoningGraphRepository,
+)
 from admin.app.dtos.langchain_chat_dto import LangchainChatCommand, LangchainChatResult
 from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 from admin.app.ports.output.langchain_chat_port import LangchainChatPort
@@ -39,7 +42,9 @@ class LangchainChatRepository(LangchainChatPort):
             thinking_budget=0,
         )
         self._langgraph_interactor = LangGraphInteractor(
-            graph_retrieval_port=graph_retrieval_port, model=self._model
+            reasoning_graph_port=ReasoningGraphRepository(
+                graph_retrieval_port=graph_retrieval_port, model=self._model
+            )
         )
 
     async def generate(self, command: LangchainChatCommand) -> LangchainChatResult:
