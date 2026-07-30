@@ -32,6 +32,13 @@ _GEMINI_EXAMPLES = (
     "너는 누구야?",
     "오늘 날씨 어때?",
 )
+_REASONING_EXAMPLES = (
+    "업로드된 자료들을 종합해서 결론을 도출해줘",
+    "이 문서와 저 문서 내용을 비교해서 차이점을 분석해줘",
+    "여러 자료에 흩어진 내용을 연결해서 원인을 설명해줘",
+    "업로드한 문서들을 근거로 이번 분기 리스크를 정리해줘",
+    "문서 전체를 훑어보고 핵심 논점을 종합해서 알려줘",
+)
 
 try:
     from kiwipiepy import Kiwi as _Kiwi
@@ -65,9 +72,14 @@ def _get_category_centroids() -> dict[str, np.ndarray]:
             [f"passage: {t}" for t in _GEMINI_EXAMPLES],
             normalize_embeddings=True,
         )
+        reasoning_vecs = model.encode(
+            [f"passage: {t}" for t in _REASONING_EXAMPLES],
+            normalize_embeddings=True,
+        )
         _category_centroids = {
             "exaone_rag": np.mean(exaone_vecs, axis=0),
             "gemini": np.mean(gemini_vecs, axis=0),
+            "reasoning": np.mean(reasoning_vecs, axis=0),
         }
     return _category_centroids
 
@@ -100,8 +112,8 @@ class EmbeddingRouterGenerator(SemanticRoutingPort):
 
     LLM 호출 없이 로컬에서 즉시 응답해 Ollama/Gemini 대비 훨씬 빠르다. crud
     동사는 정규식으로 먼저 걸러내고(임베딩은 주제 유사도는 잘 잡아도 "조회 vs
-    삭제" 같은 동사 뉘앙스엔 약하다), 나머지는 exaone_rag/gemini 대표 예문과의
-    코사인 유사도로 라우팅한다. entities는 Kiwi 형태소 분석으로 명사만 뽑는다.
+    삭제" 같은 동사 뉘앙스엔 약하다), 나머지는 exaone_rag/gemini/reasoning 대표
+    예문과의 코사인 유사도로 라우팅한다. entities는 Kiwi 형태소 분석으로 명사만 뽑는다.
     """
 
     async def classify(self, command: SemanticRoutingCommand) -> str:

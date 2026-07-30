@@ -13,7 +13,7 @@ from ontology.app.ports.output.semantic_routing_port import SemanticRoutingPort
 
 logger = logging.getLogger("uvicorn.error")
 
-_VALID_DESTINATIONS = {"crud", "exaone_rag", "gemini"}
+_VALID_DESTINATIONS = {"crud", "exaone_rag", "gemini", "reasoning"}
 _FALLBACK_DESTINATION = "exaone_rag"
 
 _HAS_DIGIT = re.compile(r"\d")

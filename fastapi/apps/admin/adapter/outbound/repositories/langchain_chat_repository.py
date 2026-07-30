@@ -3,7 +3,9 @@ from __future__ import annotations
 import logging
 
 from admin.app.dtos.langchain_chat_dto import LangchainChatCommand, LangchainChatResult
+from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 from admin.app.ports.output.langchain_chat_port import LangchainChatPort
+from admin.app.use_cases.langgraph_interactor import LangGraphInteractor
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -25,12 +27,19 @@ class LangchainChatRepository(LangchainChatPort):
     스포크가 소유한 LangChain 엔진이 책임진다 — 스포크 ↔ 스포크 직접 의존 없음.
     """
 
-    def __init__(self, semantic_routing_use_case: SemanticRoutingUseCase) -> None:
+    def __init__(
+        self,
+        semantic_routing_use_case: SemanticRoutingUseCase,
+        graph_retrieval_port: GraphRetrievalPort,
+    ) -> None:
         self._semantic_routing_use_case = semantic_routing_use_case
         self._model = ChatGoogleGenerativeAI(
             model=_MODEL_ID,
             google_api_key=get_keymaker().get_gemini_api_key(),
             thinking_budget=0,
+        )
+        self._langgraph_interactor = LangGraphInteractor(
+            graph_retrieval_port=graph_retrieval_port, model=self._model
         )
 
     async def generate(self, command: LangchainChatCommand) -> LangchainChatResult:
@@ -45,6 +54,10 @@ class LangchainChatRepository(LangchainChatPort):
             decision.destination,
             decision.entities,
         )
+
+        if decision.destination == "reasoning":
+            logger.info("[admin.langchain_chat] LangGraph reasoning 경로로 위임")
+            return await self._langgraph_interactor.run(command, decision.entities)
 
         history: list[BaseMessage] = []
         if decision.entities:
