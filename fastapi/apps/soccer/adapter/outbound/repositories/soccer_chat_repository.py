@@ -28,6 +28,8 @@ MONEYBALL_PERSONA = (
     "[축구 데이터]에 없는 내용은 추측하지 말고 모른다고 답하세요."
 )
 TOP_K_PER_TABLE = 3
+# 선수는 "○○ 소속 수비수 알려줘" 같은 목록형 질문이 많아 3건으로는 부족하다.
+TOP_K_PLAYER = 8
 MAX_PROMPT_MESSAGES = 8
 
 
@@ -74,7 +76,7 @@ class SoccerChatRepository(SoccerChatPort):
         stadiums = await self._search(StadiumOrm, query_embedding)
         teams = await self._search(TeamOrm, query_embedding)
         schedules = await self._search(ScheduleOrm, query_embedding)
-        players = await self._search(PlayerOrm, query_embedding)
+        players = await self._search(PlayerOrm, query_embedding, top_k=TOP_K_PLAYER)
 
         team_names = await self._team_name_lookup()
         stadium_names = await self._stadium_name_lookup()
@@ -104,18 +106,20 @@ class SoccerChatRepository(SoccerChatPort):
             return "(일치하는 축구 데이터 없음)"
         return "\n\n".join(blocks)
 
-    async def _search(self, orm_cls, query_embedding: list[float]):
+    async def _search(
+        self, orm_cls, query_embedding: list[float], top_k: int = TOP_K_PER_TABLE
+    ):
         stmt = (
             select(orm_cls)
             .where(orm_cls.embedding.is_not(None))
             .order_by(orm_cls.embedding.op("<=>")(query_embedding))
-            .limit(TOP_K_PER_TABLE)
+            .limit(top_k)
         )
         rows = (await self.session.scalars(stmt)).all()
         logger.info(
             "[soccer.soccer_chat] RAG 검색 완료 | table=%s | top_k=%d | 결과 수=%d",
             orm_cls.__tablename__,
-            TOP_K_PER_TABLE,
+            top_k,
             len(rows),
         )
         return rows
