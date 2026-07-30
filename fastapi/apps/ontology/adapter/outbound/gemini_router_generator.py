@@ -21,7 +21,7 @@ _ROUTING_RESPONSE_SCHEMA = {
     "properties": {
         "destination": {
             "type": "STRING",
-            "enum": ["crud", "exaone_rag", "gemini"],
+            "enum": ["crud", "exaone_rag", "gemini", "reasoning"],
         },
         "entities": {"type": "ARRAY", "items": {"type": "STRING"}},
     },
