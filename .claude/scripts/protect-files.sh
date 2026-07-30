@@ -45,8 +45,10 @@ fi
 BASE=$(basename "$FILE_PATH")
 
 # .env.example 은 키 목록 템플릿이라 편집을 허용한다 (루트 CLAUDE.md 환경 변수 규칙).
+# .env.<대상>.example 도 같은 템플릿이므로 함께 허용한다.
 case "$BASE" in
   .env.example | .env.sample | .env.template) exit 0 ;;
+  .env.*.example | .env.*.sample | .env.*.template) exit 0 ;;
 esac
 
 # 차단 대상: .env / .env.<환경> / *.key / *.pem / secrets.*
