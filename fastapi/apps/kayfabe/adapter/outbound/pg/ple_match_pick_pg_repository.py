@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-from core.entities.user_model import UserModel
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
-from sqlalchemy import Float, case, cast, func, select
+from sqlalchemy import Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kayfabe.adapter.outbound.orm.ple_orm import (
-    PleMatchModel,
-    PleMatchStatus,
-    PlePredictionModel,
-)
+from kayfabe.adapter.outbound.pg.point_aggregation import earned_points_subquery
 from kayfabe.app.dtos.ple_events_dto import MyselfQuery, MyselfResponse
 from kayfabe.app.dtos.ple_match_pick_dto import LeaderboardQuery
 from kayfabe.app.ports.output.ple_match_pick_repository import PleMatchPickRepository
@@ -25,41 +20,7 @@ class PleMatchPickPgRepository(PleMatchPickRepository):
 
     @staticmethod
     def _aggregated_subquery():
-        finished = (PleMatchModel.winner_pick.isnot(None)) & (
-            PleMatchModel.status == PleMatchStatus.FINISHED
-        )
-        correct_pick = PlePredictionModel.pick == PleMatchModel.winner_pick
-
-        score_expr = func.coalesce(
-            func.sum(
-                case(
-                    (finished & correct_pick, PleMatchModel.point_value),
-                    else_=0,
-                )
-            ),
-            0,
-        )
-        graded_expr = func.coalesce(func.sum(case((finished, 1), else_=0)), 0)
-        correct_expr = func.coalesce(
-            func.sum(case((finished & correct_pick, 1), else_=0)), 0
-        )
-
-        return (
-            select(
-                UserModel.id.label("user_id"),
-                UserModel.nickname.label("nickname"),
-                score_expr.label("score"),
-                correct_expr.label("correct"),
-                graded_expr.label("graded"),
-            )
-            .select_from(PlePredictionModel)
-            .join(PleMatchModel, PlePredictionModel.match_id == PleMatchModel.id)
-            .join(UserModel, PlePredictionModel.user_id == UserModel.id)
-            .where(PlePredictionModel.user_id.isnot(None))
-            .group_by(UserModel.id, UserModel.nickname)
-            .having(graded_expr > 0)
-            .subquery()
-        )
+        return earned_points_subquery()
 
     @staticmethod
     def _rank_order(agg):

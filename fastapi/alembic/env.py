@@ -29,8 +29,10 @@ import soccer.adapter.outbound.orm.team_orm  # noqa: E402, F401
 from core.matrix.grid_oracle_database_manager import DATABASE_URL, Base  # noqa: E402
 from core.matrix.vault_keymaker_secret_manager import get_keymaker  # noqa: E402
 
+import core.entities.user_model  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.championship_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.ple_orm  # noqa: E402, F401
+import kayfabe.adapter.outbound.orm.shop_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.title_history_orm  # noqa: E402, F401
 import titanic.adapter.outbound.orm.crew_andrews_architect_orm  # noqa: E402, F401
 import titanic.adapter.outbound.orm.crew_hartley_violin_orm  # noqa: E402, F401
