@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.jsh_flutter"
+    namespace = "cloud.jsangho.jsh_flutter"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

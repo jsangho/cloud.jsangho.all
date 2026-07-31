@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/intro_screen.dart';
+import 'screens/intro_video_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,7 @@ class KayfabeApp extends StatelessWidget {
           onSurface: Color(0xFFFAFAF9),
         ),
       ),
-      home: const IntroScreen(),
+      home: const IntroVideoScreen(),
     );
   }
 }
