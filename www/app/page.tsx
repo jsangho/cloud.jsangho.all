@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, Database, RefreshCw } from "lucide-react";
 import { GeminiChatPanel } from "@/components/gemini-chat-panel";
 import { PleAiScoreboard } from "@/components/ple-ai-scoreboard";
-import { KayfabeMark } from "@/components/kayfabe-logo";
 import { LeaderboardPreview } from "@/components/leaderboard-preview";
 import { NextPleCountdownCard } from "@/components/next-ple-countdown-card";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
@@ -28,19 +27,22 @@ function TitanicQaAppContent() {
     <WweArenaShell>
       {currentView === "qa" ? (
         <div className="flex min-h-[calc(100dvh-5.5rem)] flex-col">
-          <section className="shrink-0 px-4 pt-6 pb-4 text-center sm:pt-10">
-            <div className="relative mx-auto max-w-4xl">
-              <KayfabeMark className="hero-ring-glow relative z-10 mx-auto mb-5 h-16 w-16 rounded-2xl sm:mb-6 sm:h-[4.5rem] sm:w-[4.5rem]" />
-              <div className="relative mx-auto max-w-3xl px-2 py-2 sm:py-3">
+          <section className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-6 pb-4 text-center sm:pt-10">
+            <div className="relative mx-auto w-full">
+              <div className="relative w-full py-2 sm:py-3">
                 <div aria-hidden className="hero-title-backdrop" />
-                <h2 className="font-kr-hero relative z-10 text-balance text-[1.75rem] text-stone-900 dark:text-white sm:text-[2.5rem] md:text-[2.875rem] lg:text-[3.25rem]">
-                  <span className="font-sport text-[1.05em] tracking-[-0.05em] text-stone-900 dark:text-white">
-                    WWE PLE
-                  </span>{" "}
-                  승부 예측,
-                  <br />
-                  당신의 본능을 증명하라
-                </h2>
+                <h2 className="sr-only">WWE PLE 승부 예측, 당신의 본능을 증명하라</h2>
+                <video
+                  className="hero-ring-glow relative z-10 aspect-video w-full rounded-2xl border border-stone-300/60 object-cover dark:border-stone-700/60"
+                  src="/intro/kayfabe-hero.mp4"
+                  poster="/intro/kayfabe-hero-poster.jpg"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                  aria-label="KAYFABE · WWE PLE 예측 게임 인트로 영상"
+                />
               </div>
               <p className="relative z-10 mx-auto mt-4 max-w-2xl text-balance text-base font-medium leading-relaxed text-stone-600 dark:text-stone-400 sm:mt-5 sm:text-lg">
                 경기 결과를 예측하고 점수를 쌓아{" "}
@@ -106,9 +108,7 @@ const initialSampleDataState: SampleDataPageState = {
 };
 
 function TitanicSampleDataPage() {
-  const [state, setState] = useState<SampleDataPageState>(
-    initialSampleDataState,
-  );
+  const [state, setState] = useState<SampleDataPageState>(initialSampleDataState);
 
   const patchState = (patch: Partial<SampleDataPageState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -171,9 +171,7 @@ function TitanicSampleDataPage() {
 
       {state.errorMessage && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-            {state.errorMessage}
-          </p>
+          <p className="text-sm text-red-700 dark:text-red-400 mb-3">{state.errorMessage}</p>
           <button
             onClick={fetchData}
             aria-label="다시 불러오기"
