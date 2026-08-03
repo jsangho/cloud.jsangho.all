@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Gradle 산출물. 위의 `/build/`는 flutter/build/ 만 덮어서 android 쪽이 새어 나갔다.
+# (`flutter build apk` 를 한 번만 돌려도 android/build/ 가 생긴다)
+/android/build/
+/android/app/build/
+/android/.gradle/

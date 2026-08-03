@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from core.security.cookie import set_access_cookie
 from core.security.role import UserRole
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,11 +11,12 @@ from auth.dependencies.auth_provider import (
     get_refresh_token_repository,
 )
 from auth.domain.services.token_issuer import (
+    ACCESS_TOKEN_EXPIRES_SECONDS,
     REFRESH_TOKEN_EXPIRES_SECONDS,
     create_access_token,
     create_refresh_token,
 )
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 login_router = APIRouter(tags=["auth-login"])
 
@@ -45,6 +47,7 @@ class LoginResponse(BaseModel):
 @login_router.post("/login", response_model=LoginResponse, response_model_by_alias=True)
 async def login(
     req: LoginRequest,
+    response: Response,
     use_case: LoginUseCase = Depends(get_login_use_case),
     refresh_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
 ):
@@ -57,6 +60,9 @@ async def login(
     await refresh_repo.store(
         sub=str(user.id), jti=jti, ttl_seconds=REFRESH_TOKEN_EXPIRES_SECONDS
     )
+
+    # body의 token은 기존 프론트·모바일이 계속 쓰므로 유지하고, 쿠키를 함께 심는다.
+    set_access_cookie(response, token, max_age=ACCESS_TOKEN_EXPIRES_SECONDS)
 
     return LoginResponse(
         message="로그인됐습니다.",
