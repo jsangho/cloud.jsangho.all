@@ -25,6 +25,33 @@ class UserProfileResponse(BaseModel):
 
 
 @profile_router.get(
+    "/me", response_model=UserProfileResponse, response_model_by_alias=True
+)
+async def get_my_profile(
+    use_case: ProfileUseCase = Depends(get_profile_use_case),
+    claims: TokenPayload = Depends(get_current_user),
+):
+    """현재 로그인한 사용자.
+
+    액세스 토큰이 httpOnly 쿠키에 있으면 프론트는 JS로 토큰을 읽을 수 없어
+    `sub`(유저 id)를 직접 알아낼 방법이 없다. 그래서 "나는 누구인가"를
+    서버에 묻는 창구가 필요하다.
+
+    `get_current_user`가 `Authorization: Bearer`와 쿠키를 모두 받으므로
+    모바일·웹이 같은 엔드포인트를 쓴다.
+    """
+    user = await use_case.get_user_by_id(user_id=int(claims.sub))
+    return UserProfileResponse(
+        id=user.id,
+        login_id=user.login_id or "",
+        nickname=user.nickname,
+        email=user.email,
+        role=UserRole(user.role),
+        oauth_provider=user.oauth_provider,
+    )
+
+
+@profile_router.get(
     "/users/{user_id}",
     response_model=UserProfileResponse,
     response_model_by_alias=True,

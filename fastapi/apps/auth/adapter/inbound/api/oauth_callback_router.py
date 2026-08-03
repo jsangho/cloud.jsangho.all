@@ -3,6 +3,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from core.security.cookie import set_access_cookie
 from core.security.role import UserRole
 from fastapi.responses import RedirectResponse
 
@@ -15,6 +16,7 @@ from auth.dependencies.auth_provider import (
     get_refresh_token_repository,
 )
 from auth.domain.services.token_issuer import (
+    ACCESS_TOKEN_EXPIRES_SECONDS,
     REFRESH_TOKEN_EXPIRES_SECONDS,
     create_access_token,
     create_refresh_token,
@@ -58,7 +60,13 @@ async def _complete_login(
 
     frontend_url = get_keymaker().get_secret("FRONTEND_URL", "http://localhost:3000")
     params = urlencode({"token": token, "next": next_path})
-    return RedirectResponse(f"{frontend_url}/login/oauth-callback?{params}")
+    response = RedirectResponse(f"{frontend_url}/login/oauth-callback?{params}")
+
+    # httpOnly 쿠키로도 함께 내려보낸다. 프론트가 쿠키 방식으로 넘어갈 때까지
+    # 쿼리스트링 토큰을 유지해 한쪽만 배포돼도 로그인이 끊기지 않게 한다.
+    # 프론트 전환이 끝나면 위 `token` 파라미터를 지운다.
+    set_access_cookie(response, token, max_age=ACCESS_TOKEN_EXPIRES_SECONDS)
+    return response
 
 
 @oauth_callback_router.get("/auth/google/login")

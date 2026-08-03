@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from core.matrix.grid_oracle_database_manager import get_db
+from core.security.cookie import set_access_cookie
 from core.security.role import UserRole
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,11 +13,12 @@ from auth.adapter.outbound.redis.refresh_token_repository import (
 )
 from auth.dependencies.auth_provider import get_refresh_token_repository
 from auth.domain.services.token_issuer import (
+    ACCESS_TOKEN_EXPIRES_SECONDS,
     REFRESH_TOKEN_EXPIRES_SECONDS,
     create_access_token,
     create_refresh_token,
 )
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 refresh_router = APIRouter(tags=["auth-refresh"])
 
@@ -39,6 +41,7 @@ class RefreshResponse(BaseModel):
 )
 async def refresh(
     req: RefreshRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     refresh_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
 ):
@@ -61,5 +64,8 @@ async def refresh(
     await refresh_repo.store(
         sub=sub, jti=new_jti, ttl_seconds=REFRESH_TOKEN_EXPIRES_SECONDS
     )
+
+    # 회전된 액세스 토큰을 쿠키에도 반영한다. 안 하면 쿠키만 만료돼 로그인이 풀린다.
+    set_access_cookie(response, new_access_token, max_age=ACCESS_TOKEN_EXPIRES_SECONDS)
 
     return RefreshResponse(token=new_access_token, refresh_token=new_refresh_token)
