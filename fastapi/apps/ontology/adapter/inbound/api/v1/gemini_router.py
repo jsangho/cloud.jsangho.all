@@ -4,9 +4,9 @@ import logging
 from typing import Annotated
 
 from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
+from fastapi.responses import StreamingResponse
 
 from fastapi import APIRouter, Body, Depends
-from fastapi.responses import StreamingResponse
 from ontology.adapter.inbound.api.schemas.gemini_schema import GeminiAskSchema
 from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
 from ontology.app.ports.input.gemini_generation_use_case import (

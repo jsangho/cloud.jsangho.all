@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../auth.dart';
 import '../theme/clock_colors.dart';
 import 'chat_screen.dart';
 import 'clock_home.dart';
 
-/// 인트로 다음에 오는 메인 화면 — 시계와 채팅 중 하나를 고른다.
+/// 인트로 다음에 오는 메인 화면 — 시계·채팅·계정 중 하나를 고른다.
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
 
@@ -52,12 +53,43 @@ class MainMenuScreen extends StatelessWidget {
                   MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
                 ),
               ),
+              const SizedBox(height: 16),
+              _MenuCard(
+                icon: Icons.person_outline,
+                iconColor: kClockSubText,
+                title: '계정',
+                subtitle: '로그인된 기기 · 로그아웃',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const AccountScreen(onSignedOut: _backToSignIn),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// 로그아웃 후에는 스택을 통째로 비우고 로그인 화면만 남긴다 —
+/// 뒤로 가기로 인증된 화면에 돌아갈 수 있으면 안 된다.
+void _backToSignIn(BuildContext context) {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute<void>(
+      builder: (_) => const AuthScreen(onSignedIn: _toMenu),
+    ),
+    (route) => false,
+  );
+}
+
+void _toMenu(BuildContext context) {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute<void>(builder: (_) => const MainMenuScreen()),
+    (route) => false,
+  );
 }
 
 class _MenuCard extends StatelessWidget {

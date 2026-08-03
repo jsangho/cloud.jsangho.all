@@ -8,7 +8,6 @@ import sys
 from collections.abc import AsyncGenerator
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -17,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from fastapi import HTTPException
 
 if sys.platform == "win32":

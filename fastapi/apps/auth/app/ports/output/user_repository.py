@@ -31,7 +31,7 @@ class UserRepository(ABC):
         *,
         login_id: str,
         nickname: str,
-        email: str,
+        email: str | None,
         provider: str,
         oauth_id: str,
     ) -> UserModel: ...

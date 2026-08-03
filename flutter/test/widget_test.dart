@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jsh_flutter/auth.dart';
 import 'package:jsh_flutter/main.dart';
 
 const _method = MethodChannel('cloud.jsangho/stopwatch');
@@ -91,14 +92,25 @@ _FakeEngine _installFakeEngine() {
   return engine;
 }
 
-/// 앱을 띄우고 인트로 영상(4초)을 지나 시계 홈까지 도달시킨다.
+/// 앱을 띄우고 인트로 영상(4초) → 메인 메뉴 → 시계 홈까지 도달시킨다.
 ///
 /// 테스트 환경엔 video_player 플러그인이 없어 재생은 실패하지만,
-/// 인트로 화면은 타이머만으로 홈으로 넘어간다.
+/// 인트로 화면은 타이머만으로 다음 화면으로 넘어간다.
+///
+/// 세션은 [AuthController.debugSignIn]으로 미리 채운다 — 카카오 로그인 화면을
+/// 통과하는 것이 이 파일의 관심사가 아니다.
 Future<void> _pumpAppPastIntro(WidgetTester tester) async {
-  await tester.pumpWidget(const KayfabeApp());
+  final auth = AuthController()
+    ..debugSignIn(
+      const AuthUser(userId: 1, nickname: '테스터', email: null, role: 'user'),
+    );
+
+  await tester.pumpWidget(KayfabeApp(auth: auth));
   await tester.pump(const Duration(seconds: 4)); // 인트로 타이머 만료
-  await tester.pumpAndSettle(); // 화면 전환 완료
+  await tester.pumpAndSettle(); // 메인 메뉴로 전환 완료
+
+  await tester.tap(find.text('시계'));
+  await tester.pumpAndSettle();
 }
 
 void main() {

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import boto3
+
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 DEFAULT_REGION = "ap-northeast-2"

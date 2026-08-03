@@ -22,6 +22,7 @@ if _APPS_DIR not in sys.path:
 from auth.adapter.inbound.api.jwks_router import jwks_router
 from auth.adapter.inbound.api.login_router import login_router
 from auth.adapter.inbound.api.logout_router import logout_router
+from auth.adapter.inbound.api.mobile_auth_router import mobile_auth_router
 from auth.adapter.inbound.api.oauth_callback_router import oauth_callback_router
 from auth.adapter.inbound.api.profile_router import profile_router
 from auth.adapter.inbound.api.refresh_router import refresh_router
@@ -54,6 +55,8 @@ app.include_router(logout_router, prefix="/auth")
 app.include_router(refresh_router, prefix="/auth")
 app.include_router(signup_router, prefix="/auth")
 app.include_router(profile_router, prefix="/auth")
+# 라우터 자체 prefix가 "/mobile"이라 최종 경로는 "/auth/mobile/...".
+app.include_router(mobile_auth_router, prefix="/auth")
 # oauth_callback_router의 경로 자체가 이미 "/auth/{provider}/..."로 시작하므로
 # 여기서 추가로 prefix="/auth"를 주면 "/auth/auth/..." 이중 프리픽스가 된다.
 app.include_router(oauth_callback_router)

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from core.matrix.grid_oracle_database_manager import Base
 
 
 class UserModel(Base):
@@ -13,7 +14,9 @@ class UserModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     login_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     nickname: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    # 카카오 이메일은 선택 동의라 없을 수 있다 — 계정 식별자는 email이 아니라 id다.
+    # UNIQUE는 유지: PostgreSQL은 NULL을 서로 다른 값으로 보므로 중복 NULL이 허용된다.
+    email: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="user")
     oauth_provider: Mapped[str | None] = mapped_column(String, nullable=True)

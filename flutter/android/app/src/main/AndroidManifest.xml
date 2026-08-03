@@ -25,6 +25,27 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 카카오 로그인 리다이렉트 수신부.
+             SDK(kakao_flutter_sdk_auth)가 AuthCodeHandlerActivity를 선언하지만
+             intent-filter는 앱이 붙여야 한다 — 커스텀 스킴이 앱마다 다르기 때문이다.
+
+             스킴은 "kakao{네이티브 앱 키}"이고, 값은 build.gradle.kts의
+             manifestPlaceholders(kakaoNativeAppKey)로 주입한다. 이 문자열은
+             카카오 콘솔 등록값 · 서버 KAKAO_MOBILE_REDIRECT_URI ·
+             AuthConfig.redirectUri 넷이 완전히 같아야 한다. -->
+        <activity
+            android:name="com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="oauth"
+                    android:scheme="kakao${kakaoNativeAppKey}" />
+            </intent-filter>
+        </activity>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

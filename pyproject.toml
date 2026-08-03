@@ -63,6 +63,7 @@ dev = [
     "import-linter==2.12",
     "ruff==0.15.21",
     "aiosqlite>=0.22.1",
+    "fakeredis[lua]>=2.37.0",
 ]
 
 [tool.uv]

@@ -33,7 +33,8 @@ class LoginResponse(BaseModel):
     id: int = Field(alias="userId", description="내 DB id")
     login_id: str = Field(alias="loginId", description="로그인 ID")
     nickname: str
-    email: str
+    # 소셜 계정은 이메일이 없을 수 있다(카카오 선택 동의).
+    email: str | None = None
     role: UserRole
     token: str = Field(description="인증에 사용할 JWT 액세스 토큰")
     refresh_token: str = Field(

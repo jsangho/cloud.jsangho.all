@@ -1,8 +1,9 @@
 from logging import getLogger
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends
 from fastapi.responses import PlainTextResponse
+
+from fastapi import APIRouter, Body, Depends
 from titanic.adapter.inbound.api.schemas.crew_smith_captain_schema import (
     ChatSchema,
 )

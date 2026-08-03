@@ -4,8 +4,9 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
-from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
+
+from fastapi import HTTPException
 
 logger = logging.getLogger("uvicorn.error")
 
