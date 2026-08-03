@@ -4,7 +4,7 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-03
-> **상태:** 구현 완료, 실기기 미검증 (2026-08-03). Android 전용 — iOS 프로젝트는 여전히 없다
+> **상태:** 구현·실기기 검증 완료 (2026-08-03, 갤럭시 A35 / Android 16). Android 전용 — iOS 프로젝트는 여전히 없다
 > **상위 규칙:** [루트 CLAUDE.md](../../CLAUDE.md) · [flutter/CLAUDE.md](../CLAUDE.md)
 > **관련 문서:** [안드로이드 실기기 하네스](flutter-android-harness.md) · [아이폰 하네스](flutter-iphone-harness.md)
 
@@ -236,7 +236,12 @@
 - [x] Android 커스텀 스킴 — `AuthCodeHandlerActivity`에 intent-filter 추가. 스킴 값은 `build.gradle.kts`의 `manifestPlaceholders["kakaoNativeAppKey"]`로 주입하며, `-PKAKAO_NATIVE_APP_KEY` 또는 `android/local.properties`의 `kakao.nativeAppKey`에서 읽는다
   - **검증함**: `flutter build apk --debug` 성공, 병합된 매니페스트에 intent-filter가 들어갔고 `-PKAKAO_NATIVE_APP_KEY=abc123testkey`로 돌리면 `android:scheme="kakaoabc123testkey"`로 치환된다. 키가 비면 `android:scheme="kakao"`가 되어 **리다이렉트가 돌아오지 않는다**
 - [x] `<queries>` — SDK(`kakao_flutter_sdk_common`)가 자체 매니페스트로 카카오톡 패키지 가시성을 이미 제공한다. 앱에서 중복 선언하지 않았다 (병합 결과에 `com.kakao.talk`·`.alpha`·`.sandbox` 확인)
-- [ ] iOS — **미착수.** `ios/` 디렉터리가 여전히 없다 (§11)
+- [x] iOS 프로젝트 생성 (`flutter create --platforms=ios --org cloud.jsangho .`) + `Info.plist` 설정
+  - `CFBundleURLSchemes` = `kakaof34e28ad42efe92a4e969c12403d250d`
+  - `LSApplicationQueriesSchemes` = `kakaokompassauth` — `isKakaoTalkInstalled()`가 iOS에서
+    `canOpenURL("kakaokompassauth://authorize")`를 호출한다(SDK 소스 확인). 이 항목이 없으면
+    카카오톡이 깔려 있어도 항상 false가 되어 브라우저로만 로그인된다
+  - ⚠️ **빌드·실행은 검증하지 못했다 — 맥이 없다.** 아래 "iOS 남은 작업" 참조
 - [x] `KakaoSdk.init`을 `main()`에서 1회 수행 (`--dart-define=KAKAO_NATIVE_APP_KEY=...`)
 
 ### F2. 보안 저장소
@@ -302,6 +307,19 @@
 
 기기 연결·실행 절차는 [안드로이드 하네스](flutter-android-harness.md) / [아이폰 하네스](flutter-iphone-harness.md)를 따른다.
 
+### 실측 결과 (2026-08-03, SM-A356N / Android 16, 무선 디버깅)
+
+| # | 결과 |
+|---|---|
+| 1 | ✅ 카카오톡 전환(`TalkAuthCodeActivity`) → 동의 → 앱 복귀 → 로그인 완료 |
+| 7 | ✅ 계정 화면 진입 시 `GET /auth/mobile/sessions` 200, 기기 목록 표시 |
+| 2·3·4·5·6·8·9·10 | ⬜ 미확인 |
+
+⚠️ **`flutter/_docs/flutter-android-harness.md` §7의 "WSL 경로에서 Gradle 빌드 실패" 서술은 낡았다.**
+그 문서는 WSL에 Flutter·Android SDK가 없다는 전제로 쓰였으나, 현재는 둘 다 설치돼 있고
+(`/home/ho/flutter`, `/home/ho/Android/Sdk`) WSL 경로에서 `flutter build apk --debug`가
+정상 통과한다. 기기는 무선 디버깅(`adb connect`)으로 붙였다. 해당 문서를 갱신해야 한다.
+
 ---
 
 ## 9. 검증 기준 (Definition of Done)
@@ -332,7 +350,7 @@ flutter test
 
 ## 11. 미해결 질문 (구현 중 발견 시 여기에 기록하고 중단)
 
-- [ ] **iOS 지원 여부** — `ios/` 디렉터리가 여전히 없다. 포함한다면 `flutter create --platforms=ios .` 실행 승인이 필요하다. 현재 구현은 iOS 코드 경로(`DeviceMetaCollector`)까지는 있으나 프로젝트가 없어 빌드 자체가 불가능하다.
+- [ ] **iOS 검증** — 프로젝트와 설정은 만들었으나 **맥이 없어 빌드·실행을 한 번도 못 했다.** 아래 참조.
 - [x] **`applicationId`** — `cloud.jsangho.jsh_flutter`로 확정 (2026-08-03). `namespace`·`MainActivity` 패키지와 일치한다.
 - [x] **`lib/` 구조** — 사용자 지시대로 `lib/auth.dart` 단일 파일에 모았다. 파일이 600줄을 넘어 더 커지면 그때 쪼갠다.
 - [x] **상태 관리** — 라이브러리를 새로 넣지 않고 `ChangeNotifier` + `InheritedNotifier`(`AuthScope`)로 처리했다.
@@ -340,6 +358,35 @@ flutter test
 - [ ] **카카오 콘솔 앱 구성** — 웹과 모바일을 한 앱으로 운영할지. 분리하면 회원번호가 달라져 웹/앱 계정이 서로 다른 유저가 된다(백엔드 문서 §13과 동일 질문).
 - [ ] **푸시 토큰** — 세션 HASH의 `push_token`은 FCM/APNs 도입이 전제다. 이번 범위에 포함할지.
 - [ ] **웹 타깃** — `web/`이 존재한다. Flutter Web에서도 카카오 로그인을 지원할지(지원 시 secure storage 전략이 통째로 달라진다).
+
+---
+
+## 11-2. iOS 남은 작업 (맥 필요)
+
+**여기까지 했다 (2026-08-03, Linux/WSL에서 가능한 범위):**
+
+| 항목 | 값 |
+|---|---|
+| 프로젝트 생성 | `flutter create --platforms=ios --org cloud.jsangho .` — 43개 파일 |
+| Bundle ID | `cloud.jsangho.jshFlutter` (iOS는 언더스코어 불가라 Flutter가 camelCase로 변환. Android `applicationId`와 달라도 무방하다) |
+| `IPHONEOS_DEPLOYMENT_TARGET` | `13.0` — 카카오 SDK 요구치와 동일. 다른 플러그인 최대 요구치도 13.0이라 충돌 없음 |
+| `Info.plist` | 커스텀 스킴 + `kakaokompassauth` 등록, `plistlib`로 파싱 검증 |
+| `dart analyze` · `flutter test` | 통과 (생성 후에도 회귀 없음) |
+
+**아직 못 한 것 — 맥 없이는 불가능하다:**
+
+1. `pod install` / SPM 해석 — `Podfile`은 맥에서 첫 빌드 때 생성된다
+2. `flutter build ios` — 컴파일 자체를 한 번도 안 돌려봤다
+3. **SceneDelegate 경로 확인** — 이 템플릿은 `UIApplicationSceneManifest` 기반이다.
+   카카오 SDK의 iOS 플러그인은 `scene(_:openURLContexts:)`로 리다이렉트를 받는데,
+   Flutter의 SceneDelegate가 이를 플러그인에 전달하는지 **실기기에서 확인해야 한다.**
+   여기서 끊기면 로그인 후 앱으로 돌아오지 못한다 — iOS에서 가장 깨지기 쉬운 지점이다
+4. 카카오 콘솔에 **iOS 플랫폼(번들 ID `cloud.jsangho.jshFlutter`) 등록**
+5. §8 시나리오 전체
+
+**맥이 없을 때의 대안**: GitHub Actions의 `macos-latest` 러너나 Codemagic 같은 CI로
+빌드만 돌려볼 수 있다. 다만 위 3번(리다이렉트 복귀)은 **실기기·시뮬레이터에서
+직접 눌러봐야** 알 수 있어서 CI만으로는 완결되지 않는다.
 
 ---
 
@@ -352,6 +399,7 @@ flutter test
 | 2026-08-03 | 화면 흐름 | 인트로(4초) → 세션 있으면 `MainMenuScreen`, 없으면 `AuthScreen` → 로그인 성공 시 `MainMenuScreen`. 세션 복원은 인트로 재생 중 백그라운드로 진행 | `main.dart`·`intro_video_screen.dart` 수정 |
 | 2026-08-03 | 테스트 보수 | `widget_test.dart`가 인트로 직후 `ClockHome`을 기대하고 있었으나, 이미 `MainMenuScreen`이 중간에 들어와 있어 깨진 상태였다. 메뉴를 거쳐 시계로 들어가도록 수정 | 기존 4건 복구 |
 | 2026-08-03 | F4·F6 잔여 | `AccountScreen` 신설 — 계정 정보·기기 목록·로그아웃/모든 기기 로그아웃. `MainMenuScreen`에 "계정" 진입점 추가 | `dart analyze` 무결점, `flutter test` 18건 통과 |
+| 2026-08-03 | F1 (iOS) | iOS 프로젝트 생성 + `Info.plist` 커스텀 스킴·`kakaokompassauth` 설정 | 정적 검증만 통과. **빌드·실행 미검증(맥 없음)** — §11-2 |
 | 2026-08-03 | F1 | `applicationId`를 `com.example.jsh_flutter` → `cloud.jsangho.jsh_flutter`로 확정 | `namespace`·`MainActivity` 패키지와 3중 일치. APK 재빌드로 확인 |
 
 ### 실기기 검증 전에 반드시 채워야 하는 값

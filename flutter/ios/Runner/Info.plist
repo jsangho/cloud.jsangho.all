@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Jsh Flutter</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>jsh_flutter</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- 카카오 로그인 리다이렉트 수신용 커스텀 스킴 ("kakao" + 네이티브 앱 키).
+	     아래 네 곳이 완전히 같아야 로그인이 완성된다:
+	       1) 이 값
+	       2) 서버 .env 의 KAKAO_MOBILE_REDIRECT_URI
+	       3) flutter run 에 넘기는 KAKAO_NATIVE_APP_KEY (dart define)
+	       4) 카카오 콘솔의 iOS 플랫폼 등록값
+	     Android는 build.gradle.kts 의 manifestPlaceholders 로 주입하지만 iOS는
+	     값을 그대로 적었다. xcconfig 변수 치환이 조용히 실패하면 스킴이 리터럴
+	     문자열이 되어 원인 찾기가 어려운데, 맥이 없어 검증할 수 없기 때문이다.
+	     네이티브 앱 키는 앱 바이너리에 들어가는 값이라 비밀이 아니다. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>kakao-login</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakaof34e28ad42efe92a4e969c12403d250d</string>
+			</array>
+		</dict>
+	</array>
+	<!-- isKakaoTalkInstalled() 가 canOpenURL("kakaokompassauth://authorize") 를
+	     호출한다. 이 항목이 없으면 iOS가 항상 false를 돌려줘서 카카오톡이 깔려
+	     있어도 브라우저로만 로그인된다(동작은 하지만 UX가 다르다).
+	     카카오톡 공유(kakaolink)를 쓰게 되면 그때 추가한다. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>
