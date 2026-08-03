@@ -18,7 +18,8 @@ class UserProfileResponse(BaseModel):
     id: int = Field(alias="userId")
     login_id: str = Field(alias="loginId")
     nickname: str
-    email: str
+    # 카카오 이메일 미동의 계정은 email이 없다 — 화면 필수 요소로 만들면 안 된다.
+    email: str | None = None
     role: UserRole
     oauth_provider: str | None = Field(default=None, alias="oauthProvider")
 

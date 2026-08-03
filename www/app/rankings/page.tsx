@@ -6,6 +6,11 @@ import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
 import {
+  nicknameColorClass,
+  RankingBadgeTag,
+  RankingTitleTag,
+} from "@/components/ranking-cosmetics";
+import {
   fetchRankings,
   formatAccuracy,
   type RankingRow,
@@ -72,14 +77,18 @@ function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
         {row.rank}
       </td>
       <td className={cn("py-3.5 pr-3", text)}>
+        <RankingTitleTag item={row.title} />
         <span
           className={cn(
             "text-sm",
             row.rank === 1 ? "font-bold text-head-of-table" : "font-medium",
+            // 구매한 닉네임 색상은 순위별 기본 색을 덮는다.
+            nicknameColorClass(row.nicknameColor),
           )}
         >
           {row.nickname}
         </span>
+        <RankingBadgeTag item={row.badge} className="ml-1.5" />
         {isMe && (
           <span className="ml-2 rounded-md border border-amber-500/25 bg-amber-100 dark:bg-amber-950/30 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:text-amber-200/90">
             나

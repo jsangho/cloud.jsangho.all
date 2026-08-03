@@ -12,6 +12,7 @@ __all__ = [
     "PredictionRequestSchema",
     "LinkPredictionsSchema",
     "BatchPredictionRequestSchema",
+    "CosmeticItemSchema",
     "RankingRowSchema",
     "RankingsResponseSchema",
 ]
@@ -47,11 +48,25 @@ class BatchPredictionRequestSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class CosmeticItemSchema(BaseModel):
+    """순위표에 노출되는 장착 아이템. `code`로 표시 규칙을 고르고 `name`을 보여준다."""
+
+    code: str
+    name: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class RankingRowSchema(BaseModel):
     rank: int
     nickname: str
     score: int
     accuracy: float = Field(..., ge=0.0, le=1.0, description="적중률 0~1")
+    title: CosmeticItemSchema | None = None
+    nickname_color: CosmeticItemSchema | None = Field(
+        default=None, alias="nicknameColor"
+    )
+    badge: CosmeticItemSchema | None = None
 
     model_config = ConfigDict(populate_by_name=True)
 

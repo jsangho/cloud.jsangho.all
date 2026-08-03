@@ -29,6 +29,7 @@ class PleMatchPickInteractor(PleMatchPickUseCase):
             nickname=row.nickname,
             score=row.score,
             accuracy=round(accuracy, 4),
+            cosmetics=row.cosmetics,
         )
 
     async def list_rankings(

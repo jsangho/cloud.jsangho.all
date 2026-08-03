@@ -4,9 +4,9 @@ import os
 
 import jwt
 import redis.asyncio as redis
+
 from core.security.role import UserRole
 from core.security.token_verifier import TokenPayload, verify_token
-
 from fastapi import Depends, HTTPException, Request
 
 _REDIS_HOST = os.environ.get("REDIS_HOST", "redis")

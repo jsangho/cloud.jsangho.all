@@ -17,6 +17,7 @@ export const pleEventsBaseUrl = `${apiBaseUrl}/api/ple_events`;
 export const pleMatchPicksBaseUrl = `${apiBaseUrl}/api/ple-match-picks`;
 export const pleMatchesBaseUrl = `${apiBaseUrl}/api/ple-matches`;
 export const titleAcquisitionsBaseUrl = `${apiBaseUrl}/api/title-acquisitions`;
+export const shopBaseUrl = `${apiBaseUrl}/api/shop`;
 
 /**
  * Gemini 채팅 엔드포인트.

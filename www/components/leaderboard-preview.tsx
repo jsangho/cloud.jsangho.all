@@ -6,6 +6,10 @@ import { Loader2, Trophy } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import { fetchRankings, type RankingRow } from "@/lib/rankings-api";
+import {
+  nicknameColorClass,
+  RankingBadgeTag,
+} from "@/components/ranking-cosmetics";
 
 type PreviewState = {
   loading: boolean;
@@ -106,9 +110,15 @@ export function LeaderboardPreview({ className }: { className?: string }) {
                 >
                   {row.rank}
                 </span>
-                <span className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">
+                <span
+                  className={cn(
+                    "truncate text-sm font-medium text-stone-800 dark:text-stone-100",
+                    nicknameColorClass(row.nicknameColor),
+                  )}
+                >
                   {row.nickname}
                 </span>
+                <RankingBadgeTag item={row.badge} />
               </div>
               <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-600 dark:text-stone-300">
                 {row.score}

@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from core.entities.user_model import UserModel
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from core.security.role import UserRole
+from fastapi.responses import RedirectResponse
 
 from auth.adapter.outbound.redis.refresh_token_repository import RefreshTokenRepository
 from auth.app.ports.input.oauth_login_use_case import OAuthLoginUseCase
@@ -20,7 +21,6 @@ from auth.domain.services.token_issuer import (
     create_refresh_token,
 )
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import RedirectResponse
 
 oauth_callback_router = APIRouter(tags=["auth-oauth-callback"])
 
