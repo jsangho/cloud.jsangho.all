@@ -15,7 +15,7 @@ class S3Manager:
     """
     전역 S3 클라이언트 관리자.
 
-    - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` / `AWS_S3_BUCKET`은
+    - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_S3_BUCKET`은
       `Keymaker.get_secret()`으로 조회 (`.env` 로드는 Keymaker가 한곳에서 담당)
     - boto3 S3 클라이언트 보관
     """
@@ -44,7 +44,7 @@ class S3Manager:
         if not access_key or not secret_key:
             self._client = None
             return
-        region = keymaker.get_secret("AWS_DEFAULT_REGION", DEFAULT_REGION)
+        region = keymaker.get_secret("AWS_REGION", DEFAULT_REGION)
         self._client = boto3.client(
             "s3",
             aws_access_key_id=access_key,
