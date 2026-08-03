@@ -9,12 +9,12 @@ from __future__ import annotations
 import fakeredis.aioredis
 import pytest
 from core.entities.user_model import UserModel
+from fakes import FakeUsers
 
 from auth.adapter.outbound.redis.oauth_state_redis_store import OAuthStateRedisStore
 from auth.app.ports.output.oauth_identity_provider import OAuthIdentityProvider
 from auth.app.use_cases.oauth_login_interactor import OAuthLoginInteractor
 from auth.domain.value_objects.oauth_profile import OAuthProfile
-from fakes import FakeUsers
 
 
 class RecordingProvider(OAuthIdentityProvider):

@@ -19,6 +19,8 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from auth.adapter.inbound.api.jwks_router import jwks_router
 from auth.adapter.inbound.api.login_router import login_router
 from auth.adapter.inbound.api.logout_router import logout_router
@@ -28,7 +30,6 @@ from auth.adapter.inbound.api.profile_router import profile_router
 from auth.adapter.inbound.api.refresh_router import refresh_router
 from auth.adapter.inbound.api.signup_router import signup_router
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="jsangho Auth Gateway",

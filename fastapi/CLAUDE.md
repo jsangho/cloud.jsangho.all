@@ -104,6 +104,7 @@ dependencies/     ← FastAPI Depends 팩토리
 | `kayfabe` | WWE 예측 · 랭킹 · 챔피언십 · 타이틀 히스토리 | spoke | `/ple`, `/rankings`, `/records`, `/championship`, `/title-history` | 운영 |
 | `user` | 인증 · 프로필 | spoke | `/users` | 운영 |
 | `human_resource` | 페르소나 AI 에이전트 | spoke | `/silicon-valley` | 개발 중 |
+| `lion_king` | 사진 보관 (촬영 → S3) | spoke | `/photos` | 개발 중 |
 | `imitation_game` | 학습용 | spoke | — | 최소 |
 | `inception` | 학습용 | spoke | — | 최소 |
 | `social_network` | 소셜 | spoke | — | 플레이스홀더 |

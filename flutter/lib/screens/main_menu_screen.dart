@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth.dart';
+import '../photo_upload.dart';
 import '../theme/clock_colors.dart';
 import 'chat_screen.dart';
 import 'clock_home.dart';
@@ -51,6 +52,18 @@ class MainMenuScreen extends StatelessWidget {
                 subtitle: '대화 화면 열기',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _MenuCard(
+                icon: Icons.photo_camera_outlined,
+                iconColor: kClockAccent,
+                title: '사진 보관',
+                subtitle: '촬영해서 서버에 올리기',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PhotoCaptureScreen(),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
