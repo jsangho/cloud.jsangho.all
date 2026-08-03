@@ -84,7 +84,9 @@ target-version = "py313"
 exclude = [
     ".git",
     "__pycache__",
-    "alembic/",
+    # 저장소 루트에서 `ruff check fastapi/`로 돌리면 "alembic/"은 매칭되지 않아
+    # 자동 생성 파일이 실제로 수정된다. 경로 어디에 있든 걸리도록 `**/`를 붙인다.
+    "**/alembic/",
     "pytorch_env/",
     ".venv/",
 ]
