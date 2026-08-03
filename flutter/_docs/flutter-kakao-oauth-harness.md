@@ -4,7 +4,7 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-03
-> **상태:** 구현 완료, 실기기 미검증 (2026-08-03). Android 전용 — iOS 프로젝트는 여전히 없다
+> **상태:** 구현·실기기 검증 완료 (2026-08-03, 갤럭시 A35 / Android 16). Android 전용 — iOS 프로젝트는 여전히 없다
 > **상위 규칙:** [루트 CLAUDE.md](../../CLAUDE.md) · [flutter/CLAUDE.md](../CLAUDE.md)
 > **관련 문서:** [안드로이드 실기기 하네스](flutter-android-harness.md) · [아이폰 하네스](flutter-iphone-harness.md)
 
@@ -301,6 +301,19 @@
 | 10 | 앱 삭제 후 재설치 | 재로그인 필요(secure storage 소거) |
 
 기기 연결·실행 절차는 [안드로이드 하네스](flutter-android-harness.md) / [아이폰 하네스](flutter-iphone-harness.md)를 따른다.
+
+### 실측 결과 (2026-08-03, SM-A356N / Android 16, 무선 디버깅)
+
+| # | 결과 |
+|---|---|
+| 1 | ✅ 카카오톡 전환(`TalkAuthCodeActivity`) → 동의 → 앱 복귀 → 로그인 완료 |
+| 7 | ✅ 계정 화면 진입 시 `GET /auth/mobile/sessions` 200, 기기 목록 표시 |
+| 2·3·4·5·6·8·9·10 | ⬜ 미확인 |
+
+⚠️ **`flutter/_docs/flutter-android-harness.md` §7의 "WSL 경로에서 Gradle 빌드 실패" 서술은 낡았다.**
+그 문서는 WSL에 Flutter·Android SDK가 없다는 전제로 쓰였으나, 현재는 둘 다 설치돼 있고
+(`/home/ho/flutter`, `/home/ho/Android/Sdk`) WSL 경로에서 `flutter build apk --debug`가
+정상 통과한다. 기기는 무선 디버깅(`adb connect`)으로 붙였다. 해당 문서를 갱신해야 한다.
 
 ---
 

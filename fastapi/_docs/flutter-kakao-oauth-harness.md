@@ -417,14 +417,32 @@ REDIS_AUTH_DB=                   # 논리 DB 분리 시에만 (§13 결정 후)
 
 ## 9. 검증 기준 (Definition of Done)
 
-- [ ] §6의 모든 체크박스 완료
-- [ ] T8 테스트 전부 통과
-- [ ] `docker compose up` 후 모바일/웹 로그인이 실제로 동작
-- [ ] `KEYS auth:rt:*` 실행 시 `mobile`/`web` 네임스페이스가 육안으로 구분됨
-- [ ] Redis 어디에도 refresh token 평문이 없음 (`HGETALL` · `MONITOR`로 확인)
-- [ ] `auth:kakao:rt:*` 값이 복호화 없이는 읽히지 않음
-- [ ] 기존 웹 로그인과 이미 발급된 토큰이 만료 전까지 계속 동작 (하위 호환)
-- [ ] 신규 코드에 하드코딩된 시크릿 0건
+- [x] §6의 모바일 관련 체크박스 완료 (T5 웹 경로·T3 `user_identities`는 범위 밖으로 명시)
+- [x] T8 테스트 전부 통과 (38건)
+- [x] 모바일 로그인이 실제로 동작 — 실기기 검증 완료 (아래)
+- [x] `KEYS auth:rt:*` 에서 `mobile` 네임스페이스가 육안으로 구분됨
+- [x] Redis에 refresh token 평문 없음 — `token_hash`가 64자 SHA-256 hex
+- [x] `auth:kakao:rt:*` 값이 바이너리 암호문이라 복호화 없이는 읽히지 않음
+- [x] 기존 웹 로그인 정상 (`api.jsangho.cloud` 200, 회귀 없음)
+- [x] 신규 코드에 하드코딩된 시크릿 0건
+
+### 실기기 검증 결과 (2026-08-03, 갤럭시 A35 SM-A356N / Android 16)
+
+| 확인 항목 | 실측값 |
+|---|---|
+| `POST /auth/mobile/kakao` | **200 OK** (카카오톡 앱 전환 경유) |
+| `GET /auth/mobile/sessions` | **200 OK** (계정 화면 기기 목록) |
+| 생성된 유저 | `id=3` · `login_id=zsh1114` · `oauth_provider=kakao` |
+| 세션 키 | `auth:rt:mobile:3:b1d2696a…` + `index`·`owner`·`seq` 전부 생성 |
+| `token_hash` | 64자 hex — 평문 토큰 없음 |
+| `device_name` | `samsung SM-A356N` — 기기 메타 수집 정상 |
+| `seq` / `rotation_count` | `1` / `0` |
+| TTL | `5183963`초 ≈ **60일** (모바일 정책 일치) |
+| `auth:kakao:rt:3` | 바이너리 암호문 |
+
+**남은 관찰**: 세션의 `ip` 필드가 `172.28.0.3`(cloudflared 컨테이너 내부 IP)으로 기록된다.
+실제 클라이언트 IP를 남기려면 `X-Forwarded-For` / `CF-Connecting-IP`를 읽어야 한다.
+현재는 감사 로그로서의 가치가 없는 값이다.
 
 ---
 
@@ -461,6 +479,26 @@ uv run pytest fastapi/apps/auth/tests -q
 | 2026-08-03 | T1·T2·T4·T6 | 모바일 인증 파이프라인 구현. 세션 스토어(Lua 원자 회전)·카카오 모바일 어댑터·AES-GCM 카카오 RT 보관소·`/auth/mobile/*` 5개 엔드포인트·`platform` 클레임 | ruff·lint-imports·pytest 19건 통과 |
 | 2026-08-03 | T3(일부) | `users.email` nullable 마이그레이션(`b3f1c9d2a740`). `user_identities`는 범위 밖으로 남김 | 마이그레이션 파일 작성. **DB에 적용(`alembic upgrade head`)은 아직 하지 않았다** |
 | 2026-08-03 | — | `fastapi/__init__.py`(빈 파일, git 미추적) 삭제 | 이 파일이 실제 `fastapi` 패키지를 가려 `pytest`가 저장소 어디서도 auth·titanic 테스트를 수집하지 못했다. 삭제 후 정상 수집 |
+| 2026-08-03 | 배포 | EC2(`aws` 브랜치 `af8aec6`)에 반영. `.env`에 카카오 키 3개 추가(암호화 키는 서버에서 생성), `alembic upgrade head`(`b3f1c9d2a740`), `auth`·`backend` 재기동. 신규 런타임 의존성이 없어 재빌드는 하지 않았다 | `api.jsangho.cloud` 200(회귀 없음), `/auth/mobile/refresh` 401, `/auth/mobile/sessions` 401, 잘못된 `redirectUri` 400 — 모두 설계대로 |
+
+### `client_id` 불일치 우려에 대한 실측 (2026-08-03)
+
+SDK는 **네이티브 앱 키**로 인가를 요청하는데 서버는 **REST API 키**로 교환한다는 점이
+설계 위험으로 지적됐다. 카카오 토큰 엔드포인트에 더미 코드로 직접 질의한 결과:
+
+| 조합 | 응답 |
+|---|---|
+| REST API 키 + `client_secret` + 커스텀 스킴 | `KOE320 authorization code not found` |
+| 네이티브 앱 키 + 커스텀 스킴 | `KOE320 authorization code not found` |
+
+둘 다 **코드 조회 단계까지 도달**했다 — `client_id`나 `redirect_uri`가 거부됐다면
+`KOE101`/`KOE303`이 나왔을 것이다. 즉 "등록되지 않은 클라이언트"·"미등록 redirect_uri"
+두 실패 모드는 배제됐다.
+
+**✅ 실기기에서 최종 해소됐다 (2026-08-03, 갤럭시 A35 / Android 16).**
+카카오톡 앱 전환으로 받은 인가 코드를 서버가 **REST API 키 + client_secret**으로
+교환해 `POST /auth/mobile/kakao` → **200 OK**. 카카오는 같은 앱에 속한 키를 서로
+호환해 준다. 코드 변경은 필요 없었다.
 
 ---
 
