@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from core.security.client_ip import client_ip
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
 from pydantic import BaseModel, ConfigDict, Field
@@ -112,7 +113,7 @@ async def login_with_kakao(
             device_name=req.device_name,
             os=req.os,
             app_version=req.app_version,
-            ip=request.client.host if request.client else "",
+            ip=client_ip(request),
         ),
     )
     return LoginResponse(
