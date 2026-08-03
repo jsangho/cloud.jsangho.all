@@ -32,6 +32,11 @@ from kayfabe.adapter.outbound.orm.ple_orm import (
     PleMatchStatus,
     PlePredictionModel,
 )
+from kayfabe.adapter.outbound.orm.shop_orm import (
+    ShopItemCategory,
+    ShopItemModel,
+    UserShopItemModel,
+)
 from kayfabe.adapter.outbound.pg.ple_match_pick_pg_repository import (
     PleMatchPickPgRepository,
 )
@@ -41,6 +46,9 @@ _TABLES = [
     PleEventModel.__table__,
     PleMatchModel.__table__,
     PlePredictionModel.__table__,
+    # 순위 행에 장착 아이템을 붙이느라 상점 테이블도 읽는다.
+    ShopItemModel.__table__,
+    UserShopItemModel.__table__,
 ]
 
 
@@ -258,3 +266,95 @@ class TestGetRankedByNickname:
                 await session.close()
 
         assert asyncio.run(run()) is None
+
+
+def _shop_item(iid: int, code: str, category: str) -> ShopItemModel:
+    return ShopItemModel(
+        id=iid,
+        code=code,
+        name=f"상품 {code}",
+        description="",
+        price=10,
+        category=category,
+        is_consumable=False,
+        is_active=True,
+    )
+
+
+def _owned(
+    oid: int, *, user_id: int, shop_item_id: int, equipped: bool
+) -> UserShopItemModel:
+    return UserShopItemModel(
+        id=oid,
+        user_id=user_id,
+        shop_item_id=shop_item_id,
+        context_key="",
+        is_equipped=equipped,
+    )
+
+
+class TestEquippedCosmetics:
+    """순위 행에 장착 아이템이 붙는다 (상점 7번)."""
+
+    @staticmethod
+    def _objects() -> list[object]:
+        return [
+            *_fixture_objects(),
+            _shop_item(101, "title_master", ShopItemCategory.TITLE),
+            _shop_item(102, "nickname_color_gold", ShopItemCategory.NICKNAME_COLOR),
+            _shop_item(103, "badge_rookie", ShopItemCategory.BADGE),
+            _shop_item(104, "report_match", ShopItemCategory.REPORT),
+            # alice: 칭호·색상 장착, 뱃지는 보유만
+            _owned(201, user_id=1, shop_item_id=101, equipped=True),
+            _owned(202, user_id=1, shop_item_id=102, equipped=True),
+            _owned(203, user_id=1, shop_item_id=103, equipped=False),
+            # alice: 치장 카테고리가 아닌 소모품은 장착돼 있어도 노출되지 않는다
+            _owned(204, user_id=1, shop_item_id=104, equipped=True),
+        ]
+
+    def test_equipped_items_are_attached(self):
+        async def run():
+            session = await _seed_session(self._objects())
+            try:
+                return await PleMatchPickPgRepository(session).list_ranked(10)
+            finally:
+                await session.close()
+
+        rows = asyncio.run(run())
+        alice = next(r for r in rows if r.nickname == "alice")
+        assert alice.cosmetics.title is not None
+        assert alice.cosmetics.title.code == "title_master"
+        assert alice.cosmetics.nickname_color is not None
+        assert alice.cosmetics.nickname_color.code == "nickname_color_gold"
+        # 보유만 하고 장착하지 않은 뱃지는 붙지 않는다.
+        assert alice.cosmetics.badge is None
+
+    def test_user_without_items_gets_empty_cosmetics(self):
+        """아이템이 없는 사용자도 None이 아니라 빈 값이 온다."""
+
+        async def run():
+            session = await _seed_session(self._objects())
+            try:
+                return await PleMatchPickPgRepository(session).list_ranked(10)
+            finally:
+                await session.close()
+
+        rows = asyncio.run(run())
+        bob = next(r for r in rows if r.nickname == "bob")
+        assert bob.cosmetics.title is None
+        assert bob.cosmetics.nickname_color is None
+        assert bob.cosmetics.badge is None
+
+    def test_my_rank_lookup_also_carries_cosmetics(self):
+        async def run():
+            session = await _seed_session(self._objects())
+            try:
+                repo = PleMatchPickPgRepository(session)
+                return await repo.get_ranked_by_nickname("alice")
+            finally:
+                await session.close()
+
+        row = asyncio.run(run())
+        assert row is not None
+        assert row.cosmetics.title is not None
+        assert row.cosmetics.title.name == "상품 title_master"

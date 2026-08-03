@@ -1,10 +1,20 @@
 import { pleMatchPicksBaseUrl, requestTimeoutMs } from "@/lib/api";
 
+/** 순위표에 노출되는 장착 아이템. `code`로 표시 규칙을 고르고 `name`을 보여준다. */
+export type CosmeticItem = {
+  code: string;
+  name: string;
+};
+
 export type RankingRow = {
   rank: number;
   nickname: string;
   score: number;
   accuracy: number;
+  /** 상점에서 사서 장착한 아이템 — 없으면 `null` */
+  title?: CosmeticItem | null;
+  nicknameColor?: CosmeticItem | null;
+  badge?: CosmeticItem | null;
 };
 
 export type RankingsResponse = {
@@ -19,16 +29,6 @@ export function clamp01(value: number) {
 export function formatAccuracy(value: number) {
   const pct = Math.round(clamp01(value) * 100);
   return `${pct}%`;
-}
-
-/**
- * 보유 포인트 = 적중한 예측의 배점 합계(순위표 `score`)와 같다.
- * 요청 실패는 `null`, 채점된 예측이 없어 순위 집계에서 빠진 사용자는 `0`.
- */
-export async function fetchMyPoints(nickname: string): Promise<number | null> {
-  const data = await fetchRankings({ nickname, limit: 1 });
-  if (data === null) return null;
-  return data.myRank?.score ?? 0;
 }
 
 export async function fetchRankings(options?: {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authDisplayName, type AuthUser } from "@/context/auth-context";
-import { fetchMyPoints } from "@/lib/rankings-api";
+import { fetchWallet } from "@/lib/shop-api";
 import { cn } from "@/lib/utils";
 
 type PointsState = { status: "loading" } | { status: "ok"; points: number } | { status: "error" };
@@ -12,7 +12,12 @@ function pointsLabel(state: PointsState): string {
   return state.status === "loading" ? "…" : "—";
 }
 
-/** 내비에 표시하는 로그인 사용자 칩 — 닉네임 + 보유 포인트(`P:`) */
+/**
+ * 내비에 표시하는 로그인 사용자 칩 — 닉네임 + 보유 포인트(`P:`)
+ *
+ * 지출이 반영된 잔액(`/shop/wallet`의 `balance`)을 쓴다. 순위표 `score`는
+ * 획득액이라 상점에서 쓰고 나면 실제 보유량과 어긋난다.
+ */
 export function UserNavBadge({ user, className }: { user: AuthUser; className?: string }) {
   const [state, setState] = useState<PointsState>({ status: "loading" });
 
@@ -21,15 +26,15 @@ export function UserNavBadge({ user, className }: { user: AuthUser; className?: 
     setState({ status: "loading" });
 
     void (async () => {
-      const points = await fetchMyPoints(user.nickname);
+      const wallet = await fetchWallet(user.token);
       if (cancelled) return;
-      setState(points === null ? { status: "error" } : { status: "ok", points });
+      setState(wallet === null ? { status: "error" } : { status: "ok", points: wallet.balance });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user.nickname]);
+  }, [user.token]);
 
   const displayName = authDisplayName(user);
   const label = pointsLabel(state);

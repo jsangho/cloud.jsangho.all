@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 
 from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
@@ -13,6 +14,36 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+
+
+class ShopItemCategory(StrEnum):
+    """`shop_items.category`에 들어가는 값. 컬럼은 문자열이고 이건 호출부용 상수다."""
+
+    TITLE = "title"
+    NICKNAME_COLOR = "nickname_color"
+    BADGE = "badge"
+    REPORT = "report"
+    HOF = "hof"
+
+
+# 순위표가 한 자리에 하나씩만 그리는 카테고리 — 칭호는 닉네임 앞, 색상은 닉네임 자체,
+# 뱃지는 닉네임 뒤. 자리가 하나뿐이라 장착도 카테고리당 하나로 제한한다
+# (`ShopPgRepository.set_equipped`). 소모성 리포트·명예의 전당은 순위표에 자리가
+# 없으므로 이 규칙을 적용하지 않는다.
+COSMETIC_CATEGORIES = (
+    ShopItemCategory.TITLE,
+    ShopItemCategory.NICKNAME_COLOR,
+    ShopItemCategory.BADGE,
+)
+
+
+class PointLedgerEntryType(StrEnum):
+    """`point_ledger_entries.entry_type`에 들어가는 값."""
+
+    PURCHASE = "purchase"
+    REFUND = "refund"
+    ADMIN_GRANT = "admin_grant"
+    RECONCILE = "reconcile"
 
 
 class ShopItemModel(Base):
