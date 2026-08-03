@@ -43,6 +43,8 @@ dependencies:
   device_info_plus: ^13.2.0
   package_info_plus: ^10.2.1
   uuid: ^4.6.0
+  image_picker: ^1.2.3
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

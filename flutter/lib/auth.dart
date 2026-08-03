@@ -39,9 +39,19 @@ class AuthConfig {
     'KAKAO_NATIVE_APP_KEY',
   );
 
+  /// 인증 게이트웨이(`apps/auth`). 로그인·리프레시·세션이 여기로 간다.
+  ///
+  /// `www`가 `NEXT_PUBLIC_AUTH_BASE_URL` / `NEXT_PUBLIC_API_URL`로 나눠 쓰는 것과
+  /// 같은 구분이다. 두 호스트는 cloudflared가 서로 다른 컨테이너로 라우팅한다.
+  static const authBaseUrl = String.fromEnvironment(
+    'AUTH_BASE_URL',
+    defaultValue: 'https://auth.jsangho.cloud',
+  );
+
+  /// 일반 API 백엔드(`main.py`). 사진 업로드 등 도메인 기능이 여기로 간다.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://auth.jsangho.cloud',
+    defaultValue: 'https://api.jsangho.cloud',
   );
 
   /// 카카오 콘솔 등록값·서버 `KAKAO_MOBILE_REDIRECT_URI`와 **완전히 같은 문자열**이어야
@@ -275,7 +285,7 @@ class AuthApiClient {
           dio ??
           Dio(
             BaseOptions(
-              baseUrl: AuthConfig.apiBaseUrl,
+              baseUrl: AuthConfig.authBaseUrl,
               connectTimeout: const Duration(seconds: 5),
               receiveTimeout: const Duration(seconds: 10),
               contentType: Headers.jsonContentType,
@@ -283,15 +293,42 @@ class AuthApiClient {
               // onError가 안 불려 401 리프레시 인터셉터가 통째로 죽는다.
             ),
           ) {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: _attachBearer,
-        onError: _handleUnauthorized,
-      ),
-    );
+    _installInterceptors(_dio);
   }
 
   String? get accessToken => _accessToken;
+
+  /// 다른 호스트(예: `api.jsangho.cloud`)에 붙는 **인증된** Dio를 만든다.
+  ///
+  /// access token과 single-flight 리프레시를 이 클라이언트와 공유한다 —
+  /// 호스트마다 따로 리프레시하면 회전된 토큰을 서로 덮어써서 세션이 깨진다.
+  Dio authorizedDio({
+    required String baseUrl,
+    Duration receiveTimeout = const Duration(seconds: 30),
+    Duration sendTimeout = const Duration(seconds: 60),
+  }) {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: receiveTimeout,
+        // 사진 업로드는 본문이 커서 전송 타임아웃을 넉넉히 잡는다.
+        sendTimeout: sendTimeout,
+      ),
+    );
+    _installInterceptors(dio);
+    return dio;
+  }
+
+  void _installInterceptors(Dio dio) {
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: _attachBearer,
+        // 재시도는 요청이 원래 나갔던 Dio로 해야 baseUrl이 맞는다.
+        onError: (error, handler) => _handleUnauthorized(dio, error, handler),
+      ),
+    );
+  }
 
   void _attachBearer(
     RequestOptions options,
@@ -305,6 +342,7 @@ class AuthApiClient {
   }
 
   Future<void> _handleUnauthorized(
+    Dio dio,
     DioException error,
     ErrorInterceptorHandler handler,
   ) async {
@@ -330,7 +368,7 @@ class AuthApiClient {
 
     request.extra[_retriedFlag] = true;
     try {
-      handler.resolve(await _dio.fetch<dynamic>(request));
+      handler.resolve(await dio.fetch<dynamic>(request));
     } on DioException catch (retryError) {
       handler.next(retryError);
     }
@@ -597,6 +635,12 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<List<DeviceSession>> loadDevices() => _api.listSessions();
+
+  /// 일반 API 백엔드에 붙는 인증된 HTTP 클라이언트.
+  ///
+  /// 사진 업로드처럼 `auth` 게이트웨이 밖의 기능이 쓴다. 토큰과 리프레시를
+  /// 로그인 경로와 공유하므로, 화면에서 토큰을 직접 만질 일이 없다.
+  Dio apiClient() => _api.authorizedDio(baseUrl: AuthConfig.apiBaseUrl);
 
   void _clearSession() {
     _user = null;

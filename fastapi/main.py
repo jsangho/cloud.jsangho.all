@@ -42,7 +42,9 @@ from core.matrix.grid_oracle_database_manager import (
     init_db,
 )
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from fastapi.middleware.cors import CORSMiddleware
 from heyman.adapter.inbound.api import manager_router
+from lion_king.adapter.inbound.api.v1.photo_router import photo_router
 from pydantic import BaseModel, Field
 from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
@@ -52,7 +54,6 @@ from auth.adapter.inbound.api import auth_router
 from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
 from auth.adapter.inbound.api.jwks_router import jwks_router
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from kayfabe.adapter.inbound.api import kayfabe_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
@@ -127,6 +128,7 @@ app.include_router(langchain_router, prefix="/api")
 app.include_router(manager_router, prefix="/api")
 app.include_router(ontology_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(photo_router, prefix="/api")
 app.include_router(soccer_router, prefix="/api")
 
 
