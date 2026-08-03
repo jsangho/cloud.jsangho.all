@@ -282,7 +282,7 @@ auth:refresh:by-sub:{sub}        -> { jti, ... }
 - [ ] JWT 클레임 `platform: "web"` — 미착수. 다만 플랫폼 격리는 이미 성립한다:
       웹은 구 `auth:refresh:*`, 모바일은 신 `auth:rt:mobile:*` 네임스페이스라 서로의 토큰이 통하지 않는다
 
-### 🔴 별건으로 발견 — 웹 소셜 로그인의 `redirect_uri`가 localhost다
+### ✅ 해결됨 — 웹 소셜 로그인의 `redirect_uri`가 localhost였던 문제
 
 서버 `.env`에서 `KAKAO_OAUTH_REDIRECT_URI`·`GOOGLE_…`·`NAVER_…` **세 줄이 모두 주석 처리**돼
 있어, 코드 기본값 `http://127.0.0.1:8000/api/auth/{provider}/callback`이 쓰이고 있다.
@@ -296,8 +296,19 @@ GET https://auth.jsangho.cloud/auth/kakao/login
 동작하지만, **운영 사용자는 동의 후 자기 PC의 localhost로 튕겨 로그인이 끝나지 않는다.**
 
 이번 변경이 만든 문제가 아니라 **원래 있던 상태**이며, CSRF 수정과는 독립이다.
-고치려면 주석을 풀고(`https://auth.jsangho.cloud/auth/{provider}/callback`) 각 콘솔에
-그 URI를 등록해야 한다. 콘솔 등록 상태를 확인할 수 없어 임의로 바꾸지 않았다.
+
+**조치 (2026-08-03)**: 서버 `.env`의 주석 3줄을 해제해
+`https://auth.jsangho.cloud/auth/{provider}/callback`을 쓰도록 했다. 세 provider가
+모두 이 URI를 받아주는 것을 인가 URL 호출로 확인했다 — **콘솔에는 이미 등록돼 있었다.**
+
+| provider | 응답 |
+|---|---|
+| kakao | 302 → `accounts.kakao.com/login` |
+| google | 302 |
+| naver | 200 `<title>NAVER 로그인</title>` |
+
+> 로컬 `fastapi/.env`는 주석을 그대로 뒀다. 로컬 개발에서는 코드 기본값
+> (`http://127.0.0.1:8000/api/auth/{provider}/callback`)이 맞기 때문이다.
 
 - [ ] 기존 `/auth/kakao/login` · `/auth/kakao/callback` **경로는 유지**한다 — 카카오 콘솔 등록 URI와 `www` 프론트가 이 경로에 묶여 있다 ❓
 - [ ] `state`를 난수로 교체 + `auth:oauth:state:{state}` 5분 저장, 콜백에서 대조 후 즉시 삭제 (§4-D)
