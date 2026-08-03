@@ -9,6 +9,7 @@ from auth.adapter.outbound.kakao_oauth_client import KakaoOAuthClient
 from auth.adapter.outbound.naver_oauth_client import NaverOAuthClient
 from auth.adapter.outbound.pg.user_pg_repository import UserPgRepository
 from auth.adapter.outbound.redis.kakao_token_redis_vault import KakaoTokenRedisVault
+from auth.adapter.outbound.redis.oauth_state_redis_store import OAuthStateRedisStore
 from auth.adapter.outbound.redis.refresh_token_repository import (
     RefreshTokenRepository,
 )
@@ -43,6 +44,7 @@ def get_google_login_use_case(db: AsyncSession = Depends(get_db)) -> OAuthLoginU
         provider="google",
         identity_provider=GoogleOAuthClient(),
         repository=UserPgRepository(db),
+        state_store=OAuthStateRedisStore(),
     )
 
 
@@ -51,6 +53,7 @@ def get_kakao_login_use_case(db: AsyncSession = Depends(get_db)) -> OAuthLoginUs
         provider="kakao",
         identity_provider=KakaoOAuthClient(),
         repository=UserPgRepository(db),
+        state_store=OAuthStateRedisStore(),
     )
 
 
@@ -59,6 +62,7 @@ def get_naver_login_use_case(db: AsyncSession = Depends(get_db)) -> OAuthLoginUs
         provider="naver",
         identity_provider=NaverOAuthClient(),
         repository=UserPgRepository(db),
+        state_store=OAuthStateRedisStore(),
     )
 
 
