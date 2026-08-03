@@ -267,10 +267,37 @@ auth:refresh:by-sub:{sub}        -> { jti, ... }
 - [x] JWT 클레임: `sub`, `platform: "mobile"`, `jti`, `device_id`, `roles`, `exp`, `iat`, `aud`(현행 값 유지, §4-J)
 - [x] `auth_main.py`에 라우터 등록 (라우터 자체 prefix가 `/mobile`이라 `prefix="/auth"`로 include)
 
-### T5. 웹 인증 엔드포인트 — **전부 미착수 (범위 밖)**
+### T5. 웹 인증 엔드포인트 — **보안 항목만 선반영 (2026-08-03)**
 
-> 이번 작업은 "모바일 엔드포인트"로 범위를 잡았다. 웹 경로(§4-D state CSRF, §4-E 쿠키 전환)는
-> `www` 프론트를 함께 고쳐야 해서 별도 작업으로 남긴다. 기존 웹 로그인은 그대로 동작한다.
+- [x] 기존 `/auth/kakao/login` · `/auth/kakao/callback` **경로 유지** — 카카오 콘솔 재등록 불필요
+- [x] `state`를 난수로 교체 + `auth:oauth:state:{state}` 5분 저장, 콜백에서 대조 후 삭제 (§4-D)
+  - `GETDEL`로 조회·삭제를 한 연산으로 처리해 같은 `state`가 두 번 통과하지 못한다
+  - **검증을 카카오 코드 교환보다 먼저** 해서 위조 요청이 외부 호출조차 일으키지 않게 했다
+  - google·naver도 같은 헬퍼를 쓰므로 함께 적용됐다
+- [x] 리다이렉트 URL에서 **리프레시 토큰 제거** — `www`에 이 값을 읽는 코드가 아예 없는데
+  (참조 0건) 14일짜리 토큰이 브라우저 히스토리·Referer·중간 로그에 남고 있었다
+- [ ] 액세스 토큰(15분)의 httpOnly 쿠키 전환 (§4-E) — **미착수.** `www`의 인증 계층이
+  localStorage + `Bearer` 헤더라 프론트를 통째로 바꿔야 한다
+- [ ] `POST /auth/web/refresh` · `/auth/web/logout` — 미착수 (프론트에 리프레시 로직 자체가 없다)
+- [ ] JWT 클레임 `platform: "web"` — 미착수. 다만 플랫폼 격리는 이미 성립한다:
+      웹은 구 `auth:refresh:*`, 모바일은 신 `auth:rt:mobile:*` 네임스페이스라 서로의 토큰이 통하지 않는다
+
+### 🔴 별건으로 발견 — 웹 소셜 로그인의 `redirect_uri`가 localhost다
+
+서버 `.env`에서 `KAKAO_OAUTH_REDIRECT_URI`·`GOOGLE_…`·`NAVER_…` **세 줄이 모두 주석 처리**돼
+있어, 코드 기본값 `http://127.0.0.1:8000/api/auth/{provider}/callback`이 쓰이고 있다.
+
+```
+GET https://auth.jsangho.cloud/auth/kakao/login
+  → 302 …&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2Fapi%2Fauth%2Fkakao%2Fcallback
+```
+
+카카오는 이 URI를 **받아준다**(302 정상 — 콘솔에 등록돼 있다는 뜻). 그래서 로컬 개발에서는
+동작하지만, **운영 사용자는 동의 후 자기 PC의 localhost로 튕겨 로그인이 끝나지 않는다.**
+
+이번 변경이 만든 문제가 아니라 **원래 있던 상태**이며, CSRF 수정과는 독립이다.
+고치려면 주석을 풀고(`https://auth.jsangho.cloud/auth/{provider}/callback`) 각 콘솔에
+그 URI를 등록해야 한다. 콘솔 등록 상태를 확인할 수 없어 임의로 바꾸지 않았다.
 
 - [ ] 기존 `/auth/kakao/login` · `/auth/kakao/callback` **경로는 유지**한다 — 카카오 콘솔 등록 URI와 `www` 프론트가 이 경로에 묶여 있다 ❓
 - [ ] `state`를 난수로 교체 + `auth:oauth:state:{state}` 5분 저장, 콜백에서 대조 후 즉시 삭제 (§4-D)
@@ -439,6 +466,20 @@ REDIS_AUTH_DB=                   # 논리 DB 분리 시에만 (§13 결정 후)
 | `seq` / `rotation_count` | `1` / `0` |
 | TTL | `5183963`초 ≈ **60일** (모바일 정책 일치) |
 | `auth:kakao:rt:3` | 바이너리 암호문 |
+
+### 실제 Redis에서의 세션 스토어 검증 (2026-08-03)
+
+단위 테스트는 `fakeredis`의 Lua 에뮬레이터를 쓴다. 진짜 Redis의 Lua 인터프리터에서도
+같은지 확인하려고, 운영 서버의 Redis에 합성 유저(`user_id=999999`)로 직접 돌렸다.
+실제 유저 데이터와 겹치지 않으며 종료 시 전부 삭제했다(잔존 0건 확인).
+
+| 항목 | 결과 |
+|---|---|
+| 6번째 기기 로그인 → 가장 오래된 세션 폐기 | ✅ 5개 유지, `dev-0` 제거 |
+| 회전 후 새 토큰 발급 | ✅ |
+| 재사용 탐지 → 모바일 전멸, **웹 세션 생존** (D-3) | ✅ |
+| 동시 회전 10건 → 정확히 1건 성공 (Lua 원자성) | ✅ |
+| `jti`만 맞는 위조 토큰 거부 (§4-M) | ✅ |
 
 **남은 관찰**: 세션의 `ip` 필드가 `172.28.0.3`(cloudflared 컨테이너 내부 IP)으로 기록된다.
 실제 클라이언트 IP를 남기려면 `X-Forwarded-For` / `CF-Connecting-IP`를 읽어야 한다.
