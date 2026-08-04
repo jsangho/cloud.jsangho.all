@@ -234,8 +234,9 @@ apps/kayfabe/
 │   ├── dtos/agent_prediction_dto.py        # GeneratePredictionCommand · AgentPredictionDto
 │   ├── ports/input/ai_prediction_use_case.py       # AiPredictionUseCase (ABC)
 │   ├── ports/output/
+│   │   ├── agent_errors.py                 # AgentUnavailableError — 세 에이전트 공용
 │   │   ├── storyline_analyst_port.py       # StorylineAnalystPort (ABC)
-│   │   ├── odds_scout_port.py              # OddsScoutPort (ABC)
+│   │   ├── odds_scout_port.py              # OddsScoutPort (ABC) — 지식 검색을 받지 않는다
 │   │   ├── rumor_scout_port.py             # RumorScoutPort (ABC)
 │   │   ├── prediction_knowledge_port.py    # RAG 검색 (pgvector)
 │   │   └── agent_prediction_repository.py  # 저장·조회
@@ -353,7 +354,7 @@ DATABASE_URL=          # 이미 있음 — pgvector 포함
 |---|---|---|---|
 | **T0** | §13-Q1·Q2 결정 | 이 문서 §13 갱신 | 수집 대상과 합성 가중치가 확정됐다. **미결이면 T3에서 멈춘다** |
 | ~~**T1**~~ | ~~도메인 — 엔티티 + 합성 함수~~ | `agent_prediction.py` · `prediction_synthesis.py` | **완료 (2026-08-04)** — 픽스처 테스트 23건 통과, LLM 호출 0회 |
-| **T2** | 포트 정의 | `ports/input/*` · `ports/output/*` | 전부 `ABC`. 구현체 없이 import 된다 |
+| ~~**T2**~~ | ~~포트 정의~~ | `ports/input/*` · `ports/output/*` · `dtos/agent_prediction_dto.py` | **완료 (2026-08-04)** — 포트 6종 전부 `ABC`, 구현체 0개 상태로 테스트 통과 |
 | **T3** | 지식 적재 (RAG) | `ontology` 수집 + `ple_knowledge_chunks` | 공개 소스만. `embed_text` + pgvector 저장. **Q1 결정 후 착수** |
 | **T4** | 검색 리포지토리 | `prediction_knowledge_repository.py` | `<=>` 코사인 top-k. `wrestler_chat_repository` 패턴 |
 | **T5** | 에이전트 3종 | `adapter/outbound/agents/*` | 벤더 타입이 포트 시그니처에 새지 않음. 생성은 ontology 경유 |
@@ -413,5 +414,6 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-08-04 | T2 | 포트 6종(`AiPredictionUseCase` · 에이전트 3종 · `PredictionKnowledgePort` · `AgentPredictionRepository`)과 경계 DTO 정의. 입력 포트에서 **조회와 생성을 분리**해 페이지 진입이 LLM을 부르지 못하게 구조로 막았다. `AgentUnavailableError`는 세 에이전트가 공유하므로 `agent_errors.py`에 따로 뒀다(§6 반영) | `pytest apps/kayfabe/tests` 46 passed(포트+도메인) · 구현체 0개 상태에서 import·추상성 검증 · lint-imports 통과 |
 | 2026-08-04 | T1 | 도메인 엔티티(`AgentPrediction`·`AgentReport`·`AgentKind`·`PredictionSource`)와 합성 순수 함수(`synthesize`) 구현. **에이전트별 기본 가중치는 넣지 않았다** — §13-Q2 미결이라 근거 없는 숫자를 코드에 남기지 않는다. `confidence`는 합의도 × 응답률로 정의했다(§5 보강: 셋 중 하나만 답했을 때 확신 100%가 되는 문제) | `pytest apps/kayfabe/tests/domain` 23 passed · ruff·lint-imports 통과 · LLM/DB 호출 0회 |
 | 2026-08-04 | — | 원본 지시서를 이 저장소 맥락으로 옮겨 하네스 계약 작성. `ple_ai.py`·`ple_events_pg_repository.py`·`wrestler_chat_repository.py`·`ple_orm.py`·`ple-ai-scoreboard.tsx`·`.importlinter`·`ontology` 유스케이스 목록을 실측해 델타 8건(§2)·미해결 질문 7건(§13) 도출 | 문서만 작성, 코드 변경 없음 |
