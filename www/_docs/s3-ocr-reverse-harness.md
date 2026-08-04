@@ -4,7 +4,8 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-04
-> **상태:** 미착수 — **백엔드 선행 작업에 막혀 있다.** 목록 엔드포인트와 OCR 엔드포인트가 둘 다 존재하지 않는다(§2-D2 · §10-T0). 프론트 단독으로 시작할 수 있는 단위는 없다.
+> **상태:** 구현 완료 (2026-08-04) — T2~T6. 백엔드 T0·T1도 함께 끝나 `GET /api/receipts` · `POST /api/receipts/ocr`가 존재한다.
+> 라우트는 §6의 `/ledger`가 아니라 **`/lesson/ledger`** 다(§13-Q5 결정).
 > **상위 규칙:** [루트 CLAUDE.md](../../CLAUDE.md) · [www/.cursorrules](../.cursorrules) · [www/CLAUDE.md](../CLAUDE.md) · [`.claude/rules/typescript.md`](../../.claude/rules/typescript.md)
 
 **"역방향(reverse)"의 뜻:** 정방향은 촬영 이미지를 **클라이언트 → 서버 → S3**로 밀어넣는 흐름이다.
@@ -353,12 +354,12 @@ www에는 테스트 러너가 없다 — 위 세 명령이 그 자리를 대신�
 
 ## 13. 미해결 질문 (구현 중 발견 시 여기에 기록하고 중단)
 
-- [ ] **Q1. 목록 엔드포인트 사양** — `GET /api/receipts`의 응답 형태·정렬 기준·페이지네이션·presigned URL 만료 시간이 정해지지 않았다. 백엔드 하네스에도 없는 엔드포인트라 **양쪽에서 동시에 확정해야 한다.** §7.1은 이 문서의 제안이지 확정이 아니다.
-- [ ] **Q2. 영수증과 일반 사진의 구분** — 백엔드 하네스 §13-Q4와 같은 질문이다. 지금은 모든 사진이 `photos/{sub}/`에 섞여 있어 "영수증만" 목록으로 뽑을 방법이 없다. `receipts/` 접두사로 분리하든 메타데이터를 붙이든 결정이 필요하고, **분리하면 촬영 화면(Flutter)의 업로드 경로도 함께 바뀐다.**
-- [ ] **Q3. `www/_claude/REACT_RULES.md` 부재** — `.cursorrules` §0이 구현 전 필수로 가리키는데 디렉터리가 없다(§2-D7). 삭제된 것인지 이동한 것인지 확인이 필요하다.
-- [ ] **Q4. 판독 결과의 보관 주체** — 백엔드 하네스 §13-Q3(영속화 범위)이 "저장 안 함"으로 결정되면, 화면을 벗어나는 순간 판독 결과가 사라진다. 그 경우 재진입마다 OCR을 다시 돌리게 되므로 **비용이 사용자 행동에 그대로 비례한다.** 클라이언트 캐시로 버틸지, 백엔드에 저장할지 결정해야 한다.
-- [ ] **Q5. 라우트 이름** — `/ledger`로 제안했다. `/expenses`·`/household` 등 다른 이름을 쓸지. 확정 후 §6·§10-T6에 반영한다.
-- [ ] **Q6. Flutter 대응 문서** — 원본 지시서는 Flutter를 대상으로 쓰였다(§2-D1). `flutter/_docs/`에 별도 하네스를 만들지, 웹만 진행할지.
+- [x] **Q1. 목록 엔드포인트 사양** → 백엔드 §7.1로 확정. `LastModified` 내림차순, **최대 100장·페이지네이션 없음**, presigned URL **수명 300초**, `capturedAt`은 S3 `LastModified`(= 업로드 시각에 가깝다).
+- [x] **Q2. 영수증과 일반 사진의 구분** → **구분하지 않는다** (백엔드 §13-Q4와 동일 결정). `photos/{sub}/` 아래 모든 이미지가 목록에 뜨고, 사용자가 그중 영수증을 골라 판독한다. 촬영 화면(Flutter)은 건드리지 않았다.
+- [ ] **Q3. `www/_claude/REACT_RULES.md` 부재** — `.cursorrules` §0이 구현 전 필수로 가리키는데 디렉터리가 없다(§2-D7). **여전히 미해결이다.** 삭제된 것인지 이동한 것인지 확인이 필요하다.
+- [x] **Q4. 판독 결과의 보관 주체** → 백엔드가 **저장하지 않기로** 했다(백엔드 §13-Q3). 클라이언트 캐시도 두지 않았다 — 화면 상태(`OcrState`)는 한 번에 한 장만 들고, 다른 카드를 판독하면 이전 결과는 사라진다. **재진입·카드 전환마다 OCR이 다시 돈다.** 비용이 문제가 되면 그때 캐시나 저장을 넣는다.
+- [x] **Q5. 라우트 이름** → **`/lesson/ledger`.** §6이 제안한 `/ledger`가 아니라 레슨 섹션 아래에 두고, 진입점은 `app/lesson/layout.tsx`의 사이드바다(§10-T6이 말한 `components/navbar.tsx`가 아니다).
+- [ ] **Q6. Flutter 대응 문서** — 원본 지시서는 Flutter를 대상으로 쓰였다(§2-D1). `flutter/_docs/`에 별도 하네스를 만들지, 웹만 진행할지. **미해결.**
 
 ---
 
@@ -367,3 +368,4 @@ www에는 테스트 러너가 없다 — 위 세 명령이 그 자리를 대신�
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
 | 2026-08-04 | — | 원본 지시서(Flutter 대상)를 `www` 맥락으로 옮겨 하네스 계약 작성. `lib/api.ts`·`lib/shop-api.ts`·`context/auth-context.tsx`·`components/titanic-vision-upload.tsx`·`package.json`·`next.config.mjs` 실측 후 델타 7건(§2)·미해결 질문 6건(§13) 도출. **목록 엔드포인트 부재로 프론트 단독 착수 불가**를 확인 | 문서만 작성, 코드 변경 없음 |
+| 2026-08-04 | T2~T6 | `lib/api.ts`에 `receiptsBaseUrl` 1줄 · `lib/receipt-api.ts`(타입 + 목록/OCR 호출) · `components/ledger/*` 3종 · `app/lesson/ledger/page.tsx`. 상태는 판별 유니온, OCR 타임아웃은 `ocrTimeoutMs = 60000` 별도 상수. FastAPI 기본 영문 detail(`Not Found` 등)은 걸러 한국어 문구로 대체 | `pnpm type-check` 무오류 · `pnpm lint` 에러 0 · Prettier 적용 · `/lesson/ledger` 200 렌더 |
