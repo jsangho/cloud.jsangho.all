@@ -2,9 +2,9 @@ from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
+from kayfabe.adapter.outbound.agents.odds_scout_agent import BookmakerOddsScout
 from kayfabe.adapter.outbound.agents.pending_agents import (
     EmptyPredictionKnowledge,
-    PendingOddsScout,
     PendingRumorScout,
     PendingStorylineAnalyst,
 )
@@ -27,7 +27,7 @@ def get_agent_prediction_repository(
 def get_ai_prediction_use_case(
     repository: AgentPredictionRepository = Depends(get_agent_prediction_repository),
 ) -> AiPredictionUseCase:
-    """지금은 분석기 자리에 임시 어댑터가 들어간다.
+    """오즈만 실제 분석기이고 서사·루머는 아직 임시 어댑터다.
 
     T4(검색)·T5(에이전트)가 오면 이 함수의 인자만 바뀐다 — 유스케이스와 라우터는
     그대로다. 그것이 포트를 먼저 정의한 이유다.
@@ -36,6 +36,6 @@ def get_ai_prediction_use_case(
         repository,
         EmptyPredictionKnowledge(),
         PendingStorylineAnalyst(),
-        PendingOddsScout(),
+        BookmakerOddsScout(),
         PendingRumorScout(),
     )

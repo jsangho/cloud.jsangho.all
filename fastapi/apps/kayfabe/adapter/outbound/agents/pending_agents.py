@@ -15,7 +15,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
-from kayfabe.app.ports.output.odds_scout_port import OddsScoutPort
 from kayfabe.app.ports.output.prediction_knowledge_port import PredictionKnowledgePort
 from kayfabe.app.ports.output.rumor_scout_port import RumorScoutPort
 from kayfabe.app.ports.output.storyline_analyst_port import StorylineAnalystPort
@@ -33,11 +32,6 @@ class PendingStorylineAnalyst(StorylineAnalystPort):
         self, context: MatchContext, knowledge: Sequence[KnowledgeChunk]
     ) -> AgentReport:
         return _silent(AgentKind.STORYLINE)
-
-
-class PendingOddsScout(OddsScoutPort):
-    async def analyze(self, context: MatchContext) -> AgentReport:
-        return _silent(AgentKind.ODDS)
 
 
 class PendingRumorScout(RumorScoutPort):
