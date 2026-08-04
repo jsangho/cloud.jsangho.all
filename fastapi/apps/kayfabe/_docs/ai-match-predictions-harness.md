@@ -215,6 +215,10 @@ AgentReport
 - 각 리포트의 `weight`를 정규화해 pick별 가중 득표를 만든다.
 - 최다 득표 pick을 고르고, 그 득표 비중을 `win_probability`로 쓴다.
 - `confidence`는 **합의 정도**다 — 세 에이전트가 같은 쪽이면 높고, 갈리면 낮다. 승률과 다른 축이다.
+  구현(T1)에서 `합의도 × 응답률`로 확정했다. 응답률을 곱하는 이유는 **셋 중 하나만 답했을 때
+  합의도가 1.0이 되어 "확신 100%"로 보이는 문제** 때문이다. 그래서 `synthesize()`는 리포트
+  목록 길이가 아니라 **물어본 에이전트 수(`agent_count`)** 를 따로 받는다 — 실패한 에이전트는
+  목록에서 아예 빠지기 때문이다.
 - 리포트가 0건이면 `ReportsUnavailableError`를 던진다(§3-D6). 임의 0.5를 채우지 않는다.
 
 ---
@@ -348,7 +352,7 @@ DATABASE_URL=          # 이미 있음 — pgvector 포함
 | # | 작업 | 산출물 | 완료 판정 |
 |---|---|---|---|
 | **T0** | §13-Q1·Q2 결정 | 이 문서 §13 갱신 | 수집 대상과 합성 가중치가 확정됐다. **미결이면 T3에서 멈춘다** |
-| **T1** | 도메인 — 엔티티 + 합성 함수 | `agent_prediction.py` · `prediction_synthesis.py` | 고정 리포트 픽스처로 단위 테스트 통과. **LLM 호출 0회** |
+| ~~**T1**~~ | ~~도메인 — 엔티티 + 합성 함수~~ | `agent_prediction.py` · `prediction_synthesis.py` | **완료 (2026-08-04)** — 픽스처 테스트 23건 통과, LLM 호출 0회 |
 | **T2** | 포트 정의 | `ports/input/*` · `ports/output/*` | 전부 `ABC`. 구현체 없이 import 된다 |
 | **T3** | 지식 적재 (RAG) | `ontology` 수집 + `ple_knowledge_chunks` | 공개 소스만. `embed_text` + pgvector 저장. **Q1 결정 후 착수** |
 | **T4** | 검색 리포지토리 | `prediction_knowledge_repository.py` | `<=>` 코사인 top-k. `wrestler_chat_repository` 패턴 |
@@ -409,4 +413,5 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-08-04 | T1 | 도메인 엔티티(`AgentPrediction`·`AgentReport`·`AgentKind`·`PredictionSource`)와 합성 순수 함수(`synthesize`) 구현. **에이전트별 기본 가중치는 넣지 않았다** — §13-Q2 미결이라 근거 없는 숫자를 코드에 남기지 않는다. `confidence`는 합의도 × 응답률로 정의했다(§5 보강: 셋 중 하나만 답했을 때 확신 100%가 되는 문제) | `pytest apps/kayfabe/tests/domain` 23 passed · ruff·lint-imports 통과 · LLM/DB 호출 0회 |
 | 2026-08-04 | — | 원본 지시서를 이 저장소 맥락으로 옮겨 하네스 계약 작성. `ple_ai.py`·`ple_events_pg_repository.py`·`wrestler_chat_repository.py`·`ple_orm.py`·`ple-ai-scoreboard.tsx`·`.importlinter`·`ontology` 유스케이스 목록을 실측해 델타 8건(§2)·미해결 질문 7건(§13) 도출 | 문서만 작성, 코드 변경 없음 |
