@@ -111,6 +111,7 @@ pnpm-debug.log*
 apps/*/_models/
 apps/*/scripts/*/data/
 apps/vision/tests/*.pt
+apps/ontology/tests/*.pt
 apps/vision/tests/*.jpg
 apps/vision/tests/runs/
 apps/vision/resources/models/*.pt
