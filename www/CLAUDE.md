@@ -7,6 +7,19 @@
 
 ---
 
+<!-- omd:start v=1 hash=672475c77b07 -->
+# Design System (oh-my-design)
+
+The authoritative brand & UI spec is **@./DESIGN.md**.
+Read before any UI/styling/microcopy/motion work.
+
+Preference log (pending corrections): @./.omd/preferences.md
+
+Precedence: DESIGN.md > preferences.md > your defaults.
+<!-- omd:end -->
+
+---
+
 ## 1. 구현 전 사고 — 프론트 적용
 
 - 새 fetch 전 → `lib/api.ts`, `lib/*-api.ts`, [`fastapi/.cursorrules`](../fastapi/.cursorrules) prefix 확인

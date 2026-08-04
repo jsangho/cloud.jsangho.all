@@ -109,7 +109,7 @@ export default function MyInfoPage() {
         </h1>
         <dl className="mt-8 space-y-4 text-sm">
           <InfoRow label="닉네임" value={user.nickname} />
-          <InfoRow label="이메일" value={user.email} />
+          <InfoRow label="이메일" value={user.email ?? "미제공"} />
           <InfoRow label="역할" value={user.role} />
           <InfoRow
             label="로그인 방식"
@@ -183,7 +183,7 @@ function InfoRow({
     <div
       className={
         highlight
-          ? "rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3"
+          ? "rounded-2xl border border-brand-500/25 bg-brand-500/5 px-4 py-3"
           : "rounded-2xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-100/70 dark:bg-stone-900/70 px-4 py-3"
       }
     >
@@ -191,7 +191,7 @@ function InfoRow({
       <dd
         className={
           highlight
-            ? "mt-1 text-lg font-bold tabular-nums text-amber-800 dark:text-amber-100"
+            ? "mt-1 text-lg font-bold tabular-nums text-brand-800 dark:text-brand-100"
             : "mt-1 font-medium text-stone-800 dark:text-stone-100"
         }
       >

@@ -24,7 +24,7 @@ const initialState: PreviewState = {
 };
 
 function rankNumberClass(rank: number) {
-  if (rank === 1) return "font-black text-amber-600 dark:text-amber-300/90";
+  if (rank === 1) return "font-black text-brand-600 dark:text-brand-300/90";
   if (rank <= 3) return "font-bold text-stone-600 dark:text-stone-300";
   return "font-semibold text-stone-500";
 }
@@ -65,13 +65,13 @@ export function LeaderboardPreview({ className }: { className?: string }) {
             순위표
           </p>
           <h3 className="mt-1 flex items-center gap-1.5 text-lg font-bold text-stone-900 dark:text-stone-50">
-            <Trophy className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+            <Trophy className="h-4 w-4 shrink-0 text-brand-400" aria-hidden />
             TOP 5
           </h3>
         </div>
         <Link
           href="/rankings"
-          className="shrink-0 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:underline"
+          className="shrink-0 text-xs font-semibold text-brand-600 dark:text-brand-300 hover:underline"
         >
           전체 보기 →
         </Link>
@@ -79,7 +79,7 @@ export function LeaderboardPreview({ className }: { className?: string }) {
 
       {!isReady || state.loading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-stone-400">
-          <Loader2 className="h-4 w-4 animate-spin text-amber-400/80" />
+          <Loader2 className="h-4 w-4 animate-spin text-brand-400/80" />
           불러오는 중…
         </div>
       ) : state.unavailable ? (
@@ -98,7 +98,7 @@ export function LeaderboardPreview({ className }: { className?: string }) {
               className={cn(
                 "flex items-center justify-between rounded-lg border border-stone-200/40 dark:border-stone-800/40 px-3 py-2",
                 row.nickname === user?.nickname &&
-                  "border-amber-500/30 bg-amber-500/[0.04]",
+                  "border-brand-500/30 bg-brand-500/[0.04]",
               )}
             >
               <div className="flex min-w-0 items-center gap-2.5">

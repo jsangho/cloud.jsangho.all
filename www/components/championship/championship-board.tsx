@@ -34,11 +34,11 @@ const BRAND_ACCENT: Record<
     label: "text-blue-600 dark:text-blue-300/90",
   },
   gold: {
-    border: "border-amber-300/60 dark:border-amber-600/45",
-    glow: "from-amber-50/60 via-stone-50/30 to-stone-50/50 dark:from-amber-950/45 dark:via-stone-950/40 dark:to-stone-950/70",
+    border: "border-brand-300/60 dark:border-brand-600/45",
+    glow: "from-brand-50/60 via-stone-50/30 to-stone-50/50 dark:from-brand-950/45 dark:via-stone-950/40 dark:to-stone-950/70",
     badge:
-      "border-amber-400/50 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-200",
-    label: "text-amber-600 dark:text-amber-300/90",
+      "border-brand-400/50 bg-brand-50 text-brand-700 dark:border-brand-600/50 dark:bg-brand-950/40 dark:text-brand-200",
+    label: "text-brand-600 dark:text-brand-300/90",
   },
   purple: {
     border: "border-violet-300/60 dark:border-violet-700/45",
@@ -53,7 +53,7 @@ function ChampionNameLink({ name }: { name: string }) {
   return (
     <Link
       href={`/records/${encodeURIComponent(name)}`}
-      className="transition-colors hover:text-amber-100 hover:underline hover:underline-offset-2"
+      className="transition-colors hover:text-brand-100 hover:underline hover:underline-offset-2"
     >
       {name}
     </Link>
@@ -135,7 +135,7 @@ function TitleCard({
           </p>
           {isMain ? (
             <Crown
-              className="h-4 w-4 shrink-0 text-amber-400/80 sm:h-5 sm:w-5"
+              className="h-4 w-4 shrink-0 text-brand-400/80 sm:h-5 sm:w-5"
               aria-hidden
             />
           ) : isTag ? (
@@ -150,7 +150,7 @@ function TitleCard({
           {reign.teamName ? (
             <p
               className={cn(
-                "font-sport font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200/85",
+                "font-sport font-bold uppercase tracking-wide text-brand-700 dark:text-brand-200/85",
                 isTag ? "text-sm sm:text-base" : "text-xs",
               )}
             >
@@ -312,7 +312,7 @@ export function ChampionshipBoard() {
   if (state.loading) {
     return (
       <div className="flex items-center justify-center gap-2 rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-100/50 dark:bg-stone-950/50 px-4 py-10 text-sm text-stone-500 dark:text-stone-400">
-        <Loader2 className="h-4 w-4 animate-spin text-amber-400/80" />
+        <Loader2 className="h-4 w-4 animate-spin text-brand-400/80" />
         불러오는 중…
       </div>
     );

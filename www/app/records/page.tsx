@@ -122,7 +122,7 @@ export default function RecordsPage() {
         <section aria-label="선수 목록">
           {state.loading ? (
             <div className="flex items-center justify-center gap-2 rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-100/50 dark:bg-stone-950/50 px-4 py-10 text-sm text-stone-500 dark:text-stone-400">
-              <Loader2 className="h-4 w-4 animate-spin text-amber-400/80" />
+              <Loader2 className="h-4 w-4 animate-spin text-brand-400/80" />
               불러오는 중…
             </div>
           ) : (
@@ -134,12 +134,12 @@ export default function RecordsPage() {
                     className="records-competitor-card group block rounded-xl border px-4 py-3.5"
                   >
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-sm font-bold text-stone-900 dark:text-white transition-colors group-hover:text-amber-50 dark:group-hover:text-amber-50">
+                      <span className="truncate text-sm font-bold text-stone-900 dark:text-white transition-colors group-hover:text-brand-50 dark:group-hover:text-brand-50">
                         {name}
                       </span>
                       <ChampionBeltBadges belts={state.championMap.get(name) ?? []} />
                     </div>
-                    <div className="mt-1 text-xs font-medium text-stone-500 transition-colors group-hover:text-amber-200/70">
+                    <div className="mt-1 text-xs font-medium text-stone-500 transition-colors group-hover:text-brand-200/70">
                       상세 기록 보기 →
                     </div>
                   </Link>

@@ -181,7 +181,7 @@ export function WrestlerChatPanel({ className }: { className?: string }) {
                   className={cn(
                     "max-w-[85%] rounded-2xl border px-4 py-2.5 text-sm leading-relaxed",
                     msg.role === "user"
-                      ? "border-amber-400/30 bg-amber-500/10 text-stone-900 dark:text-stone-50"
+                      ? "border-brand-400/30 bg-brand-500/10 text-stone-900 dark:text-stone-50"
                       : "border-stone-300/50 dark:border-stone-700/50 bg-stone-100/60 dark:bg-stone-800/60 text-stone-800 dark:text-stone-100",
                   )}
                 >

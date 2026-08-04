@@ -1,0 +1,10 @@
+{
+  "design_md_hash": "dee013a95a6f",
+  "targets": {
+    "CLAUDE.md": "672475c77b07",
+    "AGENTS.md": "be71c8d154c9",
+    "../.cursor/rules/omd-design.mdc": "0b5e07316adb"
+  },
+  "updated_at": "2026-08-04T00:00:00Z",
+  "note": "DESIGN.md가 저장소 루트가 아니라 www/에 있다. CLAUDE.md·AGENTS.md shim은 www/ 안에 있어 템플릿의 ./DESIGN.md 상대 경로가 그대로 맞는다. cursor 룰만 저장소 루트 .cursor/rules/에 있어야 하므로 경로를 @www/DESIGN.md로 조정하고 globs를 www/**로 좁혔다."
+}

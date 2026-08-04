@@ -46,7 +46,7 @@ export function NextPleCountdownCard({ className }: { className?: string }) {
         다음 PLE
       </span>
       {days != null && (
-        <span className="absolute right-5 top-5 rounded-full border border-amber-400/40 bg-amber-500/15 px-2.5 py-1 text-xs font-bold tabular-nums text-amber-700 dark:text-amber-300 sm:right-6 sm:top-6">
+        <span className="absolute right-5 top-5 rounded-full border border-brand-400/40 bg-brand-500/15 px-2.5 py-1 text-xs font-bold tabular-nums text-brand-700 dark:text-brand-300 sm:right-6 sm:top-6">
           D-{days}
         </span>
       )}

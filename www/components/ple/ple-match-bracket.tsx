@@ -591,7 +591,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
           <div className="ple-login-callout mt-3 rounded-xl px-4 py-3 text-sm text-stone-700 dark:text-stone-300">
             <Link
               href={`/login?next=${encodeURIComponent(`/ple/${slug}`)}`}
-              className="font-semibold text-amber-400 underline decoration-amber-500/40 underline-offset-2 transition-colors hover:text-amber-300"
+              className="font-semibold text-brand-400 underline decoration-brand-500/40 underline-offset-2 transition-colors hover:text-brand-300"
             >
               로그인
             </Link>
@@ -599,8 +599,8 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
           </div>
         )}
         {ui.offline && (
-          <p className="mt-2 flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-100/60 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-200/90">
-            <span className="shrink-0 font-bold text-amber-400">!</span>
+          <p className="mt-2 flex items-start gap-2 rounded-lg border border-brand-500/25 bg-brand-100/60 dark:bg-brand-950/20 px-3 py-2 text-xs text-brand-700 dark:text-brand-200/90">
+            <span className="shrink-0 font-bold text-brand-400">!</span>
             서버 연결 없음 — 예측 확정은 연결 후 로그인 상태에서만 가능합니다
           </p>
         )}

@@ -13,7 +13,7 @@ const TIER_ICON: Record<ChampionshipTier, typeof Crown> = {
 const ACCENT_CLASS: Record<BrandRoster["accent"], string> = {
   red: "text-red-500 dark:text-red-400",
   blue: "text-blue-500 dark:text-blue-400",
-  gold: "text-amber-500 dark:text-amber-400",
+  gold: "text-brand-500 dark:text-brand-400",
   purple: "text-violet-500 dark:text-violet-400",
 };
 

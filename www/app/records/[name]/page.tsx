@@ -78,7 +78,7 @@ export default function RecordDetailPage() {
         <header className="mb-6">
           <Link
             href="/records"
-            className="text-sm font-semibold text-stone-400 transition-colors hover:text-amber-200/90"
+            className="text-sm font-semibold text-stone-400 transition-colors hover:text-brand-200/90"
           >
             ← 선수 목록
           </Link>
@@ -86,7 +86,7 @@ export default function RecordDetailPage() {
 
         {state.loading ? (
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-100/50 dark:bg-stone-950/50 px-4 py-10 text-sm text-stone-500 dark:text-stone-400">
-            <Loader2 className="h-4 w-4 animate-spin text-amber-400/80" />
+            <Loader2 className="h-4 w-4 animate-spin text-brand-400/80" />
             불러오는 중…
           </div>
         ) : state.missing || !state.profile ? (
@@ -94,7 +94,7 @@ export default function RecordDetailPage() {
             <p>선수 정보를 찾을 수 없습니다.</p>
             <Link
               href="/records"
-              className="mt-4 inline-block text-sm font-semibold text-amber-200/90 hover:text-amber-100"
+              className="mt-4 inline-block text-sm font-semibold text-brand-200/90 hover:text-brand-100"
             >
               선수 목록으로 돌아가기
             </Link>

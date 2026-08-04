@@ -58,7 +58,7 @@ function AiPickBanner({
           "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300",
       )}
     >
-      <span className="font-semibold text-amber-400/90">AI 예측</span>
+      <span className="font-semibold text-brand-400/90">AI 예측</span>
       <span className="mx-1 text-stone-600">·</span>
       <span className="font-medium text-stone-700 dark:text-stone-300">
         {aiPickName}
@@ -153,12 +153,12 @@ function CompetitorPick({
       className={cn(
         "ple-pick-hover relative flex flex-col items-center justify-center gap-1 border-0 bg-transparent transition-all duration-200",
         compact ? "min-h-[56px] px-2 py-2" : "min-h-[80px] flex-1 px-2 py-3",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-amber-400/60",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-400/60",
         outcome === "win" &&
           "bg-emerald-950/50 ring-2 ring-inset ring-emerald-500/70",
         outcome === "loss" && "bg-stone-900/50 opacity-60",
         outcome == null && isSelected && "ple-pick-selected",
-        outcome != null && isSelected && "ring-2 ring-inset ring-amber-400/50",
+        outcome != null && isSelected && "ring-2 ring-inset ring-brand-400/50",
         outcome == null && !isSelected && isOtherSelected && "bg-white/[0.02]",
         outcome == null && !isSelected && locked && "bg-white/[0.02]",
         (locked || resultsLocked) && "cursor-default",
@@ -181,7 +181,7 @@ function CompetitorPick({
         <span
           className={cn(
             "mt-0.5 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white",
-            outcome == null ? "bg-amber-600" : "bg-amber-700",
+            outcome == null ? "bg-brand-600" : "bg-brand-700",
           )}
         >
           {BRACKET_LABELS.myPick}

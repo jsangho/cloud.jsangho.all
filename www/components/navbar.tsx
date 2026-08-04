@@ -22,7 +22,7 @@ function navLinkClass(active: boolean, champion = false) {
     !champion &&
       active &&
       "border-stone-400 bg-stone-300 dark:bg-stone-600 text-stone-900 dark:text-stone-50 hover:bg-stone-300 dark:hover:bg-stone-600 hover:border-stone-400 hover:text-stone-900 dark:hover:text-stone-50",
-    champion && active && "border-amber-400/80 !text-amber-50",
+    champion && active && "border-brand-400/80 !text-brand-50",
   );
 }
 
@@ -118,7 +118,7 @@ export function Navbar() {
       active={isLogin}
       champion
       fullWidth={mobileOpen}
-      icon={<LogIn className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
+      icon={<LogIn className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
     >
       로그인
     </NavLink>
@@ -140,7 +140,7 @@ export function Navbar() {
             href="/rankings"
             active={isRankings}
             champion
-            icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
+            icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
           >
             순위표
           </NavLink>
@@ -200,7 +200,7 @@ export function Navbar() {
               active={isRankings}
               champion
               fullWidth
-              icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />}
+              icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
             >
               순위표
             </NavLink>

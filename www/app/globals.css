@@ -38,6 +38,88 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* KayFabe 브랜드 램프 — Tailwind v4 amber 팔레트와 값이 정확히 같다.
+     TSX의 amber-* 유틸리티를 brand-*로 옮기면서 픽셀 동일성을 지키기 위한
+     기준값이다. 브랜드 골드를 바꿀 땐 이 램프만 고친다.
+     램프는 테마와 무관하므로 :root에만 두고, .dark는 역할만 재지정한다. */
+  --brand-50: #fffbeb;
+  --brand-100: #fef3c6;
+  --brand-200: #fee685;
+  --brand-300: #ffd236;
+  --brand-400: #fcbb00;
+  --brand-500: #f99c00;
+  --brand-600: #dd7400;
+  --brand-700: #b75000;
+  --brand-800: #953d00;
+  --brand-900: #7b3306;
+  --brand-950: #461901;
+
+  /* PLE 이벤트 팔레트 — 이벤트마다 고유 색 정체성이 있고, 브랜드 골드와는
+     별개다(DESIGN.md §2). 브랜드 색을 바꿔도 이 값들은 따라오지 않는다.
+     알파가 자리마다 달라 RGB 트리플릿으로 두고 rgba(var(--x), a)로 쓴다 —
+     color-mix로 바꾸면 합성 결과가 미세하게 달라진다. */
+  --ple-black: 0, 0, 0;
+  --ple-champions-100: 254, 249, 195;
+  --ple-champions-500: 234, 179, 8;
+  --ple-champions-900: 113, 63, 18;
+  --ple-elimination-chamber-100: 241, 245, 249;
+  --ple-elimination-chamber-200: 226, 232, 240;
+  --ple-elimination-chamber-300: 148, 163, 184;
+  --ple-elimination-chamber-400: 161, 161, 170;
+  --ple-elimination-chamber-600: 113, 113, 122;
+  --ple-elimination-chamber-700: 63, 63, 70;
+  --ple-elimination-chamber-800: 39, 39, 42;
+  --ple-elimination-chamber-900: 24, 24, 27;
+  --ple-mitb-100: 220, 252, 231;
+  --ple-mitb-500: 34, 197, 94;
+  --ple-mitb-900: 22, 101, 52;
+  --ple-royal-rumble-100: 254, 226, 226;
+  --ple-royal-rumble-200: 219, 234, 254;
+  --ple-royal-rumble-400: 96, 165, 250;
+  --ple-royal-rumble-500: 239, 68, 68;
+  --ple-royal-rumble-600: 59, 130, 246;
+  --ple-royal-rumble-800: 30, 58, 138;
+  --ple-royal-rumble-900: 127, 29, 29;
+  --ple-summerslam-100: 255, 237, 213;
+  --ple-summerslam-400: 251, 146, 60;
+  --ple-summerslam-600: 249, 115, 22;
+  --ple-summerslam-900: 154, 52, 18;
+  --ple-surface-dark: 15, 23, 42;
+  --ple-surface-light: 248, 250, 252;
+  --ple-tbd-accent: 224, 32, 32;
+  --ple-tbd-neutral: 68, 68, 68;
+  --ple-white: 255, 255, 255;
+  --ple-wrestlemania-100: 254, 243, 199;
+  --ple-wrestlemania-200: 253, 230, 138;
+  --ple-wrestlemania-400: 252, 211, 77;
+  --ple-wrestlemania-500: 251, 191, 36;
+  --ple-wrestlemania-600: 255, 215, 0;
+  --ple-wrestlemania-800: 180, 83, 9;
+  --ple-wrestlemania-900: 120, 53, 15;
+
+  /* 메탈릭 골드 — .btn-champion(챔피언 버튼) 전용 가족이고 램프 밖이다.
+     벨트의 금속 질감을 내는 자리라 램프의 주황 계열과 색이 다르다.
+     원래 값이 테마와 무관했으므로 :root에만 둔다(.dark가 상속). */
+  --brand-metal: 212, 175, 55;
+  --brand-metal-hi: 255, 215, 0;
+  --brand-metal-ink: #fde68a;
+  --brand-metal-ink-hi: #fffbeb;
+  --brand-metal-surface-a: 42, 32, 8;
+  --brand-metal-surface-b: 28, 22, 6;
+  --brand-metal-surface-a-hi: 58, 44, 10;
+  --brand-metal-surface-b-hi: 36, 28, 8;
+  --brand-link: rgb(var(--brand-metal));
+  --live: #e02020;
+  --info: #3b82f6;
+
+  /* 시맨틱 역할 (라이트) — 흰 배경에서 대비를 확보하려 램프 아래쪽을 쓴다. */
+  --brand: var(--brand-600);
+  --brand-hover: var(--brand-700);
+  --brand-deep: var(--brand-800);
+
+  --primary: var(--brand);
+  --primary-foreground: #0c0a09;
 }
 
 .dark {
@@ -73,6 +155,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* 다크가 KayFabe의 기본 테마다. 액션 색은 램프의 밝은 끝을 쓴다 —
+     근흑색 캔버스 위에서 대비를 확보하는 쪽이 이 방향이다.
+     램프 자체와 --brand-link·--live·--info는 :root에서 상속한다. */
+  --brand: var(--brand-400);
+  --brand-hover: var(--brand-500);
+  --brand-deep: var(--brand-700);
+
+  --primary: var(--brand);
+  --primary-foreground: #0c0a09;
 }
 
 @theme inline {
@@ -119,6 +211,26 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* KayFabe 브랜드 유틸리티 — bg-brand-400 / text-brand / bg-live / text-info …
+     컴포넌트는 amber-* 나 hex 대신 이 이름을 쓴다 (DESIGN.md §9). */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-brand: var(--brand);
+  --color-brand-link: var(--brand-link);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-deep: var(--brand-deep);
+  --color-live: var(--live);
+  --color-info: var(--info);
 }
 
 @layer base {
@@ -187,16 +299,17 @@
   }
 
   .btn-champion {
-    border-color: rgba(212, 175, 55, 0.55) !important;
+    border-color: color-mix(in srgb, var(--brand-link) 55%, transparent) !important;
     background: linear-gradient(
       135deg,
-      rgba(42, 32, 8, 0.9) 0%,
-      rgba(28, 22, 6, 0.95) 100%
+      rgba(var(--brand-metal-surface-a), 0.9) 0%,
+      rgba(var(--brand-metal-surface-b), 0.95) 100%
     ) !important;
-    color: #fde68a !important;
+    color: var(--brand-metal-ink) !important;
+    /* 글로우는 엘리베이션이 아니라 발광이다 (DESIGN.md §6) */
     box-shadow:
-      0 0 16px rgba(212, 175, 55, 0.15),
-      inset 0 1px 0 rgba(255, 215, 0, 0.12);
+      0 0 16px color-mix(in srgb, var(--brand-link) 15%, transparent),
+      inset 0 1px 0 rgba(var(--brand-metal-hi), 0.12);
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease,
@@ -204,16 +317,16 @@
   }
 
   .btn-champion:hover {
-    border-color: rgba(255, 215, 0, 0.65) !important;
+    border-color: rgba(var(--brand-metal-hi), 0.65) !important;
     background: linear-gradient(
       135deg,
-      rgba(58, 44, 10, 0.95) 0%,
-      rgba(36, 28, 8, 1) 100%
+      rgba(var(--brand-metal-surface-a-hi), 0.95) 0%,
+      rgba(var(--brand-metal-surface-b-hi), 1) 100%
     ) !important;
-    color: #fffbeb !important;
+    color: var(--brand-metal-ink-hi) !important;
     box-shadow:
-      0 0 24px rgba(255, 215, 0, 0.28),
-      inset 0 1px 0 rgba(255, 215, 0, 0.2);
+      0 0 24px rgba(var(--brand-metal-hi), 0.28),
+      inset 0 1px 0 rgba(var(--brand-metal-hi), 0.2);
     transform: translateY(-1px);
   }
 
@@ -511,208 +624,210 @@
     animation: wwe-live-pulse 1.6s ease-in-out infinite;
   }
 
+  /* LIVE 맥박은 DESIGN.md §15의 유일한 모션 예외다 — 장식이 아니라 상태 정보다.
+     레드는 --live 토큰 하나로 통일한다 (기존 #ef4444 → #e02020). */
   @keyframes wwe-live-pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 60%, transparent);
     }
     70% {
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+      box-shadow: 0 0 0 6px transparent;
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      box-shadow: 0 0 0 0 transparent;
     }
   }
 
   .ple-card--royal-rumble {
     background: linear-gradient(
       145deg,
-      rgba(219, 234, 254, 0.75) 0%,
-      rgba(248, 250, 252, 0.9) 45%,
-      rgba(254, 226, 226, 0.55) 100%
+      rgba(var(--ple-royal-rumble-200), 0.75) 0%,
+      rgba(var(--ple-surface-light), 0.9) 45%,
+      rgba(var(--ple-royal-rumble-100), 0.55) 100%
     );
-    border-color: rgba(59, 130, 246, 0.4);
+    border-color: rgba(var(--ple-royal-rumble-600), 0.4);
   }
 
   .dark .ple-card--royal-rumble {
     background: linear-gradient(
       145deg,
-      rgba(30, 58, 138, 0.35) 0%,
-      rgba(15, 23, 42, 0.85) 45%,
-      rgba(127, 29, 29, 0.25) 100%
+      rgba(var(--ple-royal-rumble-800), 0.35) 0%,
+      rgba(var(--ple-surface-dark), 0.85) 45%,
+      rgba(var(--ple-royal-rumble-900), 0.25) 100%
     );
-    border-color: rgba(59, 130, 246, 0.35);
+    border-color: rgba(var(--ple-royal-rumble-600), 0.35);
   }
 
   .ple-card--royal-rumble:hover {
-    border-color: rgba(59, 130, 246, 0.65);
+    border-color: rgba(var(--ple-royal-rumble-600), 0.65);
     box-shadow:
-      0 16px 48px -12px rgba(59, 130, 246, 0.25),
-      0 0 28px rgba(239, 68, 68, 0.15);
+      0 16px 48px -12px rgba(var(--ple-royal-rumble-600), 0.25),
+      0 0 28px rgba(var(--ple-royal-rumble-500), 0.15);
   }
 
   .dark .ple-card--royal-rumble:hover {
-    border-color: rgba(96, 165, 250, 0.65);
+    border-color: rgba(var(--ple-royal-rumble-400), 0.65);
     box-shadow:
-      0 16px 48px -12px rgba(30, 58, 138, 0.5),
-      0 0 28px rgba(239, 68, 68, 0.25);
+      0 16px 48px -12px rgba(var(--ple-royal-rumble-800), 0.5),
+      0 0 28px rgba(var(--ple-royal-rumble-500), 0.25);
   }
 
   .ple-card--elimination-chamber {
     background: linear-gradient(
       160deg,
-      rgba(241, 245, 249, 0.95) 0%,
-      rgba(248, 250, 252, 0.9) 50%,
-      rgba(226, 232, 240, 0.7) 100%
+      rgba(var(--ple-elimination-chamber-100), 0.95) 0%,
+      rgba(var(--ple-surface-light), 0.9) 50%,
+      rgba(var(--ple-elimination-chamber-200), 0.7) 100%
     );
-    border-color: rgba(148, 163, 184, 0.45);
+    border-color: rgba(var(--ple-elimination-chamber-300), 0.45);
     background-image:
       repeating-linear-gradient(
         90deg,
         transparent,
         transparent 8px,
-        rgba(0, 0, 0, 0.02) 8px,
-        rgba(0, 0, 0, 0.02) 9px
+        rgba(var(--ple-black), 0.02) 8px,
+        rgba(var(--ple-black), 0.02) 9px
       ),
       linear-gradient(
         160deg,
-        rgba(241, 245, 249, 0.95) 0%,
-        rgba(248, 250, 252, 0.9) 100%
+        rgba(var(--ple-elimination-chamber-100), 0.95) 0%,
+        rgba(var(--ple-surface-light), 0.9) 100%
       );
   }
 
   .dark .ple-card--elimination-chamber {
     background: linear-gradient(
       160deg,
-      rgba(39, 39, 42, 0.95) 0%,
-      rgba(24, 24, 27, 0.9) 50%,
-      rgba(63, 63, 70, 0.4) 100%
+      rgba(var(--ple-elimination-chamber-800), 0.95) 0%,
+      rgba(var(--ple-elimination-chamber-900), 0.9) 50%,
+      rgba(var(--ple-elimination-chamber-700), 0.4) 100%
     );
-    border-color: rgba(113, 113, 122, 0.45);
+    border-color: rgba(var(--ple-elimination-chamber-600), 0.45);
     background-image:
       repeating-linear-gradient(
         90deg,
         transparent,
         transparent 8px,
-        rgba(255, 255, 255, 0.02) 8px,
-        rgba(255, 255, 255, 0.02) 9px
+        rgba(var(--ple-white), 0.02) 8px,
+        rgba(var(--ple-white), 0.02) 9px
       ),
       linear-gradient(
         160deg,
-        rgba(39, 39, 42, 0.95) 0%,
-        rgba(24, 24, 27, 0.9) 100%
+        rgba(var(--ple-elimination-chamber-800), 0.95) 0%,
+        rgba(var(--ple-elimination-chamber-900), 0.9) 100%
       );
   }
 
   .ple-card--elimination-chamber:hover {
-    border-color: rgba(148, 163, 184, 0.7);
+    border-color: rgba(var(--ple-elimination-chamber-300), 0.7);
     box-shadow:
-      0 16px 48px -12px rgba(0, 0, 0, 0.15),
-      0 0 24px rgba(148, 163, 184, 0.15);
+      0 16px 48px -12px rgba(var(--ple-black), 0.15),
+      0 0 24px rgba(var(--ple-elimination-chamber-300), 0.15);
   }
 
   .dark .ple-card--elimination-chamber:hover {
-    border-color: rgba(161, 161, 170, 0.7);
+    border-color: rgba(var(--ple-elimination-chamber-400), 0.7);
     box-shadow:
-      0 16px 48px -12px rgba(0, 0, 0, 0.7),
-      0 0 24px rgba(161, 161, 170, 0.15);
+      0 16px 48px -12px rgba(var(--ple-black), 0.7),
+      0 0 24px rgba(var(--ple-elimination-chamber-400), 0.15);
   }
 
   .ple-card--wrestlemania {
     background: linear-gradient(
       135deg,
-      rgba(254, 243, 199, 0.8) 0%,
-      rgba(248, 250, 252, 0.9) 40%,
-      rgba(253, 230, 138, 0.55) 100%
+      rgba(var(--ple-wrestlemania-100), 0.8) 0%,
+      rgba(var(--ple-surface-light), 0.9) 40%,
+      rgba(var(--ple-wrestlemania-200), 0.55) 100%
     );
-    border-color: rgba(251, 191, 36, 0.5);
+    border-color: rgba(var(--ple-wrestlemania-500), 0.5);
   }
 
   .dark .ple-card--wrestlemania {
     background: linear-gradient(
       135deg,
-      rgba(120, 53, 15, 0.45) 0%,
-      rgba(15, 23, 42, 0.88) 40%,
-      rgba(180, 83, 9, 0.3) 100%
+      rgba(var(--ple-wrestlemania-900), 0.45) 0%,
+      rgba(var(--ple-surface-dark), 0.88) 40%,
+      rgba(var(--ple-wrestlemania-800), 0.3) 100%
     );
-    border-color: rgba(251, 191, 36, 0.4);
+    border-color: rgba(var(--ple-wrestlemania-500), 0.4);
   }
 
   .ple-card--wrestlemania:hover {
-    border-color: rgba(251, 191, 36, 0.75);
+    border-color: rgba(var(--ple-wrestlemania-500), 0.75);
     box-shadow:
-      0 16px 48px -12px rgba(180, 83, 9, 0.2),
-      0 0 36px rgba(255, 215, 0, 0.15);
+      0 16px 48px -12px rgba(var(--ple-wrestlemania-800), 0.2),
+      0 0 36px rgba(var(--ple-wrestlemania-600), 0.15);
   }
 
   .dark .ple-card--wrestlemania:hover {
-    border-color: rgba(252, 211, 77, 0.75);
+    border-color: rgba(var(--ple-wrestlemania-400), 0.75);
     box-shadow:
-      0 16px 48px -12px rgba(180, 83, 9, 0.45),
-      0 0 36px rgba(255, 215, 0, 0.22);
+      0 16px 48px -12px rgba(var(--ple-wrestlemania-800), 0.45),
+      0 0 36px rgba(var(--ple-wrestlemania-600), 0.22);
   }
 
   .ple-card--summerslam {
     background: linear-gradient(
       145deg,
-      rgba(255, 237, 213, 0.8),
-      rgba(248, 250, 252, 0.9)
+      rgba(var(--ple-summerslam-100), 0.8),
+      rgba(var(--ple-surface-light), 0.9)
     );
-    border-color: rgba(249, 115, 22, 0.4);
+    border-color: rgba(var(--ple-summerslam-600), 0.4);
   }
 
   .dark .ple-card--summerslam {
     background: linear-gradient(
       145deg,
-      rgba(154, 52, 18, 0.35),
-      rgba(15, 23, 42, 0.9)
+      rgba(var(--ple-summerslam-900), 0.35),
+      rgba(var(--ple-surface-dark), 0.9)
     );
-    border-color: rgba(249, 115, 22, 0.35);
+    border-color: rgba(var(--ple-summerslam-600), 0.35);
   }
 
   .ple-card--summerslam:hover {
-    border-color: rgba(249, 115, 22, 0.65);
-    box-shadow: 0 0 28px rgba(249, 115, 22, 0.15);
+    border-color: rgba(var(--ple-summerslam-600), 0.65);
+    box-shadow: 0 0 28px rgba(var(--ple-summerslam-600), 0.15);
   }
 
   .dark .ple-card--summerslam:hover {
-    border-color: rgba(251, 146, 60, 0.6);
-    box-shadow: 0 0 28px rgba(249, 115, 22, 0.25);
+    border-color: rgba(var(--ple-summerslam-400), 0.6);
+    box-shadow: 0 0 28px rgba(var(--ple-summerslam-600), 0.25);
   }
 
   .ple-card--mitb {
     background: linear-gradient(
       145deg,
-      rgba(220, 252, 231, 0.75),
-      rgba(248, 250, 252, 0.9)
+      rgba(var(--ple-mitb-100), 0.75),
+      rgba(var(--ple-surface-light), 0.9)
     );
-    border-color: rgba(34, 197, 94, 0.35);
+    border-color: rgba(var(--ple-mitb-500), 0.35);
   }
 
   .dark .ple-card--mitb {
     background: linear-gradient(
       145deg,
-      rgba(22, 101, 52, 0.35),
-      rgba(15, 23, 42, 0.9)
+      rgba(var(--ple-mitb-900), 0.35),
+      rgba(var(--ple-surface-dark), 0.9)
     );
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: rgba(var(--ple-mitb-500), 0.3);
   }
 
   .ple-card--champions {
     background: linear-gradient(
       145deg,
-      rgba(254, 249, 195, 0.75),
-      rgba(248, 250, 252, 0.9)
+      rgba(var(--ple-champions-100), 0.75),
+      rgba(var(--ple-surface-light), 0.9)
     );
-    border-color: rgba(234, 179, 8, 0.4);
+    border-color: rgba(var(--ple-champions-500), 0.4);
   }
 
   .dark .ple-card--champions {
     background: linear-gradient(
       145deg,
-      rgba(113, 63, 18, 0.4),
-      rgba(15, 23, 42, 0.9)
+      rgba(var(--ple-champions-900), 0.4),
+      rgba(var(--ple-surface-dark), 0.9)
     );
-    border-color: rgba(234, 179, 8, 0.35);
+    border-color: rgba(var(--ple-champions-500), 0.35);
   }
 
   .ple-card--tbd {
@@ -721,10 +836,10 @@
 
   .ple-card--tbd:hover {
     transform: translateY(-3px) scale(1.01);
-    border-color: rgba(68, 68, 68, 0.8);
+    border-color: rgba(var(--ple-tbd-neutral), 0.8);
     box-shadow:
-      0 8px 24px -8px rgba(0, 0, 0, 0.5),
-      0 0 12px rgba(224, 32, 32, 0.08);
+      0 8px 24px -8px rgba(var(--ple-black), 0.5),
+      0 0 12px rgba(var(--ple-tbd-accent), 0.08);
   }
 
   .ple-section-glow {
@@ -755,30 +870,30 @@
   }
 
   .ple-hero-banner--rumble {
-    border-color: rgba(59, 130, 246, 0.35);
+    border-color: rgba(var(--ple-royal-rumble-600), 0.35);
     box-shadow:
-      0 0 48px -12px rgba(59, 130, 246, 0.25),
-      0 0 64px -16px rgba(239, 68, 68, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      0 0 48px -12px rgba(var(--ple-royal-rumble-600), 0.25),
+      0 0 64px -16px rgba(var(--ple-royal-rumble-500), 0.2),
+      inset 0 1px 0 rgba(var(--ple-white), 0.06);
   }
 
   .ple-hero-banner--chamber {
-    border-color: rgba(113, 113, 122, 0.45);
+    border-color: rgba(var(--ple-elimination-chamber-600), 0.45);
     background-image: repeating-linear-gradient(
       90deg,
       transparent,
       transparent 10px,
-      rgba(255, 255, 255, 0.02) 10px,
-      rgba(255, 255, 255, 0.02) 11px
+      rgba(var(--ple-white), 0.02) 10px,
+      rgba(var(--ple-white), 0.02) 11px
     );
-    box-shadow: 0 0 40px -14px rgba(161, 161, 170, 0.2);
+    box-shadow: 0 0 40px -14px rgba(var(--ple-elimination-chamber-400), 0.2);
   }
 
   .ple-hero-banner--mania {
-    border-color: rgba(251, 191, 36, 0.35);
+    border-color: rgba(var(--ple-wrestlemania-500), 0.35);
     box-shadow:
-      0 0 56px -12px rgba(251, 191, 36, 0.22),
-      inset 0 1px 0 rgba(255, 215, 0, 0.08);
+      0 0 56px -12px rgba(var(--ple-wrestlemania-500), 0.22),
+      inset 0 1px 0 rgba(var(--ple-wrestlemania-600), 0.08);
   }
 
   .ple-match-card {

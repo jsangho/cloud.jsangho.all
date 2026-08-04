@@ -48,7 +48,7 @@ function badgeClass(result: CompetitorMatchRecord["result"]) {
     case "pending":
       return "border-stone-700/70 bg-stone-950/30 text-stone-200";
     case "no-contest":
-      return "border-amber-700/60 bg-amber-950/30 text-amber-200";
+      return "border-brand-700/60 bg-brand-950/30 text-brand-200";
   }
 }
 
@@ -61,7 +61,7 @@ function accentClass(result: CompetitorMatchRecord["result"]) {
     case "pending":
       return "border-l-stone-500";
     case "no-contest":
-      return "border-l-amber-500";
+      return "border-l-brand-500";
   }
 }
 
@@ -180,7 +180,7 @@ function NameChip({ name, highlight }: { name: string; highlight?: boolean }) {
       className={cn(
         "inline-flex rounded-lg border px-2 py-0.5 text-[11px] font-semibold",
         highlight
-          ? "border-amber-600/50 bg-amber-950/30 text-amber-100"
+          ? "border-brand-600/50 bg-brand-950/30 text-brand-100"
           : "border-stone-300/70 dark:border-stone-700/70 bg-stone-100/40 dark:bg-stone-950/40 text-stone-700 dark:text-stone-200",
       )}
     >
@@ -215,12 +215,12 @@ function MatchRecordCard({
               {match.format}
             </span>
             {isTitle ? (
-              <span className="rounded-md border border-amber-700/60 bg-amber-950/30 px-2 py-0.5 text-[10px] font-extrabold text-amber-200">
+              <span className="rounded-md border border-brand-700/60 bg-brand-950/30 px-2 py-0.5 text-[10px] font-extrabold text-brand-200">
                 타이틀
               </span>
             ) : null}
             {match.wasChampion ? (
-              <span className="rounded-md border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-[10px] font-extrabold text-amber-200">
+              <span className="rounded-md border border-brand-700/50 bg-brand-950/30 px-2 py-0.5 text-[10px] font-extrabold text-brand-200">
                 챔피언
               </span>
             ) : null}
@@ -345,7 +345,7 @@ export function CompetitorRecordView({
         weightKg={profile.weightKg}
       />
 
-      <section className="rounded-2xl border border-amber-700/40 bg-amber-950/10 p-4">
+      <section className="rounded-2xl border border-brand-700/40 bg-brand-950/10 p-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-sm font-extrabold text-stone-900 dark:text-stone-50">
@@ -358,21 +358,21 @@ export function CompetitorRecordView({
         </div>
 
         {titleHistory.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-dashed border-amber-800/40 px-4 py-6 text-sm text-stone-300">
+          <div className="mt-3 rounded-xl border border-dashed border-brand-800/40 px-4 py-6 text-sm text-stone-300">
             벨트 획득 기록이 없습니다.
           </div>
         ) : (
           <div className="mt-4 space-y-4">
-            <div className="rounded-xl border border-amber-800/40 bg-stone-950/20 p-3">
+            <div className="rounded-xl border border-brand-800/40 bg-stone-950/20 p-3">
               <p className="text-xs font-bold text-stone-400">벨트별 획득</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {titleBeltCounts.map(([belt, count]) => (
                   <span
                     key={belt}
-                    className="inline-flex items-center gap-2 rounded-lg border border-amber-800/40 bg-amber-950/20 px-2.5 py-1 text-xs font-semibold text-amber-100"
+                    className="inline-flex items-center gap-2 rounded-lg border border-brand-800/40 bg-brand-950/20 px-2.5 py-1 text-xs font-semibold text-brand-100"
                   >
-                    <span className="text-amber-100">{belt}</span>
-                    <span className="rounded-md bg-amber-900/30 px-1.5 py-0.5 text-[11px] font-extrabold text-amber-200">
+                    <span className="text-brand-100">{belt}</span>
+                    <span className="rounded-md bg-brand-900/30 px-1.5 py-0.5 text-[11px] font-extrabold text-brand-200">
                       {count}
                     </span>
                   </span>
@@ -380,7 +380,7 @@ export function CompetitorRecordView({
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-800/40 bg-stone-950/20 p-3">
+            <div className="rounded-xl border border-brand-800/40 bg-stone-950/20 p-3">
               <button
                 type="button"
                 onClick={() =>
@@ -398,7 +398,7 @@ export function CompetitorRecordView({
                 </span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 shrink-0 text-amber-200/70 transition-transform duration-200",
+                    "h-4 w-4 shrink-0 text-brand-200/70 transition-transform duration-200",
                     state.titleHistoryOpen && "rotate-180",
                   )}
                   aria-hidden
@@ -466,9 +466,9 @@ export function CompetitorRecordView({
               {profile.summary.losses}
             </div>
           </div>
-          <div className="rounded-xl border border-amber-700/60 bg-amber-950/20 px-3 py-2">
-            <div className="text-[11px] font-bold text-amber-200/80">무효</div>
-            <div className="text-sm font-extrabold text-amber-200">
+          <div className="rounded-xl border border-brand-700/60 bg-brand-950/20 px-3 py-2">
+            <div className="text-[11px] font-bold text-brand-200/80">무효</div>
+            <div className="text-sm font-extrabold text-brand-200">
               {profile.summary.noContest}
             </div>
           </div>
