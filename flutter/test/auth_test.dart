@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jsh_flutter/auth.dart';
+import 'package:kayfabe/auth.dart';
 
 /// 메모리 저장소 — 실제 Keychain/Keystore 없이 돌리기 위한 대체품.
 class _MemoryStorage implements AuthStorage {

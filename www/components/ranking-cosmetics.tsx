@@ -9,7 +9,7 @@ import type { CosmeticItem } from "@/lib/rankings-api";
  * 이 표에도 넣어야 한다.
  */
 const NICKNAME_COLOR_CLASSES: Readonly<Record<string, string>> = {
-  nickname_color_gold: "text-amber-600 dark:text-amber-300",
+  nickname_color_gold: "text-brand-600 dark:text-brand-300",
   nickname_color_crimson: "text-red-600 dark:text-red-400",
   nickname_color_azure: "text-sky-600 dark:text-sky-400",
   nickname_color_emerald: "text-emerald-600 dark:text-emerald-400",

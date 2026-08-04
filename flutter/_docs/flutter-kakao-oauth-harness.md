@@ -232,7 +232,7 @@
 
 ### F1. 의존성·플랫폼 설정
 - [x] §4.1 패키지 추가 + `uuid` (`flutter pub add`)
-- [x] `applicationId` = **`cloud.jsangho.jsh_flutter`** (2026-08-03 확정). `namespace`·`MainActivity` 패키지와 모두 일치한다. ⚠️ 카카오 콘솔에 등록할 패키지명이 이 값이다 — 런타임 패키지명은 `namespace`가 아니라 `applicationId`다
+- [x] `applicationId` = **`cloud.jsangho.kayfabe`** (2026-08-04 앱명 변경. 이전 값 `cloud.jsangho.jsh_flutter`). `namespace`·`MainActivity` 패키지와 모두 일치한다. ⚠️ 카카오 콘솔에 등록할 패키지명이 이 값이다 — 런타임 패키지명은 `namespace`가 아니라 `applicationId`다. **콘솔 재등록 전까지 Android 카카오 로그인이 막힌다**
 - [x] Android 커스텀 스킴 — `AuthCodeHandlerActivity`에 intent-filter 추가. 스킴 값은 `build.gradle.kts`의 `manifestPlaceholders["kakaoNativeAppKey"]`로 주입하며, `-PKAKAO_NATIVE_APP_KEY` 또는 `android/local.properties`의 `kakao.nativeAppKey`에서 읽는다
   - **검증함**: `flutter build apk --debug` 성공, 병합된 매니페스트에 intent-filter가 들어갔고 `-PKAKAO_NATIVE_APP_KEY=abc123testkey`로 돌리면 `android:scheme="kakaoabc123testkey"`로 치환된다. 키가 비면 `android:scheme="kakao"`가 되어 **리다이렉트가 돌아오지 않는다**
 - [x] `<queries>` — SDK(`kakao_flutter_sdk_common`)가 자체 매니페스트로 카카오톡 패키지 가시성을 이미 제공한다. 앱에서 중복 선언하지 않았다 (병합 결과에 `com.kakao.talk`·`.alpha`·`.sandbox` 확인)
@@ -351,7 +351,8 @@ flutter test
 ## 11. 미해결 질문 (구현 중 발견 시 여기에 기록하고 중단)
 
 - [ ] **iOS 검증** — 프로젝트와 설정은 만들었으나 **맥이 없어 빌드·실행을 한 번도 못 했다.** 아래 참조.
-- [x] **`applicationId`** — `cloud.jsangho.jsh_flutter`로 확정 (2026-08-03). `namespace`·`MainActivity` 패키지와 일치한다.
+- [x] **`applicationId`** — `cloud.jsangho.kayfabe` (2026-08-04 앱명을 `KayFabe`로 바꾸며 변경). `namespace`·`MainActivity` 패키지와 일치한다. 표시명은 `KayFabe`지만 **패키지 식별자는 소문자를 유지한다** — Dart 패키지명은 `lowercase_with_underscores`만 허용되고, 역DNS 식별자도 소문자가 관례다.
+- [ ] **카카오 콘솔 재등록** — 2026-08-04 앱명 변경으로 Android 패키지명·iOS 번들 ID가 바뀌었다. 콘솔 [플랫폼]에서 Android 패키지명을 `cloud.jsangho.kayfabe`로, iOS 번들 ID를 `cloud.jsangho.kayfabe`로 고치기 전까지 카카오 로그인이 동작하지 않는다. **키 해시는 서명 키에서 파생되므로 변경 불필요** — 패키지명과 무관하다.
 - [x] **`lib/` 구조** — 사용자 지시대로 `lib/auth.dart` 단일 파일에 모았다. 파일이 600줄을 넘어 더 커지면 그때 쪼갠다.
 - [x] **상태 관리** — 라이브러리를 새로 넣지 않고 `ChangeNotifier` + `InheritedNotifier`(`AuthScope`)로 처리했다.
 - [ ] **API 호스트** — `AuthConfig.apiBaseUrl` 기본값을 `https://auth.jsangho.cloud`로 뒀다. **추정값이다.** auth 컨테이너는 포트 미노출이고 cloudflared 라우팅에 달려 있어, 실기기 검증 전에 실제 노출 호스트를 확인해야 한다(백엔드 문서 §13).
@@ -368,7 +369,7 @@ flutter test
 | 항목 | 값 |
 |---|---|
 | 프로젝트 생성 | `flutter create --platforms=ios --org cloud.jsangho .` — 43개 파일 |
-| Bundle ID | `cloud.jsangho.jshFlutter` (iOS는 언더스코어 불가라 Flutter가 camelCase로 변환. Android `applicationId`와 달라도 무방하다) |
+| Bundle ID | `cloud.jsangho.kayfabe` (2026-08-04 변경. 생성 당시엔 `cloud.jsangho.jshFlutter` — Flutter가 언더스코어를 camelCase로 바꾼 값이었다) |
 | `IPHONEOS_DEPLOYMENT_TARGET` | `13.0` — 카카오 SDK 요구치와 동일. 다른 플러그인 최대 요구치도 13.0이라 충돌 없음 |
 | `Info.plist` | 커스텀 스킴 + `kakaokompassauth` 등록, `plistlib`로 파싱 검증 |
 | `dart analyze` · `flutter test` | 통과 (생성 후에도 회귀 없음) |
@@ -381,7 +382,7 @@ flutter test
    카카오 SDK의 iOS 플러그인은 `scene(_:openURLContexts:)`로 리다이렉트를 받는데,
    Flutter의 SceneDelegate가 이를 플러그인에 전달하는지 **실기기에서 확인해야 한다.**
    여기서 끊기면 로그인 후 앱으로 돌아오지 못한다 — iOS에서 가장 깨지기 쉬운 지점이다
-4. 카카오 콘솔에 **iOS 플랫폼(번들 ID `cloud.jsangho.jshFlutter`) 등록**
+4. 카카오 콘솔에 **iOS 플랫폼(번들 ID `cloud.jsangho.kayfabe`) 등록**
 5. §8 시나리오 전체
 
 **맥이 없을 때의 대안**: GitHub Actions의 `macos-latest` 러너나 Codemagic 같은 CI로
@@ -401,6 +402,7 @@ flutter test
 | 2026-08-03 | F4·F6 잔여 | `AccountScreen` 신설 — 계정 정보·기기 목록·로그아웃/모든 기기 로그아웃. `MainMenuScreen`에 "계정" 진입점 추가 | `dart analyze` 무결점, `flutter test` 18건 통과 |
 | 2026-08-03 | F1 (iOS) | iOS 프로젝트 생성 + `Info.plist` 커스텀 스킴·`kakaokompassauth` 설정 | 정적 검증만 통과. **빌드·실행 미검증(맥 없음)** — §11-2 |
 | 2026-08-03 | F1 | `applicationId`를 `com.example.jsh_flutter` → `cloud.jsangho.jsh_flutter`로 확정 | `namespace`·`MainActivity` 패키지와 3중 일치. APK 재빌드로 확인 |
+| 2026-08-04 | 앱명 변경 | 앱명 `jsh_flutter` → **`KayFabe`**. 표시명(Android label·`CFBundleName`/`CFBundleDisplayName`·web title/manifest·Windows 리소스)은 `KayFabe`, Dart 패키지명은 규칙상 소문자 `kayfabe`, `applicationId`·`namespace`·`MainActivity` 패키지·iOS 번들 ID는 `cloud.jsangho.kayfabe`로 통일 | `dart analyze`·`flutter test` 통과. ⚠️ **카카오 콘솔 재등록 필요** (Android 패키지명·iOS 번들 ID. 키 해시는 서명 키 기준이라 그대로) |
 
 ### 실기기 검증 전에 반드시 채워야 하는 값
 

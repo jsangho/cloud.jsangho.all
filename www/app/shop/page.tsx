@@ -73,7 +73,7 @@ function WalletStrip({ wallet }: { wallet: Wallet }) {
             className={cn(
               "mt-1 text-lg font-bold tabular-nums sm:text-xl",
               cell.highlight
-                ? "text-amber-600 dark:text-amber-300"
+                ? "text-brand-600 dark:text-brand-300"
                 : "text-stone-700 dark:text-stone-200",
             )}
           >
@@ -110,7 +110,7 @@ function ItemCard({
             {item.name}
           </h3>
         </div>
-        <span className="shrink-0 rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-xs font-bold tabular-nums text-amber-700 dark:text-amber-200">
+        <span className="shrink-0 rounded-full border border-brand-500/35 bg-brand-500/10 px-2 py-1 text-xs font-bold tabular-nums text-brand-700 dark:text-brand-200">
           {formatPoints(item.price)} P
         </span>
       </div>
@@ -129,7 +129,7 @@ function ItemCard({
           "mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition",
           owned || disabled
             ? "cursor-not-allowed border border-stone-300/70 dark:border-stone-700/70 text-stone-400"
-            : "bg-amber-500 text-stone-950 hover:bg-amber-400",
+            : "bg-brand-500 text-stone-950 hover:bg-brand-400",
         )}
       >
         {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
@@ -170,7 +170,7 @@ function InventoryRow({
         className={cn(
           "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition",
           entry.isEquipped
-            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+            ? "border-brand-500/40 bg-brand-500/10 text-brand-700 dark:text-brand-200"
             : "border-stone-300/70 dark:border-stone-700/70 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200",
         )}
       >
@@ -184,7 +184,7 @@ function InventoryRow({
 export default function ShopPage() {
   const { user, isReady } = useAuth();
   const [state, setState] = useState<ShopPageState>(initialState);
-  const token = user?.token;
+  const isSignedIn = user != null;
 
   useEffect(() => {
     if (!isReady) return;
@@ -195,15 +195,15 @@ export default function ShopPage() {
     void (async () => {
       const [items, wallet, inventory] = await Promise.all([
         fetchShopItems(),
-        token ? fetchWallet(token) : Promise.resolve(null),
-        token ? fetchInventory(token) : Promise.resolve([]),
+        isSignedIn ? fetchWallet() : Promise.resolve(null),
+        isSignedIn ? fetchInventory() : Promise.resolve([]),
       ]);
       if (cancelled) return;
       setState((prev) => ({
         ...prev,
         loading: false,
         // 로그인 상태에서 지갑을 못 받아 오면 백엔드가 응답하지 않는 것으로 본다.
-        unavailable: Boolean(token) && wallet === null,
+        unavailable: isSignedIn && wallet === null,
         items,
         wallet,
         inventory,
@@ -213,19 +213,19 @@ export default function ShopPage() {
     return () => {
       cancelled = true;
     };
-  }, [isReady, token]);
+  }, [isReady, isSignedIn]);
 
   const handleBuy = useCallback(
     (item: ShopItem) => {
-      if (!token) return;
+      if (!isSignedIn) return;
       setState((prev) => ({ ...prev, pending: item.code, notice: null }));
 
       void (async () => {
         try {
-          const receipt = await purchaseShopItem(token, item.code);
+          const receipt = await purchaseShopItem(item.code);
           const [wallet, inventory] = await Promise.all([
-            fetchWallet(token),
-            fetchInventory(token),
+            fetchWallet(),
+            fetchInventory(),
           ]);
           setState((prev) => ({
             ...prev,
@@ -252,20 +252,20 @@ export default function ShopPage() {
         }
       })();
     },
-    [token],
+    [isSignedIn],
   );
 
   const handleToggleEquip = useCallback(
     (entry: InventoryItem) => {
-      if (!token) return;
+      if (!isSignedIn) return;
       const key = `inventory:${entry.id}`;
       setState((prev) => ({ ...prev, pending: key, notice: null }));
 
       void (async () => {
-        const updated = await setItemEquipped(token, entry.id, !entry.isEquipped);
+        const updated = await setItemEquipped(entry.id, !entry.isEquipped);
         // 장착하면 서버가 같은 카테고리의 다른 아이템을 함께 내린다. 응답 한 건만
         // 반영하면 내려간 아이템이 화면에 계속 "장착 중"으로 남으므로 다시 읽는다.
-        const refreshed = updated ? await fetchInventory(token) : [];
+        const refreshed = updated ? await fetchInventory() : [];
         setState((prev) => ({
           ...prev,
           pending: null,
@@ -275,7 +275,7 @@ export default function ShopPage() {
         }));
       })();
     },
-    [token],
+    [isSignedIn],
   );
 
   const { loading, unavailable, items, wallet, inventory, pending, notice } = state;
@@ -327,7 +327,7 @@ export default function ShopPage() {
           </div>
         ) : items.length === 0 ? (
           <div className="rankings-panel ple-section-glow flex flex-col items-center gap-3 rounded-2xl px-4 py-16 text-center sm:rounded-3xl">
-            <ShoppingBag className="h-8 w-8 text-amber-400/80" aria-hidden />
+            <ShoppingBag className="h-8 w-8 text-brand-400/80" aria-hidden />
             <p className="text-sm font-medium text-stone-400">
               판매 중인 상품이 아직 없습니다. 준비되면 이곳에 표시됩니다.
             </p>

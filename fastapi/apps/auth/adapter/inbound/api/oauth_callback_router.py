@@ -59,12 +59,10 @@ async def _complete_login(
     )
 
     frontend_url = get_keymaker().get_secret("FRONTEND_URL", "http://localhost:3000")
-    params = urlencode({"token": token, "next": next_path})
+    # **토큰을 URL에 싣지 않는다.** 쿼리스트링은 브라우저 히스토리·Referer 헤더·
+    # 중간 서버 로그에 그대로 남는다. 액세스 토큰은 아래 httpOnly 쿠키로만 간다.
+    params = urlencode({"next": next_path})
     response = RedirectResponse(f"{frontend_url}/login/oauth-callback?{params}")
-
-    # httpOnly 쿠키로도 함께 내려보낸다. 프론트가 쿠키 방식으로 넘어갈 때까지
-    # 쿼리스트링 토큰을 유지해 한쪽만 배포돼도 로그인이 끊기지 않게 한다.
-    # 프론트 전환이 끝나면 위 `token` 파라미터를 지운다.
     set_access_cookie(response, token, max_age=ACCESS_TOKEN_EXPIRES_SECONDS)
     return response
 

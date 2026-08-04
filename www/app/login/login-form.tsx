@@ -153,15 +153,16 @@ export function LoginForm() {
       }
 
       const profile = parseUserProfile(data);
-      if (!profile || typeof data?.token !== "string" || !data.token) {
+      if (!profile) {
         authFailureAlert(false, null);
         return;
       }
 
+      // 액세스 토큰은 서버가 응답과 함께 httpOnly 쿠키로 심는다 —
+      // 응답 본문의 token은 더 이상 프론트가 보관하지 않는다.
       const authUser: AuthUser = {
         ...profile,
         loginId: profile.loginId || userId,
-        token: data.token,
       };
       saveAuthUser(authUser);
       router.push(readNextPath());

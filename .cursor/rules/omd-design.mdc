@@ -1,0 +1,18 @@
+---
+description: Authoritative brand & UI design system. Read DESIGN.md before UI work.
+globs:
+  - "www/**/*.tsx"
+  - "www/**/*.jsx"
+  - "www/**/*.css"
+  - "www/**/components/**"
+  - "www/app/**/page.*"
+alwaysApply: false
+---
+
+<!-- omd:start v=1 hash=0b5e07316adb -->
+The authoritative design spec lives at `@www/DESIGN.md`. Open and read before generating/modifying UI.
+
+Pending preference corrections: `@www/.omd/preferences.md`.
+
+Precedence: DESIGN.md > preferences.md > framework defaults.
+<!-- omd:end -->

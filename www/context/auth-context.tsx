@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchUserProfile } from "@/lib/auth-api";
+import { fetchMyProfile, logoutSession } from "@/lib/auth-api";
 
 export type AuthUser = {
   /** 로그인 API userId — 예측·순위 집계에 필요 */
@@ -18,22 +18,29 @@ export type AuthUser = {
   loginId?: string;
   /** 내비·순위표에 표시하는 이름 */
   nickname: string;
-  email: string;
+  /** 카카오 이메일은 선택 동의라 없을 수 있다 — 화면 필수 요소로 만들지 않는다 */
+  email?: string;
   role: string;
   /** SNS 로그인 제공자(naver/kakao/google) — 이메일/비밀번호 로그인이면 undefined */
   oauthProvider?: string;
-  /** 서버가 검증하는 JWT 액세스 토큰 — 보호된 API 호출 시 Authorization 헤더로 전달 */
-  token: string;
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
   isReady: boolean;
+  /** 로그인 직후 프로필을 반영한다. 토큰은 서버가 쿠키로 관리하므로 받지 않는다. */
   login: (user: AuthUser) => void;
   logout: () => void;
+  /** 서버에 현재 세션을 다시 물어 상태를 맞춘다 (OAuth 팝업 복귀 등). */
+  refresh: () => Promise<AuthUser | null>;
 };
 
-const AUTH_STORAGE_KEY = "kayfabe-auth";
+/**
+ * 표시용 프로필 캐시. **토큰은 들어가지 않는다** — 액세스 토큰은 httpOnly
+ * 쿠키에만 있고 JS가 읽을 수 없다. 이 값은 첫 화면을 빠르게 그리기 위한
+ * 캐시일 뿐이고, 진짜 로그인 여부는 항상 서버(`/auth/me`)가 정한다.
+ */
+const PROFILE_CACHE_KEY = "kayfabe-profile";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -44,15 +51,16 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof u.id === "number" &&
     typeof u.nickname === "string" &&
     u.nickname.length > 0 &&
-    typeof u.email === "string" &&
-    typeof u.role === "string" &&
-    typeof u.token === "string" &&
-    u.token.length > 0
+    typeof u.role === "string"
   );
 }
 
-function persistUser(user: AuthUser) {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+function cacheProfile(user: AuthUser | null) {
+  if (user) {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(PROFILE_CACHE_KEY);
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,32 +71,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function hydrate() {
+      // ① 캐시로 즉시 그린다 (깜빡임 방지). 아직 확정 아님.
       try {
-        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (!raw) return;
-        const parsed: unknown = JSON.parse(raw);
-        if (!isAuthUser(parsed)) {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          return;
-        }
-        setUser(parsed);
-
-        const fresh = await fetchUserProfile(parsed.id, parsed.token);
-        if (cancelled) return;
-        if (!fresh) {
-          // 토큰이 만료·무효 — 세션 종료
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-          setUser(null);
-          return;
-        }
-        const nextUser: AuthUser = { ...fresh, token: parsed.token };
-        setUser(nextUser);
-        persistUser(nextUser);
+        const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        if (isAuthUser(parsed)) setUser(parsed);
+        else localStorage.removeItem(PROFILE_CACHE_KEY);
       } catch {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      } finally {
-        if (!cancelled) setIsReady(true);
+        localStorage.removeItem(PROFILE_CACHE_KEY);
       }
+
+      // ② 서버가 최종 판정한다. 쿠키가 없거나 만료면 null.
+      const fresh = await fetchMyProfile();
+      if (cancelled) return;
+      setUser(fresh);
+      cacheProfile(fresh);
+      setIsReady(true);
     }
 
     void hydrate();
@@ -98,16 +96,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((nextUser: AuthUser) => {
-    persistUser(nextUser);
+    cacheProfile(nextUser);
     setUser(nextUser);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    // 서버 응답을 기다리지 않고 화면부터 로그아웃 상태로 만든다 —
+    // 서버가 느리거나 죽어도 사용자에게는 로그아웃이 되어야 한다.
+    cacheProfile(null);
     setUser(null);
+    void logoutSession();
   }, []);
 
-  const value = useMemo(() => ({ user, isReady, login, logout }), [user, isReady, login, logout]);
+  const refresh = useCallback(async () => {
+    const fresh = await fetchMyProfile();
+    setUser(fresh);
+    cacheProfile(fresh);
+    return fresh;
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, isReady, login, logout, refresh }),
+    [user, isReady, login, logout, refresh],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

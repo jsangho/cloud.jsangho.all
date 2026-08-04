@@ -27,7 +27,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(100, 50);
   Win32Window::Size size(393, 851);
-  if (!window.Create(L"jsh_flutter", origin, size)) {
+  if (!window.Create(L"KayFabe", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

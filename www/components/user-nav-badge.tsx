@@ -26,7 +26,7 @@ export function UserNavBadge({ user, className }: { user: AuthUser; className?: 
     setState({ status: "loading" });
 
     void (async () => {
-      const wallet = await fetchWallet(user.token);
+      const wallet = await fetchWallet();
       if (cancelled) return;
       setState(wallet === null ? { status: "error" } : { status: "ok", points: wallet.balance });
     })();
@@ -34,7 +34,7 @@ export function UserNavBadge({ user, className }: { user: AuthUser; className?: 
     return () => {
       cancelled = true;
     };
-  }, [user.token]);
+  }, [user.id]);
 
   const displayName = authDisplayName(user);
   const label = pointsLabel(state);
@@ -50,7 +50,7 @@ export function UserNavBadge({ user, className }: { user: AuthUser; className?: 
       <span className="max-w-[7rem] truncate font-semibold text-stone-900 dark:text-stone-100">
         {displayName}
       </span>
-      <span className="inline-flex shrink-0 items-center rounded-full border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-amber-700 dark:text-amber-200">
+      <span className="inline-flex shrink-0 items-center rounded-full border border-brand-500/35 bg-brand-500/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-brand-700 dark:text-brand-200">
         <span className="sr-only">보유 포인트 </span>P: {label}
       </span>
     </span>

@@ -37,26 +37,26 @@ function rankRowClass(rank: number, isMe: boolean) {
     return cn(
       base,
       "rankings-row-first",
-      isMe && "ring-1 ring-inset ring-amber-400/20",
+      isMe && "ring-1 ring-inset ring-brand-400/20",
     );
   }
   if (rank === 2 || rank === 3) {
     return cn(
       base,
       "bg-stone-900/15",
-      isMe && "bg-amber-500/[0.04] ring-1 ring-inset ring-amber-500/15",
+      isMe && "bg-brand-500/[0.04] ring-1 ring-inset ring-brand-500/15",
     );
   }
   return cn(
     base,
-    isMe && "bg-amber-500/[0.04] ring-1 ring-inset ring-amber-500/15",
+    isMe && "bg-brand-500/[0.04] ring-1 ring-inset ring-brand-500/15",
   );
 }
 
 function rankNumberClass(rank: number) {
   const base = "text-sm tabular-nums";
   if (rank === 1)
-    return cn(base, "font-black text-amber-600 dark:text-amber-300/90");
+    return cn(base, "font-black text-brand-600 dark:text-brand-300/90");
   if (rank <= 3)
     return cn(base, "font-bold text-stone-600 dark:text-stone-300");
   return cn(base, "font-semibold text-stone-500");
@@ -90,7 +90,7 @@ function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
         </span>
         <RankingBadgeTag item={row.badge} className="ml-1.5" />
         {isMe && (
-          <span className="ml-2 rounded-md border border-amber-500/25 bg-amber-100 dark:bg-amber-950/30 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:text-amber-200/90">
+          <span className="ml-2 rounded-md border border-brand-500/25 bg-brand-100 dark:bg-brand-950/30 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-brand-700 dark:text-brand-200/90">
             나
           </span>
         )}
@@ -216,7 +216,7 @@ export default function RankingsPage() {
 
         {!isReady || state.loading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-stone-400">
-            <Loader2 className="h-4 w-4 animate-spin text-amber-400/80" />
+            <Loader2 className="h-4 w-4 animate-spin text-brand-400/80" />
             불러오는 중…
           </div>
         ) : state.unavailable ? (

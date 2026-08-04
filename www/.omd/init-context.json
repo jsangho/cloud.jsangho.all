@@ -1,0 +1,28 @@
+{
+  "reference_id": "twitch",
+  "description": "www — Next.js 16 App Router + Tailwind v4 + shadcn/ui (new-york, neutral, cssVariables). 기존 WWE/Kayfabe 스포츠 엔터테인먼트 테마가 globals.css에 raw 리터럴로 흩어져 있음. 목표: Tailwind + shadcn 토큰으로 스타일링을 통일하는 DESIGN.md 하네스 수립.",
+  "mode": "inspired",
+  "delta_set": {
+    "axes": {
+      "color.hue_deg": -222,
+      "color.saturation_pct": 0,
+      "color.lightness_pct": -15,
+      "surface.lightness_pct": -93
+    },
+    "voiceHints": [],
+    "matchedKeywords": [
+      "bold",
+      "dark",
+      "dense",
+      "immersive"
+    ],
+    "warnings": [
+      "axes는 브랜드 액션 색(twitch #9146ff → KayFabe #fcbb00) 기준 시프트다. 실제 적용은 수식이 아니라 기존 코드 값 승격으로 했다 — 사용자 선택 2안. 역할별 승격 근거는 DESIGN.md 하단 omd:attribution 표 참조.",
+      "골드 램프는 Tailwind v4 amber 값과 동일하다. 초판은 globals.css의 raw rgba(v3 계열)에서 뽑았으나, 앱 골드의 다수(TSX 169곳)가 v4 amber 유틸리티였으므로 그쪽으로 기준을 옮겼다. 정정 경위는 DESIGN.md 하단 참조.",
+      "surface.lightness_pct -93은 캔버스 반전(#f7f7f8 → #0a0a0c)이다. 표준 axes 키가 아니라 이 프로젝트 확장 키이며, 잉크는 반대 방향(+92)으로 함께 뒤집힌다.",
+      "radius 스케일은 twitch 구조(2/4/8/9000)를 DESIGN.md에 유지했으나 코드는 여전히 shadcn 기본(--radius: 0.625rem)이다. 이번 정렬 범위 밖.",
+      "globals.css의 raw rgba 골드 19곳은 아직 램프와 불일치한다."
+    ]
+  },
+  "bootstrapped_at": "2026-08-04"
+}

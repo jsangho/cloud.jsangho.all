@@ -45,6 +45,7 @@ from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from fastapi.middleware.cors import CORSMiddleware
 from heyman.adapter.inbound.api import manager_router
 from lion_king.adapter.inbound.api.v1.photo_router import photo_router
+from lion_king.adapter.inbound.api.v1.receipt_router import receipt_router
 from pydantic import BaseModel, Field
 from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
@@ -129,6 +130,7 @@ app.include_router(manager_router, prefix="/api")
 app.include_router(ontology_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
 app.include_router(photo_router, prefix="/api")
+app.include_router(receipt_router, prefix="/api")
 app.include_router(soccer_router, prefix="/api")
 
 

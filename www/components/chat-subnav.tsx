@@ -20,7 +20,7 @@ export function ChatSubnav({ active }: { active: "wwe" | "langchain" }) {
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-medium transition-colors",
               isActive
-                ? "border-amber-400/70 bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                ? "border-brand-400/70 bg-brand-500/15 text-brand-600 dark:text-brand-300"
                 : "border-stone-300/60 dark:border-stone-700/60 bg-stone-100/40 dark:bg-stone-900/40 text-stone-600 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800/60",
             )}
           >

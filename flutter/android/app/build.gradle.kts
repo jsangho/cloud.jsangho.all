@@ -24,7 +24,7 @@ val kakaoNativeAppKey: String = (project.findProperty("KAKAO_NATIVE_APP_KEY") as
     }
 
 android {
-    namespace = "cloud.jsangho.jsh_flutter"
+    namespace = "cloud.jsangho.kayfabe"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -36,7 +36,7 @@ android {
     defaultConfig {
         // 카카오 콘솔에 등록하는 패키지명이 이 값이다 — 런타임 패키지명은 namespace가
         // 아니라 applicationId다. 바꾸면 콘솔 재등록 + 기존 설치본과 단절이 생긴다.
-        applicationId = "cloud.jsangho.jsh_flutter"
+        applicationId = "cloud.jsangho.kayfabe"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

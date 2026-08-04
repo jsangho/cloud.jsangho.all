@@ -204,13 +204,13 @@ function MatchResultRow({
                     className={cn(
                       "rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors",
                       selected
-                        ? "border-amber-500/80 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-100"
+                        ? "border-brand-500/80 bg-brand-100 dark:bg-brand-950/50 text-brand-800 dark:text-brand-100"
                         : "border-stone-300 dark:border-stone-600 bg-stone-100/60 dark:bg-stone-900/60 text-stone-700 dark:text-stone-300 hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800",
                     )}
                   >
                     {competitor.name}
                     {competitor.isChampion && (
-                      <span className="ml-1 text-xs text-amber-400">(C)</span>
+                      <span className="ml-1 text-xs text-brand-400">(C)</span>
                     )}
                   </button>
                 );
@@ -227,13 +227,13 @@ function MatchResultRow({
                     className={cn(
                       "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                       selected
-                        ? "border-amber-500/80 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-100"
+                        ? "border-brand-500/80 bg-brand-100 dark:bg-brand-950/50 text-brand-800 dark:text-brand-100"
                         : "border-stone-300 dark:border-stone-600 bg-stone-100/60 dark:bg-stone-900/60 text-stone-700 dark:text-stone-300 hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-200 dark:hover:bg-stone-800",
                     )}
                   >
                     {c.name}
                     {c.isChampion && (
-                      <span className="ml-1 text-xs text-amber-400">(C)</span>
+                      <span className="ml-1 text-xs text-brand-400">(C)</span>
                     )}
                   </button>
                 );
@@ -398,7 +398,7 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
     <div className="space-y-4">
       <PleResultsAdminGate onAdminChange={setCanEdit} />
       {syncError && (
-        <p className="rounded-lg border border-amber-500/60 bg-amber-100/60 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+        <p className="rounded-lg border border-brand-500/60 bg-brand-100/60 dark:bg-brand-950/30 px-4 py-3 text-sm text-brand-800 dark:text-brand-200">
           서버 연결 없음 — 결과를 등록하려면 백엔드가 실행 중이어야 합니다. (
           {syncError})
         </p>
@@ -451,7 +451,7 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
                   className={cn(
                     "rounded-lg px-6 py-2.5 text-sm font-bold transition-colors",
                     canSubmit && !ui.submitting
-                      ? "bg-amber-600 text-stone-950 hover:bg-amber-500"
+                      ? "bg-brand-600 text-stone-950 hover:bg-brand-500"
                       : "cursor-not-allowed bg-stone-200 dark:bg-stone-700 text-stone-500",
                   )}
                 >

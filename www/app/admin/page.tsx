@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useAuth } from "@/context/auth-context";
-import { authHeader } from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -294,7 +293,7 @@ function TotalMembersCard() {
         </div>
         <div>
           <p className="text-[10px] text-stone-400">이번 주 신규</p>
-          <p className="text-sm font-bold text-amber-400">+186</p>
+          <p className="text-sm font-bold text-brand-400">+186</p>
         </div>
       </div>
     </div>
@@ -361,7 +360,7 @@ function RevenueCard() {
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold text-stone-100">매출</p>
           <p className="text-xl font-bold text-stone-50">$32,209</p>
-          <span className="flex items-center gap-0.5 rounded-full bg-amber-500/15 border border-amber-500/25 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+          <span className="flex items-center gap-0.5 rounded-full bg-brand-500/15 border border-brand-500/25 px-2 py-0.5 text-[10px] font-bold text-brand-400">
             <TrendingUp className="h-3 w-3" /> +22%
           </span>
         </div>
@@ -431,7 +430,7 @@ function LeadsManagementCard() {
       <div className="grid grid-cols-2 gap-2.5">
         {[
           { label: "미처리", count: "114", color: "text-stone-100" },
-          { label: "진행 중", count: "62", color: "text-amber-400" },
+          { label: "진행 중", count: "62", color: "text-brand-400" },
           { label: "실패", count: "47", color: "text-red-400" },
           { label: "성공", count: "38", color: "text-emerald-400" },
         ].map(({ label, count, color }) => (
@@ -453,7 +452,7 @@ function RetentionRateCard() {
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-stone-100">유지율</h3>
-          <p className="text-[10px] font-medium text-amber-400">95% +12% 전월 대비</p>
+          <p className="text-[10px] font-medium text-brand-400">95% +12% 전월 대비</p>
         </div>
         <div className="flex gap-1">
           {["중소기업", "스타트업", "대기업"].map((t) => (
@@ -509,7 +508,7 @@ function TeamActivityCard() {
             item.icon === "calendar"
               ? { Icon: Calendar, cls: "text-red-400 bg-red-500/10" }
               : item.icon === "mail"
-                ? { Icon: Mail, cls: "text-amber-400 bg-amber-500/10" }
+                ? { Icon: Mail, cls: "text-brand-400 bg-brand-500/10" }
                 : { Icon: Phone, cls: "text-stone-300 bg-stone-700/40" };
           return (
             <div key={i} className="flex items-center gap-3">
@@ -538,7 +537,6 @@ type Suggestion = { name: string; email: string };
 
 function EmailComposeCard() {
   const { status } = useSession();
-  const { user } = useAuth();
   const isGoogleLinked = status === "authenticated";
 
   const [to, setTo] = useState("");
@@ -555,7 +553,6 @@ function EmailComposeCard() {
     if (!value) return;
     debounceRef.current = setTimeout(async () => {
       const res = await fetch(`/api/contacts?q=${encodeURIComponent(value)}`, {
-        headers: authHeader(user?.token),
       });
       if (res.ok) setSuggestions(await res.json());
     }, 300);
@@ -574,7 +571,6 @@ function EmailComposeCard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...authHeader(user?.token),
         },
         body: JSON.stringify({ to, subject, body }),
       });
@@ -729,7 +725,6 @@ function EmailComposeCard() {
 // ── 텔레그램 작성 ─────────────────────────────────────────────────────────────
 
 function TelegramComposeCard() {
-  const { user } = useAuth();
   const [chatId, setChatId] = useState("");
   const [message, setMessage] = useState("");
   const [sendState, setSendState] = useState<SendState>("idle");
@@ -745,7 +740,6 @@ function TelegramComposeCard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...authHeader(user?.token),
         },
         body: JSON.stringify({ chatId, message }),
       });
@@ -834,7 +828,6 @@ type ReceiverEmail = {
 };
 
 function ReceiverPanel() {
-  const { user } = useAuth();
   const [emails, setEmails] = useState<ReceiverEmail[]>([]);
   const [selected, setSelected] = useState<ReceiverEmail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -843,7 +836,6 @@ function ReceiverPanel() {
     setLoading(true);
     try {
       const res = await fetch("/api/receiver", {
-        headers: authHeader(user?.token),
       });
       if (res.ok) setEmails(await res.json());
     } finally {
@@ -860,7 +852,6 @@ function ReceiverPanel() {
     if (!email.is_read) {
       const res = await fetch(`/api/receiver/${email.id}/read`, {
         method: "PATCH",
-        headers: authHeader(user?.token),
       });
       if (res.ok) {
         setEmails((prev) => prev.map((e) => (e.id === email.id ? { ...e, is_read: true } : e)));
@@ -984,7 +975,6 @@ type ContactItem = {
 };
 
 function AddressBookPanel() {
-  const { user } = useAuth();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [resetting, setResetting] = useState(false);
@@ -992,7 +982,6 @@ function AddressBookPanel() {
   const fetchContacts = async () => {
     try {
       const res = await fetch("/api/contacts/list", {
-        headers: authHeader(user?.token),
       });
       if (res.ok) setContacts(await res.json());
     } catch {}
@@ -1013,7 +1002,6 @@ function AddressBookPanel() {
     try {
       await fetch("/api/contacts/list", {
         method: "DELETE",
-        headers: authHeader(user?.token),
       });
       setContacts([]);
     } finally {

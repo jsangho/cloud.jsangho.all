@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { authHeader } from "@/lib/api";
 
 type UploadState = { kind: "empty" } | { kind: "ready"; fileName: string; text: string };
 
@@ -26,8 +25,7 @@ export function ContactsCsvUpload() {
 
         const res = await fetch("/api/contacts/upload", {
           method: "POST",
-          headers: authHeader(user?.token),
-          body: form,
+            body: form,
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) {

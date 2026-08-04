@@ -100,7 +100,7 @@ export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
           </Link>
           <Link
             href="/ple"
-            className="rounded-lg border border-stone-300/70 dark:border-white/15 bg-stone-100/50 dark:bg-white/5 px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-200 backdrop-blur-sm transition-colors hover:border-amber-500/30 hover:text-stone-900 dark:hover:text-white"
+            className="rounded-lg border border-stone-300/70 dark:border-white/15 bg-stone-100/50 dark:bg-white/5 px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-200 backdrop-blur-sm transition-colors hover:border-brand-500/30 hover:text-stone-900 dark:hover:text-white"
           >
             다른 PLE 보기
           </Link>
