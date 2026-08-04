@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from kayfabe.adapter.inbound.api.v1.ai_prediction_router import ai_prediction_router
 from kayfabe.adapter.inbound.api.v1.ple_events_router import ple_events_router
 from kayfabe.adapter.inbound.api.v1.ple_match_pick_router import ple_match_pick_router
 from kayfabe.adapter.inbound.api.v1.ple_matches_router import ple_matches_router
@@ -10,6 +11,7 @@ from kayfabe.adapter.inbound.api.v1.wrestler_chat_router import wrestler_chat_ro
 
 kayfabe_router = APIRouter(tags=["kayfabe"])
 kayfabe_router.include_router(ple_events_router)
+kayfabe_router.include_router(ai_prediction_router)
 kayfabe_router.include_router(ple_match_pick_router)
 kayfabe_router.include_router(ple_matches_router)
 kayfabe_router.include_router(shop_router)
