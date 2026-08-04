@@ -93,10 +93,7 @@ function rumbleWinner(
     id,
     title,
     cardVariant,
-    [
-      ...topFive.map((name) => ({ name })),
-      { name: BRACKET_LABELS.rumbleOther },
-    ],
+    [...topFive.map((name) => ({ name })), { name: BRACKET_LABELS.rumbleOther }],
     [...odds],
   );
 }
@@ -123,13 +120,7 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       "rr26-women-rumble",
       "Women's Royal Rumble Match",
       "sideA",
-      [
-        "Charlotte Flair",
-        "Liv Morgan",
-        "Tiffany Stratton",
-        "Rhea Ripley",
-        "Becky Lynch",
-      ],
+      ["Charlotte Flair", "Liv Morgan", "Tiffany Stratton", "Rhea Ripley", "Becky Lynch"],
       [4.5, 5.5, 6.0, 8.0, 9.5, 12.0],
     ),
     rumbleWinner(
@@ -233,11 +224,7 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       "sad26-women",
       "NXT Women's Championship",
       "sideB",
-      [
-        { name: "Lola Vice" },
-        { name: "Jacy Jayne", isChampion: true },
-        { name: "Kendal Grey" },
-      ],
+      [{ name: "Lola Vice" }, { name: "Jacy Jayne", isChampion: true }, { name: "Kendal Grey" }],
       [2.5, 2.2, 4.0],
     ),
     mm(
@@ -474,11 +461,7 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       "noc26-undisputed",
       "Undisputed WWE Championship",
       "sideA",
-      [
-        { name: "Cody Rhodes", isChampion: true },
-        { name: "Gunther" },
-        { name: "Sami Zayn" },
-      ],
+      [{ name: "Cody Rhodes", isChampion: true }, { name: "Gunther" }, { name: "Sami Zayn" }],
       [1.17, 7.0, 4.0],
     ),
     m2(
@@ -542,31 +525,104 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ),
   ],
 
-  /** WWE SummerSlam 2026.8.1-2 미니애폴리스 U.S. Bank Stadium — 2026-07-01 기준 공식 확정 카드만 반영 (나머지는 미확정) */
+  /**
+   * WWE SummerSlam 2026.8.1-2 미니애폴리스 U.S. Bank Stadium — 방송 종료 후 실제 카드 12경기.
+   * 배당은 Sky Bet 프리쇼 라인(소수 환산). 공개 배당을 찾지 못한 경기는 1.9/1.9 중립값이고,
+   * 다인전은 배당을 넣지 않았다 — 없는 값을 지어내지 않는다.
+   */
   summerslam: [
     m2(
-      "ss26-whc",
-      "World Heavyweight Championship",
-      "sideA",
-      { name: "Roman Reigns", isChampion: true },
-      { name: "Seth Rollins" },
-      { left: 1.9, right: 1.9 },
-    ),
-    m2(
-      "ss26-women-world",
+      "ss26-n1-women-world",
       "Women's World Championship",
-      "sideB",
+      "sideA",
       { name: "Liv Morgan", isChampion: true },
       { name: "IYO SKY" },
+      { left: 1.73, right: 1.91 },
+    ),
+    m2(
+      "ss26-n1-six-man",
+      "Six-Man Tag Match",
+      "sideB",
+      { name: "LA Knight, Solo Sikoa & Royce Keys" },
+      { name: "The Bloodline" },
       { left: 1.9, right: 1.9 },
     ),
     m2(
-      "ss26-hiac",
-      "Hell in a Cell Match",
+      "ss26-n1-gunther-aldis",
+      "Single Match",
       "sideA",
-      { name: "Brock Lesnar" },
-      { name: "Oba Femi" },
+      { name: "Gunther" },
+      { name: "Nick Aldis" },
       { left: 1.9, right: 1.9 },
+    ),
+    m2(
+      "ss26-n1-six-woman",
+      "Six-Woman Tag Match",
+      "sideB",
+      { name: "Fatal Influence" },
+      { name: "The Bella Twins & Paige" },
+      { left: 1.9, right: 1.9 },
+    ),
+    m2(
+      "ss26-n1-undisputed",
+      "Undisputed WWE Championship",
+      "sideA",
+      { name: "CM Punk", isChampion: true },
+      { name: "Cody Rhodes" },
+      { left: 1.22, right: 4.33 },
+    ),
+    m2(
+      "ss26-n1-hiac",
+      "Hell in a Cell Match",
+      "sideB",
+      { name: "Oba Femi" },
+      { name: "Brock Lesnar" },
+      { left: 1.04, right: 8.5 },
+    ),
+    mm("ss26-n2-contender", "Undisputed WWE Championship — No.1 Contender Fatal 4-Way", "sideA", [
+      { name: "Kevin Owens" },
+      { name: "Finn Bálor" },
+      { name: "Gunther" },
+      { name: "Sami Zayn" },
+    ]),
+    m2(
+      "ss26-n2-us",
+      "WWE United States Championship",
+      "sideB",
+      { name: "Trick Williams", isChampion: true },
+      { name: "Baron Corbin" },
+      { left: 1.3, right: 3.25 },
+    ),
+    mm("ss26-n2-women-ladder", "Interim WWE Women's Championship — Ladder Match", "sideA", [
+      { name: "Chelsea Green" },
+      { name: "Charlotte Flair" },
+      { name: "Jade Cargill" },
+      { name: "Lash Legend" },
+      { name: "Tiffany Stratton" },
+    ]),
+    m2(
+      "ss26-n2-pole",
+      "Human Monies on a Pole Match",
+      "sideB",
+      { name: "Danhausen" },
+      { name: "Dominik Mysterio" },
+      { left: 1.9, right: 1.9 },
+    ),
+    m2(
+      "ss26-n2-ic",
+      "WWE Intercontinental Championship",
+      "sideA",
+      { name: "Penta", isChampion: true },
+      { name: "Chad Gable" },
+      { left: 5.0, right: 1.14 },
+    ),
+    m2(
+      "ss26-n2-whc",
+      "World Heavyweight Championship",
+      "sideB",
+      { name: "Roman Reigns", isChampion: true },
+      { name: "Seth Rollins" },
+      { left: 1.14, right: 5.0 },
     ),
   ],
 
