@@ -291,7 +291,12 @@ export type ReceiptDraft = {
 
 | 상태 | 상황 | 화면 동작 |
 |---|---|---|
-| 401 | 세션 만료 | 로그인 유도로 전환. `auth-context`의 `refresh()`를 한 번 시도한 뒤에도 실패하면 안내 |
+| 401 | 세션 만료 | 로그인 유도로 전환. **`refresh()`를 부르지 않는다** — 이 결정은 2026-08-04에 뒤집혔다(아래) |
+
+> **§8-401 정정 (2026-08-04).** 원래 이 표는 "`auth-context`의 `refresh()`를 한 번 시도"하라고 적었지만,
+> `refresh()`는 `/auth/me`가 한 번 실패하기만 해도 `setUser(null)`로 **전역 세션을 지운다**(`context/auth-context.tsx`).
+> 그래서 목록 401 하나가 다른 화면까지 로그아웃시키는 사고가 실제로 났다. 데이터 엔드포인트의 401은
+> 화면 안에서만 처리하고, 세션 판정은 `auth-context`에 맡긴다.
 | 404 | 없는 키 / 남의 키 | "영수증 이미지를 찾을 수 없습니다." 카드를 목록에서 제거하고 목록을 다시 부른다 |
 | 422 | 영수증이 아님 | "영수증을 인식하지 못했습니다. 다시 촬영해 주세요." — **재시도 버튼을 주지 않는다** (같은 이미지로 다시 해도 같다) |
 | 503 | 보관소·OCR 일시 장애 | 문구 + **[다시 시도]** 버튼 |
@@ -368,4 +373,5 @@ www에는 테스트 러너가 없다 — 위 세 명령이 그 자리를 대신�
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
 | 2026-08-04 | — | 원본 지시서(Flutter 대상)를 `www` 맥락으로 옮겨 하네스 계약 작성. `lib/api.ts`·`lib/shop-api.ts`·`context/auth-context.tsx`·`components/titanic-vision-upload.tsx`·`package.json`·`next.config.mjs` 실측 후 델타 7건(§2)·미해결 질문 6건(§13) 도출. **목록 엔드포인트 부재로 프론트 단독 착수 불가**를 확인 | 문서만 작성, 코드 변경 없음 |
+| 2026-08-04 | 사후 | 배포 후 "가계부 페이지에 들어가면 로그아웃" 신고. 원인은 **`login-form.tsx`의 로그인 fetch에 `credentials: "include"`가 빠져** 교차 출처 응답의 `Set-Cookie`가 버려진 것 — 로그인은 200인데 이후 모든 API가 401이었다(`/api/shop/wallet`도 같은 증상). 가계부 화면이 그 401에 `refresh()`로 반응해 전역 로그아웃까지 갔다. 로그인 요청에 `credentials`를 넣고, 데이터 401은 화면 안에서만 처리하도록 §8을 정정 | `pnpm type-check`·`pnpm lint` 무오류 · EC2 backend/auth 로그로 401 원인 확인 |
 | 2026-08-04 | T2~T6 | `lib/api.ts`에 `receiptsBaseUrl` 1줄 · `lib/receipt-api.ts`(타입 + 목록/OCR 호출) · `components/ledger/*` 3종 · `app/lesson/ledger/page.tsx`. 상태는 판별 유니온, OCR 타임아웃은 `ocrTimeoutMs = 60000` 별도 상수. FastAPI 기본 영문 detail(`Not Found` 등)은 걸러 한국어 문구로 대체 | `pnpm type-check` 무오류 · `pnpm lint` 에러 0 · Prettier 적용 · `/lesson/ledger` 200 렌더 |

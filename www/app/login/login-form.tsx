@@ -131,6 +131,10 @@ export function LoginForm() {
         headers: {
           "Content-Type": "application/json",
         },
+        // 이게 없으면 교차 출처(jsangho.cloud → auth.jsangho.cloud) 응답의
+        // Set-Cookie를 브라우저가 버린다. 로그인은 200인데 이후 모든 API가
+        // 401이 되는 원인이었다.
+        credentials: "include",
         signal: controller.signal,
         body: JSON.stringify({ userId, password }),
       });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ReceiptCard, type ReceiptCardState } from "@/components/ledger/receipt-card";
 import { useAuth } from "@/context/auth-context";
@@ -49,22 +49,22 @@ function CardSkeleton() {
 }
 
 export default function LessonLedgerPage() {
-  const { user, isReady, refresh } = useAuth();
+  const { user, isReady } = useAuth();
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [ocr, setOcr] = useState<OcrState>({ kind: "idle" });
   const [notice, setNotice] = useState<string | null>(null);
-  /** 401 재확인은 한 번만 — 실패한 세션으로 목록을 무한히 다시 부르지 않는다. */
-  const refreshedOnce = useRef(false);
 
+  /**
+   * 401은 이 화면 안에서만 처리한다.
+   *
+   * `auth-context`의 `refresh()`를 부르면 `/auth/me`가 한 번 실패하는 것만으로
+   * 전역 사용자 상태가 지워져 **다른 화면까지 로그아웃된다.** 목록 한 건이
+   * 실패했다는 사실이 세션 종료를 뜻하지는 않으므로, 세션 판정은 auth-context에
+   * 맡기고 여기서는 로그인 안내만 띄운다.
+   */
   const loadList = useCallback(async () => {
     setList({ kind: "loading" });
-    let result = await fetchReceipts();
-
-    if (!result.ok && result.status === 401 && !refreshedOnce.current) {
-      refreshedOnce.current = true;
-      const fresh = await refresh();
-      if (fresh) result = await fetchReceipts();
-    }
+    const result = await fetchReceipts();
 
     if (result.ok) {
       setList({ kind: "ready", items: result.items });
@@ -75,7 +75,7 @@ export default function LessonLedgerPage() {
       return;
     }
     setList({ kind: "error", message: result.message });
-  }, [refresh]);
+  }, []);
 
   const userId = user?.id ?? null;
 
