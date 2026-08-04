@@ -5,8 +5,8 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-04
-> **상태:** 진행 중 — T0·T1·T2·T6·T7 완료. 엔드포인트가 살아 있고 지금은 **북메이커 폴백 경로**로 동작한다(T4·T5가 분석기를 채운다).
-> ⚠️ 마이그레이션 `c5a2e91d7b34`는 **작성만 되고 아직 운영에 적용되지 않았다.** **§13-Q1·Q2 결정 완료(2026-08-04)** 로 T3·T5의 착수 조건도 풀렸다.
+> **상태:** 진행 중 — T0·T1·T2·T6·T7 완료, T5는 **오즈 에이전트만** 완료. 엔드포인트가 운영에서 살아 있다(서사·루머 미착수라 대부분 북메이커 폴백).
+> 마이그레이션 `c5a2e91d7b34`는 **2026-08-04 운영 적용 완료**(`b3f1c9d2a740` → `c5a2e91d7b34`). **§13-Q1·Q2 결정 완료**로 T3·T5 착수 조건도 풀렸다.
 > 남은 미해결 질문은 Q3~Q7이며, 그중 어느 것도 T3~T7을 막지 않는다.
 > **상위 규칙:** [루트 CLAUDE.md](../../../../CLAUDE.md) · [fastapi/CLAUDE.md](../../../CLAUDE.md) · 참조 구현 [`kayfabe/adapter/outbound/repositories/wrestler_chat_repository.py`](../adapter/outbound/repositories/wrestler_chat_repository.py)
 
@@ -378,7 +378,7 @@ DATABASE_URL=          # 이미 있음 — pgvector 포함
 | ~~**T2**~~ | ~~포트 정의~~ | `ports/input/*` · `ports/output/*` · `dtos/agent_prediction_dto.py` | **완료 (2026-08-04)** — 포트 6종 전부 `ABC`, 구현체 0개 상태로 테스트 통과 |
 | **T3** | 지식 적재 (RAG) | `ontology` 수집 + `ple_knowledge_chunks` | 허용 도메인 목록(§3-D10) 안에서만 수집. `embed_text` + pgvector 저장. `source_url` 누락 청크 0건 |
 | **T4** | 검색 리포지토리 | `prediction_knowledge_repository.py` | `<=>` 코사인 top-k. `wrestler_chat_repository` 패턴 |
-| **T5** | 에이전트 3종 | `adapter/outbound/agents/*` | 벤더 타입이 포트 시그니처에 새지 않음. 생성은 ontology 경유 |
+| **T5** | 에이전트 3종 | `adapter/outbound/agents/*` | **오즈 완료 (2026-08-04)** — `BookmakerOddsScout`, LLM 미사용. 서사·루머는 미착수 |
 | ~~**T6**~~ | ~~코디네이터 유스케이스~~ | `ai_prediction_interactor.py` | **완료 (2026-08-04)** — 페이크 포트 테스트 11건. 에이전트 1개 실패 시 합성 유지, 전멸 시 북메이커 강등 검증 |
 | ~~**T7**~~ | ~~영속화 + 라우터~~ | ORM·마이그레이션·라우터·프로바이더 | **완료 (2026-08-04)** — OpenAPI에 GET/POST 노출, 관리자 가드 테스트 9건. **마이그레이션은 아직 적용 전** |
 | **T8** | 프론트 연동 | `ple-ai-scoreboard.tsx` 문구 · 리포트 모달 | §2-D4 참조 — **문구 교체와 모달만**. 통계 연동은 이미 있다 |
@@ -435,6 +435,8 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-08-04 | T5(일부) | 오즈 에이전트 `BookmakerOddsScout`. **LLM을 쓰지 않는다** — 근거가 숫자뿐이라 비용도 지연도 없고, 세 축 중 유일하게 항상 돌 수 있다. 배당 역수를 정규화해 오버라운드(북메이커 마진)를 제거한 내재 확률을 `weight`로 쓴다. 기존 `ple_ai`와 고르는 쪽은 같지만 **얼마나 확신하는지를 함께 낸다** | `pytest` 10건 · 전체 191 passed · **배포 전** |
+| 2026-08-04 | 배포 | 마이그레이션 `c5a2e91d7b34` 운영 적용 + backend·auth 재기동 | `alembic current` = `c5a2e91d7b34` · `GET /api/ple_events/summerslam/ai-predictions` 200 `{"items": []}` · POST 무인증 401 |
 | 2026-08-04 | T7 | ORM 2종·마이그레이션·PG 리포지토리·스키마·라우터·프로바이더. 조회는 무인증, 생성은 `RoleChecker(ADMIN)`. 분석기 자리에는 **의견 없음을 내는 임시 어댑터**를 넣어 지금은 북메이커 폴백으로 엔드투엔드가 돈다 — T4·T5가 오면 프로바이더의 인자만 바뀐다 | OpenAPI에 `/api/ple_events/{slug}/ai-predictions` GET·POST 노출 · 라우터 테스트 9건 · 전체 181 passed |
 | 2026-08-04 | T6 | 코디네이터 `AiPredictionInteractor` 구현. 세 에이전트를 `asyncio.gather`로 동시 호출하고 실패한 것만 제외해 합성한다. 카드에 없는 pick을 낸 리포트는 버리지 않고 **의견 없음으로 강등**한다(없는 선택지가 득표를 가져가면 승률이 통째로 틀어진다). 근거 문장은 리포트 요약을 규칙으로 엮어 **LLM을 한 번 더 부르지 않는다** | `pytest apps/kayfabe/tests/app/use_cases` 11 passed · 전체 172 passed · 페이크 포트만 사용(LLM·DB 0회) |
 | 2026-08-04 | T0 | §13-Q1·Q2 결정. 수집은 **공개 소스만**(허용 도메인 목록, 유료 구독 본문 미저장, X 스크래핑 금지), 에이전트 기본 가중치는 **셋 다 1.0**. §3에 D-10·D-11로 확정 사항을 추가하고 T3의 착수 조건을 풀었다 | 문서만 갱신, 코드 변경 없음 |
