@@ -126,3 +126,113 @@ def test_text_without_amounts_is_not_a_receipt(raw_text: str) -> None:
     """판독 실패를 조용히 빈 초안으로 삼키지 않는다."""
     with pytest.raises(ReceiptNotRecognizedError):
         parse_receipt(raw_text=raw_text, confidence=0.9)
+
+
+# 실물 영수증(농협 하나로마트)의 Gemini 판독 원문. 라벨 글자 사이 공백과
+# 두 줄에 걸친 품목 배치가 그대로 들어 있다 — 규칙이 무너지던 실제 사례다.
+_REAL_RECEIPT = """        농협
+주소:경기 의정부시
+대표: 최영*             전화:031-***-****
+사업자번호:127-82-*****
+홈페이지 :http://www.nonghyup.com/
+영수증 미지참시 교환/환불 불가(30일내)
+교환/환불 구매점에서 가능(결제카드지참)
+=========================================
+김갑순     2015-11-03 16:31:53  0002-00085
+상품(코드)            단가    수량        금액
+-----------------------------------------
+001 P굿모닝우유 900ML               [2,150]
+*8801104210645       1,350     1       1,350
+002 P양파 ,
+*231973              3,300     1       3,300
+003 P무 ,
+*231913                500     1         500
+004 P깻잎 ,
+*231308                750     1         750
+005 P하선정 바로먹기좋은장아찌 150g
+ 8801007265889       1,380     1       1,380
+006 P브로커리 .
+*232285              1,280     1       1,280
+-----------------------------------------
+                판 매 총 액:          8,560
+-----------------------------------------
+             ◆ 받 을 금 액 :          8,560
+                신   용   액:          8,560
+ ))---------------------------------------((
+            부가세면세물품가액:          7,180
+            부가세과세물품가액:          1,255
+            부    가    세:            125
+-----------------------------------------
+바코드앞 * 면세, # 영세, 상품명 P포인트
+-----------------------------------------
+회원:2010190034*** 박*분 님
+                  우수고객포인트:             40
+                  잔 여 포 인 트:         14,198
+                  사용가능포인트:         14,190
+  ****** 신용카드 매출전표(고객용) ******
+우리카드:4902************
+할부:00개월              매출금액:       8,560원
+승인No:75513401          가맹점:0000007490C
+"""
+
+
+def test_real_receipt_merchant_is_the_store_not_the_first_item() -> None:
+    """상호명 줄 위에 주소·대표·전화가 끼어 있어도 상호를 집어야 한다."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert draft.merchant_name == "농협"
+
+
+def test_real_receipt_ignores_barcode_as_business_number() -> None:
+    """13자리 바코드 앞 10자리를 사업자번호로 오인하지 않는다. 마스킹이면 None."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert draft.business_no is None
+
+
+def test_real_receipt_total_survives_spaced_out_labels() -> None:
+    """`판 매 총 액:` 처럼 글자를 벌려 찍어도 합계를 찾는다."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert draft.total_amount == 8560
+    assert draft.transacted_at == datetime(2015, 11, 3, 16, 31, 53)
+
+
+def test_real_receipt_vat_is_not_the_exempt_supply_amount() -> None:
+    """`부가세면세물품가액`(7,180)이 아니라 `부 가 세`(125)를 집는다."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert draft.vat_amount == 125
+
+
+def test_real_receipt_reads_items_split_across_two_lines() -> None:
+    """품목명과 단가·수량·금액이 다른 줄에 있는 배치를 읽는다."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert [item.name for item in draft.line_items] == [
+        "P굿모닝우유 900ML",
+        "P양파",
+        "P무",
+        "P깻잎",
+        "P하선정 바로먹기좋은장아찌 150g",
+        "P브로커리",
+    ]
+    assert [item.amount for item in draft.line_items] == [
+        1350,
+        3300,
+        500,
+        750,
+        1380,
+        1280,
+    ]
+    # 열 순서가 `단가 수량 금액`이다 — 수량을 1,350으로 읽으면 안 된다.
+    assert draft.line_items[0].quantity == 1
+    assert draft.line_items[0].unit_price == 1350
+
+
+def test_real_receipt_balances_and_needs_no_review() -> None:
+    """품목 합(8,560)이 합계와 맞으므로 확인 필요로 몰지 않는다."""
+    draft = parse_receipt(raw_text=_REAL_RECEIPT, confidence=0.99)
+
+    assert sum(item.amount for item in draft.line_items) == draft.total_amount
+    assert draft.needs_review is False

@@ -2,6 +2,14 @@
 
 한국 영수증의 통상 배치를 전제로 한 규칙 기반 파서다. 판독 실패(=영수증이 아님)와
 "품목이 없는 영수증"은 다른 상태이므로, 전자는 예외를 던지고 후자는 빈 목록을 돌려준다.
+
+실물 영수증에서 확인한 두 가지가 규칙을 지배한다.
+
+1. **라벨의 글자 사이에 공백이 들어간다** (`판 매 총 액:`). 그대로 부분 문자열을
+   비교하면 합계를 못 찾고, 그 줄이 품목으로 잡혀 합계가 몇 배로 부풀었다.
+   그래서 라벨 비교는 공백을 모두 지운 형태로 한다.
+2. **품목이 두 줄에 걸쳐 있다.** 첫 줄에 품목명, 다음 줄에 바코드와 단가·수량·금액이
+   온다. 한 줄만 보면 품목을 하나도 못 읽는다.
 """
 
 from __future__ import annotations
@@ -19,23 +27,31 @@ class ReceiptNotRecognizedError(Exception):
 # 합계를 가리키는 라벨. 품목 합보다 우선한다 — 할인·봉사료가 섞이면 합이 맞지 않는다.
 _TOTAL_LABELS = ("합계", "총액", "받을금액", "승인금액")
 _VAT_LABELS = ("부가세", "부가가치세", "세액", "VAT")
+# 부가세 라벨을 포함하지만 부가세가 아닌 줄 (`부가세면세물품가액`).
+_VAT_EXCLUDES = ("물품가액", "공급가액")
+
 # 품목 줄로 오해하기 쉬운 라벨들. 금액이 붙어 있어도 품목이 아니다.
 _NON_ITEM_LABELS = (
     *_TOTAL_LABELS,
     *_VAT_LABELS,
+    *_VAT_EXCLUDES,
     "소계",
-    "공급가액",
-    "과세물품가액",
-    "면세물품가액",
+    "과세물품",
+    "면세물품",
     "받은금액",
     "거스름돈",
     "잔액",
     "할인",
+    "할부",
     "포인트",
+    "신용",
     "카드",
     "현금",
     "결제",
-    "승인번호",
+    "매출금액",
+    "승인",
+    "가맹점",
+    "회원",
     "사업자",
     "대표",
     "주소",
@@ -43,7 +59,11 @@ _NON_ITEM_LABELS = (
     "TEL",
 )
 
+# 상호명을 찾아 위로 올라갈 때 건너뛰는 매장 메타데이터 줄.
+_STORE_META_LABELS = ("주소", "대표", "전화", "TEL", "FAX", "홈페이지", "http")
+
 _BUSINESS_NO_PATTERN = re.compile(r"(\d{3})-?(\d{2})-?(\d{5})")
+_BUSINESS_NO_LABELS = ("사업자", "등록번호")
 _DATE_PATTERN = re.compile(
     r"(?P<year>\d{4}|\d{2})[-/.](?P<month>\d{1,2})[-/.](?P<day>\d{1,2})"
     r"(?:\D{1,3}(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?)?"
@@ -53,6 +73,13 @@ _KOREAN_DATE_PATTERN = re.compile(
     r"(?:\s*(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?)?"
 )
 _AMOUNT_TOKEN_PATTERN = re.compile(r"^[₩\-]?[\d,]+원?$")
+# 품목 줄 다음에 오는 바코드·상품코드 (`*8801104210645` · `231973`).
+_CODE_TOKEN_PATTERN = re.compile(r"^[*#\s]?\d{4,}$")
+# 품목명 앞의 일련번호 (`001 P굿모닝우유` → `P굿모닝우유`).
+_LEADING_SEQUENCE_PATTERN = re.compile(r"^\d{1,3}\s+")
+# 품목명 뒤에 붙는 포인트 표기 (`[2,150]`).
+_TRAILING_BRACKET_PATTERN = re.compile(r"\[[^\]]*\]\s*$")
+
 # 수량으로 읽을 최대값. 이보다 크면 단가·금액으로 본다.
 _MAX_QUANTITY = 999
 
@@ -64,14 +91,12 @@ def parse_receipt(*, raw_text: str, confidence: float) -> ReceiptDraft:
     실패를 조용히 삼켜 빈 초안을 돌려주면 사용자는 "판독됐는데 비어 있다"로 오해한다.
     """
     lines = [line.strip() for line in raw_text.splitlines()]
-    non_empty = [(index, line) for index, line in enumerate(lines) if line]
+    non_empty = [line for line in lines if line]
     if not non_empty:
         raise ReceiptNotRecognizedError("판독된 텍스트가 없습니다.")
 
     business_no, business_no_index = _find_business_no(lines)
-    line_items = tuple(
-        item for _, line in non_empty if (item := _to_line_item(line)) is not None
-    )
+    line_items = _find_line_items(non_empty)
     total_amount = _find_labeled_amount(non_empty, _TOTAL_LABELS)
     if total_amount is None and line_items:
         total_amount = sum(item.amount for item in line_items)
@@ -84,7 +109,7 @@ def parse_receipt(*, raw_text: str, confidence: float) -> ReceiptDraft:
         business_no=business_no,
         transacted_at=_find_transacted_at(non_empty),
         total_amount=total_amount,
-        vat_amount=_find_labeled_amount(non_empty, _VAT_LABELS),
+        vat_amount=_find_labeled_amount(non_empty, _VAT_LABELS, exclude=_VAT_EXCLUDES),
         line_items=line_items,
         confidence=confidence,
         raw_text=raw_text,
@@ -102,19 +127,40 @@ def to_amount(token: str) -> int | None:
     return -value if negative else value
 
 
+def _squeeze(line: str) -> str:
+    """라벨 비교용. 영수증은 `판 매 총 액:`처럼 글자 사이를 벌려 인쇄한다."""
+    return re.sub(r"\s+", "", line)
+
+
+def _has_label(line: str, labels: tuple[str, ...]) -> bool:
+    squeezed = _squeeze(line)
+    return any(label in squeezed for label in labels)
+
+
 def _find_business_no(lines: list[str]) -> tuple[str | None, int | None]:
+    """사업자등록번호는 **라벨이 있는 줄에서만** 찾는다.
+
+    아무 줄에서나 10자리를 찾으면 바코드(`8801104210645`)나 회원번호가 먼저 걸린다.
+    번호가 마스킹된 영수증(`127-82-*****`)에서는 값이 `None`이 되지만, 줄 위치는
+    상호명을 찾는 기준으로 계속 쓴다.
+    """
     for index, line in enumerate(lines):
+        if not _has_label(line, _BUSINESS_NO_LABELS):
+            continue
         match = _BUSINESS_NO_PATTERN.search(line)
-        if match:
-            return "".join(match.groups()), index
+        return ("".join(match.groups()) if match else None), index
     return None, None
 
 
 def _find_merchant_name(lines: list[str], business_no_index: int | None) -> str | None:
-    """사업자등록번호 라인 위쪽 첫 비어있지 않은 줄 — 한국 영수증의 통상 배치다."""
+    """사업자등록번호 줄 위쪽 첫 줄 — 단, 주소·대표·전화 같은 매장 정보는 건너뛴다.
+
+    한국 영수증은 맨 위에 상호, 그 아래 주소·대표자·전화번호, 그다음 사업자번호를
+    찍는다. 바로 윗줄만 집으면 상호가 아니라 대표자명이 잡힌다.
+    """
     if business_no_index is not None:
         for line in reversed(lines[:business_no_index]):
-            if line:
+            if line and not _has_label(line, _STORE_META_LABELS):
                 return line
     for line in lines:
         if line:
@@ -122,8 +168,8 @@ def _find_merchant_name(lines: list[str], business_no_index: int | None) -> str 
     return None
 
 
-def _find_transacted_at(non_empty: list[tuple[int, str]]) -> datetime | None:
-    for _, line in non_empty:
+def _find_transacted_at(non_empty: list[str]) -> datetime | None:
+    for line in non_empty:
         parsed = _parse_datetime(line)
         if parsed is not None:
             return parsed
@@ -154,26 +200,104 @@ def _parse_datetime(line: str) -> datetime | None:
 
 
 def _find_labeled_amount(
-    non_empty: list[tuple[int, str]], labels: tuple[str, ...]
+    non_empty: list[str],
+    labels: tuple[str, ...],
+    *,
+    exclude: tuple[str, ...] = (),
 ) -> int | None:
-    for _, line in non_empty:
-        if not any(label in line for label in labels):
+    for line in non_empty:
+        if not _has_label(line, labels):
             continue
-        amounts = [
-            value
-            for token in line.split()
-            if _AMOUNT_TOKEN_PATTERN.match(token)
-            and (value := to_amount(token)) is not None
-        ]
+        if exclude and _has_label(line, exclude):
+            continue
+        amounts = _trailing_amounts(line.split())
         if amounts:
             # 라벨 줄의 마지막 숫자가 금액이다 (`합계 3건 23,400`).
             return amounts[-1]
     return None
 
 
+def _trailing_amounts(tokens: list[str]) -> list[int]:
+    """줄에서 금액으로 읽히는 토큰들의 값."""
+    values = []
+    for token in tokens:
+        if _AMOUNT_TOKEN_PATTERN.match(token):
+            value = to_amount(token)
+            if value is not None:
+                values.append(value)
+    return values
+
+
+def _find_line_items(non_empty: list[str]) -> tuple[ReceiptLineItem, ...]:
+    """한 줄짜리 품목과 두 줄에 걸친 품목을 함께 읽는다."""
+    items: list[ReceiptLineItem] = []
+    skip_next = False
+
+    for index, line in enumerate(non_empty):
+        if skip_next:
+            skip_next = False
+            continue
+
+        single = _to_line_item(line)
+        if single is not None:
+            items.append(single)
+            continue
+
+        next_line = non_empty[index + 1] if index + 1 < len(non_empty) else None
+        paired = _to_paired_line_item(line, next_line) if next_line else None
+        if paired is not None:
+            items.append(paired)
+            skip_next = True
+
+    return tuple(items)
+
+
+def _is_item_name_line(line: str) -> bool:
+    if _has_label(line, _NON_ITEM_LABELS):
+        return False
+    if _parse_datetime(line) is not None:
+        return False
+    name = _clean_item_name(line)
+    return bool(name) and any(char.isalpha() for char in name)
+
+
+def _clean_item_name(line: str) -> str:
+    name = _TRAILING_BRACKET_PATTERN.sub("", line)
+    name = _LEADING_SEQUENCE_PATTERN.sub("", name)
+    return name.strip().rstrip(",.·").strip()
+
+
+def _to_paired_line_item(name_line: str, value_line: str) -> ReceiptLineItem | None:
+    """`001 P굿모닝우유 900ML` + `*8801104210645  1,350  1  1,350` 형태를 읽는다."""
+    if not _is_item_name_line(name_line):
+        return None
+    # 품목명 줄에 이미 금액이 있으면 두 줄짜리가 아니다. 앞의 일련번호(`001`)는
+    # 금액이 아니므로 정리한 이름을 기준으로 본다.
+    if _trailing_amounts(_clean_item_name(name_line).split()):
+        return None
+
+    tokens = value_line.split()
+    if not tokens or not _CODE_TOKEN_PATTERN.match(tokens[0]):
+        return None
+
+    numbers = _trailing_amounts(tokens[1:])
+    if len(numbers) < 2:
+        return None
+
+    quantity, unit_price, amount = _split_numbers(numbers)
+    if amount is None or amount <= 0:
+        return None
+    return ReceiptLineItem(
+        name=_clean_item_name(name_line),
+        quantity=quantity,
+        unit_price=unit_price,
+        amount=amount,
+    )
+
+
 def _to_line_item(line: str) -> ReceiptLineItem | None:
-    """`우유 1L  2  3,200  6,400` 형태의 줄을 품목으로 읽는다."""
-    if any(label in line for label in _NON_ITEM_LABELS):
+    """`우유 1L  2  3,200  6,400` 형태의 한 줄짜리 품목을 읽는다."""
+    if _has_label(line, _NON_ITEM_LABELS):
         return None
     if _BUSINESS_NO_PATTERN.search(line) or _parse_datetime(line) is not None:
         return None
@@ -191,7 +315,7 @@ def _to_line_item(line: str) -> ReceiptLineItem | None:
         trailing.insert(0, value)
         raw_trailing.insert(0, tokens.pop())
 
-    name = " ".join(tokens).strip()
+    name = _clean_item_name(" ".join(tokens))
     # 이름이 없거나 숫자뿐이면 품목 줄이 아니다.
     if not trailing or not name or not any(char.isalpha() for char in name):
         return None
@@ -216,12 +340,21 @@ def _looks_like_money(token: str, value: int) -> bool:
 
 
 def _split_numbers(trailing: list[int]) -> tuple[int, int | None, int | None]:
-    """줄 끝 숫자들을 (수량, 단가, 금액)으로 나눈다. 미기재 수량은 1이다."""
+    """줄 끝 숫자들을 (수량, 단가, 금액)으로 나눈다. 미기재 수량은 1이다.
+
+    영수증마다 열 순서가 다르다 — `수량 단가 금액`도 있고 `단가 수량 금액`도 있다.
+    **수량 × 단가 = 금액**이 맞아떨어지는 쪽을 수량으로 본다.
+    """
     if len(trailing) >= 3:
-        quantity, unit_price, amount = trailing[-3], trailing[-2], trailing[-1]
-        if 0 < quantity <= _MAX_QUANTITY:
-            return quantity, unit_price, amount
-        return 1, unit_price, amount
+        first, second, amount = trailing[-3], trailing[-2], trailing[-1]
+        for quantity, unit_price in ((second, first), (first, second)):
+            if 0 < quantity <= _MAX_QUANTITY and quantity * unit_price == amount:
+                return quantity, unit_price, amount
+        if 0 < second <= _MAX_QUANTITY:
+            return second, first, amount
+        if 0 < first <= _MAX_QUANTITY:
+            return first, second, amount
+        return 1, None, amount
     if len(trailing) == 2:
         first, amount = trailing
         if 0 < first <= _MAX_QUANTITY:
