@@ -4,7 +4,8 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-04
-> **상태:** 미착수 — 설계 계약만 확정. §13에 미해결 질문 4건이 남아 있고, **Q1(앱 소속)이 정해지기 전에는 T1을 시작하지 않는다.**
+> **상태:** 구현 완료 (2026-08-04) — T1~T7. §13 질문 4건 전부 결정됐다(안 A · Gemini · 저장 안 함 · `photos/` 유지).
+> 프론트가 필요로 한 **목록 엔드포인트 `GET /api/receipts`가 계약에 추가**됐다(§7.1).
 > **상위 규칙:** [루트 CLAUDE.md](../../CLAUDE.md) · [fastapi/CLAUDE.md](../CLAUDE.md) · 참조 구현 [`apps/lion_king/`](../apps/lion_king/)
 
 **"역방향(reverse)"의 뜻:** 기존 `lion_king`은 촬영 이미지를 **서버 → S3**로 밀어넣는 정방향이다.
@@ -226,7 +227,34 @@ apps/lion_king/
 
 ## 7. API 계약
 
-### `POST /api/receipts/ocr`
+### 7.1 `GET /api/receipts`
+
+화면 진입 시 1회. **판독은 하지 않는다** — 목록 길이만큼 OCR 비용이 곱해진다.
+
+**응답 200**
+
+```json
+{
+  "items": [
+    {
+      "key": "photos/42/9f3c1a8b7e2d4f60a1b2c3d4e5f60718.jpg",
+      "thumbnailUrl": "https://...presigned...",
+      "capturedAt": "2026-08-04T19:32:00+00:00"
+    }
+  ]
+}
+```
+
+- 접두사는 서버가 JWT `sub`로 만든다(`photos/{sub}/`). 클라이언트는 지정할 수 없다.
+- `thumbnailUrl`은 **수명 300초 presigned GET URL**이다. 버킷을 공개로 열지 않고 브라우저가
+  이미지를 직접 받게 하려는 것이고, 그래서 응답에 버킷 이름이 들어가지 않는다.
+- `capturedAt`은 S3 객체의 `LastModified`다. 촬영 시각 메타데이터를 따로 저장하지 않으므로
+  **업로드 시각에 가깝다** — 정확한 촬영 시각이 필요해지면 업로드 경로에서 함께 받아야 한다.
+- 정렬은 `LastModified` 내림차순, **한 번에 최대 100장**. 페이지네이션은 없다 — 없으면 사진이
+  쌓인 계정에서 응답이 무한정 커지므로 상한으로 막았다.
+- 허용 확장자(`.jpg`·`.png`) 객체만 담는다.
+
+### 7.2 `POST /api/receipts/ocr`
 
 **요청** (`Authorization: Bearer <access_token>` 또는 `access_token` 쿠키)
 
@@ -349,10 +377,13 @@ cd fastapi && PYTHONPATH=apps uv run pytest apps/lion_king/tests -q
 
 ## 13. 미해결 질문 (구현 중 발견 시 여기에 기록하고 중단)
 
-- [ ] **Q1. 앱 소속** — `lion_king` 확장(안 A) vs 신규 스포크(안 B). §2-D4 참조. **T1 착수 전에 결정해야 한다.** 권장은 안 A.
-- [ ] **Q2. OCR 엔진** — Textract `AnalyzeExpense` vs Gemini 멀티모달. §2-D3 참조. Textract를 고르면 **`ap-northeast-2` 지원 여부를 먼저 확인**한다 — 미지원이면 `S3Manager`가 S3 전용이라 Textract용 클라이언트 관리자를 따로 만들어야 하고, 이미지가 리전을 넘어간다.
-- [ ] **Q3. 영속화 범위** — 지시서는 "파싱 및 반환"까지다. 가계부는 결국 저장이 필요한데, 이번 범위에 테이블을 넣을지. 넣는다면 `_docs/ENTITY_RULE.md`를 먼저 읽고 `id: int` auto-increment 규칙을 따른다. **넣지 않기로 하면 클라이언트가 초안을 들고 있어야 하므로 앱/웹 쪽 계약이 달라진다.**
-- [ ] **Q4. 키 접두사** — 영수증을 기존 `photos/` 아래 그대로 둘지, `receipts/{sub}/`로 분리할지. 분리하면 수명 정책(lifecycle rule)과 OCR 비용을 접두사 단위로 끊을 수 있지만, 업로드 경로(`POST /api/photos`)에 접두사 선택 파라미터가 생긴다.
+- [x] **Q1. 앱 소속** → **안 A (`lion_king` 확장).** 키 접두사 상수와 소유권 규칙이 한 앱 안에 있고 토폴로지 계약을 건드리지 않는다. `PHOTO_KEY_PREFIX`를 `domain/value_objects/receipt_key.py`로 올려 업로드 어댑터가 그것을 참조하게 했다 — 상수가 두 곳으로 갈라지면 소유권 검사가 뚫린다.
+- [x] **Q2. OCR 엔진** → **Gemini 멀티모달** (`adapter/outbound/gemini_ocr_reader.py`). `GEMINI_API_KEY`·`google-genai`가 이미 있어 IAM 정책 추가가 필요 없다. 출력이 확률적이라 `response_schema`로 JSON을 강제하고, 형식이 깨지면 `OcrUnavailableError`로 올린다. **어댑터는 파싱하지 않는다** — 텍스트만 옮겨 적게 하고 해석은 도메인 파서가 한다(§3-D4).
+- [x] **Q3. 영속화 범위** → **저장하지 않는다.** 테이블·ORM·마이그레이션 없음. 화면을 벗어나면 초안이 사라지므로 재진입 시 다시 판독한다 — 비용이 사용자 행동에 비례한다는 것을 감수한 결정이다. 저장이 필요해지면 그때 `_docs/ENTITY_RULE.md`를 따라 별도 작업으로 넣는다.
+- [x] **Q4. 키 접두사** → **`photos/` 유지.** 업로드 경로(`POST /api/photos`)와 Flutter 촬영 화면을 건드리지 않기 위해서다. 대가로 일반 사진과 영수증이 목록에 섞이므로 **사용자가 목록에서 영수증을 골라 판독**한다. 수명 정책·OCR 비용을 접두사 단위로 끊고 싶어지면 그때 분리하고, 업로드 경로도 함께 바꾼다.
+
+> **IAM:** 이번 작업으로 읽기 권한이 새로 필요해졌다 — `s3:GetObject`(판독) · `s3:ListBucket`(목록).
+> 정방향은 `PutObject`만 썼다. 권한이 없으면 목록·판독이 503으로 떨어진다.
 
 ---
 
@@ -361,3 +392,5 @@ cd fastapi && PYTHONPATH=apps uv run pytest apps/lion_king/tests -q
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
 | 2026-08-04 | — | 원본 지시서를 이 저장소 맥락으로 옮겨 하네스 계약 작성. `lion_king`·`s3_manager`·`core.security`·`.importlinter` 실측 후 델타 6건(§2)·미해결 질문 4건(§13) 도출 | 문서만 작성, 코드 변경 없음 |
+| 2026-08-04 | T0 | §13 Q1~Q4 결정 (안 A · Gemini · 저장 안 함 · `photos/` 유지) | 문서 갱신 |
+| 2026-08-04 | T1~T7 | `lion_king`에 영수증 판독 구현. 도메인(`receipt_key`·`receipt_draft`·`receipt_parser`) · 포트 3종 · `ReceiptInteractor` · S3 읽기 어댑터 · Gemini 어댑터 · 라우터/스키마/프로바이더. 프론트 요구로 `GET /api/receipts`(목록)를 계약에 추가(§7.1). T7은 안 A라 `.importlinter` 변경 없음 | ruff check·format 통과 · lint-imports 계약 4건 KEPT · `pytest apps/lion_king/tests` 59 passed · `app.openapi()`에 `/api/receipts`·`/api/receipts/ocr` 노출 확인 |

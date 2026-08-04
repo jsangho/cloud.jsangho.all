@@ -20,8 +20,11 @@ from lion_king.app.ports.output.photo_repository import (
     PhotoStorageUnavailableError,
 )
 from lion_king.domain.value_objects.photo_content import PhotoContent
+from lion_king.domain.value_objects.receipt_key import PHOTO_KEY_PREFIX
 
-_KEY_PREFIX = "photos"
+# 읽기(역방향) 쪽 소유권 검증이 같은 상수를 본다. 두 곳으로 갈라지면 저장 경로와
+# 검사 규칙이 어긋나는 순간 소유권 검사가 뚫린다.
+_KEY_PREFIX = PHOTO_KEY_PREFIX
 
 
 class PhotoS3Repository(PhotoRepository):
