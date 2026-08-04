@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { authBaseUrl } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
-import { completeOAuthLogin } from "@/lib/auth-api";
 import { openOAuthPopup } from "@/lib/oauth-popup";
 import { readNextPath } from "./login-form";
 
@@ -118,15 +117,18 @@ type OAuthProvider = "google" | "naver" | "kakao";
 
 export function SnsLoginButtons() {
   const router = useRouter();
-  const { login: saveAuthUser } = useAuth();
+  const { refresh } = useAuth();
 
-  async function finishPopupLogin(token: string | null, next: string | null) {
-    const profile = token ? await completeOAuthLogin(token) : null;
-    if (!token || !profile) {
+  async function finishPopupLogin(completed: boolean, next: string | null) {
+    // 사용자가 팝업을 그냥 닫았다 — 취소는 오류가 아니다.
+    if (!completed) return;
+
+    // 쿠키는 서버가 이미 심었다. 프로필만 다시 받아 상태를 맞춘다.
+    const profile = await refresh();
+    if (!profile) {
       alert("소셜 로그인에 실패했습니다.");
       return;
     }
-    saveAuthUser({ ...profile, token });
     router.replace(next?.startsWith("/") ? next : "/");
   }
 
@@ -137,7 +139,7 @@ export function SnsLoginButtons() {
     // 팝업이 차단된 브라우저에서는 기존 방식(전체 페이지 리다이렉트)으로 폴백한다.
     const opened = openOAuthPopup(
       url,
-      (resultToken, resultNext) => void finishPopupLogin(resultToken, resultNext),
+      (completed, resultNext) => void finishPopupLogin(completed, resultNext),
     );
     if (!opened) {
       window.location.href = url;

@@ -1,5 +1,4 @@
 import {
-  authHeader,
   getRequestTimeoutMessage,
   isAbortError,
   parseApiError,
@@ -63,15 +62,15 @@ export async function fetchShopItems(): Promise<ShopItem[]> {
   return Array.isArray(items) ? items : [];
 }
 
-export async function fetchWallet(token: string): Promise<Wallet | null> {
+export async function fetchWallet(): Promise<Wallet | null> {
   return requestJson<Wallet>(`${shopBaseUrl}/wallet`, {
-    headers: authHeader(token),
+    credentials: "include",
   });
 }
 
-export async function fetchInventory(token: string): Promise<InventoryItem[]> {
+export async function fetchInventory(): Promise<InventoryItem[]> {
   const items = await requestJson<InventoryItem[]>(`${shopBaseUrl}/inventory`, {
-    headers: authHeader(token),
+    credentials: "include",
   });
   return Array.isArray(items) ? items : [];
 }
@@ -81,7 +80,6 @@ export async function fetchInventory(token: string): Promise<InventoryItem[]> {
  * 서버가 402(잔액 부족)·409(중복 보유)·410(판매 중단)으로 사유를 갈라 준다.
  */
 export async function purchaseShopItem(
-  token: string,
   itemCode: string,
   contextKey?: string,
 ): Promise<PurchaseReceipt> {
@@ -90,7 +88,8 @@ export async function purchaseShopItem(
   try {
     const res = await fetch(`${shopBaseUrl}/purchases`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeader(token) },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemCode, contextKey: contextKey ?? "" }),
       signal: controller.signal,
     });
@@ -116,13 +115,13 @@ export async function purchaseShopItem(
 }
 
 export async function setItemEquipped(
-  token: string,
   inventoryId: number,
   isEquipped: boolean,
 ): Promise<InventoryItem | null> {
   return requestJson<InventoryItem>(`${shopBaseUrl}/inventory/${inventoryId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeader(token) },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ isEquipped }),
   });
 }
