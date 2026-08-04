@@ -5,10 +5,17 @@ from __future__ import annotations
 from typing import Any
 
 import boto3
+from botocore.config import Config
 
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 DEFAULT_REGION = "ap-northeast-2"
+
+# presigned URL은 **리전 엔드포인트로 서명해야 한다.** 기본 설정에서는 호스트가
+# 글로벌 `s3.amazonaws.com`으로 잡혀 ap-northeast-2 서명과 어긋나고, 브라우저가
+# 그 URL을 그대로 받으면 403 SignatureDoesNotMatch가 난다. SDK 호출은 botocore가
+# 내부에서 리다이렉트를 따라가 티가 나지 않지만, presigned URL은 복구되지 않는다.
+_CLIENT_CONFIG = Config(signature_version="s3v4", s3={"addressing_style": "virtual"})
 
 
 class S3Manager:
@@ -50,6 +57,7 @@ class S3Manager:
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region,
+            config=_CLIENT_CONFIG,
         )
 
     def get_client(self) -> Any:

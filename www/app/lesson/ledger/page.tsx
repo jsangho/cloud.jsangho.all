@@ -36,13 +36,14 @@ function cardStateOf(ocr: OcrState, key: string): ReceiptCardState {
   return { kind: "error", message: ocr.message, canRetry: ocr.canRetry };
 }
 
+/** 최종 치수와 같은 자리를 잡아 목록이 뜰 때 화면이 밀리지 않게 한다. */
 function CardSkeleton() {
   return (
-    <li className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
-      <div className="aspect-[4/3] animate-pulse bg-neutral-100 dark:bg-neutral-900" />
-      <div className="space-y-2 p-3">
-        <div className="h-3 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
-        <div className="h-8 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+    <li className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center gap-3 p-2.5">
+        <div className="size-14 shrink-0 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+        <div className="h-3 w-32 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+        <div className="ml-auto h-8 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
       </div>
     </li>
   );
@@ -126,7 +127,7 @@ export default function LessonLedgerPage() {
         </div>
 
         {!isReady ? (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="space-y-2">
             <CardSkeleton />
             <CardSkeleton />
           </ul>
@@ -146,7 +147,7 @@ export default function LessonLedgerPage() {
             ) : null}
 
             {list.kind === "loading" ? (
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ul className="space-y-2">
                 <CardSkeleton />
                 <CardSkeleton />
               </ul>
@@ -162,7 +163,7 @@ export default function LessonLedgerPage() {
                 촬영한 영수증이 없습니다. 앱에서 영수증을 촬영하면 여기에 표시됩니다.
               </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ul className="space-y-2">
                 {list.items.map((receipt) => (
                   <ReceiptCard
                     key={receipt.key}
