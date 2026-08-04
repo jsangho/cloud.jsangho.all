@@ -31,6 +31,7 @@ from core.matrix.vault_keymaker_secret_manager import get_keymaker  # noqa: E402
 
 import core.entities.user_model  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.championship_orm  # noqa: E402, F401
+import kayfabe.adapter.outbound.orm.agent_prediction_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.ple_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.shop_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.title_history_orm  # noqa: E402, F401
