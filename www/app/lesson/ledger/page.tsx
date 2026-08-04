@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ReceiptCard, type ReceiptCardState } from "@/components/ledger/receipt-card";
 import { useAuth } from "@/context/auth-context";
@@ -36,35 +36,36 @@ function cardStateOf(ocr: OcrState, key: string): ReceiptCardState {
   return { kind: "error", message: ocr.message, canRetry: ocr.canRetry };
 }
 
+/** 최종 치수와 같은 자리를 잡아 목록이 뜰 때 화면이 밀리지 않게 한다. */
 function CardSkeleton() {
   return (
-    <li className="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
-      <div className="aspect-[4/3] animate-pulse bg-neutral-100 dark:bg-neutral-900" />
-      <div className="space-y-2 p-3">
-        <div className="h-3 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
-        <div className="h-8 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+    <li className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center gap-3 p-2.5">
+        <div className="size-14 shrink-0 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+        <div className="h-3 w-32 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
+        <div className="ml-auto h-8 w-24 animate-pulse rounded bg-neutral-100 dark:bg-neutral-900" />
       </div>
     </li>
   );
 }
 
 export default function LessonLedgerPage() {
-  const { user, isReady, refresh } = useAuth();
+  const { user, isReady } = useAuth();
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [ocr, setOcr] = useState<OcrState>({ kind: "idle" });
   const [notice, setNotice] = useState<string | null>(null);
-  /** 401 재확인은 한 번만 — 실패한 세션으로 목록을 무한히 다시 부르지 않는다. */
-  const refreshedOnce = useRef(false);
 
+  /**
+   * 401은 이 화면 안에서만 처리한다.
+   *
+   * `auth-context`의 `refresh()`를 부르면 `/auth/me`가 한 번 실패하는 것만으로
+   * 전역 사용자 상태가 지워져 **다른 화면까지 로그아웃된다.** 목록 한 건이
+   * 실패했다는 사실이 세션 종료를 뜻하지는 않으므로, 세션 판정은 auth-context에
+   * 맡기고 여기서는 로그인 안내만 띄운다.
+   */
   const loadList = useCallback(async () => {
     setList({ kind: "loading" });
-    let result = await fetchReceipts();
-
-    if (!result.ok && result.status === 401 && !refreshedOnce.current) {
-      refreshedOnce.current = true;
-      const fresh = await refresh();
-      if (fresh) result = await fetchReceipts();
-    }
+    const result = await fetchReceipts();
 
     if (result.ok) {
       setList({ kind: "ready", items: result.items });
@@ -75,7 +76,7 @@ export default function LessonLedgerPage() {
       return;
     }
     setList({ kind: "error", message: result.message });
-  }, [refresh]);
+  }, []);
 
   const userId = user?.id ?? null;
 
@@ -126,7 +127,7 @@ export default function LessonLedgerPage() {
         </div>
 
         {!isReady ? (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="space-y-2">
             <CardSkeleton />
             <CardSkeleton />
           </ul>
@@ -146,7 +147,7 @@ export default function LessonLedgerPage() {
             ) : null}
 
             {list.kind === "loading" ? (
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ul className="space-y-2">
                 <CardSkeleton />
                 <CardSkeleton />
               </ul>
@@ -162,7 +163,7 @@ export default function LessonLedgerPage() {
                 촬영한 영수증이 없습니다. 앱에서 영수증을 촬영하면 여기에 표시됩니다.
               </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ul className="space-y-2">
                 {list.items.map((receipt) => (
                   <ReceiptCard
                     key={receipt.key}
