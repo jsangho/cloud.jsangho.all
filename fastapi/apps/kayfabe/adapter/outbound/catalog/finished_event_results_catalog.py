@@ -73,6 +73,40 @@ FINISHED_EVENT_RESULTS: dict[str, dict[str, MatchResultResponse]] = {
             winner_side="left", winner_name="Roman Reigns"
         ),
     },
+    "summerslam": {
+        "ss26-n1-women-world": MatchResultResponse(
+            winner_side="left", winner_name="Liv Morgan"
+        ),
+        "ss26-n1-six-man": MatchResultResponse(winner_side="left"),
+        "ss26-n1-gunther-aldis": MatchResultResponse(
+            winner_side="left", winner_name="Gunther"
+        ),
+        "ss26-n1-six-woman": MatchResultResponse(
+            winner_side="left", winner_name="Fatal Influence"
+        ),
+        "ss26-n1-undisputed": MatchResultResponse(
+            winner_side="left", winner_name="CM Punk"
+        ),
+        "ss26-n1-hiac": MatchResultResponse(winner_side="left", winner_name="Oba Femi"),
+        "ss26-n2-contender": MatchResultResponse(
+            winner_index=0, winner_name="Kevin Owens"
+        ),
+        "ss26-n2-us": MatchResultResponse(
+            winner_side="right", winner_name="Baron Corbin"
+        ),
+        "ss26-n2-women-ladder": MatchResultResponse(
+            winner_index=0, winner_name="Chelsea Green"
+        ),
+        "ss26-n2-pole": MatchResultResponse(
+            winner_side="left", winner_name="Danhausen"
+        ),
+        "ss26-n2-ic": MatchResultResponse(
+            winner_side="right", winner_name="Chad Gable"
+        ),
+        "ss26-n2-whc": MatchResultResponse(
+            winner_side="left", winner_name="Roman Reigns"
+        ),
+    },
     "backlash": {
         "bl26-danhausen": MatchResultResponse(winner_side="left"),
         "bl26-iyo-asuka": MatchResultResponse(
