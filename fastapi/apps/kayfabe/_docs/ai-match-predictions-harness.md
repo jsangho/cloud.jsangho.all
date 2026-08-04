@@ -5,7 +5,7 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-04
-> **상태:** 진행 중 — T1·T2 완료. **§13-Q1·Q2 결정 완료(2026-08-04)** 로 T3·T5의 착수 조건이 풀렸다.
+> **상태:** 진행 중 — T0·T1·T2·T6 완료. **§13-Q1·Q2 결정 완료(2026-08-04)** 로 T3·T5의 착수 조건도 풀렸다.
 > 남은 미해결 질문은 Q3~Q7이며, 그중 어느 것도 T3~T7을 막지 않는다.
 > **상위 규칙:** [루트 CLAUDE.md](../../../../CLAUDE.md) · [fastapi/CLAUDE.md](../../../CLAUDE.md) · 참조 구현 [`kayfabe/adapter/outbound/repositories/wrestler_chat_repository.py`](../adapter/outbound/repositories/wrestler_chat_repository.py)
 
@@ -346,7 +346,7 @@ Alembic 마이그레이션은 자동 생성 후 손대지 않는다(루트 `CLAU
 | 없는 이벤트·경기 | 리포지토리 | `MatchNotFoundError` | 404 | 경기를 찾을 수 없습니다. |
 | 리포트 0건 | 합성 함수 | `ReportsUnavailableError` | 503 | 분석 근거를 모으지 못했습니다. |
 | LLM 오류·한도 초과 | 에이전트 어댑터 | `AgentUnavailableError` | 503 | AI 분석을 잠시 사용할 수 없습니다. |
-| 수집 대상 응답 실패 | 수집 어댑터 | `KnowledgeSourceUnavailableError` | 503 | (생성 경로에서만. 조회는 저장분을 그대로 준다) |
+| 지식 조회 실패 | 지식 어댑터 | `KnowledgeSourceUnavailableError` | — | **503으로 올리지 않는다.** 코디네이터가 잡아 빈 지식으로 강등하고, 오즈만으로 예측을 만든다. 확신도가 낮아지는 것으로 사실이 드러난다 (T6 구현에서 확정) |
 | 권한 없음 | `RoleChecker` | `HTTPException` | 403 | (기존 문구) |
 
 **원칙:** 모델 이름·프롬프트·수집 대상 URL의 내부 사정은 `detail`에 노출하지 않고 로그에만 남긴다.
@@ -378,7 +378,7 @@ DATABASE_URL=          # 이미 있음 — pgvector 포함
 | **T3** | 지식 적재 (RAG) | `ontology` 수집 + `ple_knowledge_chunks` | 허용 도메인 목록(§3-D10) 안에서만 수집. `embed_text` + pgvector 저장. `source_url` 누락 청크 0건 |
 | **T4** | 검색 리포지토리 | `prediction_knowledge_repository.py` | `<=>` 코사인 top-k. `wrestler_chat_repository` 패턴 |
 | **T5** | 에이전트 3종 | `adapter/outbound/agents/*` | 벤더 타입이 포트 시그니처에 새지 않음. 생성은 ontology 경유 |
-| **T6** | 코디네이터 유스케이스 | `ai_prediction_interactor.py` | 포트 페이크로 테스트. **한 에이전트가 실패해도 나머지로 합성**됨을 검증 |
+| ~~**T6**~~ | ~~코디네이터 유스케이스~~ | `ai_prediction_interactor.py` | **완료 (2026-08-04)** — 페이크 포트 테스트 11건. 에이전트 1개 실패 시 합성 유지, 전멸 시 북메이커 강등 검증 |
 | **T7** | 영속화 + 라우터 | ORM·마이그레이션·라우터·프로바이더 | `/docs` 노출. 관리자 권한 가드 동작 |
 | **T8** | 프론트 연동 | `ple-ai-scoreboard.tsx` 문구 · 리포트 모달 | §2-D4 참조 — **문구 교체와 모달만**. 통계 연동은 이미 있다 |
 
@@ -434,6 +434,7 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-08-04 | T6 | 코디네이터 `AiPredictionInteractor` 구현. 세 에이전트를 `asyncio.gather`로 동시 호출하고 실패한 것만 제외해 합성한다. 카드에 없는 pick을 낸 리포트는 버리지 않고 **의견 없음으로 강등**한다(없는 선택지가 득표를 가져가면 승률이 통째로 틀어진다). 근거 문장은 리포트 요약을 규칙으로 엮어 **LLM을 한 번 더 부르지 않는다** | `pytest apps/kayfabe/tests/app/use_cases` 11 passed · 전체 172 passed · 페이크 포트만 사용(LLM·DB 0회) |
 | 2026-08-04 | T0 | §13-Q1·Q2 결정. 수집은 **공개 소스만**(허용 도메인 목록, 유료 구독 본문 미저장, X 스크래핑 금지), 에이전트 기본 가중치는 **셋 다 1.0**. §3에 D-10·D-11로 확정 사항을 추가하고 T3의 착수 조건을 풀었다 | 문서만 갱신, 코드 변경 없음 |
 | 2026-08-04 | T2 | 포트 6종(`AiPredictionUseCase` · 에이전트 3종 · `PredictionKnowledgePort` · `AgentPredictionRepository`)과 경계 DTO 정의. 입력 포트에서 **조회와 생성을 분리**해 페이지 진입이 LLM을 부르지 못하게 구조로 막았다. `AgentUnavailableError`는 세 에이전트가 공유하므로 `agent_errors.py`에 따로 뒀다(§6 반영) | `pytest apps/kayfabe/tests` 46 passed(포트+도메인) · 구현체 0개 상태에서 import·추상성 검증 · lint-imports 통과 |
 | 2026-08-04 | T1 | 도메인 엔티티(`AgentPrediction`·`AgentReport`·`AgentKind`·`PredictionSource`)와 합성 순수 함수(`synthesize`) 구현. **에이전트별 기본 가중치는 넣지 않았다** — §13-Q2 미결이라 근거 없는 숫자를 코드에 남기지 않는다. `confidence`는 합의도 × 응답률로 정의했다(§5 보강: 셋 중 하나만 답했을 때 확신 100%가 되는 문제) | `pytest apps/kayfabe/tests/domain` 23 passed · ruff·lint-imports 통과 · LLM/DB 호출 0회 |
