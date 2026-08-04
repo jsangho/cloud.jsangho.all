@@ -14,6 +14,7 @@ const VISION_HREF = "/lesson/titanic/vision";
 const OBJECT_DETECTION_HREF = "/lesson/titanic/vision/object-detection";
 const RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
 const CRAWLER_SCRAPER_HREF = "/lesson/dataset-collection/crawler-scraper";
+const LEDGER_HREF = "/lesson/ledger";
 export default function LessonLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isTitanic = pathname === TITANIC_HREF;
@@ -24,6 +25,7 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
   const isObjectDetection = pathname === OBJECT_DETECTION_HREF;
   const isRagChat = pathname === RAG_CHAT_HREF;
   const isCrawlerScraper = pathname === CRAWLER_SCRAPER_HREF;
+  const isLedger = pathname === LEDGER_HREF;
   const isLessonSection = isTitanic || isDataCollection || isTitanicList || isSmithSailor;
   const isVisionSection = isVision || isObjectDetection;
 
@@ -208,6 +210,19 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
         )}
       >
         크롤러/스크래퍼
+      </Link>
+
+      <Link
+        href={LEDGER_HREF}
+        aria-current={isLedger ? "page" : undefined}
+        className={cn(
+          "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          isLedger
+            ? "bg-stone-100 text-stone-950 hover:bg-stone-50"
+            : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
+        )}
+      >
+        가계부
       </Link>
     </nav>
   );
