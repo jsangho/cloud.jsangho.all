@@ -1,4 +1,4 @@
-package cloud.jsangho.jsh_flutter
+package cloud.jsangho.kayfabe
 
 import cloud.jsangho.stopwatch.StopwatchChannel
 import io.flutter.embedding.android.FlutterActivity
