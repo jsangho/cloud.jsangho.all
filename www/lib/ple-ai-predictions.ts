@@ -47,6 +47,26 @@ export function toPercent(ratio: number): number {
 }
 
 /**
+ * 단일전에서 상대가 가진 승률 몫.
+ *
+ * 서버는 고른 쪽의 승률만 저장하지만, 2파전이면 나머지는 상대의 것이다. 다인전은
+ * 나머지를 여러 명이 나눠 가지므로 이 함수가 `null`을 준다 — 6명이 나눈 몫을
+ * 한 명 것처럼 보여줄 수는 없다.
+ */
+export function opponentShare(
+  slug: string,
+  prediction: AiPrediction,
+): { name: string; probability: number } | null {
+  const card = getPleMatches(slug).find(
+    (match) => match.id === prediction.matchKey,
+  );
+  if (!card || isMultiMatch(card)) return null;
+
+  const opponent = prediction.pick === "left" ? card.right : card.left;
+  return { name: opponent.name, probability: 1 - prediction.winProbability };
+}
+
+/**
  * 리포트의 `pick` 코드를 사람 이름으로 바꾼다.
  *
  * 서버는 채점과 맞추기 위해 코드(`left` · `right` · 다인전 인덱스)를 보낸다.

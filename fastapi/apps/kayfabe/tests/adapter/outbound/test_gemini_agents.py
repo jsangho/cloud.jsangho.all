@@ -22,7 +22,10 @@ from datetime import UTC, datetime
 
 import pytest
 
-from kayfabe.adapter.outbound.agents.gemini_agent_support import MAX_SUMMARY_CHARS
+from kayfabe.adapter.outbound.agents.gemini_agent_support import (
+    MAX_SUMMARY_CHARS,
+    RateGate,
+)
 from kayfabe.adapter.outbound.agents.rumor_scout_agent import GeminiRumorScout
 from kayfabe.adapter.outbound.agents.storyline_gemini_agent import (
     GeminiStorylineAnalyst,
@@ -90,12 +93,17 @@ def _reply(pick: object, confidence: float = 0.8, summary: str = "명분이 있�
     )
 
 
+#: 테스트는 한도를 기다리지 않는다 — 여기서 검증하는 것은 페이싱이 아니라 판독이다.
+def _open_gate() -> RateGate:
+    return RateGate(10_000)
+
+
 def _storyline(generation: FakeGeneration) -> GeminiStorylineAnalyst:
-    return GeminiStorylineAnalyst(generation)  # type: ignore[arg-type]
+    return GeminiStorylineAnalyst(generation, rate_gate=_open_gate())  # type: ignore[arg-type]
 
 
 def _rumor(generation: FakeGeneration) -> GeminiRumorScout:
-    return GeminiRumorScout(generation)  # type: ignore[arg-type]
+    return GeminiRumorScout(generation, rate_gate=_open_gate())  # type: ignore[arg-type]
 
 
 @pytest.mark.asyncio

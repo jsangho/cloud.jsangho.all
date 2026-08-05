@@ -12,10 +12,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
+    RateGate,
     ask_for_report,
     describe_knowledge,
     describe_match,
     json_rule,
+    shared_rate_gate,
     silent,
     usable_knowledge,
 )
@@ -35,8 +37,15 @@ _PERSONA = (
 
 
 class GeminiStorylineAnalyst(StorylineAnalystPort):
-    def __init__(self, generation_use_case: GeminiGenerationUseCase) -> None:
+    def __init__(
+        self,
+        generation_use_case: GeminiGenerationUseCase,
+        *,
+        rate_gate: RateGate | None = None,
+    ) -> None:
         self._generation_use_case = generation_use_case
+        # 기본값은 두 에이전트가 공유하는 게이트다 — 한도는 모델 단위이기 때문이다.
+        self._rate_gate = rate_gate or shared_rate_gate
 
     async def analyze(
         self, context: MatchContext, knowledge: Sequence[KnowledgeChunk]
@@ -57,4 +66,5 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
             prompt=prompt,
             context=context,
             chunks=chunks,
+            gate=self._rate_gate,
         )

@@ -182,7 +182,8 @@ async def test_generates_prediction_from_three_agents() -> None:
     assert saved.pick == "left"
     assert saved.pick_name == "Roman Reigns"
     assert saved.source is PredictionSource.AGENTS
-    assert saved.win_probability == 1.0
+    # 세 에이전트가 같은 쪽이어도 100%가 아니다 — 상대가 가진 몫이 남는다.
+    assert 0.5 < saved.win_probability < 1.0
     assert saved.confidence == 1.0
     assert len(saved.reports) == 3
 
@@ -223,7 +224,9 @@ async def test_all_agents_dead_falls_back_to_bookmaker() -> None:
     # 배당이 낮은 쪽(1.14)
     assert saved.pick == "left"
     assert saved.reports == ()
-    # 배당만 보고 고른 것이라 확신을 높게 주지 않는다
+    # 승률은 배당의 내재 확률이다 — 임의의 0.5보다 정직하다.
+    assert saved.win_probability > 0.5
+    # 에이전트가 아무도 답하지 못했으므로 합의는 없다
     assert saved.confidence == 0.0
 
 

@@ -12,8 +12,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import time
 from collections.abc import Sequence
 from typing import Any
 
@@ -34,6 +36,12 @@ MAX_KNOWLEDGE_ITEMS = 5
 #: 리포트에 붙이는 출처 수.
 MAX_SOURCES = 5
 
+#: 분당 허용 호출 수. 무료 등급 한도는 5회이고, 1회는 승부예측 외의 경로
+#: (선수 챗 등) 몫으로 남긴다. 넘기면 429가 나고 그 경기는 오즈 한 표로 확정된다.
+MAX_CALLS_PER_MINUTE = 4
+
+_RATE_WINDOW_SECONDS = 60.0
+
 _JSON_RULE = (
     "반드시 아래 JSON 하나만 출력하세요. 코드블록·설명·인사말을 붙이지 마세요.\n"
     '{"pick": "<선택지 코드 또는 null>", "confidence": <0.0~1.0>, '
@@ -41,6 +49,40 @@ _JSON_RULE = (
     "근거가 부족하면 pick을 null로, confidence를 0으로 두세요. "
     "**추측으로 한쪽을 고르지 마세요.**"
 )
+
+
+class RateGate:
+    """분당 호출 수를 맞춰 429를 애초에 만들지 않는다.
+
+    **재시도가 아니라 페이싱이다.** 429를 맞고 다시 던지면 상대 서버에 두 번 부담을
+    주고, 그 사이 다른 경기 호출까지 밀린다. 속도를 맞추면 그 상황이 오지 않는다.
+
+    프로세스 안에서만 유효하다 — 워커가 여럿이면 그 수만큼 곱해진다. 지금 생성
+    경로는 스크립트 하나(또는 관리자 요청 하나)라 이 범위로 충분하다.
+    """
+
+    def __init__(self, max_per_minute: int) -> None:
+        self._max = max_per_minute
+        self._lock = asyncio.Lock()
+        self._recent: list[float] = []
+
+    async def acquire(self) -> None:
+        async with self._lock:
+            while True:
+                now = time.monotonic()
+                self._recent = [
+                    t for t in self._recent if now - t < _RATE_WINDOW_SECONDS
+                ]
+                if len(self._recent) < self._max:
+                    self._recent.append(now)
+                    return
+                wait = _RATE_WINDOW_SECONDS - (now - self._recent[0])
+                logger.info("[kayfabe.agent] 호출 한도 대기 | %.1f초", wait)
+                await asyncio.sleep(wait)
+
+
+#: 두 LLM 에이전트가 공유한다 — 한도는 모델 단위이지 에이전트 단위가 아니다.
+shared_rate_gate = RateGate(MAX_CALLS_PER_MINUTE)
 
 
 def describe_match(context: MatchContext) -> str:
@@ -94,16 +136,19 @@ async def ask_for_report(
     prompt: str,
     context: MatchContext,
     chunks: Sequence[KnowledgeChunk],
+    gate: RateGate,
 ) -> AgentReport:
     """모델에 묻고 리포트로 옮긴다. 엔진이 죽었으면 `AgentUnavailableError`."""
-    raw = await _generate(use_case, agent, prompt)
+    raw = await _generate(use_case, agent, prompt, gate)
     payload = _parse(raw, agent)
     return _to_report(payload, agent=agent, context=context, chunks=chunks)
 
 
 async def _generate(
-    use_case: GeminiGenerationUseCase, agent: AgentKind, prompt: str
+    use_case: GeminiGenerationUseCase, agent: AgentKind, prompt: str, gate: RateGate
 ) -> str:
+    await gate.acquire()
+
     pieces: list[str] = []
     try:
         async for piece in use_case.stream_generate(GeminiGenerationCommand(prompt)):

@@ -122,7 +122,11 @@ class AiPredictionInteractor(AiPredictionUseCase):
         reports = await self._collect_reports(context, knowledge)
 
         try:
-            synthesis = synthesize(reports, agent_count=AGENT_COUNT)
+            synthesis = synthesize(
+                reports,
+                agent_count=AGENT_COUNT,
+                options=[option.pick for option in context.options],
+            )
         except ReportsUnavailableError:
             # 아무도 의견을 내지 못했다 — 화면은 그래도 예측을 보여줘야 하므로
             # 북메이커 배당으로 강등한다. 대신 source에 그 사실을 남긴다.
@@ -197,7 +201,7 @@ class AiPredictionInteractor(AiPredictionUseCase):
 
     def _bookmaker_fallback(self, context: MatchContext) -> AgentPrediction | None:
         favorite = _bookmaker_favorite(context)
-        if favorite is None:
+        if favorite is None or (probability := _implied_probability(context)) is None:
             logger.warning(
                 "[kayfabe.ai_prediction] 폴백 불가 | match=%s | 배당 없음",
                 context.match_key,
@@ -214,8 +218,9 @@ class AiPredictionInteractor(AiPredictionUseCase):
             match_key=context.match_key,
             pick=favorite.pick,
             pick_name=favorite.name,
-            # 배당만 보고 고른 것이라 승률·확신을 에이전트 합의처럼 높게 주지 않는다.
-            win_probability=0.5,
+            #: 배당의 내재 확률이다. 임의의 0.5보다 정직하다 — 시장이 실제로 매긴 값이다.
+            win_probability=probability,
+            # 에이전트가 아무도 답하지 못했으므로 합의는 없다.
             confidence=0.0,
             rationale=(
                 "분석 에이전트의 의견을 모으지 못해 북메이커 배당이 가장 낮은 쪽을 "
@@ -268,6 +273,18 @@ def _bookmaker_favorite(context: MatchContext) -> MatchOption | None:
         return None
     best = min(range(len(decimals)), key=lambda i: decimals[i])
     return context.options[best]
+
+
+def _implied_probability(context: MatchContext) -> float | None:
+    """배당 favorite의 내재 확률. 오버라운드(북메이커 마진)를 정규화로 걷어낸다."""
+    decimals = context.bookmaker_decimal
+    if not decimals or len(decimals) != len(context.options):
+        return None
+    if any(value <= 0 for value in decimals):
+        return None
+    inverses = [1.0 / value for value in decimals]
+    total = sum(inverses)
+    return max(inverses) / total if total > 0 else None
 
 
 def _compose_rationale(
