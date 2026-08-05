@@ -148,13 +148,7 @@ function pickPrediction(
 }
 
 /** 근거를 못 불러온 것과 애초에 근거가 없는 것을 구분해 알려 준다. */
-function GroupFooter({
-  entry,
-  rows,
-}: {
-  entry: PredictionCache[string] | undefined;
-  rows: PleAiRecord[];
-}) {
+function GroupFooter({ entry }: { entry: PredictionCache[string] | undefined }) {
   if (!entry || entry.status === "loading") return null;
 
   if (entry.status === "error") {
@@ -165,14 +159,7 @@ function GroupFooter({
     );
   }
 
-  const legacy = rows.filter((row) => !entry.byMatch[row.matchKey]).length;
-  if (legacy === 0) return null;
-
-  return (
-    <p className="mt-2 text-xs text-stone-500">
-      근거 버튼이 없는 {legacy}경기는 배당만 보고 예측하던 시기의 기록입니다.
-    </p>
-  );
+  return null;
 }
 
 export function PleAiScoreboard() {
@@ -347,10 +334,7 @@ export function PleAiScoreboard() {
                             />
                           ))}
                         </ul>
-                        <GroupFooter
-                          entry={predictions[group.slug]}
-                          rows={group.rows}
-                        />
+                        <GroupFooter entry={predictions[group.slug]} />
                       </div>
                     )}
                   </li>
