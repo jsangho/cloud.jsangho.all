@@ -5,8 +5,9 @@
 > **대상 저장소:** `cloud.jsangho.all`
 > **작업 주체:** Claude Code
 > **작성일:** 2026-08-04
-> **상태:** 진행 중 — T0·T1·T2·T6·T7 완료, T5는 **오즈 에이전트만** 완료. 엔드포인트가 운영에서 살아 있다(서사·루머 미착수라 대부분 북메이커 폴백).
+> **상태:** 진행 중 — T0·T1·T2·T3·T4·T6·T7 완료, T5는 **오즈 에이전트만** 완료. 엔드포인트가 운영에서 살아 있다(서사·루머 미착수라 대부분 북메이커 폴백).
 > 마이그레이션 `c5a2e91d7b34`는 **2026-08-04 운영 적용 완료**(`b3f1c9d2a740` → `c5a2e91d7b34`). **§13-Q1·Q2 결정 완료**로 T3·T5 착수 조건도 풀렸다.
+> 마이그레이션 `d1c7f3b80204`(`ple_knowledge_chunks`)는 **작성 완료·운영 미적용**이다. 수집(T3)과 검색(T4)이 모두 붙었지만 **테이블이 없어 아직 한 건도 적재하지 않았다** — 적용 뒤 `scripts/ingest_prediction_knowledge.py`를 돌리는 것이 다음 순서다. 그전까지 검색 결과는 0건이고, 이는 실패가 아니라 아는 게 없는 상태다.
 > 남은 미해결 질문은 Q3~Q7이며, 그중 어느 것도 T3~T7을 막지 않는다.
 > **상위 규칙:** [루트 CLAUDE.md](../../../../CLAUDE.md) · [fastapi/CLAUDE.md](../../../CLAUDE.md) · 참조 구현 [`kayfabe/adapter/outbound/repositories/wrestler_chat_repository.py`](../adapter/outbound/repositories/wrestler_chat_repository.py)
 
@@ -272,12 +273,26 @@ apps/kayfabe/
 │       │   └── rumor_scout_agent.py
 │       ├── repositories/prediction_knowledge_repository.py   # pgvector <=> 검색
 │       ├── orm/agent_prediction_orm.py     # 새 테이블 2개 (§5)
+│       ├── orm/knowledge_chunk_orm.py      # ple_knowledge_chunks (§6 DB 엔티티)
 │       └── pg/agent_prediction_pg_repository.py
 ├── dependencies/ai_prediction_provider.py
 └── tests/test_prediction_synthesis.py · test_ai_prediction_interactor.py · test_ai_prediction_router.py
 ```
 
 **수집(ingestion)은 `ontology` 쪽에 둔다** — 크롤러·스크래퍼가 이미 거기 있고, 특정 앱의 지식이 아니기 때문이다. kayfabe는 **검색만** 한다(§2-D2).
+
+### 수집 경계 (T3 구현에서 확정)
+
+"수집을 허브에 둔다"를 문자 그대로 하면 허브가 `ple_knowledge_chunks`에 써야 하는데, 그러려면 `ontology`가 `kayfabe`를 import해야 한다 — **§4-2 금지 사항이다.** 그래서 다음처럼 갈랐다.
+
+| 책임 | 위치 | 이유 |
+|---|---|---|
+| HTTP·robots.txt·본문 추출 | `ontology/app/use_cases/public_source_interactor.py` | 특정 앱의 지식이 아니다. 기존 `WebPageFetcherPort`를 그대로 쓴다 |
+| **무엇을** 읽을 자격이 있는지(허용 도메인) | `kayfabe/app/services/prediction_knowledge_sources.py` | 목록은 그 지식을 쓰는 앱이 안다. 허브에는 생성자 인자로 넘긴다 |
+| 쪼개기·지문 | `kayfabe/domain/services/knowledge_chunking.py` | 순수 함수 |
+| 임베딩·저장 | `kayfabe/adapter/outbound/{embedding,pg}/` | 테이블 소유자가 쓴다 |
+
+robots.txt는 **실행 시점에 확인한다**(`HttpxRobotsPolicy`). 사람이 한 번 확인하고 주석으로 남기는 방식은 상대가 정책을 바꾸면 그대로 어긋난다. 읽지 못하면 **가져가지 않는다.**
 
 ### DB 엔티티 (`_claude/ENTITY_RULE.md` 준수)
 
@@ -376,8 +391,8 @@ DATABASE_URL=          # 이미 있음 — pgvector 포함
 | ~~**T0**~~ | ~~§13-Q1·Q2 결정~~ | 이 문서 §3-D10·D11 · §13 | **완료 (2026-08-04)** — 공개 소스만 · 동일 가중 1.0 |
 | ~~**T1**~~ | ~~도메인 — 엔티티 + 합성 함수~~ | `agent_prediction.py` · `prediction_synthesis.py` | **완료 (2026-08-04)** — 픽스처 테스트 23건 통과, LLM 호출 0회 |
 | ~~**T2**~~ | ~~포트 정의~~ | `ports/input/*` · `ports/output/*` · `dtos/agent_prediction_dto.py` | **완료 (2026-08-04)** — 포트 6종 전부 `ABC`, 구현체 0개 상태로 테스트 통과 |
-| **T3** | 지식 적재 (RAG) | `ontology` 수집 + `ple_knowledge_chunks` | 허용 도메인 목록(§3-D10) 안에서만 수집. `embed_text` + pgvector 저장. `source_url` 누락 청크 0건 |
-| **T4** | 검색 리포지토리 | `prediction_knowledge_repository.py` | `<=>` 코사인 top-k. `wrestler_chat_repository` 패턴 |
+| ~~**T3**~~ | ~~지식 적재 (RAG)~~ | `ontology` 수집 유스케이스 + kayfabe 적재 유스케이스 + `scripts/ingest_prediction_knowledge.py` | **완료 (2026-08-05)** — 허용 도메인 목록 밖은 요청조차 보내지 않고, robots.txt를 실행 시점에 확인한다. `source_url`은 DB NOT NULL. 테스트 25건 |
+| ~~**T4**~~ | ~~검색 리포지토리~~ | `knowledge_chunk_orm.py` · 마이그레이션 `d1c7f3b80204` · `prediction_knowledge_repository.py` | **완료 (2026-08-05)** — `<=>` 코사인 top-k, `wrestler_chat_repository` 패턴. 테스트 11건 |
 | **T5** | 에이전트 3종 | `adapter/outbound/agents/*` | **오즈 완료 (2026-08-04)** — `BookmakerOddsScout`, LLM 미사용. 서사·루머는 미착수 |
 | ~~**T6**~~ | ~~코디네이터 유스케이스~~ | `ai_prediction_interactor.py` | **완료 (2026-08-04)** — 페이크 포트 테스트 11건. 에이전트 1개 실패 시 합성 유지, 전멸 시 북메이커 강등 검증 |
 | ~~**T7**~~ | ~~영속화 + 라우터~~ | ORM·마이그레이션·라우터·프로바이더 | **완료 (2026-08-04)** — OpenAPI에 GET/POST 노출, 관리자 가드 테스트 9건. **마이그레이션은 아직 적용 전** |
@@ -426,7 +441,7 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 - [ ] **Q3. 생성 트리거** — 관리자 수동 호출만으로 갈지, PLE 개최 D-7/D-1 배치를 걸지. 배치라면 스케줄러가 지금 없다(별도 작업).
 - [ ] **Q4. 기존 지표와의 연속성** — 새 예측도 `ple_matches.ai_pick`에 함께 반영하면 적중률이 이어지지만, **규칙 기반 시절 기록과 멀티 에이전트 기록이 한 숫자로 섞인다.** 분리해서 보여줄지.
 - [ ] **Q5. 비용 상한** — 경기당 3회 호출 × 이벤트당 12경기 = 이벤트 1회 36회. 월 상한과 초과 시 동작(중단/폴백)을 정한다.
-- [ ] **Q6. 지식 신선도** — `ple_knowledge_chunks`를 언제 지울지. 6개월 보관이면 그 이후 청크의 처리(삭제/아카이브)를 정한다.
+- [ ] **Q6. 지식 신선도** — `ple_knowledge_chunks`를 언제 지울지. 6개월 보관이면 그 이후 청크의 처리(삭제/아카이브)를 정한다. **T4에서 검색 단계의 나이 제한(cutoff)은 넣지 않았다** — 오래된 청크를 조용히 빼면 "지식이 없어서 의견 없음"인지 "잘려서 없음"인지 구분되지 않는다. 대신 결과를 최신순으로 늘어놓아 에이전트가 날짜를 보고 판단하게 했다. 보관 정책이 정해지면 그때 삭제로 처리한다.
 - [ ] **Q7. 문서 위치** — 이 문서는 사용자 지정 경로(`apps/kayfabe/_docs/`)에 있다. 루트 `CLAUDE.md` §0-4는 백엔드 문서를 `fastapi/_docs/`로 안내하지만, `apps/kayfabe/_docs/CLAUDE.md` 선례가 이미 있어 앱 전용 문서는 앱 아래 두는 것으로 보인다. 규칙을 §0-4에 명시할지.
 
 ---
@@ -435,6 +450,8 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-08-05 | T3 | 수집 파이프라인. **허브에는 HTTP·robots.txt·본문 추출만 두고 허용 도메인 목록은 kayfabe가 넘긴다** — 허브가 `ple_knowledge_chunks`에 직접 쓰면 `ontology → kayfabe` import가 되어 §4-2 위반이라 경계를 §6에 새로 명시했다. robots.txt는 주석이 아니라 **실행 시점 확인**이고, 읽지 못하면 가져가지 않는다. 청킹은 문장 경계 기준(글자 수로 자르면 에이전트가 읽을 수 없는 조각이 된다)이고, 재수집이 같은 내용을 쌓지 않도록 `content_hash` + `ON CONFLICT DO NOTHING`으로 멱등하게 만들었다 | `pytest` 165 passed(신규 25건) · lint-imports 4 KEPT · **네트워크·DB·임베딩 모델 없이** 페이크로 검증 · 마이그레이션 미적용이라 실적재는 아직 |
+| 2026-08-05 | T4 | 지식 청크 테이블(`ple_knowledge_chunks`)·마이그레이션 `d1c7f3b80204`·검색 리포지토리. `source_url`을 **NOT NULL**로 둬 출처 없는 지식이 애초에 저장되지 못하게 했다(§3-D6을 앱 검증이 아니라 DB에서 막는다). **뽑는 것은 유사도, 늘어놓는 것은 최신순**으로 정했다 — 선정을 최신순으로 하면 무관한 새 글이 밀려 들어오고, 순서까지 유사도로 두면 부상·복귀처럼 뒤집히는 사실에서 옛 소식이 먼저 읽힌다. 프로바이더에서 임시 `EmptyPredictionKnowledge`를 걷어내고 실물을 연결했다 | `pytest apps/kayfabe/tests` 137 passed(신규 11건) · lint-imports 4 KEPT · **DB·임베딩 모델 없이** 페이크로 검증 · 마이그레이션 미적용 |
 | 2026-08-04 | T5(일부) | 오즈 에이전트 `BookmakerOddsScout`. **LLM을 쓰지 않는다** — 근거가 숫자뿐이라 비용도 지연도 없고, 세 축 중 유일하게 항상 돌 수 있다. 배당 역수를 정규화해 오버라운드(북메이커 마진)를 제거한 내재 확률을 `weight`로 쓴다. 기존 `ple_ai`와 고르는 쪽은 같지만 **얼마나 확신하는지를 함께 낸다** | `pytest` 10건 · 전체 191 passed · **배포 전** |
 | 2026-08-04 | 배포 | 마이그레이션 `c5a2e91d7b34` 운영 적용 + backend·auth 재기동 | `alembic current` = `c5a2e91d7b34` · `GET /api/ple_events/summerslam/ai-predictions` 200 `{"items": []}` · POST 무인증 401 |
 | 2026-08-04 | T7 | ORM 2종·마이그레이션·PG 리포지토리·스키마·라우터·프로바이더. 조회는 무인증, 생성은 `RoleChecker(ADMIN)`. 분석기 자리에는 **의견 없음을 내는 임시 어댑터**를 넣어 지금은 북메이커 폴백으로 엔드투엔드가 돈다 — T4·T5가 오면 프로바이더의 인자만 바뀐다 | OpenAPI에 `/api/ple_events/{slug}/ai-predictions` GET·POST 노출 · 라우터 테스트 9건 · 전체 181 passed |
