@@ -8,6 +8,12 @@ import {
   type PleAiRecord,
   type PleAiStats,
 } from "@/lib/ple-ai-stats";
+import {
+  fetchAiPredictions,
+  type AiPrediction,
+  type AiPredictionsResult,
+} from "@/lib/ple-ai-predictions";
+import { AiReportDialog } from "@/components/ple/ai-report-dialog";
 import { WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
 import { getPleMatches } from "@/lib/wwe-ple-matches";
 
@@ -23,6 +29,12 @@ type AiScoreboardUi = {
   sectionOpen: boolean;
   expandedSlug: string | null;
 };
+
+/** PLE별 예측 캐시. 펼친 대회만 담긴다 — 접힌 대회까지 미리 받지 않는다. */
+type PredictionCache = Record<
+  string,
+  AiPredictionsResult | { status: "loading" }
+>;
 
 const initialUi: AiScoreboardUi = {
   sectionOpen: false,
@@ -72,7 +84,13 @@ function groupRecordsByPle(records: PleAiRecord[]): PleAiGroup[] {
     });
 }
 
-function AiMatchRow({ row }: { row: PleAiRecord }) {
+function AiMatchRow({
+  row,
+  prediction,
+}: {
+  row: PleAiRecord;
+  prediction?: AiPrediction;
+}) {
   return (
     <li
       className={cn(
@@ -110,8 +128,50 @@ function AiMatchRow({ row }: { row: PleAiRecord }) {
         >
           {row.correct ? "적중" : "실패"}
         </span>
+        {prediction && (
+          <AiReportDialog
+            slug={row.eventSlug}
+            matchTitle={row.matchTitle}
+            prediction={prediction}
+          />
+        )}
       </div>
     </li>
+  );
+}
+
+function pickPrediction(
+  entry: PredictionCache[string] | undefined,
+  matchKey: string,
+): AiPrediction | undefined {
+  return entry?.status === "ready" ? entry.byMatch[matchKey] : undefined;
+}
+
+/** 근거를 못 불러온 것과 애초에 근거가 없는 것을 구분해 알려 준다. */
+function GroupFooter({
+  entry,
+  rows,
+}: {
+  entry: PredictionCache[string] | undefined;
+  rows: PleAiRecord[];
+}) {
+  if (!entry || entry.status === "loading") return null;
+
+  if (entry.status === "error") {
+    return (
+      <p className="mt-2 text-xs text-stone-500">
+        분석 근거를 불러오지 못했습니다.
+      </p>
+    );
+  }
+
+  const legacy = rows.filter((row) => !entry.byMatch[row.matchKey]).length;
+  if (legacy === 0) return null;
+
+  return (
+    <p className="mt-2 text-xs text-stone-500">
+      근거 버튼이 없는 {legacy}경기는 배당만 보고 예측하던 시기의 기록입니다.
+    </p>
   );
 }
 
@@ -119,6 +179,7 @@ export function PleAiScoreboard() {
   const [stats, setStats] = useState<PleAiStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [ui, setUi] = useState<AiScoreboardUi>(initialUi);
+  const [predictions, setPredictions] = useState<PredictionCache>({});
 
   const patchUi = (patch: Partial<AiScoreboardUi>) =>
     setUi((prev) => ({ ...prev, ...patch }));
@@ -151,9 +212,17 @@ export function PleAiScoreboard() {
   };
 
   const togglePle = (slug: string) => {
-    patchUi({
-      expandedSlug: ui.expandedSlug === slug ? null : slug,
-    });
+    const opening = ui.expandedSlug !== slug;
+    patchUi({ expandedSlug: opening ? slug : null });
+    if (opening) void loadPredictions(slug);
+  };
+
+  /** 펼칠 때 한 번만 받는다. 실패해도 목록 자체는 그대로 보인다. */
+  const loadPredictions = async (slug: string) => {
+    if (predictions[slug]) return;
+    setPredictions((prev) => ({ ...prev, [slug]: { status: "loading" } }));
+    const result = await fetchAiPredictions(slug);
+    setPredictions((prev) => ({ ...prev, [slug]: result }));
   };
 
   return (
@@ -168,7 +237,7 @@ export function PleAiScoreboard() {
               PLE 승패 예측 기록
             </h3>
             <p className="mt-1 text-sm text-stone-400">
-              북메이커 배당 favorite 기준 · 경기 결과 확정 시 자동 채점
+              서사·오즈·루머 분석을 합쳐 예측 · 경기 결과 확정 시 자동 채점
             </p>
           </div>
           {stats && stats.totalGraded > 0 && (
@@ -265,14 +334,24 @@ export function PleAiScoreboard() {
                       </span>
                     </button>
                     {isOpen && (
-                      <ul className="space-y-1.5 border-t border-stone-200/50 dark:border-stone-700/50 px-3 py-3">
-                        {group.rows.map((row) => (
-                          <AiMatchRow
-                            key={`${row.eventSlug}-${row.matchKey}`}
-                            row={row}
-                          />
-                        ))}
-                      </ul>
+                      <div className="border-t border-stone-200/50 dark:border-stone-700/50 px-3 py-3">
+                        <ul className="space-y-1.5">
+                          {group.rows.map((row) => (
+                            <AiMatchRow
+                              key={`${row.eventSlug}-${row.matchKey}`}
+                              row={row}
+                              prediction={pickPrediction(
+                                predictions[group.slug],
+                                row.matchKey,
+                              )}
+                            />
+                          ))}
+                        </ul>
+                        <GroupFooter
+                          entry={predictions[group.slug]}
+                          rows={group.rows}
+                        />
+                      </div>
                     )}
                   </li>
                 );

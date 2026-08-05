@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
 from kayfabe.adapter.outbound.agents.odds_scout_agent import BookmakerOddsScout
-from kayfabe.adapter.outbound.agents.pending_agents import (
-    PendingRumorScout,
-    PendingStorylineAnalyst,
+from kayfabe.adapter.outbound.agents.rumor_scout_agent import GeminiRumorScout
+from kayfabe.adapter.outbound.agents.storyline_gemini_agent import (
+    GeminiStorylineAnalyst,
 )
 from kayfabe.adapter.outbound.pg.agent_prediction_pg_repository import (
     AgentPredictionPgRepository,
@@ -19,6 +19,10 @@ from kayfabe.app.ports.output.agent_prediction_repository import (
 )
 from kayfabe.app.ports.output.prediction_knowledge_port import PredictionKnowledgePort
 from kayfabe.app.use_cases.ai_prediction_interactor import AiPredictionInteractor
+from ontology.app.ports.input.gemini_generation_use_case import GeminiGenerationUseCase
+from ontology.dependencies.gemini_generation_provider import (
+    get_gemini_generation_use_case,
+)
 
 
 def get_agent_prediction_repository(
@@ -36,16 +40,18 @@ def get_prediction_knowledge(
 def get_ai_prediction_use_case(
     repository: AgentPredictionRepository = Depends(get_agent_prediction_repository),
     knowledge: PredictionKnowledgePort = Depends(get_prediction_knowledge),
+    generation: GeminiGenerationUseCase = Depends(get_gemini_generation_use_case),
 ) -> AiPredictionUseCase:
-    """오즈와 지식 검색은 실제 구현이고 서사·루머는 아직 임시 어댑터다.
+    """세 에이전트가 모두 실물이다.
 
-    T3(수집)가 오기 전까지 `ple_knowledge_chunks`는 비어 있어 검색 결과가 0건이다 —
-    **실패가 아니라 아직 아는 게 없는 상태다.** T5가 오면 이 함수의 인자만 바뀐다.
+    **지식이 비어 있는 동안은 LLM 호출이 0회다** — 서사·루머 에이전트가 출처 있는
+    자료를 못 받으면 모델을 부르지 않고 의견 없음을 낸다. 그래서 적재 전에는 오즈
+    한 표로만 예측이 만들어지고, 비용도 들지 않는다.
     """
     return AiPredictionInteractor(
         repository,
         knowledge,
-        PendingStorylineAnalyst(),
+        GeminiStorylineAnalyst(generation),
         BookmakerOddsScout(),
-        PendingRumorScout(),
+        GeminiRumorScout(generation),
     )
