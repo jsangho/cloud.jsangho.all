@@ -88,7 +88,7 @@ def test_row_carries_source_columns() -> None:
 async def test_empty_batch_touches_nothing() -> None:
     session = _FakeSession([])
 
-    assert await _repository(session).save_new([]) == 0
+    assert await _repository(session).replace_document_chunks([]) == 0
     assert session.statements == []
 
 
@@ -96,13 +96,31 @@ async def test_empty_batch_touches_nothing() -> None:
 async def test_conflicting_rows_are_skipped_not_raised() -> None:
     session = _FakeSession([1])
 
-    stored = await _repository(session).save_new(
+    stored = await _repository(session).replace_document_chunks(
         [_chunk(), _chunk("다른 본문", "b" * 64)]
     )
 
-    # 두 건을 넣었지만 DB가 하나만 받았다 — 나머지는 이미 있던 내용이다.
+    # 두 건을 넣었지만 DB가 하나만 받았다 — 나머지는 다른 문서가 이미 가진 문단이다.
     assert stored == 1
-    sql = str(session.statements[0].compile(dialect=postgresql.dialect()))
+    sql = str(session.statements[-1].compile(dialect=postgresql.dialect()))
     assert "ON CONFLICT (content_hash) DO NOTHING" in sql
     assert "RETURNING ple_knowledge_chunks.id" in sql
     assert session.flushed
+
+
+@pytest.mark.asyncio
+async def test_old_version_of_the_same_document_is_removed_first() -> None:
+    """위키가 갱신되면 해시가 달라진다 — 지우지 않으면 옛 판본이 계속 검색된다."""
+    session = _FakeSession([1, 2])
+
+    await _repository(session).replace_document_chunks(
+        [_chunk(), _chunk("다른 본문", "b" * 64)]
+    )
+
+    delete_sql = str(session.statements[0].compile(dialect=postgresql.dialect()))
+    assert delete_sql.startswith("DELETE FROM ple_knowledge_chunks")
+    assert "source_url" in delete_sql
+    # 삭제가 먼저, 삽입이 나중이다.
+    assert "INSERT INTO" in str(
+        session.statements[1].compile(dialect=postgresql.dialect())
+    )

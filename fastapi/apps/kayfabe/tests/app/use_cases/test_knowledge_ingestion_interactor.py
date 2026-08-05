@@ -67,7 +67,7 @@ class FakeRepository(KnowledgeChunkRepository):
         self.saved: list[NewKnowledgeChunk] = []
         self._stored = stored
 
-    async def save_new(self, chunks: Sequence[NewKnowledgeChunk]) -> int:
+    async def replace_document_chunks(self, chunks: Sequence[NewKnowledgeChunk]) -> int:
         self.saved.extend(chunks)
         return len(chunks) if self._stored is None else self._stored
 
