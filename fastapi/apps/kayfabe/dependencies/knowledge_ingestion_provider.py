@@ -19,7 +19,9 @@ from kayfabe.app.use_cases.knowledge_ingestion_interactor import (
 from ontology.dependencies.public_source_provider import get_public_source_use_case
 
 
-def get_knowledge_ingestion_use_case(db: AsyncSession) -> KnowledgeIngestionUseCase:
+def get_knowledge_ingestion_use_case(
+    db: AsyncSession, *, max_chunks: int | None = None
+) -> KnowledgeIngestionUseCase:
     """`Depends`가 아니라 세션을 직접 받는다.
 
     적재는 외부 사이트를 여러 번 오가는 긴 작업이라 HTTP 요청 안에서 돌리지 않는다
@@ -29,4 +31,5 @@ def get_knowledge_ingestion_use_case(db: AsyncSession) -> KnowledgeIngestionUseC
         OntologyPublicSourceCollector(get_public_source_use_case(ALLOWED_DOMAINS)),
         BgeM3Embedder(),
         KnowledgeChunkPgRepository(db=db),
+        max_chunks_per_document=max_chunks,
     )

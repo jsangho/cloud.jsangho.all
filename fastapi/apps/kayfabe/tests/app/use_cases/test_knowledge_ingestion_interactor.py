@@ -87,9 +87,14 @@ def _interactor(
     source: FakeSource,
     embedder: FakeEmbedder | None = None,
     repository: FakeRepository | None = None,
+    *,
+    max_chunks: int | None = None,
 ) -> KnowledgeIngestionInteractor:
     return KnowledgeIngestionInteractor(
-        source, embedder or FakeEmbedder(), repository or FakeRepository()
+        source,
+        embedder or FakeEmbedder(),
+        repository or FakeRepository(),
+        max_chunks_per_document=max_chunks,
     )
 
 
@@ -184,3 +189,23 @@ async def test_empty_command_touches_nothing() -> None:
     assert source.requested == []
     assert summary.requested == 0
     assert summary.stored == 0
+
+
+@pytest.mark.asyncio
+async def test_chunk_cap_limits_embedding_work() -> None:
+    """위키 인물 문서는 뒤로 갈수록 타이틀 이력·각주다 — 앞부분만 담는다."""
+    long_text = " ".join(
+        f"{i}번째 문단입니다. 내용을 충분히 길게 채운 문장을 넣습니다."
+        for i in range(80)
+    )
+    source = FakeSource({_WWE_URL: _document(text=long_text)})
+    embedder = FakeEmbedder()
+    repository = FakeRepository()
+
+    summary = await _interactor(source, embedder, repository, max_chunks=3).ingest(
+        IngestKnowledgeCommand(urls=(_WWE_URL,))
+    )
+
+    assert summary.chunks == 3
+    assert len(embedder.calls) == 3
+    assert len(repository.saved) == 3

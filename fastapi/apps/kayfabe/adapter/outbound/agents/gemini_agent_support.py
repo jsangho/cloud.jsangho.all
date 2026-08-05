@@ -36,6 +36,16 @@ MAX_KNOWLEDGE_ITEMS = 5
 #: 리포트에 붙이는 출처 수.
 MAX_SOURCES = 5
 
+#: 한 리포트를 얻기 위한 최대 시도 수. 마지막 시도는 예비 모델로 간다.
+#:
+#: 벤더의 일시 장애(503 "high demand")가 실제로 관측됐고, 그때 서사 에이전트가
+#: 통째로 빠져 경기가 오즈 단독으로 확정됐다. **재시도는 한도 초과(429)가 아니라
+#: 이 일시 장애를 위한 것이다** — 페이싱으로 429는 이미 막고 있다.
+MAX_ATTEMPTS = 3
+
+#: 재시도 간격(초). 몰아치지 않도록 뒤로 갈수록 늘린다.
+RETRY_BACKOFF_SECONDS = (3.0, 8.0)
+
 #: 분당 허용 호출 수. 무료 등급 한도는 5회이고, 1회는 승부예측 외의 경로
 #: (선수 챗 등) 몫으로 남긴다. 넘기면 429가 나고 그 경기는 오즈 한 표로 확정된다.
 MAX_CALLS_PER_MINUTE = 4
@@ -138,9 +148,10 @@ async def ask_for_report(
     chunks: Sequence[KnowledgeChunk],
     gate: RateGate,
     model: str | None = None,
+    fallback_model: str | None = None,
 ) -> AgentReport:
     """모델에 묻고 리포트로 옮긴다. 엔진이 죽었으면 `AgentUnavailableError`."""
-    raw = await _generate(use_case, agent, prompt, gate, model)
+    raw = await _generate(use_case, agent, prompt, gate, model, fallback_model)
     payload = _parse(raw, agent)
     return _to_report(payload, agent=agent, context=context, chunks=chunks)
 
@@ -151,18 +162,48 @@ async def _generate(
     prompt: str,
     gate: RateGate,
     model: str | None,
+    fallback_model: str | None = None,
+) -> str:
+    """일시 장애면 다시 묻고, 그래도 안 되면 예비 모델로 한 번 더 묻는다.
+
+    같은 모델만 두드리면 그 모델이 혼잡한 동안 계속 실패한다. 마지막 시도를 다른
+    모델로 돌리는 이유이고, 한도가 모델 단위라 예비 모델은 자기 몫을 따로 갖는다.
+    """
+    last: Exception | None = None
+    for attempt in range(MAX_ATTEMPTS):
+        is_last = attempt == MAX_ATTEMPTS - 1
+        target = fallback_model if (is_last and fallback_model) else model
+        try:
+            return await _stream_once(use_case, gate, prompt, target)
+        except Exception as exc:  # 네트워크·한도 초과·인증 실패·일시 혼잡
+            last = exc
+            # 모델 이름과 프롬프트는 로그에도 원문으로 남기지 않는다.
+            logger.warning(
+                "[kayfabe.agent] 생성 실패 | agent=%s | 시도=%d/%d | %r",
+                agent,
+                attempt + 1,
+                MAX_ATTEMPTS,
+                exc,
+            )
+            if not is_last:
+                await asyncio.sleep(
+                    RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
+                )
+
+    raise AgentUnavailableError("AI 분석을 잠시 사용할 수 없습니다.") from last
+
+
+async def _stream_once(
+    use_case: GeminiGenerationUseCase,
+    gate: RateGate,
+    prompt: str,
+    model: str | None,
 ) -> str:
     await gate.acquire()
-
     pieces: list[str] = []
-    try:
-        command = GeminiGenerationCommand(prompt=prompt, model=model)
-        async for piece in use_case.stream_generate(command):
-            pieces.append(piece)
-    except Exception as exc:  # 네트워크·한도 초과·인증 실패
-        # 모델 이름과 프롬프트는 로그에도 원문으로 남기지 않는다.
-        logger.warning("[kayfabe.agent] 생성 실패 | agent=%s | %r", agent, exc)
-        raise AgentUnavailableError("AI 분석을 잠시 사용할 수 없습니다.") from exc
+    command = GeminiGenerationCommand(prompt=prompt, model=model)
+    async for piece in use_case.stream_generate(command):
+        pieces.append(piece)
     return "".join(pieces)
 
 

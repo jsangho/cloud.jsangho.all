@@ -44,10 +44,15 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
         source: PublicSourcePort,
         embedder: TextEmbeddingPort,
         repository: KnowledgeChunkRepository,
+        *,
+        max_chunks_per_document: int | None = None,
     ) -> None:
         self._source = source
         self._embedder = embedder
         self._repository = repository
+        #: 문서당 청크 상한. 위키 인물 문서는 대부분이 타이틀 이력과 각주라,
+        #: 앞부분만 담아도 근거로는 충분하고 임베딩 시간이 크게 줄어든다.
+        self._max_chunks = max_chunks_per_document
 
     async def ingest(self, command: IngestKnowledgeCommand) -> IngestionSummary:
         collected = 0
@@ -105,7 +110,11 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
         prepared: list[NewKnowledgeChunk] = []
         failed = 0
 
-        for content in chunk_document(document.text):
+        contents = chunk_document(document.text)
+        if self._max_chunks is not None:
+            contents = contents[: self._max_chunks]
+
+        for content in contents:
             try:
                 embedding = await self._embedder.embed(content)
             except EmbeddingUnavailableError as exc:
