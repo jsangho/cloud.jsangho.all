@@ -70,7 +70,7 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
             total_chunks += len(prepared) + failures
             failed += failures
             if prepared:
-                stored += await self._repository.save_new(prepared)
+                stored += await self._repository.replace_document_chunks(prepared)
 
         duplicates = total_chunks - failed - stored
         logger.info(

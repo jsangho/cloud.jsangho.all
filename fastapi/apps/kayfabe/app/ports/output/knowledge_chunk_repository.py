@@ -8,9 +8,13 @@ from kayfabe.app.dtos.knowledge_ingestion_dto import NewKnowledgeChunk
 
 class KnowledgeChunkRepository(ABC):
     @abstractmethod
-    async def save_new(self, chunks: Sequence[NewKnowledgeChunk]) -> int:
-        """아직 없는 청크만 넣고, 실제로 넣은 수를 돌려준다.
+    async def replace_document_chunks(self, chunks: Sequence[NewKnowledgeChunk]) -> int:
+        """같은 `source_url`의 기존 청크를 **갈아 끼우고**, 넣은 수를 돌려준다.
 
-        중복 판정은 `content_hash`다. **재실행이 안전해야 한다** — 같은 URL을 다시
-        수집하는 일이 정상 운용이기 때문이다.
+        추가가 아니라 교체인 이유: 위키 문서는 갱신된다. 내용이 한 글자만 달라져도
+        `content_hash`가 달라지므로 그냥 넣으면 **작년 판본과 올해 판본이 함께
+        검색된다.** 부상·복귀처럼 뒤집히는 사실에서 옛 판본은 틀린 근거다.
+
+        문서를 못 가져온 경우에는 호출되지 않는다 — 수집 실패로 기존 지식을 잃지
+        않기 위해서다.
         """
