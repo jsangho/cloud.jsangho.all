@@ -137,21 +137,27 @@ async def ask_for_report(
     context: MatchContext,
     chunks: Sequence[KnowledgeChunk],
     gate: RateGate,
+    model: str | None = None,
 ) -> AgentReport:
     """모델에 묻고 리포트로 옮긴다. 엔진이 죽었으면 `AgentUnavailableError`."""
-    raw = await _generate(use_case, agent, prompt, gate)
+    raw = await _generate(use_case, agent, prompt, gate, model)
     payload = _parse(raw, agent)
     return _to_report(payload, agent=agent, context=context, chunks=chunks)
 
 
 async def _generate(
-    use_case: GeminiGenerationUseCase, agent: AgentKind, prompt: str, gate: RateGate
+    use_case: GeminiGenerationUseCase,
+    agent: AgentKind,
+    prompt: str,
+    gate: RateGate,
+    model: str | None,
 ) -> str:
     await gate.acquire()
 
     pieces: list[str] = []
     try:
-        async for piece in use_case.stream_generate(GeminiGenerationCommand(prompt)):
+        command = GeminiGenerationCommand(prompt=prompt, model=model)
+        async for piece in use_case.stream_generate(command):
             pieces.append(piece)
     except Exception as exc:  # 네트워크·한도 초과·인증 실패
         # 모델 이름과 프롬프트는 로그에도 원문으로 남기지 않는다.
