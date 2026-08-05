@@ -72,9 +72,11 @@ class FakeGeneration:
         self.reply = reply
         self.error = error
         self.prompts: list[str] = []
+        self.models: list[str | None] = []
 
     def stream_generate(self, command: GeminiGenerationCommand) -> AsyncIterator[str]:
         self.prompts.append(command.prompt)
+        self.models.append(command.model)
 
         async def _stream() -> AsyncIterator[str]:
             if self.error is not None:
@@ -249,3 +251,34 @@ async def test_engine_failure_becomes_agent_unavailable() -> None:
     # 모델 이름·한도 초과 원문이 사용자 문구로 새지 않는다.
     assert "quota" not in str(caught.value)
     assert "gemini" not in str(caught.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_each_agent_carries_its_own_model() -> None:
+    """무료 등급 한도가 모델 단위라, 둘이 같은 모델을 쓰면 서로의 몫을 갉아먹는다."""
+    storyline_gen = FakeGeneration(_reply("left"))
+    rumor_gen = FakeGeneration(_reply(None))
+
+    await GeminiStorylineAnalyst(
+        storyline_gen,  # type: ignore[arg-type]
+        model="model-heavy",
+        rate_gate=_open_gate(),
+    ).analyze(_CONTEXT, _CHUNKS)
+    await GeminiRumorScout(
+        rumor_gen,  # type: ignore[arg-type]
+        model="model-light",
+        rate_gate=_open_gate(),
+    ).analyze(_CONTEXT, _CHUNKS)
+
+    assert storyline_gen.models == ["model-heavy"]
+    assert rumor_gen.models == ["model-light"]
+
+
+@pytest.mark.asyncio
+async def test_model_is_optional() -> None:
+    """지정하지 않으면 허브의 기본값(GEMINI_MODEL)이 쓰인다."""
+    generation = FakeGeneration(_reply("left"))
+
+    await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert generation.models == [None]
