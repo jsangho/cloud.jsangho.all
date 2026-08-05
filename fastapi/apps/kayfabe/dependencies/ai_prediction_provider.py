@@ -41,6 +41,10 @@ DEFAULT_STORYLINE_MODEL = "gemini-3.6-flash"
 #: 루머는 "자료에 부상·복귀 사실이 있나, 없으면 null"이라 가벼운 모델로 충분하다.
 DEFAULT_RUMOR_MODEL = "gemini-3.5-flash-lite"
 
+#: 주 모델이 혼잡할 때(503) 마지막 시도를 넘길 곳. 서로의 예비가 되면 한 모델이
+#: 죽어도 리포트가 통째로 사라지지 않는다 — 한도도 모델 단위라 서로 침범하지 않는다.
+DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash"
+
 
 def _model(env_key: str, default: str) -> str:
     return (os.getenv(env_key) or "").strip() or default
@@ -73,10 +77,14 @@ def get_ai_prediction_use_case(
         repository,
         knowledge,
         GeminiStorylineAnalyst(
-            generation, model=_model("GEMINI_MODEL_STORYLINE", DEFAULT_STORYLINE_MODEL)
+            generation,
+            model=_model("GEMINI_MODEL_STORYLINE", DEFAULT_STORYLINE_MODEL),
+            fallback_model=_model("GEMINI_MODEL_FALLBACK", DEFAULT_FALLBACK_MODEL),
         ),
         BookmakerOddsScout(),
         GeminiRumorScout(
-            generation, model=_model("GEMINI_MODEL_RUMOR", DEFAULT_RUMOR_MODEL)
+            generation,
+            model=_model("GEMINI_MODEL_RUMOR", DEFAULT_RUMOR_MODEL),
+            fallback_model=_model("GEMINI_MODEL_FALLBACK", DEFAULT_FALLBACK_MODEL),
         ),
     )

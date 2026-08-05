@@ -22,7 +22,9 @@ from datetime import UTC, datetime
 
 import pytest
 
+from kayfabe.adapter.outbound.agents import gemini_agent_support
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
+    MAX_ATTEMPTS,
     MAX_SUMMARY_CHARS,
     RateGate,
 )
@@ -68,9 +70,17 @@ _CHUNKS = (
 class FakeGeneration:
     """`GeminiGenerationUseCase` 대역. 무엇을 물었는지 붙잡아 둔다."""
 
-    def __init__(self, reply: str = "", *, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        reply: str = "",
+        *,
+        error: Exception | None = None,
+        fail_times: int = 0,
+    ) -> None:
         self.reply = reply
         self.error = error
+        #: 앞의 N번은 실패시킨다 — 벤더 일시 장애(503) 재현용.
+        self.fail_times = fail_times
         self.prompts: list[str] = []
         self.models: list[str | None] = []
 
@@ -79,6 +89,9 @@ class FakeGeneration:
         self.models.append(command.model)
 
         async def _stream() -> AsyncIterator[str]:
+            if self.fail_times > 0:
+                self.fail_times -= 1
+                raise RuntimeError("503 UNAVAILABLE")
             if self.error is not None:
                 raise self.error
             # 스트리밍이므로 조각으로 나뉘어 온다 — 이어 붙여야 JSON이 된다.
@@ -93,6 +106,12 @@ def _reply(pick: object, confidence: float = 0.8, summary: str = "명분이 있�
         {"pick": pick, "confidence": confidence, "summary": summary},
         ensure_ascii=False,
     )
+
+
+@pytest.fixture(autouse=True)
+def _no_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    """재시도 간격을 없앤다 — 검증 대상은 대기 시간이 아니라 재시도 여부다."""
+    monkeypatch.setattr(gemini_agent_support, "RETRY_BACKOFF_SECONDS", (0.0, 0.0))
 
 
 #: 테스트는 한도를 기다리지 않는다 — 여기서 검증하는 것은 페이싱이 아니라 판독이다.
@@ -282,3 +301,41 @@ async def test_model_is_optional() -> None:
     await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
 
     assert generation.models == [None]
+
+
+@pytest.mark.asyncio
+async def test_transient_failure_is_retried() -> None:
+    """503은 벤더 혼잡이다 — 한 번 실패했다고 그 경기를 포기하지 않는다."""
+    generation = FakeGeneration(_reply("left"), fail_times=1)
+
+    report = await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "left"
+    assert len(generation.prompts) == 2
+
+
+@pytest.mark.asyncio
+async def test_last_attempt_switches_to_fallback_model() -> None:
+    """같은 모델만 두드리면 혼잡한 동안 계속 실패한다."""
+    generation = FakeGeneration(_reply("left"), fail_times=2)
+
+    report = await GeminiStorylineAnalyst(
+        generation,  # type: ignore[arg-type]
+        model="model-heavy",
+        fallback_model="model-spare",
+        rate_gate=_open_gate(),
+    ).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "left"
+    assert generation.models == ["model-heavy", "model-heavy", "model-spare"]
+
+
+@pytest.mark.asyncio
+async def test_gives_up_after_max_attempts() -> None:
+    """계속 죽으면 그 사실을 감추지 않는다 — 임의 값을 만들지 않는다."""
+    generation = FakeGeneration(_reply("left"), fail_times=99)
+
+    with pytest.raises(AgentUnavailableError):
+        await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert len(generation.prompts) == MAX_ATTEMPTS

@@ -42,11 +42,14 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
         generation_use_case: GeminiGenerationUseCase,
         *,
         model: str | None = None,
+        fallback_model: str | None = None,
         rate_gate: RateGate | None = None,
     ) -> None:
         self._generation_use_case = generation_use_case
         # 무료 등급 한도가 모델 단위라, 두 에이전트가 다른 모델을 쓰면 한도를 나눠 갖는다.
         self._model = model
+        # 주 모델이 혼잡할 때 마지막 시도를 넘길 곳.
+        self._fallback_model = fallback_model
         # 기본값은 두 에이전트가 공유하는 게이트다 — 한도는 모델 단위이기 때문이다.
         self._rate_gate = rate_gate or shared_rate_gate
 
@@ -71,4 +74,5 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
             chunks=chunks,
             gate=self._rate_gate,
             model=self._model,
+            fallback_model=self._fallback_model,
         )
