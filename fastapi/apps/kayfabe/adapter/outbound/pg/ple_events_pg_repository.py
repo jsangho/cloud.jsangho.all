@@ -17,6 +17,7 @@ from kayfabe.adapter.outbound.mappers.ple_orm_mapper import (
     event_to_read,
     event_to_snapshot,
 )
+from kayfabe.adapter.outbound.orm.agent_prediction_orm import AgentPredictionModel
 from kayfabe.adapter.outbound.orm.ple_orm import (
     PleEventModel,
     PleEventStatus,
@@ -36,13 +37,16 @@ from kayfabe.app.dtos.ple_events_dto import (
     PleEventSyncCommand,
 )
 from kayfabe.app.ports.output.ple_events_repository import PleEventsRepository
-from kayfabe.app.services.ple_ai import derive_ai_pick_from_card, grade_ai_correct
 from kayfabe.app.services.ple_scoring import (
     competitor_count_from_card,
     derive_match_point_value,
 )
+from kayfabe.domain.entities.agent_prediction import PredictionSource
 
 logger = LAYER_LOG
+
+#: 적중률에서 빼는 예측. 에이전트가 아무도 답하지 못해 배당으로 대체한 것이다.
+BOOKMAKER_FALLBACK_SOURCE = str(PredictionSource.BOOKMAKER_FALLBACK)
 
 
 class PleEventsPgRepository(PleEventsRepository):
@@ -157,14 +161,52 @@ class PleEventsPgRepository(PleEventsRepository):
         ]
 
     async def get_ai_stats(self) -> PleAiStatsResponse:
+        """적중률은 **에이전트가 만든 예측만** 센다.
+
+        예전에는 `ple_matches.ai_pick`(카드 동기화 때 배당으로 파생한 값)을 셌다.
+        그 기록과 멀티 에이전트 기록이 한 숫자로 섞이면 무엇의 적중률인지 말할 수
+        없어, 집계 대상을 `ple_agent_predictions`로 옮겼다(하네스 §13-Q4 결정).
+
+        **북메이커 폴백은 제외한다** — 에이전트가 아무도 답하지 못해 배당으로
+        대체한 예측이라, 그것까지 세면 지우기로 한 그 숫자가 다시 섞인다.
+        """
         logger.info("[PleEventsPgRepository] get_ai_stats -> Neon")
+        graded = (
+            select(
+                AgentPredictionModel.pick.label("pick"),
+                AgentPredictionModel.pick_name.label("pick_name"),
+                PleMatchModel.winner_pick.label("winner_pick"),
+                PleMatchModel.winner_name.label("winner_name"),
+                PleMatchModel.match_key.label("match_key"),
+                PleMatchModel.title.label("title"),
+                PleMatchModel.sort_order.label("sort_order"),
+                PleMatchModel.id.label("match_id"),
+                PleEventModel.slug.label("slug"),
+                PleEventModel.label.label("label"),
+                PleEventModel.year.label("year"),
+                PleEventModel.month.label("month"),
+            )
+            .join(PleEventModel, AgentPredictionModel.event_id == PleEventModel.id)
+            .join(
+                PleMatchModel,
+                (PleMatchModel.event_id == AgentPredictionModel.event_id)
+                & (PleMatchModel.match_key == AgentPredictionModel.match_key),
+            )
+            .where(
+                PleMatchModel.winner_pick.isnot(None),
+                AgentPredictionModel.source != BOOKMAKER_FALLBACK_SOURCE,
+            )
+            .subquery()
+        )
+
         agg = await self.db.execute(
             select(
-                func.count(PleMatchModel.id),
+                func.count(),
                 func.coalesce(
-                    func.sum(case((PleMatchModel.ai_correct.is_(True), 1), else_=0)), 0
+                    func.sum(case((graded.c.pick == graded.c.winner_pick, 1), else_=0)),
+                    0,
                 ),
-            ).where(PleMatchModel.ai_correct.isnot(None))
+            ).select_from(graded)
         )
         total_graded, correct = agg.one()
         total_graded = int(total_graded or 0)
@@ -173,28 +215,25 @@ class PleEventsPgRepository(PleEventsRepository):
         accuracy = round(correct / total_graded * 100, 1) if total_graded > 0 else None
 
         recent_rows = await self.db.execute(
-            select(PleMatchModel, PleEventModel)
-            .join(PleEventModel, PleMatchModel.event_id == PleEventModel.id)
-            .where(PleMatchModel.ai_correct.isnot(None))
-            .order_by(
-                PleEventModel.year.asc(),
-                PleEventModel.month.asc().nulls_last(),
-                PleEventModel.slug.asc(),
-                PleMatchModel.sort_order.asc(),
-                PleMatchModel.id.asc(),
+            select(graded).order_by(
+                graded.c.year.asc(),
+                graded.c.month.asc().nulls_last(),
+                graded.c.slug.asc(),
+                graded.c.sort_order.asc(),
+                graded.c.match_id.asc(),
             )
         )
         recent = [
             PleAiRecordResponse(
-                event_slug=event.slug,
-                event_label=event.label,
-                match_key=match.match_key,
-                match_title=match.title,
-                ai_pick_name=match.ai_pick_name or "",
-                winner_name=match.winner_name,
-                correct=bool(match.ai_correct),
+                event_slug=row.slug,
+                event_label=row.label,
+                match_key=row.match_key,
+                match_title=row.title,
+                ai_pick_name=row.pick_name or "",
+                winner_name=row.winner_name,
+                correct=row.pick == row.winner_pick,
             )
-            for match, event in recent_rows.all()
+            for row in recent_rows.all()
         ]
 
         stats = PleAiStatsResponse(
@@ -279,13 +318,10 @@ class PleEventsPgRepository(PleEventsRepository):
 
             card_dict = json.loads(row.card_json)
             self._apply_point_value(row, card_dict)
-            derived = derive_ai_pick_from_card(card_dict)
-            if derived:
-                row.ai_pick, row.ai_pick_name = derived
-
+            # 여기서 AI 예측을 파생하지 않는다. 예측은 에이전트가 만들고
+            # `ple_agent_predictions`에만 남는다 — 페이지 진입이 예측을 만들던 경로다.
             if card.result:
                 self._apply_result_to_row(row, card.result)
-            self._grade_ai_row(row)
 
         for key, row in existing.items():
             if key not in seen_keys:
@@ -331,11 +367,6 @@ class PleEventsPgRepository(PleEventsRepository):
         if result.winner_side or result.winner_index is not None or result.winner_name:
             row.status = PleMatchStatus.FINISHED
             row.finished_at = datetime.now(UTC)
-        self._grade_ai_row(row)
-
-    @staticmethod
-    def _grade_ai_row(row: PleMatchModel) -> None:
-        row.ai_correct = grade_ai_correct(row.ai_pick, row.winner_pick)
 
     async def set_match_result(
         self,
