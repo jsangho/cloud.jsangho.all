@@ -1,4 +1,4 @@
-"""T4·T5가 채울 자리를 잡아 두는 임시 어댑터.
+"""T5가 채울 자리를 잡아 두는 임시 어댑터.
 
 **아직 분석기를 붙이지 않았다는 사실을 정직하게 표현한다.** 세 에이전트가 전부
 "의견 없음"을 내면 코디네이터가 북메이커 배당으로 강등하고, 응답에 `source =
@@ -15,7 +15,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
-from kayfabe.app.ports.output.prediction_knowledge_port import PredictionKnowledgePort
 from kayfabe.app.ports.output.rumor_scout_port import RumorScoutPort
 from kayfabe.app.ports.output.storyline_analyst_port import StorylineAnalystPort
 from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
@@ -39,10 +38,3 @@ class PendingRumorScout(RumorScoutPort):
         self, context: MatchContext, knowledge: Sequence[KnowledgeChunk]
     ) -> AgentReport:
         return _silent(AgentKind.RUMOR)
-
-
-class EmptyPredictionKnowledge(PredictionKnowledgePort):
-    """T3에서 지식을 적재하기 전까지는 검색 결과가 비어 있다 — 실패가 아니다."""
-
-    async def search(self, *, query: str, top_k: int) -> list[KnowledgeChunk]:
-        return []
