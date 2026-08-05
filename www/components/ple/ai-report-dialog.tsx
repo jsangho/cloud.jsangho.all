@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import {
   agentLabel,
   isBookmakerFallback,
+  opponentShare,
   resolvePickName,
   toPercent,
   type AiAgentReport,
@@ -88,6 +89,7 @@ export function AiReportDialog({
 }: AiReportDialogProps) {
   const [open, setOpen] = useState(false);
   const fallback = isBookmakerFallback(prediction);
+  const opponent = opponentShare(slug, prediction);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -122,6 +124,12 @@ export function AiReportDialog({
           <span className="text-sm tabular-nums text-stone-600 dark:text-stone-300">
             승률 {toPercent(prediction.winProbability)}%
           </span>
+          {opponent && (
+            /* 상대가 가진 몫. 승률이 한쪽만 적히면 나머지가 어디 갔는지 알 수 없다. */
+            <span className="text-sm tabular-nums text-stone-500">
+              vs {opponent.name} {toPercent(opponent.probability)}%
+            </span>
+          )}
           <span
             className={cn(
               "text-sm tabular-nums",
