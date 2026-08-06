@@ -1,0 +1,1327 @@
+{
+  "schemaVersion": 3,
+  "file": "events_region.json",
+  "note": "권역 5 + 한국 예외. 값마다 5장 (§3-D14·§11-7). 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "na_arena_tour_grind",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "버스 스물두 시간",
+      "bodies": [
+        "3주째 도시를 옮겨다니는 투어. 오늘 아침 눈을 떴을 때 여기가 오하이오인지 인디애나인지 몰랐다.",
+        "3주째 렌터카에서 잤다. 오늘 도시 이름을 아직 모른다.",
+        "새벽 네 시 도착, 여덟 시 체육관, 저녁 일곱 시 경기. 이번 주 다섯 번째다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "na"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "sleep",
+          "label": "체육관을 건너뛰고 잔다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -1,
+            "inRing": -2,
+            "wear": -6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "train_anyway",
+          "label": "그래도 체육관에 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": 6,
+            "wear": 5
+          },
+          "injuryRisk": 0.08
+        }
+      ]
+    },
+    {
+      "code": "na_tv_taping_dark",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "방송에 안 나가는 경기",
+      "bodies": [
+        "TV 녹화 전 다크매치. 카메라는 꺼져 있고 관중 만 명만 본다. 방송에는 한 컷도 안 나간다.",
+        "카메라 빨간불이 꺼져 있다. 이 경기는 어디에도 남지 않는다.",
+        "관중 워밍업용 경기다. 편성표 어디에도 없다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "na"
+        ],
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "full_effort",
+          "label": "카메라가 없어도 전력으로 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 2,
+            "inRing": 7,
+            "backstage": 10,
+            "wear": 4
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "save_it",
+          "label": "몸을 아낀다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": -2,
+            "wear": -4,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "na_indie_reunion",
+      "kind": "sub",
+      "arena": "public",
+      "title": "인디 시절 동료",
+      "body": "메이저에 올라온 뒤 처음으로, 같이 체육관 매트를 깔던 친구가 찾아왔다. 그는 아직 인디에 있다.",
+      "weight": 16,
+      "once": true,
+      "requires": {
+        "regions": [
+          "na"
+        ],
+        "minWeek": 150,
+        "acts": [
+          2,
+          3
+        ]
+      },
+      "choices": [
+        {
+          "code": "put_in_word",
+          "label": "부커에게 그의 이름을 넣는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": -5,
+            "backstage": -8,
+            "alignment": 15
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_distance",
+          "label": "밥만 사고 헤어진다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 4,
+            "backstage": 4,
+            "alignment": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "na_stadium_hometown",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "고향 스타디움",
+      "body": "당신이 자란 도시의 야구장. 8만 석이 찼고, 고등학교 코치가 링사이드에 앉아 있다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "na"
+        ],
+        "minWeek": 300,
+        "stats": {
+          "popularity": [
+            55,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "dedicate",
+          "label": "경기를 그에게 바친다고 말한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 14,
+            "inRing": -2,
+            "micWork": 10,
+            "alignment": 20
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "just_wrestle",
+          "label": "말 없이 경기로만 보여준다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 13,
+            "wear": 6
+          },
+          "injuryRisk": 0.12
+        }
+      ]
+    },
+    {
+      "code": "na_border_crowd",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "국경 도시",
+      "bodies": [
+        "국경 근처 아레나. 관중 절반이 당신을 외국인 취급하고, 절반은 자기 사람으로 여긴다.",
+        "관중 절반이 국기를 흔들고 절반이 야유한다.",
+        "이 도시에서 당신은 외지인이자 동향 사람이다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "regions": [
+          "na"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "play_both",
+          "label": "양쪽을 다 데리고 논다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "micWork": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "pick_a_side",
+          "label": "한쪽을 골라 확실히 선다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "alignment": -12
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "eu_uk_gimmick_pressure",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "가면을 쓰라는 요구",
+      "body": "정통 서브미션이 주무기인 당신에게 경영진이 말한다. \"경기력은 좋은데 굿즈가 안 팔려. 다음 주부터 가면 쓰고 나와.\"",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "eu"
+        ],
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "wear_it",
+          "label": "쓴다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 14,
+            "inRing": -5,
+            "micWork": 6,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "refuse",
+          "label": "거절하고 순수 테크니션으로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -6,
+            "inRing": 8,
+            "backstage": -14
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "push_frozen"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "eu_technical_showcase",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "60분 아이언맨",
+      "bodies": [
+        "유럽 정통 룰의 라운드제 경기. 화려한 스팟 없이 한 시간을 채워야 한다.",
+        "라운드 종료 벨이 울렸다. 아직 여덟 라운드 남았다.",
+        "유럽 정통 룰이다. 로프 브레이크마다 경기가 끊기고 관중은 기술만 본다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "eu"
+        ],
+        "minWeek": 80,
+        "stats": {
+          "inRing": [
+            45,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "pure_technical",
+          "label": "그라운드로만 채운다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 12,
+            "backstage": 10,
+            "wear": 5
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "add_spots",
+          "label": "중간에 화려한 스팟을 섞는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 4,
+            "wear": 8,
+            "backstage": -6
+          },
+          "injuryRisk": 0.15
+        }
+      ]
+    },
+    {
+      "code": "eu_football_chant",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "축구장 챈트",
+      "bodies": [
+        "관중이 축구 응원가에 당신 이름을 붙여 부른다. 2천 명이 한 목소리로 발을 구른다.",
+        "관중이 발을 구르며 응원가를 부른다. 아레나 바닥이 울린다.",
+        "2천 명이 한 목소리로 당신 이름을 축구장 멜로디에 붙였다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "regions": [
+          "eu"
+        ],
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "conduct_them",
+          "label": "지휘하듯 손을 든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -2,
+            "alignment": 12,
+            "micWork": 5
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "silence_them",
+          "label": "손가락을 입에 대고 조용히 시킨다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": -2,
+            "alignment": -18,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "eu_small_hall_purist",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "300석 홀",
+      "bodies": [
+        "관중 300명. 전원이 20년째 레슬링을 본 사람들이고, 당신이 기술 하나를 대충 하면 즉시 알아챈다.",
+        "관중이 기술 이름을 먼저 부른다. 이 사람들은 다 안다.",
+        "좁은 홀. 앞줄과 링 사이가 1미터고, 숨소리까지 들린다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "eu"
+        ],
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "work_clean",
+          "label": "하나도 대충 하지 않는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 10,
+            "backstage": 8
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "big_league_style",
+          "label": "TV용 큰 동작으로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 5,
+            "inRing": -4,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "eu_language_barrier",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "모국어로 할까",
+      "bodies": [
+        "대륙 투어 중 생방송 프로모. 영어로 하면 전 세계에 전달되고, 모국어로 하면 오늘 이 관중에게 닿는다.",
+        "생방송 프로모 30초 전. 어느 언어로 갈지 아직 안 정했다.",
+        "통역이 대기 중이다. 쓰면 정확하지만 호흡이 죽는다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "regions": [
+          "eu"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "english",
+          "label": "영어로 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": -1,
+            "micWork": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "native",
+          "label": "모국어로 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -4,
+            "alignment": 12,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "jp_style_clash",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "스트롱 스타일은 안 팔린다",
+      "body": "미국 단체 프로듀서가 부른다. \"네 일본식 스트롱 스타일은 우리 TV에 안 맞아. 안전하게, 리액션을 크게 해.\"",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "jp"
+        ],
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "adapt",
+          "label": "방송용으로 바꾼다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -6,
+            "micWork": 10,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_style",
+          "label": "\"이게 내 프로레슬링이다.\"",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 8,
+            "backstage": -16
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "push_frozen"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "jp_silent_crowd",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "숨죽인 관중",
+      "bodies": [
+        "일본 관중은 조용하다. 야유도 환호도 없이 경기만 본다. 미국식 리액션 유도가 전혀 먹히지 않는다.",
+        "만 명이 앉아 있는데 소리가 없다. 기술 소리만 울린다.",
+        "관중이 숨을 죽이고 본다. 환호도 야유도 없다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "regions": [
+          "jp"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "respect_it",
+          "label": "정적을 받아들이고 기술로 채운다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 10,
+            "backstage": 8
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "force_reaction",
+          "label": "억지로 반응을 끌어낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -6,
+            "inRing": -3,
+            "micWork": 5
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "jp_tournament_grind",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "리그전 12연전",
+      "bodies": [
+        "18일 동안 12경기. 오늘이 아홉 번째고, 무릎은 다섯 번째 경기부터 부어 있다.",
+        "승점이 걸린 경기다. 다만 오늘로 열흘 연속 출전이다.",
+        "리그전 후반. 오늘 상대는 어제 쉰 사람이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "jp"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "pace_yourself",
+          "label": "남은 경기를 위해 아낀다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 5,
+            "wear": -5,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "match_of_the_night",
+          "label": "오늘 최고 경기를 만든다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": 12,
+            "wear": 14
+          },
+          "injuryRisk": 0.28
+        }
+      ]
+    },
+    {
+      "code": "jp_dojo_return",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "도장으로",
+      "body": "옛 도장 관장이 연락했다. \"한 달 들어와라. 네 기본이 무너졌다.\" 그 한 달 동안 TV에서 사라진다.",
+      "weight": 16,
+      "once": true,
+      "requires": {
+        "regions": [
+          "jp"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "go_back",
+          "label": "들어간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -12,
+            "inRing": 15,
+            "wear": -8,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_on_tv",
+          "label": "TV에 남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -3
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "jp_forearm_exchange",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "팔꿈치 교환",
+      "bodies": [
+        "상대가 가드를 내리고 턱을 내민다. 서로 팔꿈치를 주고받자는 뜻이다. 관중이 처음으로 소리를 냈다.",
+        "상대가 두 팔을 벌리고 가슴을 내민다. 촙을 받겠다는 뜻이다.",
+        "둘 다 무릎을 꿇은 채로 팔꿈치를 주고받기 시작했다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "regions": [
+          "jp"
+        ],
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "trade",
+          "label": "받아준다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 8,
+            "wear": 8
+          },
+          "injuryRisk": 0.18
+        },
+        {
+          "code": "duck_it",
+          "label": "피하고 그라운드로 끌고 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 6,
+            "backstage": -6
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "latam_mask_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "가면을 물려받다",
+      "body": "지역 전설이 은퇴하며 자기 가면 계보를 당신에게 넘기겠다고 한다. 이름도 함께 바뀐다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "latam"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "take_mask",
+          "label": "가면을 쓴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": -1,
+            "alignment": 12,
+            "backstage": 12,
+            "micWork": -4
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "masked"
+          ]
+        },
+        {
+          "code": "own_name",
+          "label": "내 이름으로 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": -3,
+            "micWork": 8,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "latam_mask_vs_mask",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "가면을 건 경기",
+      "body": "숙적이 가면 대 가면을 걸자고 한다. 지면 관중 앞에서 벗고 본명을 밝혀야 한다.",
+      "weight": 22,
+      "once": true,
+      "requires": {
+        "regions": [
+          "latam"
+        ],
+        "flags": [
+          "masked"
+        ],
+        "rivalryStage": [
+          "nemesis"
+        ]
+      },
+      "choices": [
+        {
+          "code": "accept",
+          "label": "받는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 25,
+            "inRing": 4,
+            "micWork": 8,
+            "wear": 6
+          },
+          "injuryRisk": 0.15,
+          "heat": 55
+        },
+        {
+          "code": "hair_instead",
+          "label": "머리카락을 걸자고 되받는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "micWork": 10
+          },
+          "injuryRisk": 0.05,
+          "heat": 35
+        }
+      ]
+    },
+    {
+      "code": "latam_family_legacy",
+      "kind": "sub",
+      "arena": "public",
+      "title": "가문의 이름",
+      "body": "3대째 레슬링 가문이라는 기사가 났다. 아버지의 전성기와 비교하는 댓글이 하루 종일 올라온다.",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "regions": [
+          "latam"
+        ],
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "honor_it",
+          "label": "아버지 기술을 피니셔로 쓴다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": 1,
+            "alignment": 15,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "break_from_it",
+          "label": "가문 이름을 버리고 내 것으로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "micWork": 10,
+            "alignment": -15
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "latam_high_altitude",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "해발 2200미터",
+      "bodies": [
+        "고지대 아레나. 5분 만에 숨이 턱까지 차고, 관중은 20분짜리 경기를 기대한다.",
+        "링에 오르는 계단만으로 숨이 찬다. 오늘은 세미메인이다.",
+        "해발 2200미터. 평소 호흡으로는 10분을 못 간다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "latam"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "slow_it_down",
+          "label": "속도를 죽이고 길게 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 7,
+            "backstage": 6
+          },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "full_speed",
+          "label": "평소 속도로 밀어붙인다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": 5,
+            "wear": 12
+          },
+          "injuryRisk": 0.25
+        }
+      ]
+    },
+    {
+      "code": "latam_trios_chaos",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "6인 태그",
+      "bodies": [
+        "여섯 명이 동시에 링 안팎을 오간다. 심판은 포기했고 관중은 열광한다. 당신 차례가 언제인지 아무도 모른다.",
+        "링에 여섯이 동시에 올랐다. 태그 규칙은 3분 전에 사라졌다.",
+        "6인 태그. 규칙이 사라진 지 3분 됐고 관중은 열광한다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "regions": [
+          "latam"
+        ],
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "find_the_moment",
+          "label": "틈을 찾아 한 방을 만든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 6,
+            "wear": 5
+          },
+          "injuryRisk": 0.15
+        },
+        {
+          "code": "hold_it_together",
+          "label": "흐름을 정리하는 역할을 맡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 8,
+            "backstage": 12
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "oce_long_flight",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "스물여섯 시간",
+      "bodies": [
+        "경유 두 번, 스물여섯 시간. 착륙 네 시간 뒤가 경기다.",
+        "환승 공항에서 여덟 시간 발이 묶였다. 링에 오르기까지 다섯 시간 남았다.",
+        "시차가 아홉 시간이다. 몸은 아직 어제 새벽에 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "oce"
+        ],
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "short_match",
+          "label": "경기를 짧게 가자고 상대와 맞춘다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 3,
+            "backstage": 8,
+            "wear": 2
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "normal_match",
+          "label": "평소대로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7,
+            "wear": 9
+          },
+          "injuryRisk": 0.2
+        }
+      ]
+    },
+    {
+      "code": "oce_small_scene",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "좁은 바닥",
+      "bodies": [
+        "이 나라 프로레슬링계는 선수 전부가 서로를 안다. 오늘 대립한 상대와 내일 같은 차를 타야 한다.",
+        "이 나라 단체가 셋뿐이다. 어디로 옮겨도 같은 사람들을 만난다.",
+        "이 바닥 선수 전원이 서로를 안다. 링 밖에서 마주치지 않을 방법이 없다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "oce"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "keep_it_pro",
+          "label": "링 밖에서는 선을 지킨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 7,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_in_character",
+          "label": "차 안에서도 캐릭터를 유지한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -3,
+            "backstage": -12,
+            "alignment": -8
+          },
+          "injuryRisk": 0.0,
+          "heat": 20
+        }
+      ]
+    },
+    {
+      "code": "oce_rugby_crowd",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "럭비장 관중",
+      "bodies": [
+        "관중이 프로레슬링을 스포츠로 본다. 반칙을 쓰면 진짜로 화를 내고, 정면 승부에는 박수를 친다.",
+        "관중이 반칙에 진짜로 화를 낸다. 야유가 연기가 아니다.",
+        "반칙 하나에 관중석에서 진짜 욕이 날아온다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "oce"
+        ],
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "clean_fight",
+          "label": "정면으로만 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": 5,
+            "alignment": 15
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "cheat_anyway",
+          "label": "그래도 반칙을 쓴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": -1,
+            "alignment": -20,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "oce_first_tour_debut",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "본토 첫 투어",
+      "body": "메이저 단체가 처음으로 이 나라에 왔고, 당신은 현지 대표로 카드에 올랐다. 관중 전원이 당신 편이다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "oce"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "represent",
+          "label": "국기를 들고 나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 16,
+            "inRing": -3,
+            "alignment": 20,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "no_flag",
+          "label": "국적 없이 선수로만 나간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": 8,
+            "backstage": 8
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "oce_isolation",
+      "kind": "sub",
+      "arena": "public",
+      "title": "너무 멀다",
+      "body": "메이저 스카우트가 말한다. \"실력은 충분한데 여기서 너를 보러 오는 사람이 없어. 이주할 생각 있나?\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "regions": [
+          "oce"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "move",
+          "label": "짐을 싼다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 15,
+            "inRing": -2,
+            "backstage": 6,
+            "alignment": -8
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "relocated"
+          ]
+        },
+        {
+          "code": "stay_home",
+          "label": "여기서 크게 만들겠다고 답한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 6,
+            "alignment": 18,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "kr_homecoming_show",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "첫 국내 흥행",
+      "body": "한국에서 처음 열리는 대형 흥행. 체육관 5천 석이 찼고, 관중 대부분이 프로레슬링을 처음 본다.",
+      "weight": 22,
+      "once": true,
+      "requires": {
+        "regions": [
+          "kr"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "teach_them",
+          "label": "기본부터 보여줘 관중을 가르친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": 8,
+            "alignment": 15
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "spectacle",
+          "label": "첫인상으로 압도한다 — 큰 스팟만",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 22,
+            "inRing": 2,
+            "wear": 12
+          },
+          "injuryRisk": 0.3
+        }
+      ]
+    },
+    {
+      "code": "kr_variety_show",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "예능 섭외",
+      "body": "지상파 예능에서 섭외가 왔다. 레슬링 이야기는 3분이고 나머지는 몸개그다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "regions": [
+          "kr"
+        ],
+        "minWeek": 130
+      },
+      "choices": [
+        {
+          "code": "go_on",
+          "label": "나간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": -3,
+            "micWork": 8,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "decline",
+          "label": "거절하고 링에 집중한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -9,
+            "inRing": 6,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "kr_language_promo",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "한국어 프로모",
+      "bodies": [
+        "해외 단체 링. 통역 없이 한국어로 프로모를 하면 여기 관중 대부분은 못 알아듣는다. 다만 온라인에서는 다르게 퍼진다.",
+        "해외 아레나 한가운데다. 관중 중 한국인은 앞줄 셋뿐이다.",
+        "마이크를 잡았다. 어느 말로 시작할지 1초 안에 정해야 한다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "kr"
+        ],
+        "minWeek": 70,
+        "stats": {
+          "micWork": [
+            30,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "korean",
+          "label": "한국어로 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "alignment": 10,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "english",
+          "label": "영어로 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 1,
+            "micWork": 9,
+            "alignment": -4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "kr_underground_scene",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "지하 흥행",
+      "bodies": [
+        "관중 80명짜리 지하 소극장. 링 로프는 낡았고 매트 아래 합판이 튀어나와 있다. 여기서 시작한 사람들이 오늘도 온다.",
+        "관중 80명. 링 로프가 늘어졌고 매트 아래 합판이 보인다.",
+        "지하 소극장. 천장이 낮아 톱로프에 설 수 없다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "regions": [
+          "kr"
+        ],
+        "maxWeek": 200
+      },
+      "choices": [
+        {
+          "code": "give_everything",
+          "label": "80명 앞에서 전부 쏟는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": 9,
+            "alignment": 12,
+            "wear": 6
+          },
+          "injuryRisk": 0.14
+        },
+        {
+          "code": "protect_yourself",
+          "label": "링 상태를 감안해 몸을 지킨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 2,
+            "backstage": 8,
+            "wear": -3
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "kr_national_pride",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "국기를 든 상대",
+      "bodies": [
+        "상대가 프로모에서 한국을 조롱하며 관중의 야유를 끌어낸다. 오래된 수법이고, 잘 먹힌다.",
+        "상대가 어설픈 한국말 흉내로 관중을 웃긴다.",
+        "상대가 국기를 밟는 시늉을 한다. 관중이 술렁인다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "regions": [
+          "kr"
+        ],
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "answer_it",
+          "label": "정면으로 받아친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 14,
+            "inRing": -2,
+            "micWork": 10,
+            "alignment": 20
+          },
+          "injuryRisk": 0.0,
+          "heat": 30
+        },
+        {
+          "code": "join_him",
+          "label": "같이 조롱하며 힐로 선다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -1,
+            "alignment": -30,
+            "micWork": 12
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_heel"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1107 @@
+{
+  "schemaVersion": 3,
+  "file": "events_style.json",
+  "note": "플레이스타일 5종 × 5장 (§3-D11·§11-7). 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "tech_submission_purist",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "탭은 안 팔린다",
+      "body": "부커가 말한다. \"서브미션으로 이기면 관중이 안 일어나. 임팩트 있는 피니셔 하나 만들어.\"",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "technician"
+        ],
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "add_finisher",
+          "label": "타격 피니셔를 하나 만든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -3,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_pure",
+          "label": "서브미션으로만 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -5,
+            "inRing": 10,
+            "backstage": -10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "tech_slow_burn_crowd",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "12분째 그라운드",
+      "bodies": [
+        "12분 동안 매트에서 팔만 비틀었다. 이야기는 완벽하게 쌓이고 있는데, 관중은 지루해한다.",
+        "관중석에서 \"뭐 좀 해봐\" 소리가 나왔다. 경기는 계획대로 가고 있다.",
+        "완벽하게 쌓이는 중인데 아레나가 조용해졌다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "technician"
+        ],
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "trust_the_story",
+          "label": "끝까지 쌓는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -6,
+            "inRing": 10,
+            "backstage": 6
+          },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "break_pattern",
+          "label": "큰 동작 하나로 흐름을 깬다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": 3,
+            "wear": 4
+          },
+          "injuryRisk": 0.1
+        }
+      ]
+    },
+    {
+      "code": "tech_teach_rookie",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "가르쳐 달라는 신인",
+      "body": "신인 셋이 당신 그라운드를 배우고 싶다며 매일 한 시간씩 남겠다고 한다.",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "technician"
+        ],
+        "minWeek": 150
+      },
+      "choices": [
+        {
+          "code": "teach",
+          "label": "가르친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 1,
+            "inRing": 4,
+            "backstage": 20,
+            "alignment": 12,
+            "wear": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "no_time",
+          "label": "내 경기에 집중한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 8,
+            "backstage": -8,
+            "wear": -3
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "tech_shoot_style_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "진짜로 붙자는 제안",
+      "body": "슛스타일 단체가 제안한다. 각본 없이 실제 기량으로 겨루는 룰. 지면 그대로 진 것이 된다.",
+      "weight": 16,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "technician"
+        ],
+        "minWeek": 180,
+        "stats": {
+          "inRing": [
+            55,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "take_it",
+          "label": "받는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 12,
+            "inRing": 14,
+            "backstage": -8,
+            "wear": 10
+          },
+          "injuryRisk": 0.3
+        },
+        {
+          "code": "pass",
+          "label": "거절한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": -2,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "tech_limb_work_criticism",
+      "kind": "sub",
+      "arena": "public",
+      "title": "다리를 공격했는데",
+      "bodies": [
+        "20분 내내 상대 다리를 부순 경기가 호평받았다. 그런데 상대가 마지막에 멀쩡히 뛰어다녔다는 지적이 온라인에 도배됐다.",
+        "경기 평점은 높은데 \"이야기가 안 남았다\"는 평이 붙었다.",
+        "온라인에서 \"셀링이 없다\"는 지적이 당신 경기에 붙었다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "technician"
+        ],
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "call_him_out",
+          "label": "상대에게 직접 말한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7,
+            "backstage": -10
+          },
+          "injuryRisk": 0.0,
+          "heat": 20
+        },
+        {
+          "code": "eat_it",
+          "label": "삼키고 다음 경기에서 내가 더 판다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 8,
+            "backstage": 8,
+            "wear": 3
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "power_size_typecast",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "괴물 역할",
+      "body": "작가진이 대사 없는 괴물 기믹을 준다. 프로모도 매니저가 대신 하고, 당신은 서 있기만 하면 된다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "powerhouse"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "be_the_monster",
+          "label": "괴물이 된다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 14,
+            "inRing": -1,
+            "alignment": -15,
+            "micWork": -6,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "demand_mic",
+          "label": "직접 말하겠다고 요구한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -4,
+            "inRing": -3,
+            "micWork": 10,
+            "backstage": -12
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "power_press_slam_risk",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "머리 위로 든 상대",
+      "bodies": [
+        "120킬로 상대를 머리 위로 들었다. 그런데 허리가 접히는 게 느껴진다. 지금 내리면 관중은 실망한다.",
+        "상대를 어깨에 올렸는데 무릎이 흔들린다. 관중은 던지길 기다린다.",
+        "120킬로를 들어 올린 순간 손목이 꺾였다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "powerhouse"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "hold_it",
+          "label": "버티고 던진다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": 5,
+            "wear": 12
+          },
+          "injuryRisk": 0.32
+        },
+        {
+          "code": "set_him_down",
+          "label": "안전하게 내려놓는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 8,
+            "backstage": 10,
+            "wear": 2
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "power_weight_pressure",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "체중 요구",
+      "body": "경영진이 10킬로를 더 붙이라고 한다. 지금도 무릎이 매 경기 붓는다.",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "powerhouse"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "bulk_up",
+          "label": "찌운다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -3,
+            "backstage": 8,
+            "wear": 10
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "stay_lean",
+          "label": "지금 체중을 유지한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 6,
+            "wear": -5,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "power_carry_the_small_guy",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "반쪽짜리 상대",
+      "bodies": [
+        "당신 절반 체구의 상대. 관중은 당신이 압살하길 기대하고, 상대는 자기 커리어가 걸려 있다.",
+        "상대가 링에 오르자 관중이 웃었다. 체격 차이가 그만큼이다.",
+        "상대가 20킬로 가볍다. 오늘 그의 커리어가 이 경기에 걸려 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "powerhouse"
+        ],
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "sell_for_him",
+          "label": "그의 공격을 크게 받아준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 6,
+            "backstage": 16,
+            "alignment": 12
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "squash",
+          "label": "3분 만에 압살한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -3,
+            "alignment": -12,
+            "backstage": -4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "power_strength_challenge",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "괴력 대결",
+      "bodies": [
+        "생방송에서 상대가 벤치프레스 대결을 걸었다. 진짜 무게고, 당신은 오늘 어깨가 안 좋다.",
+        "생방송에서 상대가 진짜 무게로 힘 대결을 걸었다.",
+        "링 위에 바벨이 올라왔다. 관중이 숫자를 세기 시작한다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "powerhouse"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "lift_it",
+          "label": "든다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": -1,
+            "wear": 10
+          },
+          "injuryRisk": 0.28
+        },
+        {
+          "code": "flip_the_bench",
+          "label": "벤치를 뒤엎고 그를 덮친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -3,
+            "alignment": -14,
+            "micWork": 5
+          },
+          "injuryRisk": 0.05,
+          "heat": 30
+        }
+      ]
+    },
+    {
+      "code": "hf_body_toll",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "진통제 없이는",
+      "body": "매 경기 사다리 위에서 몸을 던진 대가로, 밤마다 관절이 아파 진통제 없이는 잠들지 못한다.",
+      "weight": 22,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "high_flyer"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "take_pills",
+          "label": "삼키고 다음 경기를 강행한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 8,
+            "inRing": 3,
+            "wear": 18
+          },
+          "injuryRisk": 0.2,
+          "flags": [
+            "painkiller_habit"
+          ]
+        },
+        {
+          "code": "change_style",
+          "label": "공중기를 봉인하고 체질을 바꾼다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -14,
+            "inRing": 6,
+            "wear": -15
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "grounded_style"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "hf_ladder_spot_pitch",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "아무도 안 한 스팟",
+      "bodies": [
+        "제작진이 사다리 두 개와 테이블 세 개를 쌓은 스팟을 제안한다. 리허설은 없다.",
+        "제작진이 도면을 내민다. 무대 세트 위에서 링 안으로 넘어오는 동선이다.",
+        "리허설 없이 하라는 스팟이 제안됐다. 높이는 4미터다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "high_flyer"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "do_it",
+          "label": "한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 26,
+            "inRing": 4,
+            "wear": 20
+          },
+          "injuryRisk": 0.45
+        },
+        {
+          "code": "scale_it_down",
+          "label": "규모를 줄여 안전하게 바꾼다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": 4,
+            "backstage": 8,
+            "wear": 6
+          },
+          "injuryRisk": 0.12
+        }
+      ]
+    },
+    {
+      "code": "hf_signature_copied",
+      "kind": "sub",
+      "arena": "public",
+      "title": "복제된 기술",
+      "bodies": [
+        "다른 단체 신인이 당신 시그니처 다이브를 그대로 쓰고 있다. 더 높이 뛰고 더 화제가 된다.",
+        "당신 기술 영상 조회수 1위가 남의 계정이다.",
+        "당신 기술 이름이 다른 선수 이름으로 검색된다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "high_flyer"
+        ],
+        "minWeek": 130
+      },
+      "choices": [
+        {
+          "code": "go_higher",
+          "label": "더 높은 걸 만든다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 5,
+            "wear": 14
+          },
+          "injuryRisk": 0.35
+        },
+        {
+          "code": "retire_the_move",
+          "label": "그 기술을 봉인하고 새 무기를 판다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 8,
+            "wear": -4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "hf_knee_warning",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "무릎 소견서",
+      "body": "정밀검사 결과지에 적혀 있다. \"현 스타일 유지 시 3년 내 수술 필요.\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "high_flyer"
+        ],
+        "minWeek": 200,
+        "stats": {
+          "wear": [
+            40,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "ignore_it",
+          "label": "서랍에 넣는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 6,
+            "inRing": 2,
+            "wear": 8
+          },
+          "injuryRisk": 0.15
+        },
+        {
+          "code": "adapt_now",
+          "label": "지금 바꾼다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -10,
+            "inRing": 5,
+            "wear": -18,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "grounded_style"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "hf_safer_landing_offer",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "받아줄 사람이 없다",
+      "bodies": [
+        "장외 다이브 자리에 상대가 서 있지 않다. 착지 지점은 콘크리트다.",
+        "톱로프에 올라섰는데 상대가 반대편으로 굴러가 버렸다.",
+        "톱로프에 섰는데 받아줄 사람이 두 걸음 어긋나 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "high_flyer"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "abort",
+          "label": "동작을 접고 로프에서 내려온다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 2,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "go_anyway",
+          "label": "그래도 던진다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 7,
+            "wear": 14
+          },
+          "injuryRisk": 0.42
+        }
+      ]
+    },
+    {
+      "code": "brawl_medical_ban",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "출전 정지",
+      "body": "지난 경기 가시철사 난투로 온몸이 찢어지자, 전담 의료진이 3주 출전 정지를 내렸다.",
+      "weight": 22,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "brawler"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "comply",
+          "label": "쉰다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 11,
+            "wear": -14,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "break_out",
+          "label": "라커룸 문을 부수고 생방송에 난입한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 24,
+            "inRing": -5,
+            "backstage": -30,
+            "alignment": -10,
+            "wear": 10
+          },
+          "injuryRisk": 0.35,
+          "flags": [
+            "fined",
+            "suspension_pending"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "brawl_hardcore_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "데스매치 제안",
+      "bodies": [
+        "군소 단체가 형광등 데스매치를 제안한다. 출연료는 한 달치고, 소속 단체는 이걸 좋아하지 않는다.",
+        "테이블·사다리·의자 매치 섭외다. 소속 단체 몰래 뛰어야 한다.",
+        "가시철사 매치 제안이 왔다. 출연료는 한 달치다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "brawler"
+        ],
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "take_it",
+          "label": "간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": -6,
+            "wear": 16,
+            "backstage": -14
+          },
+          "injuryRisk": 0.38
+        },
+        {
+          "code": "decline",
+          "label": "거절한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 2,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "brawl_stiff_reputation",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "같이 못 하겠다",
+      "body": "선수 둘이 당신과 붙기를 거부했다. \"너무 세게 때린다\"는 이유다. 부커가 대진을 다시 짜고 있다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "brawler"
+        ],
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "tone_down",
+          "label": "강도를 낮추겠다고 약속한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 3,
+            "backstage": 16
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "own_it",
+          "label": "\"내 스타일이다.\"",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -5,
+            "backstage": -18,
+            "alignment": -12
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "brawl_referee_warning",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "실격 5초 전",
+      "bodies": [
+        "심판이 마지막 경고를 한다. 다섯을 세면 실격이다. 상대는 아직 코너에 갇혀 있고 관중은 더 원한다.",
+        "실격 선언 직전이다. 심판이 이미 종을 향해 손을 들었다.",
+        "심판이 넷을 셌다. 관중은 더 원한다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "brawler"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "break",
+          "label": "손을 떼고 물러난다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 4,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "eat_the_dq",
+          "label": "실격을 감수하고 계속 친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "alignment": -18,
+            "backstage": -8
+          },
+          "injuryRisk": 0.05,
+          "heat": 30
+        }
+      ]
+    },
+    {
+      "code": "brawl_bloodlust_crowd",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "피를 원하는 관중",
+      "bodies": [
+        "관중이 \"테이블\"을 연호한다. 오늘 대본에 테이블은 없고, 링사이드에는 한 대가 있다.",
+        "관중이 링 밑을 가리키며 발을 구른다. 거기 뭐가 있는지 다 안다.",
+        "관중이 흉기를 요구한다. 링 밑에 의자가 있다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "brawler"
+        ],
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "give_them",
+          "label": "꺼낸다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": 5,
+            "backstage": -12,
+            "wear": 10
+          },
+          "injuryRisk": 0.25
+        },
+        {
+          "code": "deny_them",
+          "label": "무시하고 경기로 끝낸다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 5,
+            "backstage": 10
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "show_promo_of_the_year",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "8분짜리 프로모",
+      "bodies": [
+        "생방송 오프닝 8분이 통째로 당신 몫이다. 대본은 세 줄뿐이고 나머지는 알아서 채우라고 한다.",
+        "쇼 마지막 10분이 비었다. 프로듀서가 \"채워\"라고만 하고 갔다.",
+        "무대가 비었고 시간이 열려 있다. 채우는 건 당신이다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "showman"
+        ],
+        "minWeek": 80,
+        "stats": {
+          "micWork": [
+            40,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "go_off_script",
+          "label": "대본을 버리고 즉흥으로 채운다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": -6,
+            "micWork": 14,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stick_to_beats",
+          "label": "세 줄을 축으로 안전하게 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 5,
+            "micWork": 8,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "show_merch_gimmick",
+      "kind": "sub",
+      "arena": "public",
+      "title": "티셔츠 문구",
+      "body": "당신이 무심코 던진 한마디가 밈이 됐다. 상품팀이 그 문구로 티셔츠를 찍자고 한다. 유치하다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "playStyles": [
+          "showman"
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "sell_it",
+          "label": "찍는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 16,
+            "inRing": -3,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "kill_it",
+          "label": "밀어낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -7,
+            "inRing": 5,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "show_catchphrase_stolen",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "가로챈 유행어",
+      "bodies": [
+        "상위 카드 선수가 생방송에서 당신 유행어를 자기 것처럼 썼다. 관중은 그의 것으로 알아들었다.",
+        "당신 유행어가 다른 선수 티셔츠에 찍혀 팔리고 있다.",
+        "관중이 당신 유행어를 다른 사람 이름과 함께 외친다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "showman"
+        ],
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "call_it_out_live",
+          "label": "다음 주 생방송에서 공개적으로 짚는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -5,
+            "micWork": 10,
+            "backstage": -14
+          },
+          "injuryRisk": 0.0,
+          "heat": 35
+        },
+        {
+          "code": "make_a_new_one",
+          "label": "새 유행어를 만든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 3,
+            "micWork": 8,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "show_overshadow_match",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "경기가 안 따라온다",
+      "bodies": [
+        "프로모는 그날 최고였는데 경기가 밋밋했다는 평이 나왔다. \"말만 잘한다\"는 문장이 계속 붙는다.",
+        "평점이 나왔다. 프로모 5점, 경기 2점.",
+        "\"말만 잘한다\"는 문장이 당신 이름 뒤에 계속 따라붙는다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "showman"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "prove_in_ring",
+          "label": "다음 경기를 30분짜리로 잡아 증명한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": 12,
+            "wear": 9
+          },
+          "injuryRisk": 0.18
+        },
+        {
+          "code": "lean_on_character",
+          "label": "캐릭터를 더 밀어붙인다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "micWork": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "show_talk_show_segment",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "토크쇼 코너",
+      "bodies": [
+        "링 위 토크쇼 코너를 맡게 됐다. 게스트는 당신을 싫어하는 고참이고, 대본에는 \"알아서\"라고만 적혀 있다.",
+        "링 위에 소파와 테이블이 놓였다. 게스트는 지난주 당신을 깎아내린 사람이다.",
+        "진행은 당신이고 대본은 없다. 게스트는 아직 뭘 물을지 모른다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "playStyles": [
+          "showman"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "roast_him",
+          "label": "생방송에서 그를 난도질한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -5,
+            "micWork": 12,
+            "backstage": -16
+          },
+          "injuryRisk": 0.0,
+          "heat": 40
+        },
+        {
+          "code": "make_him_look_good",
+          "label": "그를 돋보이게 만들어 준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 10,
+            "backstage": 20,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

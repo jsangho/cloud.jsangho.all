@@ -8,6 +8,7 @@ root_packages =
     heyman
     soccer
     lion_king
+    wwe_game
     auth
 
 # 하네스 계약 목록 — 위반 시 CI 차단
@@ -34,6 +35,7 @@ source_modules =
     heyman
     soccer
     lion_king
+    wwe_game
     auth
 forbidden_modules =
     titanic
@@ -43,6 +45,7 @@ forbidden_modules =
     heyman
     soccer
     lion_king
+    wwe_game
     auth
 exclude_type_checking_imports = True
 
@@ -57,7 +60,7 @@ exclude_type_checking_imports = True
 name = Only hub (ontology) may import spoke modules
 type = layers
 layers =
-    titanic | kayfabe | superstar | admin | heyman | soccer | lion_king
+    titanic | kayfabe | superstar | admin | heyman | soccer | lion_king | wwe_game
     ontology
 
 
@@ -77,6 +80,7 @@ containers =
     heyman
     soccer
     lion_king
+    wwe_game
     auth
 layers =
     adapter
@@ -101,5 +105,6 @@ source_modules =
     heyman
     soccer
     lion_king
+    wwe_game
 forbidden_modules =
     auth

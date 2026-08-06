@@ -1,0 +1,487 @@
+{
+  "schemaVersion": 3,
+  "file": "events_rivalry.json",
+  "note": "대립 상태 기반 (§2-D4). rivalryStage가 맞아야 발동. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "riv_backstage_ambush",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "소화기",
+      "bodies": [
+        "복도를 걷는데 어두운 코너에서 숙적이 튀어나와 소화기로 뒤통수를 내리쳤다.",
+        "케이터링에서 접시를 들고 있는데 뒤에서 목이 감겼다.",
+        "주차장으로 가는 길에 뒤에서 파이프가 날아왔다."
+      ],
+      "weight": 25,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "nemesis"
+        ]
+      },
+      "choices": [
+        {
+          "code": "fight_now",
+          "label": "피투성이로 달려들어 주먹다짐한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 12,
+            "inRing": -5,
+            "backstage": -12,
+            "wear": 8
+          },
+          "injuryRisk": 0.22,
+          "heat": 50,
+          "flags": [
+            "fined"
+          ]
+        },
+        {
+          "code": "save_it",
+          "label": "이를 갈고 PLE까지 참는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 4,
+            "micWork": 8,
+            "alignment": 10
+          },
+          "injuryRisk": 0.05,
+          "heat": 30,
+          "flags": [
+            "ple_revenge_buff"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "riv_promo_war",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "마이크 전쟁",
+      "bodies": [
+        "숙적이 링 반대편에서 당신 커리어를 조목조목 깎아내린다. 관중은 당신 차례를 기다린다.",
+        "숙적이 당신 고향 이름을 꺼내며 관중을 웃긴다.",
+        "숙적이 마이크로 당신의 가장 아픈 패배를 하나씩 읊는다."
+      ],
+      "weight": 24,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "heated",
+          "nemesis"
+        ]
+      },
+      "choices": [
+        {
+          "code": "out_talk_him",
+          "label": "말로 되받는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -1,
+            "micWork": 12
+          },
+          "injuryRisk": 0.0,
+          "heat": 25
+        },
+        {
+          "code": "attack_mid_sentence",
+          "label": "말 끊고 덮친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "alignment": -12,
+            "micWork": -3
+          },
+          "injuryRisk": 0.1,
+          "heat": 40
+        },
+        {
+          "code": "walk_away",
+          "label": "등을 돌리고 나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 3,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0,
+          "heat": -15
+        }
+      ]
+    },
+    {
+      "code": "riv_contract_signing",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "계약 조인식",
+      "bodies": [
+        "링 위에 테이블과 펜. 사인만 하면 끝나는 자리인데, 숙적이 계약서를 찢어 던졌다.",
+        "펜을 잡는 순간 숙적이 손목을 눌렀다. 카메라가 붙어 있다.",
+        "조인식 도중 숙적이 테이블을 뒤엎었다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "heated",
+          "nemesis"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "sign_anyway",
+          "label": "찢어진 조각에 사인한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "micWork": 8,
+            "alignment": 10
+          },
+          "injuryRisk": 0.0,
+          "heat": 20
+        },
+        {
+          "code": "table_spot",
+          "label": "테이블로 그를 관통시킨다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 5,
+            "wear": 9,
+            "backstage": -10
+          },
+          "injuryRisk": 0.25,
+          "heat": 45
+        }
+      ]
+    },
+    {
+      "code": "riv_steal_finisher",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "내 기술로 이긴다",
+      "bodies": [
+        "숙적이 경기 막판, 당신의 피니셔를 그대로 써서 당신을 눕히려 한다.",
+        "숙적이 당신 마무리 자세를 그대로 잡았다. 아레나가 숨을 멈췄다.",
+        "숙적이 당신 시그니처 포즈를 잡고 관중을 본다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "nemesis"
+        ]
+      },
+      "choices": [
+        {
+          "code": "counter_it",
+          "label": "받아치고 내 것으로 끝낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": 8
+          },
+          "injuryRisk": 0.1,
+          "heat": 30
+        },
+        {
+          "code": "take_it_and_rise",
+          "label": "맞고 일어나 그의 기술로 되갚는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 6,
+            "wear": 7
+          },
+          "injuryRisk": 0.2,
+          "heat": 40
+        }
+      ]
+    },
+    {
+      "code": "riv_family_insult",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "선을 넘었다",
+      "body": "숙적이 생방송에서 당신 가족을 언급했다. 대본에 없던 말이고, 라커룸 전체가 조용해졌다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "rivalryStage": [
+          "nemesis"
+        ],
+        "minWeek": 150
+      },
+      "choices": [
+        {
+          "code": "go_after_him",
+          "label": "카메라 앞에서 그를 찾아간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": -6,
+            "alignment": 10,
+            "backstage": -10,
+            "wear": 6
+          },
+          "injuryRisk": 0.18,
+          "heat": 60
+        },
+        {
+          "code": "cold_response",
+          "label": "다음 주에 조용히 답한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -1,
+            "micWork": 14,
+            "alignment": 8
+          },
+          "injuryRisk": 0.0,
+          "heat": 35
+        }
+      ]
+    },
+    {
+      "code": "riv_partner_turns",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "적의 적",
+      "bodies": [
+        "숙적이 링 위에서 셋에게 둘러싸였다. 그를 돕는 사람은 지금 당신뿐이다.",
+        "경기가 끝난 뒤 세 명이 숙적을 붙잡고 의자를 꺼냈다. 게이트는 비어 있다.",
+        "숙적이 실려 나가기 직전이다. 링사이드에서 당신과 눈이 마주쳤다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "heated",
+          "nemesis"
+        ],
+        "minWeek": 180
+      },
+      "choices": [
+        {
+          "code": "save_him",
+          "label": "뛰어들어 함께 싸운다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": 4,
+            "alignment": 20,
+            "wear": 6
+          },
+          "injuryRisk": 0.15,
+          "heat": -35,
+          "flags": [
+            "uneasy_alliance"
+          ]
+        },
+        {
+          "code": "watch",
+          "label": "램프 위에서 지켜본다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "alignment": -18,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0,
+          "heat": 25
+        }
+      ]
+    },
+    {
+      "code": "riv_respect_handshake",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "내민 손",
+      "body": "3년짜리 대립의 마지막 경기가 끝났다. 숙적이 무릎을 꿇은 채 손을 내민다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "rivalryStage": [
+          "nemesis"
+        ],
+        "minWeek": 400
+      },
+      "choices": [
+        {
+          "code": "shake_it",
+          "label": "잡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 18,
+            "inRing": 1,
+            "alignment": 25,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0,
+          "heat": -80
+        },
+        {
+          "code": "spit_on_it",
+          "label": "뿌리치고 내려간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -3,
+            "alignment": -25,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0,
+          "heat": 30
+        }
+      ]
+    },
+    {
+      "code": "riv_cool_down",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "식어가는 대립",
+      "bodies": [
+        "부커가 말한다. \"둘 사이 반응이 죽었어. 다음 달에 정리하고 각자 다른 상대로 간다.\"",
+        "이번 달 대립 관련 굿즈가 한 장도 안 팔렸다는 보고가 올라왔다.",
+        "대립 시청률이 3주 연속 떨어졌다는 자료가 붙었다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "heated"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "accept_end",
+          "label": "정리한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 7,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0,
+          "heat": -50
+        },
+        {
+          "code": "pitch_one_more",
+          "label": "마지막 한 판을 제안한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": -4,
+            "micWork": 6,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0,
+          "heat": 25
+        }
+      ]
+    },
+    {
+      "code": "riv_rematch_clause",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "재대결 조항",
+      "bodies": [
+        "벨트를 잃었지만 계약서에 재대결 조항이 있다. 지금 쓰면 준비 없이 붙어야 하고, 미루면 기회가 사라질 수 있다.",
+        "계약서에 재대결 조항이 있다. 지금 쓸지 미룰지다.",
+        "재대결 권리가 아직 살아 있다. 다만 기한이 있다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "rivalryStage": [
+          "heated",
+          "nemesis"
+        ],
+        "flags": [
+          "lost_world_title"
+        ]
+      },
+      "choices": [
+        {
+          "code": "invoke_now",
+          "label": "지금 쓴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 4,
+            "wear": 6
+          },
+          "injuryRisk": 0.15,
+          "heat": 30
+        },
+        {
+          "code": "wait",
+          "label": "몸을 만들고 기다린다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -7,
+            "inRing": 8,
+            "wear": -5
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "riv_career_vs_career",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "둘 중 하나는 끝난다",
+      "body": "커리어를 건 경기의 종반. 상대는 이미 못 일어난다. 지금 끝내면 그의 커리어가 여기서 닫힌다.",
+      "weight": 24,
+      "once": true,
+      "requires": {
+        "rivalryStage": [
+          "nemesis"
+        ],
+        "flags": [
+          "career_match_booked"
+        ]
+      },
+      "choices": [
+        {
+          "code": "finish_him",
+          "label": "끝낸다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 22,
+            "inRing": -5,
+            "alignment": -10,
+            "micWork": 6
+          },
+          "injuryRisk": 0.05,
+          "heat": -100,
+          "flags": [
+            "ended_a_career"
+          ]
+        },
+        {
+          "code": "refuse_to_pin",
+          "label": "핀을 거부하고 그를 일으킨다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": 1,
+            "alignment": 30,
+            "backstage": 15
+          },
+          "injuryRisk": 0.1,
+          "heat": -70
+        }
+      ]
+    }
+  ]
+}
