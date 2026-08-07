@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from wwe_game.domain.constants import career_flags
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services.seeded_roll import SeededRoll
@@ -313,7 +314,7 @@ CALLUP_POPULARITY_RETENTION = {
 """
 
 
-EMERGENCY_CALLUP_FLAG = "callup_emergency"
+EMERGENCY_CALLUP_FLAG = career_flags.EMERGENCY_CALLUP
 """덱과 주차 시뮬을 잇는 플래그. 이 이름의 선택지를 고르면 다음 활동 주차에 올라간다.
 
 카드가 브랜드를 직접 바꾸지 않는 이유: 선택지의 효과는 스탯·컨디션·열기뿐이고, 여기에

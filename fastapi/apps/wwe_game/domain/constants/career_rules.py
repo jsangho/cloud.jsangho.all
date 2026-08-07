@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from wwe_game.domain.constants import career_flags as _flags
 from wwe_game.domain.value_objects.condition import InjuryGrade
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 
@@ -222,6 +223,50 @@ NXT_POPULARITY_GAIN_MULTIPLIER = 2.4
 경기력에는 붙지 않는다. 기량은 무대 크기와 무관하게 는다.
 """
 
+# ── 선택이 남긴 표식이 읽히는 자리 (§3-D26) ─────────────────
+
+PAINKILLER_INJURY_MULTIPLIER = 1.35
+"""`painkiller_habit`을 지닌 선수의 부상 확률 배수.
+
+**문서가 약속하고 구현이 없던 규칙이다.** `CareerRun.flags`의 설명에 "`painkiller_habit`은
+부상 굴림을 올린다"고 적혀 있었지만 아무 코드도 그 값을 읽지 않았다(2026-08-07 감사).
+아픈 데를 눌러 놓고 뛰면 다음이 더 크게 온다 — 그 문장을 규칙으로 만든다.
+"""
+
+GROUNDED_INJURY_MULTIPLIER = 0.78
+"""`grounded_style` — 공중기를 봉인한 선수의 부상 확률 배수.
+
+체질을 바꾼 대가로 안전을 얻는다. 카드가 "공중기를 봉인하고 체질을 바꾼다"는 선택을
+주면서 아무것도 바뀌지 않으면, 그 선택은 문장일 뿐이다.
+"""
+
+PUSH_FROZEN_GAIN_FACTOR = 0.72
+"""`push_frozen` — 밀어주기가 멈춘 선수의 인기도 상승 배수.
+
+사무실과 각을 세운 대가다. 스탯을 직접 깎지 않고 **오르는 속도**를 늦추는 이유:
+당장의 손해는 이미 그 카드의 선택지가 물렸고, 표식이 하는 일은 그 뒤를 바꾸는 것이다.
+"""
+
+GRUDGE_BACKSTAGE_FACTOR = 0.55
+"""`locker_room_grudge` — 라커룸에 척을 진 선수의 평판 회복 배수.
+
+평판은 방출 판정이 읽는 값이다(§3-D24). 회복이 느려지면 방출 위험이 오래 남는다 —
+"그때 문을 박차고 나간 것"이 몇 년 뒤 계약으로 돌아온다.
+"""
+
+MANAGER_MIC_BONUS = 1.45
+"""`has_manager` — 매니저가 붙은 선수의 마이크웍 성장 배수.
+
+말은 대신해 주는 사람이 있으면 는다. 인기도가 아니라 마이크웍에 붙이는 이유: 매니저는
+무대를 대신 채워 주지 관중을 대신 모아 주지 않는다.
+"""
+
+NEMESIS_LOCK_COOL_FACTOR = 0.35
+"""`nemesis_locked` — 매듭짓지 못한 숙적과의 열기가 식는 속도 배수.
+
+"피 흘리며 관중석까지 쫓아간" 대립은 한 주 쉰다고 식지 않는다.
+"""
+
 POPULARITY_DROP_CHANCE = 0.02
 """패배 시 인기도 하락 확률. 상승 기대값보다 확실히 낮게 둔다."""
 
@@ -348,9 +393,7 @@ RELEASE_FLAG_GRACE_DIVISOR = 2
 선을 넘은 것이라, 다음 문제에서 단체의 인내가 짧다.
 """
 
-RELEASE_TRIGGER_FLAGS: frozenset[str] = frozenset(
-    {"suspension_pending", "went_into_business_for_self"}
-)
+RELEASE_TRIGGER_FLAGS = _flags.RELEASE_TRIGGER_FLAGS
 
 RELEASE_MIN_AGE = 0
 """**나이 제한이 없다.** 부진 은퇴는 35세부터지만 방출은 신인에게도 온다 —

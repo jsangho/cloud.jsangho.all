@@ -15,6 +15,13 @@
 from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.constants.career_flags import (
+    GROUNDED,
+    GRUDGE,
+    MANAGER,
+    PAINKILLER,
+    PUSH_FROZEN,
+)
 from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
@@ -127,6 +134,10 @@ def injury_chance(run: CareerRun, kind: WeekKind, *, major: bool = False) -> flo
     chance = rules.INJURY_BASE_CHANCE
     chance *= 1.0 + (run.condition.wear / 100) * rules.INJURY_WEAR_FACTOR
     chance *= rules.INJURY_STYLE_MULTIPLIER[run.identity.play_style]
+    if PAINKILLER in run.flags:
+        chance *= rules.PAINKILLER_INJURY_MULTIPLIER
+    if GROUNDED in run.flags:
+        chance *= rules.GROUNDED_INJURY_MULTIPLIER
     if kind is WeekKind.PLE:
         chance *= rules.INJURY_PLE_MULTIPLIER
         if major:
@@ -360,6 +371,8 @@ def _growth(run: CareerRun, week: int, result: OutcomeKind) -> dict[str, int]:
     for stat in ("in_ring", "mic_work"):
         current = getattr(run.stats, stat)
         chance = rules.GAIN_BASE_CHANCE * _headroom(current) * multiplier
+        if stat == "mic_work" and MANAGER in run.flags:
+            chance *= rules.MANAGER_MIC_BONUS
         if roll.chance(min(1.0, chance)):
             delta[stat] = 1
 
@@ -374,6 +387,8 @@ def _growth(run: CareerRun, week: int, result: OutcomeKind) -> dict[str, int]:
     )
     if run.brand is Brand.NXT:
         gain *= rules.NXT_POPULARITY_GAIN_MULTIPLIER
+    if PUSH_FROZEN in run.flags:
+        gain *= rules.PUSH_FROZEN_GAIN_FACTOR
     if roll.chance(min(1.0, gain)):
         delta["popularity"] = 1
     elif roll.chance(
@@ -385,7 +400,10 @@ def _growth(run: CareerRun, week: int, result: OutcomeKind) -> dict[str, int]:
     elif result is OutcomeKind.LOSS and roll.chance(rules.POPULARITY_DROP_CHANCE):
         delta["popularity"] = -1
 
-    if roll.chance(rules.BACKSTAGE_GAIN_CHANCE):
+    backstage_chance = rules.BACKSTAGE_GAIN_CHANCE
+    if GRUDGE in run.flags:
+        backstage_chance *= rules.GRUDGE_BACKSTAGE_FACTOR
+    if roll.chance(backstage_chance):
         delta["backstage"] = delta.get("backstage", 0) + 1
 
     return delta

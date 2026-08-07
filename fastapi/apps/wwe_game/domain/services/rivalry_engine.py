@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants import roster
+from wwe_game.domain.constants.career_flags import NEMESIS_LOCKED
 from wwe_game.domain.entities.career_run import (
     HEAT_MAX,
     HEAT_MIN,
@@ -126,6 +128,9 @@ def advance_rivalries(
             delta = heat_gain
         else:
             delta = -COOL_PER_QUIET_WEEK
+            if NEMESIS_LOCKED in run.flags:
+                # 매듭짓지 못한 대립은 한 주 쉰다고 식지 않는다 (§3-D26).
+                delta = -round(COOL_PER_QUIET_WEEK * rules.NEMESIS_LOCK_COOL_FACTOR)
         nxt = with_heat(rivalry, delta)
         if nxt.heat >= DROP_BELOW:
             moved.append(nxt)
