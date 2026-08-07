@@ -276,6 +276,71 @@ class TestEligibility:
         assert event_draw.is_eligible(holder, card)
 
 
+class TestRepetitionCeiling:
+    """§11-19 — `weekly` 한 판에서 같은 카드가 5회를 넘지 않는다.
+
+    **한 시점의 후보 수가 아니라 30년을 돌려서 센다.** 예전에는 권역×스타일 조합을
+    전수로 훑어 "카드당 3.7회"를 얻었는데, 그건 한 판이 실제로 겪는 분포가 아니다 —
+    진짜 커리어를 돌리자 최대 7회가 나왔다(2026-08-07).
+    """
+
+    MAX_CARD_REPEAT = 5
+
+    def test_no_card_repeats_too_often_in_one_career(self) -> None:
+        from collections import Counter
+
+        from wwe_game.domain.constants.countries import Country
+        from wwe_game.domain.entities.career_run import start_run
+        from wwe_game.domain.services import career_end
+        from wwe_game.domain.services.week_simulation import apply_week, simulate_week
+        from wwe_game.domain.value_objects.game_mode import game_mode_of
+        from wwe_game.domain.value_objects.wrestler_identity import (
+            RingName,
+            WrestlerIdentity,
+        )
+
+        worst = 0
+        for index, (style, country) in enumerate(
+            zip(
+                PlayStyle,
+                [Country.KR, Country.US, Country.JP, Country.MX, Country.GB],
+                strict=True,
+            )
+        ):
+            identity = WrestlerIdentity(
+                name=RingName("장상호"),
+                gender=Gender.MALE,
+                country=country,
+                play_style=style,
+            )
+            run = start_run(
+                identity=identity,
+                mode=game_mode_of("weekly"),
+                seed=1100 + index,
+                user_id=1,
+            )
+            drawn: Counter[str] = Counter()
+            while run.is_active and run.week < 1560:
+                if run.is_blocked:
+                    code = run.pending_event.code
+                    drawn[code] += 1
+                    run = event_draw.resolve_choice(run, BY_CODE[code].choices[0].code)
+                    run = career_end.close_if_ended(run)
+                    continue
+                run = apply_week(run, simulate_week(run))
+                run = career_end.track_decline(career_end.track_release(run))
+                run = career_end.close_if_ended(run)
+            if drawn:
+                worst = max(worst, drawn.most_common(1)[0][1])
+        assert worst <= self.MAX_CARD_REPEAT, f"같은 카드가 {worst}회 나왔다"
+
+    def test_the_cooldown_fits_inside_the_memory(self) -> None:
+        # 쿨다운이 기억보다 길면 뒤쪽이 그냥 버려진다 — 나눗수를 올려도 반복이 안 준다.
+        from wwe_game.domain.constants.event_deck import DECK
+
+        assert event_draw._cooldown(len(DECK)) <= event_draw.RECENT_MEMORY
+
+
 class TestDraw:
     def test_the_same_seed_draws_the_same_event(self) -> None:
         run = make_run(week=200, stats=WrestlerStats(popularity=45, in_ring=45))

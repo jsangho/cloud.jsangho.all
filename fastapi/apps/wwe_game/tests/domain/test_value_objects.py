@@ -185,8 +185,8 @@ class TestGameMode:
         ("code", "weeks_per_tick", "total_ticks", "budget"),
         [
             (GameModeCode.YEARLY, 52, 30, 30),
-            (GameModeCode.QUARTERLY, 13, 120, 80),
-            (GameModeCode.MONTHLY, 4, 390, 160),
+            (GameModeCode.QUARTERLY, 13, 120, 160),
+            (GameModeCode.MONTHLY, 4, 390, 200),
             (GameModeCode.WEEKLY, 1, 1560, 320),
         ],
     )

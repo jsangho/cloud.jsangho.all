@@ -45,9 +45,9 @@ class GameMode:
 GAME_MODES: dict[GameModeCode, GameMode] = {
     GameModeCode.YEARLY: GameMode(GameModeCode.YEARLY, 52, 30, guest_allowed=True),
     GameModeCode.QUARTERLY: GameMode(
-        GameModeCode.QUARTERLY, 13, 80, guest_allowed=True
+        GameModeCode.QUARTERLY, 13, 160, guest_allowed=True
     ),
-    GameModeCode.MONTHLY: GameMode(GameModeCode.MONTHLY, 4, 160, guest_allowed=False),
+    GameModeCode.MONTHLY: GameMode(GameModeCode.MONTHLY, 4, 200, guest_allowed=False),
     GameModeCode.WEEKLY: GameMode(GameModeCode.WEEKLY, 1, 320, guest_allowed=False),
 }
 

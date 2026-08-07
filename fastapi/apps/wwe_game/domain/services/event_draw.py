@@ -20,16 +20,24 @@ from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
 
 COOLDOWN_MIN = 8
-COOLDOWN_DIVISOR = 3
+COOLDOWN_DIVISOR = 2
 COOLDOWN_RELAX_ATTEMPTS = 2
-"""쿨다운 = `max(8, 남은_후보수 // 3)`. 후보가 마르면 절반씩 완화해 최대 2회 재시도한다.
+"""쿨다운 = `max(8, 남은_후보수 // 2)`. 후보가 마르면 절반씩 완화해 최대 2회 재시도한다.
 
 완화가 없으면 조건이 겹친 상태(부상 중 + 특정 액트)에서 후보가 서너 장뿐일 때
 이벤트가 영영 안 뜬다.
+
+**나눗수를 3에서 2로 낮췄다**(2026-08-07). 3일 때는 후보 148장 기준 쿨다운이 49회라
+30년짜리 `weekly` 한 판에서 **같은 카드가 최대 7회** 나와 §11-19(5회 이하)를 넘고
+있었다. 2로 올리면 74회가 되고 같은 조건에서 5회로 내려간다.
 """
 
-RECENT_MEMORY = 64
-"""쿨다운용으로 들고 있는 최근 코드 수. 전체 이력은 로그 테이블에 있다."""
+RECENT_MEMORY = 128
+"""쿨다운용으로 들고 있는 최근 코드 수. 전체 이력은 로그 테이블에 있다.
+
+**쿨다운보다 넉넉해야 한다.** 64일 때는 쿨다운(74회)이 기억을 넘어서 뒤쪽 24회가 그냥
+버려졌다 — 나눗수를 올려도 반복이 안 줄던 이유가 이것이다.
+"""
 
 
 def _stat_of(run: CareerRun, name: str) -> int:
