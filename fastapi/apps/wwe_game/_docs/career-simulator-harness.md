@@ -265,11 +265,15 @@ apps/lion_king/adapter/outbound
 
 kayfabe에 `app/services/wwe_roster_catalog.py`가 있지만 **import할 수 없다**(스포크↔스포크 금지, §2-D3). 그래서 `domain/constants/roster.py`에 게임용 목록을 둔다.
 
-**베끼는 일은 생성기가 한다** (2026-08-07 개정). `scripts/generate_roster.py`가 kayfabe의 `_docs/wwe_active_roster_cleaned.csv`를 읽어 `roster.py`를 찍어 낸다. 계약이 막는 것은 **런타임 import**이고, 빌드 시점에 파일을 읽어 소스를 생성하는 것은 그 계약과 무관하다. 손으로 적던 때 **58명에서 멈춰 있었고**, 그게 결정이 아니라 미달이라는 것을 사용자가 발견했다(원본은 178명).
+**베끼는 일은 생성기가 한다** (2026-08-07 개정). `scripts/generate_roster.py`가 **두 파일**을 읽어 `roster.py`와 `character_presets.py`를 찍어 낸다 — kayfabe의 `_docs/wwe_active_roster_cleaned.csv`(이름·신체·피니셔)와 이 앱의 `_docs/roster_game_data.csv`(한글명·성별·등급·플레이스타일·생년월일). 계약이 막는 것은 **런타임 import**이고, 빌드 시점에 파일을 읽어 소스를 생성하는 것은 그 계약과 무관하다. 손으로 적던 때 **58명에서 멈춰 있었고**, 그게 결정이 아니라 미달이라는 것을 사용자가 발견했다(원본은 178명).
 
 CSV가 주지 않는 두 값은 생성기의 상수가 채운다.
 
-| 값 | 조달 |
+**게임 값은 이 앱이 소유한다.** kayfabe CSV에 컬럼을 더할 수 없다 — 그쪽 적재 스크립트가 헤더를 정확히 대조해 컬럼이 하나만 늘어도 멈춘다(`load_wrestlers_csv._read_rows`). 소유도 이쪽이 맞다: 한글 표기와 등급은 kayfabe의 사실이 아니라 이 게임의 값이다.
+
+`roster_game_data.csv`의 칸이 비면 아래 추정이 메우고, **채워 갈수록 추정이 줄어든다.**
+
+| 값 | 비었을 때의 추정 |
 |---|---|
 | 성별 | CSV가 섹션마다 남자→여자 순으로 알파벳을 되감는다. 그 경계를 `FIRST_WOMAN`에 이름으로 박는다. **자동 탐지하지 않는다** — 남자 구간 안에도 순서가 어긋난 이름이 있어("Austin Theory → Tyler Bate") 탐지가 조용히 틀린다 |
 | 등급 | NXT 섹션은 통째로 유망주, 메인 로스터는 미드카드, `MAIN_EVENTERS`에 적힌 이름만 정상급 |

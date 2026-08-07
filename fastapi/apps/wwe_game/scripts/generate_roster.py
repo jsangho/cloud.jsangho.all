@@ -10,9 +10,20 @@ uv run python apps/wwe_game/scripts/generate_roster.py        # 미리보기
 uv run python apps/wwe_game/scripts/generate_roster.py --write # 파일 갱신
 ```
 
-## CSV가 주지 않는 두 가지
+## 원본은 두 파일이다
 
-`gender`와 `tier` 컬럼이 원본에 없다. 각각 이렇게 채운다.
+| 파일 | 주는 것 | 소유 |
+|---|---|---|
+| `kayfabe/_docs/wwe_active_roster_cleaned.csv` | 이름·신체·피니셔·출생지 | kayfabe |
+| `wwe_game/_docs/roster_game_data.csv` | **한글명·성별·등급·플레이스타일·생년월일** | 이 게임 |
+
+**kayfabe CSV에 컬럼을 더할 수 없다** — 그쪽 적재 스크립트가 헤더를 정확히 대조해서
+(`load_wrestlers_csv._read_rows`) 컬럼이 하나만 늘어도 멈춘다. 소유도 이쪽이 맞다:
+한글 표기와 등급은 kayfabe의 사실이 아니라 이 게임의 값이다.
+
+게임 데이터의 칸이 비면 아래 추정이 메운다. **파일을 채워 갈수록 추정이 줄어든다.**
+
+## 칸이 비었을 때의 추정
 
 - **성별** — CSV는 섹션마다 남자를 알파벳순으로 늘어놓은 뒤 여자를 다시 알파벳순으로
   잇는다. 그 경계를 `FIRST_WOMAN`에 **이름으로 박아 둔다.** 되감김을 자동 탐지하지 않는
@@ -42,6 +53,25 @@ from pathlib import Path
 APP_DIR = Path(__file__).resolve().parents[1]
 CSV_PATH = APP_DIR.parents[0] / "kayfabe" / "_docs" / "wwe_active_roster_cleaned.csv"
 OUT_PATH = APP_DIR / "domain" / "constants" / "roster.py"
+
+GAME_DATA_PATH = APP_DIR / "_docs" / "roster_game_data.csv"
+"""게임 전용 값 — **사용자가 직접 채우는 파일**이다 (2026-08-07).
+
+kayfabe의 CSV에 컬럼을 더할 수 없다: 그쪽 적재 스크립트가 헤더를 정확히 대조해
+(`load_wrestlers_csv._read_rows`) 컬럼이 하나만 늘어도 멈춘다. 소유도 이쪽이 맞다 —
+한글 표기·등급·플레이스타일은 kayfabe가 아니라 이 게임의 값이다.
+
+`name`으로 kayfabe CSV와 잇는다. 빈 칸은 **아래 상수들이 추정으로 메운다** — 파일을
+채워 갈수록 추정이 줄어든다.
+
+| 칸 | 비면 |
+|---|---|
+| `korean_name` | `KOREAN_NAMES` 표, 그것도 없으면 영문 그대로(경고) |
+| `gender` | 섹션별 알파벳 되감김(`FIRST_WOMAN`·`EXPLICIT_WOMEN`) |
+| `tier` | 브랜드 섹션 + `MAIN_EVENTERS` 명단 |
+| `play_style` | 피니셔 → 체중 → 쇼맨 (`STYLE_OVERRIDES` 우선) |
+| `birth_date` | kayfabe CSV, 그것도 없으면 `DEFAULT_AGE` |
+"""
 
 TODAY = datetime.date(2026, 8, 7)
 WEEKS_PER_YEAR = 52
@@ -490,6 +520,32 @@ for _g in Gender:  # pragma: no cover - 임포트 시 구조 검증
 '''
 
 
+def read_game_data() -> dict[str, dict[str, str]]:
+    """사용자가 채운 게임 데이터. 파일이 없으면 빈 표를 돌려주고 추정으로만 간다."""
+    if not GAME_DATA_PATH.exists():
+        print(
+            f"알림: {GAME_DATA_PATH.name}이 없어 전부 추정으로 만듭니다",
+            file=sys.stderr,
+        )
+        return {}
+    rows = csv.DictReader(io.StringIO(GAME_DATA_PATH.read_text(encoding="utf-8-sig")))
+    return {
+        (row.get("name") or "").strip(): {
+            k: (v or "").strip() for k, v in row.items() if k
+        }
+        for row in rows
+        if (row.get("name") or "").strip()
+    }
+
+
+GAME_DATA: dict[str, dict[str, str]] = {}
+"""`main()`이 채운다. 아래 해석 함수들이 읽는다."""
+
+
+def given(name: str, field: str) -> str:
+    return GAME_DATA.get(name, {}).get(field, "")
+
+
 def read_sections(path: Path) -> dict[str, list[tuple[str, int]]]:
     """섹션 이름 → [(선수 이름, 나이)]. 등장 순서를 그대로 지킨다."""
     rows = csv.DictReader(io.StringIO(path.read_text(encoding="utf-8-sig")))
@@ -508,8 +564,9 @@ def read_sections(path: Path) -> dict[str, list[tuple[str, int]]]:
 
 
 def _age_of(row: dict[str, str | None]) -> int:
-    """생년월일에서 오늘 나이. 비어 있으면 명부 중앙값을 쓴다."""
-    raw = (row.get("birth_date") or "").strip()
+    """생년월일에서 오늘 나이. **사용자가 채운 값이 먼저다.**"""
+    name = (row.get("name") or "").strip()
+    raw = given(name, "birth_date") or (row.get("birth_date") or "").strip()
     try:
         born = datetime.date.fromisoformat(raw)
     except ValueError:
@@ -534,6 +591,13 @@ def split_by_gender(
     section: str, entries: list[tuple[str, int]]
 ) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
     """(남성부, 여성부). 경계 이름이 목록에 없으면 CSV가 바뀐 것이므로 멈춘다."""
+    stated = {n for n, _ in entries if given(n, "gender")}
+    if stated == {n for n, _ in entries}:
+        # 전부 채워져 있으면 알파벳 되감김을 볼 필요가 없다.
+        return (
+            [e for e in entries if given(e[0], "gender") != "female"],
+            [e for e in entries if given(e[0], "gender") == "female"],
+        )
     explicit = EXPLICIT_WOMEN.get(section)
     if explicit is not None:
         unknown = explicit - {n for n, _ in entries}
@@ -698,6 +762,10 @@ def fictional_members(
     return members
 
 
+def _is_korean(text: str) -> bool:
+    return any("\uac00" <= ch <= "\ud7a3" for ch in text)
+
+
 def build_presets() -> list[tuple[str, str, str, str]]:
     """(한국어 이름, 성별, 플레이스타일, 국가코드). 실존 선수만 대상이다."""
     presets: list[tuple[str, str, str, str]] = []
@@ -715,7 +783,7 @@ def build_presets() -> list[tuple[str, str, str, str]]:
                 row = raw.get(name, {})
                 presets.append(
                     (
-                        KOREAN_NAMES.get(name, name),
+                        given(name, "korean_name") or KOREAN_NAMES.get(name, name),
                         gender,
                         preset_style(
                             name,
@@ -740,12 +808,14 @@ def build() -> list[tuple[str, str, str, int, int | None, int]]:
         window = LATE_DEBUT_SECTIONS.get(section)
         for gender_alias, group in (("_M", men), ("_F", women)):
             for index, (name, age) in enumerate(group):
-                if section in PROSPECT_SECTIONS or window is not None:
-                    tier = "_P"
-                elif name in MAIN_EVENTERS:
-                    tier = "_ME"
-                else:
-                    tier = "_MC"
+                tier = TIER_ALIAS.get(given(name, "tier"), "")
+                if not tier:
+                    if section in PROSPECT_SECTIONS or window is not None:
+                        tier = "_P"
+                    elif name in MAIN_EVENTERS:
+                        tier = "_ME"
+                    else:
+                        tier = "_MC"
                 if window is None:
                     debut = 0
                 else:
@@ -757,7 +827,15 @@ def build() -> list[tuple[str, str, str, int, int | None, int]]:
                     (name, gender_alias, tier, debut, retire, experience_of(age))
                 )
 
-    missing = [n for n, _, _, _, _, _ in members if n not in KOREAN_NAMES]
+    members = [
+        (given(n, "korean_name") or n, g, t, d, r, e)
+        if given(n, "korean_name")
+        else (n, g, t, d, r, e)
+        for n, g, t, d, r, e in members
+    ]
+    missing = [
+        n for n, _, _, _, _, _ in members if n not in KOREAN_NAMES and not _is_korean(n)
+    ]
     if missing:
         print(
             f"경고: 한국어 표기가 없는 이름 {len(missing)}개 — {missing}",
@@ -965,7 +1043,14 @@ def _weight_kg(raw: str) -> int | None:
     return int(digits) if digits else None
 
 
+TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
+"""게임 데이터의 등급 표기 → 생성 코드의 별칭."""
+
+
 def preset_style(name: str, finisher: str, weight: str, gender: str) -> str:
+    stated = given(name, "play_style").upper()
+    if stated:
+        return stated
     if name in STYLE_OVERRIDES:
         return STYLE_OVERRIDES[name]
     low = finisher.lower()
@@ -1049,6 +1134,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="파일에 쓴다")
     args = parser.parse_args()
+
+    global GAME_DATA  # noqa: PLW0603 - 파일 하나를 읽어 모듈 전역에 둔다
+    GAME_DATA = read_game_data()
+    if GAME_DATA:
+        filled = {
+            f: sum(1 for r in GAME_DATA.values() if r.get(f))
+            for f in ("korean_name", "gender", "tier", "play_style", "birth_date")
+        }
+        print(f"게임 데이터 {len(GAME_DATA)}행 — 채워진 칸: {filled}")
 
     members = build()
     counts: dict[tuple[str, str], int] = {}
