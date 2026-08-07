@@ -36,6 +36,7 @@ import kayfabe.adapter.outbound.orm.knowledge_chunk_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.ple_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.shop_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.title_history_orm  # noqa: E402, F401
+import wwe_game.adapter.outbound.orm.career_orm  # noqa: E402, F401
 import titanic.adapter.outbound.orm.crew_andrews_architect_orm  # noqa: E402, F401
 import titanic.adapter.outbound.orm.crew_hartley_violin_orm  # noqa: E402, F401
 import titanic.adapter.outbound.orm.crew_james_director_orm  # noqa: E402, F401

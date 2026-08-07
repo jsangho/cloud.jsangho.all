@@ -22,6 +22,11 @@ _shadow_init = str(_fastapi_dir / "__init__.py")
 if getattr(sys.modules.get("fastapi"), "__file__", None) == _shadow_init:
     del sys.modules["fastapi"]
 
+# fastapi/ → "core.*" 임포트 활성화. T9의 ORM이 `core.matrix`의 `Base`를 쓴다.
+_fastapi_path = str(_fastapi_dir)
+if _fastapi_path not in sys.path:
+    sys.path.insert(0, _fastapi_path)
+
 # fastapi/apps/ → "wwe_game.*" 임포트 활성화
 _apps_dir = str(_fastapi_dir / "apps")
 if _apps_dir not in sys.path:
