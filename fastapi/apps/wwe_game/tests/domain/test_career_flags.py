@@ -43,14 +43,20 @@ class TestTheDeckAndRulesAgree:
         # 겹쳐도 동작은 하지만, 한 표식이 두 방식으로 읽히면 균형을 재기 어려워진다.
         assert not (RULE_READ_FLAGS & CARD_READ_FLAGS)
 
-    def test_the_dead_flag_count_does_not_grow(self) -> None:
-        """아직 아무도 안 읽는 표식이 **늘지 않는지** 지킨다.
+    def test_no_flag_is_dead(self) -> None:
+        """**아무도 안 읽는 표식이 하나도 없어야 한다.**
 
-        지금 남은 것은 콘텐츠 부채다 — 콜백 카드나 규칙으로 이어 주면 줄어든다.
-        늘어나면 카드를 추가하며 또 죽은 값을 심었다는 뜻이다.
+        감사 시점에는 30종 중 21종이 죽어 있었다. 규칙 여섯 · 콜백 카드 열다섯으로
+        전부 이었다(§3-D26). 카드를 추가하며 새 표식을 심고 읽지 않으면 여기서 걸린다 —
+        표식은 조용히 죽으므로 알려 주는 장치가 필요하다.
         """
         dead = DECK_FLAGS - RULE_READ_FLAGS - CARD_READ_FLAGS
-        assert len(dead) <= 15, f"죽은 표식이 늘었다: {sorted(dead)}"
+        assert not dead, f"아무도 읽지 않는 표식: {sorted(dead)}"
+
+    @pytest.mark.parametrize("flag", sorted(CARD_READ_FLAGS))
+    def test_every_card_condition_flag_is_reachable(self, flag: str) -> None:
+        # 조건만 있고 그 표식을 남기는 선택지가 없으면 그 카드는 영영 안 뜬다.
+        assert flag in DECK_FLAGS, f"{flag}을 남기는 선택지가 덱에 없다"
 
     def test_the_audit_can_see_every_reader(self) -> None:
         """규칙이 읽는 표식은 **전부 `career_flags`에 이름이 있어야** 한다.
