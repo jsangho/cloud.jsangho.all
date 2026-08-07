@@ -1,0 +1,120 @@
+"""커리어 진행 입력 포트 (하네스 §6·§7).
+
+**로그인과 체험판이 같은 유스케이스를 쓴다**(§3-D8·§11-25). 판정 규칙이 두 벌이 되면
+어느 한쪽만 고쳐지는 날이 오고, 그때 두 화면의 결과가 갈린다. 갈리는 것은 세이브를
+어디서 읽고 어디에 쓰는가뿐이라, 그 차이는 `CareerRepository` 구현이 흡수한다.
+
+그래서 `advance`·`choose`가 로그인용과 체험판용으로 나뉘어 있다 — 인자만 다르고
+(하나는 `run_id`, 하나는 세이브 전체) 내부에서 같은 진행 루프를 부른다.
+"""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+
+from wwe_game.app.dtos.career_dto import (
+    AdvanceCommand,
+    AdvanceResult,
+    CareerLogPage,
+    ChooseCommand,
+    GuestAdvanceCommand,
+    GuestChooseCommand,
+    GuestStartCommand,
+    ModeView,
+    PresetView,
+    StartRunCommand,
+)
+
+
+class RunAlreadyActiveError(Exception):
+    """진행 중인 세이브가 있는데 새로 시작하려 할 때 (하네스 §8 → 409).
+
+    세이브는 하나뿐이다(§13-Q4). 덮어쓰지 않고 막는 이유: 30년짜리 진행이 클릭 한 번에
+    사라지면 안 된다. 지우려면 `retire()`를 먼저 부른다.
+    """
+
+
+class ChoiceRequiredError(Exception):
+    """대기 이벤트가 있는데 진행을 시도했을 때 (하네스 §8 → 409 · §11-2)."""
+
+
+class NoPendingEventError(Exception):
+    """대기 이벤트가 없는데 선택을 냈을 때 (하네스 §8 → 409).
+
+    "없는 선택지 코드"(`InvalidChoiceError`, 400)와 다르다 — 이건 이벤트 자체가 없다.
+    """
+
+
+class GuestModeNotAllowedError(Exception):
+    """체험판이 `monthly`·`weekly`를 요청했을 때 (하네스 §8 → 400 · §11-24).
+
+    두 모드는 틱이 390·1560개라 상태가 브라우저에 안 들어간다(§3-D8).
+    """
+
+
+class CareerUseCase(ABC):
+    """'다음' 중심의 진행 코디네이터.
+
+    **판정은 하나도 하지 않는다.** 주차 시뮬·이벤트 추첨·은퇴 판정은 전부 도메인 서비스의
+    순수 함수이고(§3-D1), 여기는 그것들을 순서대로 부르고 저장하는 자리다.
+    """
+
+    # ── 로그인 플레이 ─────────────────────────────────────────
+
+    @abstractmethod
+    async def start(self, command: StartRunCommand) -> AdvanceResult:
+        """새 커리어. 이미 진행 중이면 `RunAlreadyActiveError`."""
+
+    @abstractmethod
+    async def current(self, user_id: int) -> AdvanceResult | None:
+        """진행 중인 세이브와 대기 이벤트. 없으면 None."""
+
+    @abstractmethod
+    async def advance(self, command: AdvanceCommand) -> AdvanceResult:
+        """'다음'. 대기 이벤트가 있으면 `ChoiceRequiredError`."""
+
+    @abstractmethod
+    async def choose(self, command: ChooseCommand) -> AdvanceResult:
+        """대기 이벤트에 답한다. 없으면 `NoPendingEventError`."""
+
+    @abstractmethod
+    async def read_log(
+        self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
+    ) -> CareerLogPage:
+        """커리어 로그 한 페이지. 30년이면 1560줄이라 전부 내려보내지 않는다."""
+
+    @abstractmethod
+    async def retire(self, run_id: int, user_id: int) -> AdvanceResult:
+        """스스로 커리어를 닫는다 — 은퇴 5조건 중 하나다(§3-D16)."""
+
+    # ── 체험판 (§3-D8) ────────────────────────────────────────
+
+    @abstractmethod
+    def start_guest(self, command: GuestStartCommand) -> AdvanceResult:
+        """체험판 시작. 잠긴 모드면 `GuestModeNotAllowedError`.
+
+        **동기다** — 읽고 쓸 저장소가 없어 `await`할 대상이 없다(fastapi/CLAUDE.md §9).
+        """
+
+    @abstractmethod
+    def advance_guest(self, command: GuestAdvanceCommand) -> AdvanceResult:
+        """받은 세이브를 진행시켜 **다음 상태를 통째로** 돌려준다. 저장하지 않는다.
+
+        상태는 클라이언트가 들고 있으므로 조작될 수 있다. 값 객체가 입구에서 검증하고
+        (범위 밖 스탯·1560 초과 주차는 `InvalidCareerRunError`), 규칙에 맞는 값이면
+        그대로 받는다 — **신뢰하지 않되 막지도 않는다**(§3-D8, 순위표와 무관하므로).
+        """
+
+    @abstractmethod
+    def choose_guest(self, command: GuestChooseCommand) -> AdvanceResult:
+        """체험판의 이벤트 선택 판정. 대기 이벤트가 없으면 `NoPendingEventError`."""
+
+    # ── 메타 ──────────────────────────────────────────────────
+
+    @abstractmethod
+    def modes(self) -> tuple[ModeView, ...]:
+        """모드 4종. 상수를 읽을 뿐이라 동기다 (§3-D15)."""
+
+    @abstractmethod
+    def presets(self) -> tuple[PresetView, ...]:
+        """캐릭터 생성의 바탕이 될 선수 목록 (§3-D10-1). 상수를 읽을 뿐이라 동기다."""

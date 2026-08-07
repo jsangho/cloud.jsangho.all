@@ -26,3 +26,10 @@ if getattr(sys.modules.get("fastapi"), "__file__", None) == _shadow_init:
 _apps_dir = str(_fastapi_dir / "apps")
 if _apps_dir not in sys.path:
     sys.path.insert(0, _apps_dir)
+
+# `domain/_helpers.py`의 `make_run`을 어댑터 테스트에서도 쓴다. pytest는 테스트 파일이
+# 있는 디렉터리만 sys.path에 넣으므로 `tests/adapter/`에서는 안 보인다. 빌더가 둘로
+# 갈리면 두 곳이 서로 다른 CareerRun을 만들어, 같은 버그를 한쪽만 재현하게 된다.
+_domain_tests = str(_here / "domain")
+if _domain_tests not in sys.path:
+    sys.path.insert(0, _domain_tests)
