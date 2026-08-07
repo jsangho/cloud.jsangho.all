@@ -23,6 +23,7 @@ from wwe_game.domain.value_objects.title import (
     Brand,
     Title,
     grand_slam_level,
+    group_counts,
     missing_groups,
     nxt_titles,
     titles_for_group,
@@ -104,24 +105,51 @@ def eligible_titles(run: CareerRun) -> tuple[Title, ...]:
     )
 
 
+WORLD_GROUP = "월드"
+"""정상 그룹의 이름. 남녀 공통이다 (`GRAND_SLAM_GROUPS`)."""
+
+
+def is_crowned(run: CareerRun) -> bool:
+    """월드 벨트를 한 번이라도 감았는지 — **정상에 올라 본 적이 있는가.**"""
+    return group_counts(run.titles_won, run.identity.gender)[WORLD_GROUP] > 0
+
+
 def grand_slam_chase(run: CareerRun) -> Title | None:
-    """그랜드슬램까지 한 그룹 남았고, 그 벨트가 지금 브랜드에서 닿으면 그 벨트."""
+    """아래 계층으로 내려가 주울 벨트. 없으면 None.
+
+    **정상에 올라 본 선수는 여러 그룹이 비어도 내려간다** (2026-08-07 개정).
+
+    예전에는 "한 그룹만 남았을 때"만 작동했는데, 그러면 **강한 커리어일수록
+    그랜드슬램에서 멀어진다.** 인기도가 높으면 `eligible_titles`가 늘 최상위 벨트를
+    돌려주므로 태그·US·인터컨티넨탈이 통째로 비고, 세 그룹이 빈 상태에서는 이 함수가
+    아예 None을 돌려주기 때문이다 — 실측에서 인기도 91짜리 커리어 20판 중 태그팀
+    16건·US 12건·IC 11건이 비었고, 인기도 67짜리는 태그팀 6건만 비었다.
+
+    **최고의 선수가 그랜드슬램을 못 하는 것은 뒤집힌 그림이다.** 정상에 오른 뒤에는
+    남은 벨트를 주우러 갈 수 있어야 한다 — 실제로도 그랜드슬램은 훌륭한 커리어의
+    훈장이지 어중간한 커리어의 부산물이 아니다.
+    """
     if run.brand not in MAIN_ROSTER:
         return None
     gender = run.identity.gender
     missing = missing_groups(run.titles_won, gender)
-    if len(missing) != 1:
+    if not missing:
         return None
-    reachable = [
-        t
-        for t in titles_for_group(missing[0], gender)
-        if run.brand in TITLES[t].brands
-        and run.stats.popularity >= TITLES[t].popularity_required
-    ]
-    return reachable[0] if reachable else None
+    if len(missing) != 1 and not is_crowned(run):
+        return None
+    for name in missing:
+        reachable = [
+            t
+            for t in titles_for_group(name, gender)
+            if run.brand in TITLES[t].brands
+            and run.stats.popularity >= TITLES[t].popularity_required
+        ]
+        if reachable:
+            return reachable[0]
+    return None
 
 
-GRAND_SLAM_CHASE_CHANCE = 0.015
+GRAND_SLAM_CHASE_CHANCE = 0.004
 """**타이틀전 한 번당** 마지막 한 그룹을 주우러 아래 계층으로 내려갈 확률.
 
 **보장이던 것을 확률로 바꿨다.** 항상 내려가게 두었더니 그랜드슬램이 난도가 아니라
@@ -140,6 +168,22 @@ GRAND_SLAM_CHASE_CHANCE = 0.015
 """
 
 
+CROWNED_CHASE_CHANCE = 0.013
+"""정상에 올라 본 선수가 아래 벨트를 주우러 갈 확률 — 기본값의 세 배 남짓.
+
+**나머지를 채우는 일은 정상에 오른 뒤에 시작된다.** 월드 벨트를 감기 전에는 위로
+올라가는 것이 이야기이고, 감고 나면 남은 것을 모으는 것이 이야기다.
+
+값을 더 올리면 **전원이 달성한다** — 0.20에서 세 정책 모두 87~93%였다. 30년이면
+타이틀전이 마흔 번 남짓이라 회당 확률이 조금만 높아도 누적으로 확실해진다. 0.03에서도
+계산적 플레이가 45%로 문서 목표(25~30%)를 넘었다.
+"""
+
+
+def chase_chance(run: CareerRun) -> float:
+    return CROWNED_CHASE_CHANCE if is_crowned(run) else GRAND_SLAM_CHASE_CHANCE
+
+
 def target_title(run: CareerRun, roll: SeededRoll) -> Title | None:
     """이번 타이틀전의 대상. 없으면 None.
 
@@ -147,7 +191,7 @@ def target_title(run: CareerRun, roll: SeededRoll) -> Title | None:
     계층 1선이 잡히고 — 대개 이미 감아 본 벨트다 — 그 기회는 그냥 지나간다.
     """
     chase = grand_slam_chase(run)
-    if chase is not None and roll.chance(GRAND_SLAM_CHASE_CHANCE):
+    if chase is not None and roll.chance(chase_chance(run)):
         return chase
     tiers = eligible_titles(run)
     return tiers[0] if tiers else None
