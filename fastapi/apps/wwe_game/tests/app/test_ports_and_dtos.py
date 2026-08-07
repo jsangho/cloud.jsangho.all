@@ -142,4 +142,18 @@ class TestDtosCarryNoInternals:
 
     def test_step_and_stop_are_closed_sets(self) -> None:
         assert {m.value for m in StepMode} == {"auto", "tick"}
-        assert {r.value for r in StopReason} == {"event", "tick", "ended", "ple"}
+        assert {r.value for r in StopReason} == {
+            "event",
+            "ple",
+            "ended",
+            "tick",
+            "max_weeks",
+            "ready",
+        }
+
+    def test_the_dto_reuses_the_domain_enums(self) -> None:
+        # 같은 이름의 열거형을 두 레이어에 두면 값이 갈릴 때 어느 쪽이 맞는지 알 수 없다.
+        from wwe_game.domain.value_objects import advance_outcome
+
+        assert StepMode is advance_outcome.StepMode
+        assert StopReason is advance_outcome.StopReason

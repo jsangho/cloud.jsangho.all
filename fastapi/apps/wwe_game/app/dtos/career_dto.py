@@ -11,39 +11,20 @@ DTO가 새로 만드는 것은 **도메인에 없는 것**뿐이다: 서술 문�
 선택지 목록.
 
 체험판(§3-D8)도 같은 자료형을 쓴다. 다른 것은 세이브를 어디서 읽고 어디에 쓰는가뿐이다.
+
+`StepMode`·`StopReason`은 여기서 정의하지 않고 도메인에서 가져온다 — 진행 루프가 순수
+함수라 멈춘 이유를 도메인이 직접 정하고, 같은 열거형을 두 곳에 두면 값이 갈릴 때 어느
+쪽이 맞는지 알 수 없다. 어댑터가 편히 쓰도록 이름만 여기로 다시 내보낸다.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import StrEnum
 
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
+from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
 from wwe_game.domain.value_objects.week_report import WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
-
-
-class StepMode(StrEnum):
-    """'다음' 한 번이 얼마나 가는지 (§3-D17)."""
-
-    AUTO = "auto"
-    """이벤트를 만날 때까지. 기본값이다 — `weekly`가 클릭 1560번이 되지 않게."""
-    TICK = "tick"
-    """정확히 `weeks_per_tick` 주만. 이벤트를 만나면 그 전에 멈춘다."""
-
-
-class StopReason(StrEnum):
-    """진행이 멈춘 이유. **어디서 멈췄는지가 곧 화면의 상태다.**"""
-
-    EVENT = "event"
-    """대기 이벤트를 만났다 — 선택하기 전에는 더 못 간다."""
-    TICK = "tick"
-    """요청한 만큼 갔다."""
-    ENDED = "ended"
-    """커리어가 끝났다 (§3-D16 은퇴 5조건)."""
-    PLE = "ple"
-    """대형 대회에서 한 번 끊었다 (§3-D17). 굵은 틱을 쓰는 모드는 끊지 않는다."""
-
 
 # ── 명령 ─────────────────────────────────────────────────────
 
@@ -151,7 +132,7 @@ class AdvanceResult:
 
     run: CareerRun
     weeks: tuple[WeekReportView, ...] = ()
-    stop_reason: StopReason = StopReason.TICK
+    stop_reason: StopReason = StopReason.READY
     pending_event: PendingEventView | None = None
 
     @property

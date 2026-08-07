@@ -118,6 +118,20 @@ if _unmapped:  # pragma: no cover - 임포트 시 구조 검증
     raise RuntimeError(f"권역 매핑이 없는 국가: {sorted(c.value for c in _unmapped)}")
 
 
+def country_of(code: str | None) -> Country | None:
+    """국가 코드 문자열 → `Country`. 비어 있으면 None (프리셋이 채운다, §3-D10-1).
+
+    라우터가 아니라 여기서 검증하는 이유는 `RingName`과 같다 — 들어오는 입구가 하나여야
+    모르는 코드가 도메인 안으로 새지 않는다.
+    """
+    if code is None:
+        return None
+    try:
+        return Country(code)
+    except ValueError as exc:
+        raise UnknownCountryError(f"선택할 수 없는 항목입니다: {code}") from exc
+
+
 def region_of(country: Country) -> Region:
     """국가가 속한 권역. 이벤트 추첨의 `regions` 조건이 이 값을 본다."""
     try:
