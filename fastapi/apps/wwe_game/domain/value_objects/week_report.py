@@ -33,6 +33,19 @@ class OutcomeKind(StrEnum):
     DRAW = "draw"
 
 
+class CallUpReason(StrEnum):
+    """콜업이 **어떻게** 왔는지. 남는 인기도가 갈리고, 서술도 갈린다."""
+
+    EARNED = "earned"
+    """문턱을 넘어서 올라갔다 — 실력으로 부른 것."""
+    EMERGENCY = "emergency"
+    """메인 로스터의 부상 공백을 메우러 대타로 올라갔다 (§3-D22-1).
+
+    이벤트 카드에서 플레이어가 **수락했을 때만** 생긴다. 준비가 덜 된 채 올라가지만
+    그 대타 출전 자체가 생중계 화제라 인기도가 덜 깎인다.
+    """
+
+
 @dataclass(frozen=True)
 class WeekReport:
     week: int
@@ -48,11 +61,20 @@ class WeekReport:
     """이 주차가 타이틀전이면 걸린 벨트. 대형 대회에서만 생긴다."""
     title_defended: bool = False
     """이미 들고 있던 벨트의 방어전이었는지. 도전과 방어는 같은 경로를 탄다."""
-    called_up: bool = False
-    """이 주차에 NXT에서 메인 로스터로 올라갔는지."""
-    drafted: bool = False
-    """이 주차에 드래프트로 브랜드가 바뀌었는지."""
+    call_up: CallUpReason | None = None
+    """이 주차에 NXT에서 메인 로스터로 올라갔다면 그 경로. 아니면 None."""
+    draft_night: bool = False
+    """이 주차에 **드래프트가 열렸는지**. 브랜드가 실제로 바뀌었는지가 아니다.
+
+    이동 굴림은 `apply_week`이 `championship.draft()`로 돌리고, 평소 확률은 16%다.
+    이름이 `drafted`였을 때 서술이 "브랜드가 바뀌었다"로 나가 **다섯 번 중 네 번은
+    사실이 아닌 문장**이 됐다. 필드가 약속하는 것과 담는 것을 맞춘다.
+    """
     narration: str = ""
+
+    @property
+    def called_up(self) -> bool:
+        return self.call_up is not None
 
     @property
     def had_match(self) -> bool:

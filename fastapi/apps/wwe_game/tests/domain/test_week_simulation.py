@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없다)
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.services import championship
+from wwe_game.domain.services.championship import NXT_MIN_WEEKS
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.services.week_simulation import (
     age_penalty,
@@ -20,7 +22,7 @@ from wwe_game.domain.services.week_simulation import (
 )
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.title import Brand, Title
-from wwe_game.domain.value_objects.week_report import WeekKind
+from wwe_game.domain.value_objects.week_report import CallUpReason, WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
@@ -384,16 +386,48 @@ class TestBrandProgression:
             report = simulate_week(run)
             run = apply_week(run, report)
             if report.called_up:
+                assert report.call_up is CallUpReason.EARNED
                 assert run.brand in {Brand.RAW, Brand.SMACKDOWN}
+                assert report.week >= NXT_MIN_WEEKS, "하한보다 일찍 실력 콜업이 났다"
                 return
         pytest.fail("콜업 리포트가 나오지 않았다")
+
+    def test_the_emergency_flag_beats_the_floor(self) -> None:
+        # 대타 자리를 수락한 선수는 문턱도 하한도 넘어선다 — 그게 '깜짝'인 이유다.
+        run = make_run(
+            brand=Brand.NXT,
+            week=30,
+            stats=WrestlerStats(popularity=20),
+        ).evolve(flags=frozenset({championship.EMERGENCY_CALLUP_FLAG}))
+        assert not championship.should_call_up(run)
+        report = simulate_week(run)
+        assert report.call_up is CallUpReason.EMERGENCY
+        assert apply_week(run, report).brand in {Brand.RAW, Brand.SMACKDOWN}
+
+    def test_an_emergency_call_up_lands_softer(self) -> None:
+        # 같은 인기도라면 대타로 올라간 쪽이 더 많이 들고 간다.
+        base = make_run(brand=Brand.NXT, week=30, stats=WrestlerStats(popularity=40))
+        called = base.evolve(flags=frozenset({championship.EMERGENCY_CALLUP_FLAG}))
+        emergency = apply_week(called, simulate_week(called))
+        earned = championship.call_up(base, SeededRoll(base.seed, 31, "brand"))
+        assert emergency.stats.popularity > earned.stats.popularity
+
+    def test_an_injured_prospect_waits_for_the_slot(self) -> None:
+        # 결장 주차에는 대타로 못 나간다. 플래그는 남으므로 복귀하는 주에 올라간다.
+        hurt = make_run(
+            brand=Brand.NXT,
+            week=30,
+            condition=Condition(grade=InjuryGrade.SERIOUS, weeks_left=6),
+        ).evolve(flags=frozenset({championship.EMERGENCY_CALLUP_FLAG}))
+        assert simulate_week(hurt).call_up is None
+        assert apply_week(hurt, simulate_week(hurt)).brand is Brand.NXT
 
     def test_draft_only_fires_on_draft_weeks(self) -> None:
         from wwe_game.domain.services.championship import DRAFT_INTERVAL_WEEKS
 
         for w in range(1, 120):
             report = simulate_week(make_run(seed=4, week=w))
-            assert report.drafted == (report.week % DRAFT_INTERVAL_WEEKS == 0)
+            assert report.draft_night == (report.week % DRAFT_INTERVAL_WEEKS == 0)
 
     def test_you_never_hold_a_belt_from_a_brand_you_left(self) -> None:
         # 불변식이 애그리거트에 있으므로 30년을 돌려 한 번도 안 깨지는지 본다.

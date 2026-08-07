@@ -25,7 +25,12 @@ from wwe_game.domain.services import (
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title
-from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
+from wwe_game.domain.value_objects.week_report import (
+    CallUpReason,
+    OutcomeKind,
+    WeekKind,
+    WeekReport,
+)
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 # ── 나이 곡선 — 인기도가 상쇄한다 ────────────────────────────
@@ -145,7 +150,13 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
     if kind is WeekKind.PROMO:
         # 경기 없는 주차. 마이크로 벌고 몸은 쉰다 — 마모도 부상도 없다.
-        return WeekReport(week=week, kind=kind, stat_delta=_promo_gain(run, week))
+        promo_delta = _promo_gain(run, week)
+        return WeekReport(
+            week=week,
+            kind=kind,
+            stat_delta=promo_delta,
+            call_up=_call_up_of(run, promo_delta),
+        )
 
     match_roll = SeededRoll(run.seed, week, seeded_roll.MATCH)
     score = performance_score(run.stats, run.condition, run.age)
@@ -200,17 +211,24 @@ def simulate_week(run: CareerRun) -> WeekReport:
         injury_weeks=injury_weeks,
         title_at_stake=title,
         title_defended=title is not None and title in run.titles_held,
-        called_up=_will_call_up(run, week, stat_delta),
-        drafted=week % championship.DRAFT_INTERVAL_WEEKS == 0,
+        call_up=_call_up_of(run, stat_delta),
+        draft_night=week % championship.DRAFT_INTERVAL_WEEKS == 0,
     )
 
 
-def _will_call_up(run: CareerRun, week: int, stat_delta: dict[str, int]) -> bool:
-    """이번 주차 결과까지 반영하면 콜업 조건에 닿는지 미리 본다."""
+def _call_up_of(run: CareerRun, stat_delta: dict[str, int]) -> CallUpReason | None:
+    """이번 주차에 콜업되는지, 된다면 어느 경로로.
+
+    **깜짝 콜업이 먼저다.** 대타 자리를 수락해 둔 선수는 문턱과 무관하게 올라간다.
+    결장 주차는 여기까지 오지 않는다 — 부상자는 대타로도 못 나가고, 플래그는 남으므로
+    복귀하는 주에 올라간다.
+    """
     if run.brand is not Brand.NXT:
-        return False
+        return None
+    if championship.EMERGENCY_CALLUP_FLAG in run.flags:
+        return CallUpReason.EMERGENCY
     projected = run.evolve(stats=run.stats.apply(stat_delta))
-    return championship.should_call_up(projected)
+    return CallUpReason.EARNED if championship.should_call_up(projected) else None
 
 
 def _draw_title_match(run: CareerRun, week: int, kind: WeekKind) -> Title | None:
@@ -226,7 +244,7 @@ def _draw_title_match(run: CareerRun, week: int, kind: WeekKind) -> Title | None
     )
     if not roll.chance(chance):
         return None
-    return championship.target_title(run)
+    return championship.target_title(run, roll)
 
 
 def _promo_gain(run: CareerRun, week: int) -> dict[str, int]:
@@ -385,11 +403,13 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             moved = moved.evolve(pending_event=drawn)
 
     # 브랜드 이동은 스탯 반영 뒤에 판정한다 — 콜업 임계값이 이번 주 인기도를 봐야 한다.
-    if report.called_up:
+    if report.call_up is not None:
         moved = championship.call_up(
-            moved, SeededRoll(run.seed, report.week, seeded_roll.BRAND)
+            moved,
+            SeededRoll(run.seed, report.week, seeded_roll.BRAND),
+            report.call_up,
         )
-    elif report.drafted:
+    elif report.draft_night:
         moved = championship.draft(
             moved, SeededRoll(run.seed, report.week, seeded_roll.BRAND)
         )

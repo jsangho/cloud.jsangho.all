@@ -27,6 +27,7 @@ from wwe_game.domain.value_objects.title import (
     titles_for_group,
     titles_of,
 )
+from wwe_game.domain.value_objects.week_report import CallUpReason
 
 # ── 기회 ─────────────────────────────────────────────────────
 
@@ -99,14 +100,33 @@ def grand_slam_chase(run: CareerRun) -> Title | None:
     return reachable[0] if reachable else None
 
 
-def target_title(run: CareerRun) -> Title | None:
+GRAND_SLAM_CHASE_CHANCE = 0.015
+"""**타이틀전 한 번당** 마지막 한 그룹을 주우러 아래 계층으로 내려갈 확률.
+
+**보장이던 것을 확률로 바꿨다.** 항상 내려가게 두었더니 그랜드슬램이 난도가 아니라
+**생존**으로 정해졌다 — 30년을 완주하기만 하면 이 규칙이 남은 한 벨트까지 데려다줘서
+부상을 피하는 플레이의 달성률이 **97%**였다(150판). 벨트 난도를 +20 해도 93%로
+꿈쩍하지 않았고, 타이틀전 빈도를 4분의 1로 줄여야 44%가 되는데 그때는 커리어당 대관이
+13회에서 4회로 무너져 타이틀 게임 자체가 사라졌다. 원인이 수치가 아니라 구조였다.
+
+**값이 작아 보이는 것은 기회가 많아서다.** 한 그룹만 남은 상태로 커리어 후반 20~30번의
+타이틀전을 치르므로, 1.5%라도 판을 거듭하면 4분의 1쯤은 결국 걸린다. 0.08만 돼도
+계산적 플레이가 46%로 되돌아간다 — 회당 확률이 아니라 **누적**으로 봐야 하는 자리다.
+
+내려가는 그림 자체는 §3-D20의 결정이라 지우지 않고 **드물게** 만들었다. 마지막 한 벨트는
+이제 사무실이 언제 그 카드를 잡아 주느냐에 달렸고, 그래서 커리어마다 갈린다. 대관 횟수는
+건드리지 않았다(커리어당 14.4회 유지) — 줄어든 것은 트로피이지 경기가 아니다.
+"""
+
+
+def target_title(run: CareerRun, roll: SeededRoll) -> Title | None:
     """이번 타이틀전의 대상. 없으면 None.
 
-    그랜드슬램 우선이 계층 순서를 덮는다 — 월드 챔피언이 마지막 한 벨트를 주우러
-    아래 계층까지 내려가는 그림이 여기서 나온다.
+    그랜드슬램 우선이 계층 순서를 덮되, **굴림에 걸렸을 때만** 덮는다. 안 걸리면 평소대로
+    계층 1선이 잡히고 — 대개 이미 감아 본 벨트다 — 그 기회는 그냥 지나간다.
     """
     chase = grand_slam_chase(run)
-    if chase is not None:
+    if chase is not None and roll.chance(GRAND_SLAM_CHASE_CHANCE):
         return chase
     tiers = eligible_titles(run)
     return tiers[0] if tiers else None
@@ -177,30 +197,93 @@ def is_grand_slam(run: CareerRun) -> bool:
 
 # ── NXT 콜업 ─────────────────────────────────────────────────
 
-NXT_CALLUP_POPULARITY = 48
-"""NXT 안에서 이만큼 크면 메인 로스터가 부른다."""
+NXT_MIN_WEEKS = 78
+"""이 주차 전에는 실력으로 올라갈 수 없다 — **1.5년**.
 
-CALLUP_POPULARITY_RETENTION = 0.5
+덱이 들어오기 전에는 필요 없던 하한이다. 이벤트가 실제로 뜨기 시작하자 NXT 구간이
+80주 남짓으로 줄면서 **6개월 만에 올라가는 커리어**가 나왔다(200판 실측 최단 0.5년).
+NXT가 한 챕터로 읽히려면 최소 한 시즌은 굴러야 한다.
+
+**깜짝 콜업은 이 하한을 넘어선다**(§3-D22-1) — 그게 '깜짝'인 이유다.
+"""
+
+NXT_PATIENCE_WEEKS = 260
+"""이 주차에 문턱이 최저가 된다 — **5년**. 그 뒤로는 더 내려가지 않는다.
+
+기울기를 정하는 값이지 종착점이 아니다. 208주(4년)로 두면 문턱이 빨리 내려앉아 **늦게
+크는 커리어까지 3년 안에 전부 올라갔다**(150판 최장 3.0년). 260주로 늘리자 같은 잔류율
+(계산적 2% · 무작위 19%)에서 꼬리만 3.6년까지 벌어졌다 — 목표한 1.5~4년 폭이 여기서 나온다.
+"""
+
+NXT_CALLUP_POPULARITY_EARLY = 76
+"""하한(1.5년) 시점의 콜업 문턱. 이 나이에 올라가려면 NXT를 압도해야 한다."""
+
+NXT_CALLUP_POPULARITY_LATE = 30
+"""인내 만료(5년) 시점의 콜업 문턱.
+
+**문턱이 재적 기간에 따라 내려간다.** 고정값 하나로 두면 커리어가 전부 같은 인기도에서
+같은 시기에 올라가 NXT 구간이 판마다 똑같아진다. 내려가는 문턱은 두 가지를 동시에
+만든다 — 빨리 큰 선수는 일찍 올라가되 **높은 인기도를 들고 가고**(76×0.42), 더디 큰
+선수는 늦게 올라가되 **바닥에서 다시 시작한다**(30×0.42). 같은 규칙 하나에서 스타와
+저니맨이 갈린다.
+"""
+
+CALLUP_POPULARITY_RETENTION = {
+    CallUpReason.EARNED: 0.42,
+    CallUpReason.EMERGENCY: 0.63,
+}
 """콜업 때 남는 인기도 비율.
 
-**NXT의 스타덤은 절반만 따라온다.** 그대로 가져오면 콜업 즉시 월드 임계값 근처에 서서
+**NXT의 스타덤은 절반쯤만 따라온다.** 그대로 가져오면 콜업 즉시 월드 임계값 근처에 서서
 메인 로스터 커리어가 통째로 사라진다. 큰 물에서는 다시 증명해야 한다.
+
+0.5에서 **0.42로 내렸다.** 문턱을 48 고정에서 76~30 곡선으로 바꾸자 콜업 시점 인기도가
+51→63으로 올랐고, 절반을 남기면 메인 로스터 출발점이 25→32가 되어 **그랜드슬램이
+57%에서 67%로 튀었다**(250판). 앞선 균형 작업이 일부러 내려놓은 수치라 되돌렸다 —
+바뀐 것은 NXT 구간의 길이지 메인 로스터의 난도가 아니어야 한다.
+
+**깜짝 콜업은 덜 깎인다(1.5배).** 대타 출전 자체가 생중계에서 이름을 알리는 사건이라
+무대가 스포트라이트를 대신 켜 준다. 그래도 문턱을 넘기 전에 올라가는 것이라 절대
+인기도는 정상 콜업보다 낮게 시작한다 — 비율이 높을 뿐 밑천이 적다.
 """
 
 
+EMERGENCY_CALLUP_FLAG = "callup_emergency"
+"""덱과 주차 시뮬을 잇는 플래그. 이 이름의 선택지를 고르면 다음 활동 주차에 올라간다.
+
+카드가 브랜드를 직접 바꾸지 않는 이유: 선택지의 효과는 스탯·컨디션·열기뿐이고, 여기에
+브랜드를 더하면 덱 데이터가 소속 규칙을 아는 셈이 된다. 플래그 하나만 넘기고 판정은
+규칙이 한다 — 콘텐츠 추가에 코드 리뷰가 필요 없다는 §3-D19의 전제가 유지된다.
+"""
+
+
+def nxt_callup_threshold(week: int) -> int:
+    """재적 주차에 따라 내려가는 콜업 문턱 (`EARLY` → `LATE`, 선형)."""
+    span = NXT_PATIENCE_WEEKS - NXT_MIN_WEEKS
+    elapsed = min(max(week - NXT_MIN_WEEKS, 0), span)
+    drop = (NXT_CALLUP_POPULARITY_EARLY - NXT_CALLUP_POPULARITY_LATE) * (elapsed / span)
+    return round(NXT_CALLUP_POPULARITY_EARLY - drop)
+
+
 def should_call_up(run: CareerRun) -> bool:
-    """NXT 인기도를 채웠거나 NXT 벨트를 모두 감았으면 콜업 (스펙)."""
-    if run.brand is not Brand.NXT:
+    """그 주차의 문턱을 넘었거나 NXT 벨트를 모두 감았으면 콜업 (스펙).
+
+    벨트 석권도 하한을 앞당기지는 못한다. 규칙이 둘로 갈리면 "1.5년 전에는 안 올라간다"를
+    말할 수 없게 되고, 실제로 그 안에 3벨트를 다 감는 커리어도 없다.
+    """
+    if run.brand is not Brand.NXT or run.week < NXT_MIN_WEEKS:
         return False
-    if run.stats.popularity >= NXT_CALLUP_POPULARITY:
+    if run.stats.popularity >= nxt_callup_threshold(run.week):
         return True
     return nxt_titles(run.identity.gender) <= set(run.titles_won)
 
 
-def call_up(run: CareerRun, roll: SeededRoll) -> CareerRun:
-    """메인 로스터로 올린다. NXT 벨트는 반납하고 인기도는 절반이 된다."""
+def call_up(
+    run: CareerRun, roll: SeededRoll, reason: CallUpReason = CallUpReason.EARNED
+) -> CareerRun:
+    """메인 로스터로 올린다. NXT 벨트는 반납하고 인기도는 경로만큼만 남는다."""
     brand = roll.pick((Brand.RAW, Brand.SMACKDOWN))
-    kept = round(run.stats.popularity * CALLUP_POPULARITY_RETENTION)
+    kept = round(run.stats.popularity * CALLUP_POPULARITY_RETENTION[reason])
     return run.evolve(
         brand=brand,
         titles_held=run.titles_held - nxt_titles(run.identity.gender),

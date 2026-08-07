@@ -19,6 +19,7 @@ from pathlib import Path
 from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.entities.career_run import RivalryStage
 from wwe_game.domain.value_objects.condition import InjuryGrade
+from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
@@ -66,6 +67,8 @@ class EventRequirement:
     """생략한 조건은 "무관"이다. 모든 조건은 AND, 리스트 안은 OR."""
 
     acts: frozenset[int] = frozenset()
+    brands: frozenset[Brand] = frozenset()
+    """소속 제한. NXT 전용 카드처럼 무대가 정해진 사건에만 쓴다."""
     min_week: int = 0
     max_week: int | None = None
     min_age: int | None = None
@@ -132,6 +135,7 @@ def _requirement(raw: dict[str, object]) -> EventRequirement:
     alignment = raw.get("alignment")
     return EventRequirement(
         acts=frozenset(raw.get("acts", ())),  # type: ignore[arg-type]
+        brands=frozenset(Brand(b) for b in raw.get("brands", ())),  # type: ignore[arg-type]
         min_week=int(raw.get("minWeek", 0)),  # type: ignore[arg-type]
         max_week=raw.get("maxWeek"),  # type: ignore[arg-type]
         min_age=raw.get("minAge"),  # type: ignore[arg-type]

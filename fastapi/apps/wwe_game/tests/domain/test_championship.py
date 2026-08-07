@@ -6,8 +6,10 @@ import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.exceptions import InvalidCareerRunError
 from wwe_game.domain.services.championship import (
+    CALLUP_POPULARITY_RETENTION,
     DEFENSE_REWARD,
-    NXT_CALLUP_POPULARITY,
+    NXT_MIN_WEEKS,
+    NXT_PATIENCE_WEEKS,
     REPEAT_REWARD_FACTOR,
     award,
     call_up,
@@ -16,6 +18,7 @@ from wwe_game.domain.services.championship import (
     grand_slam_chase,
     is_grand_slam,
     loss_of,
+    nxt_callup_threshold,
     other_brand,
     reward_of,
     should_call_up,
@@ -39,8 +42,24 @@ from wwe_game.domain.value_objects.title import (
     nxt_titles,
     titles_of,
 )
+from wwe_game.domain.value_objects.week_report import CallUpReason
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
+
+
+class _FixedRoll:
+    """`chance()`만 쓰는 자리에 넣는 고정 굴림 — 줍기가 걸린/안 걸린 경우를 가른다."""
+
+    def __init__(self, hit: bool) -> None:
+        self._hit = hit
+
+    def chance(self, probability: float) -> bool:  # noqa: ARG002
+        return self._hit
+
+
+ALWAYS_CHASE = _FixedRoll(True)
+NEVER_CHASE = _FixedRoll(False)
+
 
 RAW_SWEEP = (
     Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP,
@@ -93,11 +112,11 @@ class TestTierLadder:
         self, popularity: int, expected: Title | None
     ) -> None:
         run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=popularity))
-        assert target_title(run) is expected
+        assert target_title(run, NEVER_CHASE) is expected
 
     def test_smackdown_offers_different_belts(self) -> None:
         run = make_run(brand=Brand.SMACKDOWN, stats=WrestlerStats(popularity=55))
-        assert target_title(run) is Title.UNITED_STATES_CHAMPIONSHIP
+        assert target_title(run, NEVER_CHASE) is Title.UNITED_STATES_CHAMPIONSHIP
 
     def test_you_cannot_challenge_another_brands_belt(self) -> None:
         run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=100))
@@ -105,9 +124,9 @@ class TestTierLadder:
 
     def test_falling_popularity_drops_you_down_the_ladder(self) -> None:
         run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85))
-        assert target_title(run) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+        assert target_title(run, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
         cooled = run.evolve(stats=WrestlerStats(popularity=35))
-        assert target_title(cooled) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
+        assert target_title(cooled, NEVER_CHASE) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
 
 
 class TestGrandSlamGroups:
@@ -189,12 +208,25 @@ class TestGrandSlamPriority:
             ),
         )
         assert grand_slam_chase(run) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
-        assert target_title(run) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
+        assert target_title(run, ALWAYS_CHASE) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
+
+    def test_the_chase_only_fires_when_the_roll_lands(self) -> None:
+        # 안 걸리면 평소대로 계층 1선 — 이미 감아 본 벨트로 기회가 지나간다.
+        run = make_run(
+            brand=Brand.RAW,
+            stats=WrestlerStats(popularity=95),
+            titles_won=(
+                Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP,
+                Title.INTERCONTINENTAL_CHAMPIONSHIP,
+                Title.UNITED_STATES_CHAMPIONSHIP,
+            ),
+        )
+        assert target_title(run, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
 
     def test_two_groups_short_does_not_override(self) -> None:
         run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=95))
         assert grand_slam_chase(run) is None
-        assert target_title(run) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+        assert target_title(run, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
 
     def test_a_belt_on_the_other_brand_cannot_be_chased(self) -> None:
         run = make_run(
@@ -305,19 +337,51 @@ class TestCallUp:
         assert run.brand is Brand.NXT
 
     def test_popularity_threshold_triggers_the_call_up(self) -> None:
+        threshold = nxt_callup_threshold(NXT_MIN_WEEKS)
         below = make_run(
             brand=Brand.NXT,
-            stats=WrestlerStats(popularity=NXT_CALLUP_POPULARITY - 1),
+            week=NXT_MIN_WEEKS,
+            stats=WrestlerStats(popularity=threshold - 1),
         )
         at = make_run(
-            brand=Brand.NXT, stats=WrestlerStats(popularity=NXT_CALLUP_POPULARITY)
+            brand=Brand.NXT,
+            week=NXT_MIN_WEEKS,
+            stats=WrestlerStats(popularity=threshold),
         )
         assert not should_call_up(below)
         assert should_call_up(at)
 
+    def test_nobody_leaves_nxt_before_the_floor(self) -> None:
+        # 문턱을 한참 넘겨도 하한 전에는 안 올라간다 — 깜짝 콜업만이 이 선을 넘는다.
+        early = make_run(
+            brand=Brand.NXT,
+            week=NXT_MIN_WEEKS - 1,
+            stats=WrestlerStats(popularity=100),
+            titles_won=tuple(nxt_titles(Gender.MALE)),
+        )
+        assert not should_call_up(early)
+
+    def test_the_threshold_falls_as_the_stint_drags_on(self) -> None:
+        early = nxt_callup_threshold(NXT_MIN_WEEKS)
+        mid = nxt_callup_threshold((NXT_MIN_WEEKS + NXT_PATIENCE_WEEKS) // 2)
+        late = nxt_callup_threshold(NXT_PATIENCE_WEEKS)
+        assert early > mid > late
+        # 인내가 만료된 뒤로는 더 내려가지 않는다 — 문턱이 0으로 새지 않는다.
+        assert nxt_callup_threshold(NXT_PATIENCE_WEEKS * 3) == late
+
+    def test_a_slow_burner_clears_a_lower_bar_later(self) -> None:
+        stats = WrestlerStats(popularity=nxt_callup_threshold(NXT_PATIENCE_WEEKS))
+        assert not should_call_up(
+            make_run(brand=Brand.NXT, week=NXT_MIN_WEEKS, stats=stats)
+        )
+        assert should_call_up(
+            make_run(brand=Brand.NXT, week=NXT_PATIENCE_WEEKS, stats=stats)
+        )
+
     def test_sweeping_every_nxt_belt_triggers_the_call_up(self) -> None:
         run = make_run(
             brand=Brand.NXT,
+            week=NXT_MIN_WEEKS,
             stats=WrestlerStats(popularity=20),
             titles_won=tuple(nxt_titles(Gender.MALE)),
         )
@@ -328,7 +392,15 @@ class TestCallUp:
             make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=100))
         )
 
-    def test_call_up_halves_popularity_and_vacates_nxt_belts(self) -> None:
+    def test_an_emergency_call_up_keeps_more_of_the_heat(self) -> None:
+        run = make_run(brand=Brand.NXT, stats=WrestlerStats(popularity=60))
+        earned = call_up(run, SeededRoll(1, 1, "brand"), CallUpReason.EARNED)
+        emergency = call_up(run, SeededRoll(1, 1, "brand"), CallUpReason.EMERGENCY)
+        assert emergency.stats.popularity > earned.stats.popularity
+        # 그래도 절반 이하다 — 무대가 켜 준 스포트라이트지 쌓아 온 스타덤이 아니다.
+        assert emergency.stats.popularity < run.stats.popularity
+
+    def test_call_up_cuts_popularity_and_vacates_nxt_belts(self) -> None:
         run = make_run(
             brand=Brand.NXT,
             stats=WrestlerStats(popularity=60),
@@ -337,7 +409,9 @@ class TestCallUp:
         )
         promoted = call_up(run, SeededRoll(1, 1, "brand"))
         assert promoted.brand in {Brand.RAW, Brand.SMACKDOWN}
-        assert promoted.stats.popularity == 30
+        assert promoted.stats.popularity == round(
+            60 * CALLUP_POPULARITY_RETENTION[CallUpReason.EARNED]
+        )
         assert promoted.titles_held == frozenset()
         # 이력은 남는다 — NXT 챔피언이었다는 사실은 지워지지 않는다
         assert promoted.won_count(Title.NXT_CHAMPIONSHIP) == 1
@@ -422,7 +496,9 @@ class TestWomensDivision:
             run = make_run(
                 gender=Gender.FEMALE, brand=brand, stats=WrestlerStats(popularity=35)
             )
-            assert target_title(run) is Title.WWE_WOMENS_TAG_TEAM_CHAMPIONSHIP
+            assert (
+                target_title(run, NEVER_CHASE) is Title.WWE_WOMENS_TAG_TEAM_CHAMPIONSHIP
+            )
 
     def test_divisions_never_see_each_others_belts(self) -> None:
         for brand in Brand:
@@ -457,8 +533,11 @@ class TestWomensDivision:
         later = make_run(
             gender=Gender.FEMALE, brand=Brand.NXT, stats=WrestlerStats(popularity=45)
         )
-        assert target_title(early) is Title.NXT_WOMENS_NORTH_AMERICAN_CHAMPIONSHIP
-        assert target_title(later) is Title.NXT_WOMENS_CHAMPIONSHIP
+        assert (
+            target_title(early, NEVER_CHASE)
+            is Title.NXT_WOMENS_NORTH_AMERICAN_CHAMPIONSHIP
+        )
+        assert target_title(later, NEVER_CHASE) is Title.NXT_WOMENS_CHAMPIONSHIP
 
     def test_a_woman_called_up_vacates_nxt_womens_belts(self) -> None:
         run = make_run(

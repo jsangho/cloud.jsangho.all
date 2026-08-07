@@ -15,6 +15,7 @@ from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.constants.event_deck import BY_CODE, DECK, Choice, EventCard
 from wwe_game.domain.entities.career_run import CareerRun, EventInstance
+from wwe_game.domain.exceptions import InvalidChoiceError
 from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
 
@@ -43,6 +44,8 @@ def is_eligible(run: CareerRun, card: EventCard) -> bool:
     if card.once and card.code in run.seen_events:
         return False
     if r.acts and run.act not in r.acts:
+        return False
+    if r.brands and run.brand not in r.brands:
         return False
     if run.week < r.min_week:
         return False
@@ -146,7 +149,7 @@ def resolve_choice(run: CareerRun, choice_code: str) -> CareerRun:
     card = BY_CODE[pending.code]
     choice = card.choice(choice_code)
     if choice is None:
-        raise ValueError(f"선택할 수 없는 항목입니다: {choice_code}")
+        raise InvalidChoiceError(f"선택할 수 없는 항목입니다: {choice_code}")
     return _apply(run, card, choice)
 
 

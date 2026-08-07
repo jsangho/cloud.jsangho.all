@@ -30,6 +30,13 @@ class UnknownCountryError(ValueError):
     """권역에 매핑되지 않은 국가를 골랐을 때 (하네스 §11-16)."""
 
 
+class InvalidChoiceError(ValueError):
+    """대기 이벤트에 없는 선택지 코드를 냈을 때 (하네스 §8 → 400).
+
+    "이벤트가 없다"(409)와 다르다 — 이건 이벤트는 있는데 **그 항목이 없는** 경우다.
+    """
+
+
 class InvalidCareerRunError(ValueError):
     """세이브 자체가 규칙에 맞지 않을 때.
 
