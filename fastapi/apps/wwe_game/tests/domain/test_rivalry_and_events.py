@@ -5,11 +5,13 @@ from __future__ import annotations
 import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.constants import roster
+from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.constants.event_deck import BY_CODE, DECK, Arena, CardKind
 from wwe_game.domain.entities.career_run import Rivalry, RivalryStage
-from wwe_game.domain.services import event_draw, rivalry_engine
+from wwe_game.domain.services import championship, event_draw, rivalry_engine
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
@@ -122,6 +124,58 @@ class TestRivalPool:
             name = rivalry_engine.pick_rival(run, SeededRoll(seed, 1, "riv"))
             assert name in womens
 
+    def test_todays_roster_does_not_wrestle_forever(self) -> None:
+        # 30년이면 로스터가 통째로 갈린다 — 오늘의 얼굴이 남아 있으면 안 된다.
+        today = {m.name for m in roster.active_at(0)}
+        late = {m.name for m in roster.active_at(30 * WEEKS_PER_YEAR)}
+        assert not (today & late)
+
+    def test_new_faces_debut_over_the_years(self) -> None:
+        assert roster.active_at(0) != roster.active_at(10 * WEEKS_PER_YEAR)
+        for year in (0, 10, 20, 30):
+            assert len(roster.active_at(year * WEEKS_PER_YEAR)) >= 100
+
+    def test_the_development_brand_arrives_later(self) -> None:
+        # Evolve는 NXT 아래 단계라 몇 해 뒤에 올라온다 (2026-08-07 사용자 요청).
+        evolve = {"에런 루크", "지나 스털링", "스타보이 찰리", "아리아 베넷"}
+        at_start = {m.name for m in roster.active_at(0)}
+        assert not (evolve & at_start), "Evolve가 0주차 명부에 섞였다"
+        by_five = {m.name for m in roster.active_at(5 * WEEKS_PER_YEAR)}
+        assert evolve <= by_five, "Evolve가 5년 안에 데뷔하지 않았다"
+        assert all(
+            m.start_tier is roster.RivalTier.PROSPECT
+            for m in roster.ROSTER
+            if m.name in evolve
+        )
+
+    def test_a_prospect_climbs_with_experience(self) -> None:
+        rookie = next(
+            m
+            for m in roster.ROSTER
+            if m.start_tier is roster.RivalTier.PROSPECT and m.debut_week == 0
+        )
+        assert roster.tier_at(rookie, 0) is roster.RivalTier.PROSPECT
+        assert roster.tier_at(rookie, 12 * WEEKS_PER_YEAR) > roster.RivalTier.PROSPECT
+
+    def test_experience_never_promotes_on_day_one(self) -> None:
+        # 경력은 기다림을 줄일 뿐 0으로 만들지 않는다 — 0주차 등급은 오늘의 분류가 이긴다.
+        for member in roster.active_at(0):
+            assert roster.tier_at(member, 0) is member.start_tier
+
+    def test_every_pool_stays_stocked_for_thirty_years(self) -> None:
+        for year in range(0, 31):
+            for gender in Gender:
+                for tier in roster.RivalTier:
+                    pool = roster.pool_for(gender, tier, year * WEEKS_PER_YEAR)
+                    assert len(pool) >= roster.MIN_POOL, (year, gender, tier)
+
+    def test_a_rival_is_picked_from_that_weeks_roster(self) -> None:
+        run = make_run(week=25 * WEEKS_PER_YEAR, stats=WrestlerStats(popularity=70))
+        active = {m.name for m in roster.active_at(run.week)}
+        for seed in range(20):
+            name = rivalry_engine.pick_rival(run, SeededRoll(seed, 1, "riv"))
+            assert name in active
+
     def test_an_existing_rival_is_not_picked_again(self) -> None:
         taken = roster.pool_for(Gender.MALE, roster.RivalTier.PROSPECT)[0]
         run = make_run(rivalries=(rival(taken, 50),))
@@ -198,6 +252,21 @@ class TestEligibility:
         hurt = healthy.evolve(condition=Condition().injured(InjuryGrade.SERIOUS, 12))
         assert not event_draw.is_eligible(healthy, card)
         assert event_draw.is_eligible(hurt, card)
+
+    def test_brand_gated_cards_stay_on_their_own_stage(self) -> None:
+        card = BY_CODE["callup_injury_replacement"]
+        base = make_run(week=40, stats=WrestlerStats(popularity=40))
+        assert event_draw.is_eligible(base.evolve(brand=Brand.NXT), card)
+        assert not event_draw.is_eligible(base.evolve(brand=Brand.RAW), card)
+
+    def test_only_the_accepting_choice_carries_the_call_up_flag(self) -> None:
+        # 거절 선택지가 플래그를 달면 안 부른 커리어가 조용히 올라간다.
+        for code in ("callup_injury_replacement", "callup_live_hole"):
+            card = BY_CODE[code]
+            carriers = [
+                c for c in card.choices if championship.EMERGENCY_CALLUP_FLAG in c.flags
+            ]
+            assert len(carriers) == 1
 
     def test_flag_gated_cards_need_the_flag(self) -> None:
         card = BY_CODE["ring_cash_in_moment"]
