@@ -24,6 +24,12 @@ class WeekKind(StrEnum):
     """주간 TV — 경기 없이 대립을 쌓는 주차 (스펙: 빌드업으로 1주를 써도 된다)."""
     PLE = "ple"
     """대형 대회. **반드시 경기가 있다** — 없으면 그 주차는 열리지 않는다."""
+    SPECIAL = "special"
+    """분기별 특별 방송(SNME) — **PLE와 주간 TV 사이** (§3-D21-2).
+
+    경기는 반드시 있지만 대회는 아니다. 타이틀전 확률도 마모도 그 사이에 놓이고,
+    진행은 여기서 멈추지 않는다.
+    """
     OFF = "off"
     """부상 회복 중이라 나오지 않는 주차."""
 
@@ -78,6 +84,11 @@ class WeekReport:
     사실이 아닌 문장**이 됐다. 필드가 약속하는 것과 담는 것을 맞춘다.
     """
     narration: str = ""
+
+    @property
+    def is_big_match_night(self) -> bool:
+        """대회든 특별 방송이든 **경기가 보장된 밤**인지."""
+        return self.kind in (WeekKind.PLE, WeekKind.SPECIAL)
 
     @property
     def is_major_show(self) -> bool:

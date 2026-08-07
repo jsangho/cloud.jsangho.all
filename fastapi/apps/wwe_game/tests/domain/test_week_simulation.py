@@ -5,10 +5,8 @@ from __future__ import annotations
 import pytest
 from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없다)
 from wwe_game.domain.constants import career_rules as rules
-from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.constants.ple_calendar import (
     QUIET_MONTH,
-    WEEK_OF_MONTH,
     calendar_for,
 )
 from wwe_game.domain.services import championship
@@ -150,17 +148,26 @@ class TestWeekKind:
             assert (
                 week_kind_of(make_run(week=week - 1, brand=Brand.RAW)) is WeekKind.PLE
             )
-        for week in (3, 12, 50, 52):
+        for week in (3, 12, 44, 50):
             assert not main.is_show_week(week)
             assert (
                 week_kind_of(make_run(week=week - 1, brand=Brand.RAW))
                 is not WeekKind.PLE
             )
 
-    def test_december_is_quiet(self) -> None:
+    def test_december_has_no_ple_but_keeps_the_special(self) -> None:
+        # 대회는 쉬어도 방송은 돈다 (§3-D21-2).
         main = calendar_for(Brand.RAW)
-        december = range(WEEK_OF_MONTH[QUIET_MONTH] - 2, WEEKS_PER_YEAR + 1)
-        assert not any(main.is_show_week(week) for week in december)
+        december = [show for show in main.shows if show.month == QUIET_MONTH]
+        assert december, "12월에 아무것도 없다"
+        assert all(show.is_special for show in december)
+
+    def test_a_special_is_not_a_ple_week(self) -> None:
+        main = calendar_for(Brand.RAW)
+        special = next(show for show in main.shows if show.is_special)
+        kind = week_kind_of(make_run(week=special.week_of_year - 1, brand=Brand.RAW))
+        assert kind is WeekKind.SPECIAL
+        assert kind is not WeekKind.PLE
 
     def test_nxt_runs_its_own_calendar(self) -> None:
         main, nxt = calendar_for(Brand.RAW), calendar_for(Brand.NXT)

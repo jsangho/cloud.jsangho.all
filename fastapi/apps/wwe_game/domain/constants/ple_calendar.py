@@ -70,6 +70,12 @@ class ShowTier(StrEnum):
     """커리어의 분기점이 되는 대회. 진행이 여기서만 멈춘다."""
     STANDARD = "standard"
     """큰 경기지만 한 해에 여러 번 온다."""
+    SPECIAL = "special"
+    """**PLE와 주간 TV 사이**의 특별 방송 (2026-08-07 사용자 요청).
+
+    분기별 토요일 특집이다. 경기는 반드시 있지만 대회는 아니다 — 타이틀전 확률도
+    마모도 그 사이에 놓인다. 주차 종류가 `WeekKind.SPECIAL`로 갈리는 유일한 급이다.
+    """
 
 
 @dataclass(frozen=True)
@@ -77,14 +83,24 @@ class PleShow:
     name: str
     month: int
     tier: ShowTier
+    week_offset: int = 0
+    """그 달 한가운데에서 몇 주 밀 것인지.
+
+    **한 달에 대회와 특별 방송이 함께 설 수 있어야 한다**(SNME). 달만으로 자리를 잡으면
+    3월에 킹 앤 퀸과 SNME를 같이 둘 수 없다.
+    """
 
     @property
     def is_major(self) -> bool:
         return self.tier is ShowTier.MAJOR
 
     @property
+    def is_special(self) -> bool:
+        return self.tier is ShowTier.SPECIAL
+
+    @property
     def week_of_year(self) -> int:
-        return WEEK_OF_MONTH[self.month]
+        return WEEK_OF_MONTH[self.month] + self.week_offset
 
 
 def _week_of_year(week: int) -> int:
@@ -99,9 +115,12 @@ class ShowCalendar:
     shows: tuple[PleShow, ...]
 
     def __post_init__(self) -> None:
-        months = [show.month for show in self.shows]
-        if len(set(months)) != len(months):
-            raise ValueError(f"한 달에 대회가 둘입니다: {sorted(months)}")
+        weeks = [show.week_of_year for show in self.shows]
+        if len(set(weeks)) != len(weeks):
+            raise ValueError(f"같은 주차에 무대가 둘입니다: {sorted(weeks)}")
+        outside = [w for w in weeks if not 1 <= w <= WEEKS_PER_YEAR]
+        if outside:
+            raise ValueError(f"연중 주차를 벗어났습니다: {sorted(outside)}")
 
     def _by_week(self) -> dict[int, PleShow]:
         return {show.week_of_year: show for show in self.shows}
@@ -121,7 +140,7 @@ class ShowCalendar:
         return len(self.shows)
 
 
-_MAJOR, _STD = ShowTier.MAJOR, ShowTier.STANDARD
+_MAJOR, _STD, _SPECIAL = ShowTier.MAJOR, ShowTier.STANDARD, ShowTier.SPECIAL
 
 MAIN_CALENDAR = ShowCalendar(
     shows=(
@@ -136,6 +155,11 @@ MAIN_CALENDAR = ShowCalendar(
         PleShow("나이트 오브 챔피언스", 9, _STD),
         PleShow("크라운 주얼", 10, _STD),
         PleShow("서바이버 시리즈", 11, _MAJOR),
+        # ── 분기별 특별 방송 (§3-D21-2) ──
+        PleShow("새터데이 나이트 메인 이벤트", 3, _SPECIAL, week_offset=2),
+        PleShow("새터데이 나이트 메인 이벤트", 6, _SPECIAL, week_offset=2),
+        PleShow("새터데이 나이트 메인 이벤트", 9, _SPECIAL, week_offset=2),
+        PleShow("새터데이 나이트 메인 이벤트", 12, _SPECIAL, week_offset=2),
     ),
 )
 """메인 로스터 — 1월부터 11월까지 달마다 한 번. **12월은 쉰다**(2026-08-07 사용자 결정).
@@ -143,6 +167,10 @@ MAIN_CALENDAR = ShowCalendar(
 목록도 사용자가 고른다 — 클래시 앳 더 캐슬·헬 인 어 셀은 뺐다.
 
 달을 실제 시기에 맞췄다: 로열럼블 1월 · 레슬매니아 4월 · 서머슬램 8월 · 서바이버 11월.
+
+**분기별 특별 방송(SNME)이 3·6·9·12월 하순에 함께 선다**(2026-08-07 사용자 요청).
+같은 달의 대회와 2주를 띄워 겹치지 않고, **12월에는 이것만 있다** — 대회는 쉬어도
+방송은 돈다.
 **대형이 고르게 흩어져 있지 않다** — 간격이 일정하면 "다음 큰 대회까지 몇 달"이 늘 같아
 계획이 무의미해진다.
 """
@@ -170,7 +198,10 @@ CALENDARS: dict[Brand, ShowCalendar] = {
 }
 
 QUIET_MONTH = 12
-"""대회가 열리지 않는 달. 연말은 비워 둔다 (2026-08-07 사용자 결정)."""
+"""**대회**가 열리지 않는 달. 연말은 비워 둔다 (2026-08-07 사용자 결정).
+
+특별 방송(SNME)은 예외다 — 대회가 쉬는 달에도 방송은 돈다.
+"""
 
 
 def calendar_for(brand: Brand) -> ShowCalendar:
@@ -186,5 +217,6 @@ for _cal in CALENDARS.values():  # pragma: no cover - 임포트 시 구조 검�
     _months = {show.month for show in _cal.shows}
     if not _months <= set(range(1, MONTHS_PER_YEAR + 1)):
         raise RuntimeError(f"달 범위를 벗어난 대회가 있습니다: {sorted(_months)}")
-    if QUIET_MONTH in _months:
+    _ple_months = {s.month for s in _cal.shows if not s.is_special}
+    if QUIET_MONTH in _ple_months:
         raise RuntimeError(f"{QUIET_MONTH}월에는 대회를 두지 않습니다")

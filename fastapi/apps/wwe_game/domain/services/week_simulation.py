@@ -89,8 +89,12 @@ def week_kind_of(run: CareerRun) -> WeekKind:
     if run.condition.is_injured:
         return WeekKind.OFF
     upcoming = run.week + 1
-    if calendar_for(run.brand).is_show_week(upcoming):
-        return WeekKind.PLE
+    calendar = calendar_for(run.brand)
+    if calendar.is_show_week(upcoming):
+        # 특별 방송은 대회가 아니다 — 경기는 보장되지만 위상이 한 단계 아래다 (§3-D21-2).
+        return (
+            WeekKind.SPECIAL if calendar.show_for(upcoming).is_special else WeekKind.PLE
+        )
     roll = SeededRoll(run.seed, upcoming, seeded_roll.CARD)
     return (
         WeekKind.WEEKLY_SHOW
@@ -260,13 +264,14 @@ def _draw_title_match(
 
     주무대는 PLE고, 주간 TV에서도 **가끔** 열린다(스펙). 대형 대회는 확률이 두 배다.
     """
-    if kind not in (WeekKind.PLE, WeekKind.WEEKLY_SHOW):
+    if kind not in (WeekKind.PLE, WeekKind.SPECIAL, WeekKind.WEEKLY_SHOW):
         return None
     roll = SeededRoll(run.seed, week, seeded_roll.TITLE)
     chance = championship.title_shot_chance(
         run.stats.popularity,
         on_tv=kind is WeekKind.WEEKLY_SHOW,
         major=show is not None and show.is_major,
+        special=kind is WeekKind.SPECIAL,
     )
     if not roll.chance(chance):
         return None
@@ -325,11 +330,10 @@ def _decay_only(run: CareerRun, week: int) -> dict[str, int]:
 
 def _wear_gain(run: CareerRun, week: int, kind: WeekKind) -> int:
     """마모는 확률로 쌓인다 (`WEAR_GAIN_CHANCE_*`). 스타일이 배수로 곱해진다."""
-    base = (
-        rules.WEAR_GAIN_CHANCE_PLE
-        if kind is WeekKind.PLE
-        else rules.WEAR_GAIN_CHANCE_SHOW
-    )
+    base = {
+        WeekKind.PLE: rules.WEAR_GAIN_CHANCE_PLE,
+        WeekKind.SPECIAL: rules.SPECIAL_WEAR_CHANCE,
+    }.get(kind, rules.WEAR_GAIN_CHANCE_SHOW)
     chance = base * rules.INJURY_STYLE_MULTIPLIER[run.identity.play_style]
     roll = SeededRoll(run.seed, week, seeded_roll.WEAR)
     return 1 if roll.chance(min(1.0, chance)) else 0
@@ -405,6 +409,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
 
     heat_gain = {
         WeekKind.PLE: rivalry_engine.HEAT_PER_PLE,
+        WeekKind.SPECIAL: rivalry_engine.HEAT_PER_MATCH,
         WeekKind.WEEKLY_SHOW: rivalry_engine.HEAT_PER_MATCH,
         WeekKind.PROMO: rivalry_engine.HEAT_PER_PROMO,
         WeekKind.OFF: -rivalry_engine.COOL_PER_QUIET_WEEK,

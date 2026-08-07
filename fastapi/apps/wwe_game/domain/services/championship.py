@@ -71,7 +71,11 @@ TITLE_LOSS_IN_RING = -1
 
 
 def title_shot_chance(
-    popularity: int, *, on_tv: bool = False, major: bool = False
+    popularity: int,
+    *,
+    on_tv: bool = False,
+    major: bool = False,
+    special: bool = False,
 ) -> float:
     """이번 무대에서 벨트가 걸릴 확률.
 
@@ -81,6 +85,8 @@ def title_shot_chance(
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
     if major:
         chance *= rules.MAJOR_SHOT_MULTIPLIER
+    if special:
+        chance *= rules.SPECIAL_SHOT_FACTOR
     if on_tv:
         chance *= TV_SHOT_CHANCE_FACTOR
     return min(1.0, chance)

@@ -246,7 +246,9 @@ def beat_of(report: WeekReport) -> Beat:
         return Beat.OFF
     if report.kind is WeekKind.PROMO:
         return Beat.PROMO
-    return _MATCH_BEATS[(report.kind is WeekKind.PLE, report.result)]
+    # 특별 방송(SNME)도 대회 문구를 쓴다 — 경기가 보장된 밤이고, `{show}`가 이름을
+    # 채워 주므로 "주간 방송 중반 경기"가 아니라 그 방송의 이름으로 읽힌다 (§3-D21-2).
+    return _MATCH_BEATS[(report.is_big_match_night, report.result)]
 
 
 class RuleNarrator(NarrationPort):
