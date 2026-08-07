@@ -19,13 +19,19 @@ from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 
 # ── 주차 구조 ────────────────────────────────────────────────
 
-PLE_INTERVAL_WEEKS = 13
-"""대형 대회 주기. 연 4회다.
+# 대형 대회 주기는 **브랜드마다 다르다** — 값과 달력은 `ple_calendar`가 함께 갖는다
+# (§3-D21-1). 메인 4주(연 13회) · NXT 13주(연 4회). 간격만 여기 두면 달력과 어긋난 것을
+# 아무도 못 잡는다.
 
-실제 단체는 연 10회 이상 열지만, 그때마다 진행이 멈추면 `weekly` 모드가 이벤트(320회)에
-더해 PLE 120회로 클릭이 두 배가 된다. **멈춤은 "보고 싶은 것"일 때만 의미가 있다**는
-기준으로 연 4회만 남겼다.
+MAJOR_SHOT_MULTIPLIER = 2.0
+"""대형 대회에서 타이틀전이 잡힐 확률 배수.
+
+연 13회가 되면서 회당 확률을 낮췄는데(총량을 지키려고), 그러면 큰 대회도 밋밋해진다.
+급으로 다시 벌린다 — 레슬매니아에서 벨트가 걸릴 확률이 배로 높다.
 """
+
+MAJOR_INJURY_MULTIPLIER = 1.25
+"""대형 대회의 부상 위험 배수. 큰 무대일수록 무리한다."""
 
 WEEKLY_MATCH_CHANCE = 0.62
 """주간 TV에서 경기가 잡힐 확률. 나머지는 `PROMO`(대립 빌드업) 주차다.
@@ -110,7 +116,13 @@ INJURY_BASE_CHANCE = 0.0025
 INJURY_WEAR_FACTOR = 2.5
 """마모가 부상 확률에 곱하는 배수. `wear` 100이면 3.5배가 된다."""
 
-INJURY_PLE_MULTIPLIER = 1.8
+INJURY_PLE_MULTIPLIER = 1.0
+"""대형 대회의 부상 배수 — **1.8에서 내렸다**(2026-08-07, §3-D21-1).
+
+대회가 연 4회에서 11회로 늘면서 이 배수가 붙는 주차도 2.5배가 됐다. 그대로 두면 부상이
+커리어당 7.8회에서 9.5회로 오르고 완주율이 무너진다. 큰 무대의 위험은 이제 급이 맡는다
+(`MAJOR_INJURY_MULTIPLIER`) — 모든 대회가 위험한 게 아니라 **대형이** 위험하다.
+"""
 """대형 대회는 스팟이 크다."""
 
 INJURY_STYLE_MULTIPLIER: dict[PlayStyle, float] = {
@@ -139,7 +151,11 @@ INJURY_MATCH_PENALTY: dict[InjuryGrade, float] = {
 """부상 중 경기 판정 감점. 부상 중에는 원칙적으로 쉬지만 무리하는 선택지가 있다."""
 
 WEAR_GAIN_CHANCE_SHOW = 0.03
-WEAR_GAIN_CHANCE_PLE = 0.50
+WEAR_GAIN_CHANCE_PLE = 0.18
+"""대회 주차의 마모 확률 — **0.50에서 내렸다**(2026-08-07, §3-D21-1).
+
+같은 이유다. 유입이 2.5배가 되자 최고 마모가 100에 눌어붙어 후반 부상이 몰렸다.
+"""
 WEAR_RECOVERY_PER_OFF_WEEK = 1
 """마모 수지 — **확률로 쌓는다.**
 

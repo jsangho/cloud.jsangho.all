@@ -18,6 +18,7 @@ from wwe_game.domain.entities.career_run import CareerRun, EventInstance
 from wwe_game.domain.exceptions import InvalidChoiceError
 from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.game_mode import GAME_MODES
 
 COOLDOWN_MIN = 8
 COOLDOWN_DIVISOR = 2
@@ -32,11 +33,20 @@ COOLDOWN_RELAX_ATTEMPTS = 2
 있었다. 2로 올리면 74회가 되고 같은 조건에서 5회로 내려간다.
 """
 
-RECENT_MEMORY = 128
-"""쿨다운용으로 들고 있는 최근 코드 수. 전체 이력은 로그 테이블에 있다.
+RECENT_MEMORY = 512
+"""들고 있는 최근 이벤트 코드 수. **커리어 전체를 덮는다.**
 
-**쿨다운보다 넉넉해야 한다.** 64일 때는 쿨다운(74회)이 기억을 넘어서 뒤쪽 24회가 그냥
-버려졌다 — 나눗수를 올려도 반복이 안 줄던 이유가 이것이다.
+두 가지에 쓰인다.
+
+1. **쿨다운** — 최근 N회에 나온 카드는 후보에서 뺀다
+2. **본문 변주 순환** — 그 카드가 지금까지 몇 번 나왔는지 세어 다음 변주를 고른다
+
+2번 때문에 짧으면 안 된다. 128일 때는 쿨다운(74회)이 기억의 절반을 넘어 **한 카드의
+이전 등장이 최대 한 번만 남았고**, 그래서 변주가 0번과 1번 사이만 오갔다 — 2번 변주는
+거의 쓰이지 않고 같은 문장이 한 판에 5회까지 나왔다(§11-6 기준 3회).
+
+가장 큰 예산(320)보다 넉넉해야 카운트가 정확하다. 아래 임포트 검증이 그걸 지킨다.
+저장 비용은 코드 문자열 수백 개로, 세이브 하나에 10KB 남짓이다.
 """
 
 
@@ -139,14 +149,27 @@ def draw_event(run: CareerRun) -> EventInstance | None:
         return None
 
     card = _weighted(pool, roll)
-    body_roll = SeededRoll(run.seed, run.week, seeded_roll.BODY)
     rival = rivalry_engine.top_rivalry(run)
     return EventInstance(
         code=card.code,
         week=run.week,
-        body_index=body_roll.between(0, len(card.bodies) - 1),
+        body_index=_body_index(run, card),
         rival_name=rival.rival_name if rival else None,
     )
+
+
+def _body_index(run: CareerRun, card: EventCard) -> int:
+    """다음에 보여줄 본문 변주. **굴리지 않고 돌린다.**
+
+    독립적으로 굴리면 같은 카드가 다섯 번 뜰 때 어느 변주가 겹칠 확률이 그대로 남는다 —
+    실측에서 같은 문장이 한 판에 5회까지 나왔다(§11-6 기준 3회). 지금까지 몇 번 나왔는지를
+    세어 차례로 돌리면 세 변주를 고르게 쓰고, 다섯 번 등장해도 최다 2회다.
+
+    시드를 더하는 이유: 안 그러면 **모든 커리어가 같은 변주로 시작한다.** 판마다 출발점이
+    달라야 첫 등장부터 같은 장면이 반복되지 않는다.
+    """
+    seen = run.recent_events.count(card.code)
+    return (run.seed + seen) % len(card.bodies)
 
 
 def resolve_choice(run: CareerRun, choice_code: str) -> CareerRun:
@@ -206,4 +229,12 @@ def _apply(run: CareerRun, card: EventCard, choice: Choice) -> CareerRun:
         recent_events=recent,
         events_fired=run.events_fired + 1,
         pending_event=None,
+    )
+
+
+# 기억이 가장 큰 예산보다 짧으면 변주 순환이 조용히 어긋난다 (위 `RECENT_MEMORY` 참조).
+_max_budget = max(_mode.event_budget for _mode in GAME_MODES.values())
+if RECENT_MEMORY <= _max_budget:  # pragma: no cover - 임포트 시 구조 검증
+    raise RuntimeError(
+        f"RECENT_MEMORY({RECENT_MEMORY})가 최대 이벤트 예산({_max_budget})보다 작습니다"
     )

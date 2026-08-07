@@ -5,6 +5,12 @@ from __future__ import annotations
 import pytest
 from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없다)
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
+from wwe_game.domain.constants.ple_calendar import (
+    QUIET_MONTH,
+    WEEK_OF_MONTH,
+    calendar_for,
+)
 from wwe_game.domain.services import championship
 from wwe_game.domain.services.championship import NXT_MIN_WEEKS
 from wwe_game.domain.services.seeded_roll import SeededRoll
@@ -25,6 +31,10 @@ from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import CallUpReason, WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
+
+FIRST_SHOW_WEEK = min(s.week_of_year for s in calendar_for(Brand.RAW).shows)
+"""메인 로스터의 첫 대회 주차. 테스트가 "대회 주차"를 만들 때 쓴다."""
+
 
 # ── 시드 결정성 ──────────────────────────────────────────────
 
@@ -132,10 +142,35 @@ class TestPopularityOutranksAge:
 
 
 class TestWeekKind:
-    def test_every_thirteenth_week_is_a_ple(self) -> None:
-        assert week_kind_of(make_run(week=12)) is WeekKind.PLE
-        assert week_kind_of(make_run(week=25)) is WeekKind.PLE
-        assert week_kind_of(make_run(week=11)) is WeekKind.WEEKLY_SHOW
+    def test_the_calendar_decides_which_weeks_are_shows(self) -> None:
+        # 달마다 한 번, 12월은 쉰다 (§3-D21-1). NXT는 달력이 따로다.
+        main = calendar_for(Brand.RAW)
+        for week in (2, 15, 32, 46):
+            assert main.is_show_week(week)
+            assert (
+                week_kind_of(make_run(week=week - 1, brand=Brand.RAW)) is WeekKind.PLE
+            )
+        for week in (3, 12, 50, 52):
+            assert not main.is_show_week(week)
+            assert (
+                week_kind_of(make_run(week=week - 1, brand=Brand.RAW))
+                is not WeekKind.PLE
+            )
+
+    def test_december_is_quiet(self) -> None:
+        main = calendar_for(Brand.RAW)
+        december = range(WEEK_OF_MONTH[QUIET_MONTH] - 2, WEEKS_PER_YEAR + 1)
+        assert not any(main.is_show_week(week) for week in december)
+
+    def test_nxt_runs_its_own_calendar(self) -> None:
+        main, nxt = calendar_for(Brand.RAW), calendar_for(Brand.NXT)
+        assert nxt is not main
+        assert nxt.per_year < main.per_year
+        assert not {s.name for s in nxt.shows} & {s.name for s in main.shows}
+        # NXT 대회 주차는 메인의 부분집합이지만 그 반대는 아니다.
+        nxt_weeks = {s.week_of_year for s in nxt.shows}
+        main_weeks = {s.week_of_year for s in main.shows}
+        assert nxt_weeks < main_weeks
 
     def test_injured_weeks_are_off_weeks(self) -> None:
         hurt = make_run(week=12, condition=Condition().injured(InjuryGrade.MINOR, 4))
@@ -173,9 +208,17 @@ class TestInjury:
             tech, WeekKind.WEEKLY_SHOW
         )
 
-    def test_ple_is_riskier_than_a_weekly_show(self) -> None:
+    def test_a_major_show_is_riskier_than_a_weekly_show(self) -> None:
+        # 위험은 이제 급이 맡는다 — 모든 대회가 아니라 **대형이** 위험하다 (§3-D21-1).
         run = make_run()
-        assert injury_chance(run, WeekKind.PLE) > injury_chance(
+        assert injury_chance(run, WeekKind.PLE, major=True) > injury_chance(
+            run, WeekKind.WEEKLY_SHOW
+        )
+
+    def test_a_standard_show_carries_the_same_risk_as_tv(self) -> None:
+        # 대회가 연 4회에서 11회로 늘어, 전부 위험하면 부상이 커리어당 9.5회로 뛴다.
+        run = make_run()
+        assert injury_chance(run, WeekKind.PLE) == injury_chance(
             run, WeekKind.WEEKLY_SHOW
         )
 
@@ -277,10 +320,14 @@ class TestWear:
     def test_ple_weeks_wear_more_than_shows(self) -> None:
         run = make_run(style=PlayStyle.TECHNICIAN)
         ple = sum(
-            simulate_week(run.evolve(week=w * 13 - 1)).wear_delta for w in range(1, 40)
+            simulate_week(run.evolve(week=w - 1)).wear_delta
+            for w in range(1, 200)
+            if calendar_for(run.brand).is_show_week(w)
         )
         show = sum(
-            simulate_week(run.evolve(week=w)).wear_delta for w in range(1, 40) if w % 13
+            simulate_week(run.evolve(week=w - 1)).wear_delta
+            for w in range(1, 200)
+            if not calendar_for(run.brand).is_show_week(w)
         )
         assert ple > show
 
@@ -292,7 +339,7 @@ class TestCardScheduling:
     def test_ple_always_has_a_match(self) -> None:
         # 스펙: PLE는 경기가 있어야 한다.
         for seed in range(30):
-            run = make_run(seed=seed, week=rules.PLE_INTERVAL_WEEKS - 1)
+            run = make_run(seed=seed, week=FIRST_SHOW_WEEK - 1)
             report = simulate_week(run)
             assert report.kind is WeekKind.PLE
             assert report.had_match
@@ -322,7 +369,7 @@ class TestCardScheduling:
 
     def test_injury_keeps_you_off_the_card_even_on_a_ple_week(self) -> None:
         hurt = make_run(
-            week=rules.PLE_INTERVAL_WEEKS - 1,
+            week=FIRST_SHOW_WEEK - 1,
             condition=Condition().injured(InjuryGrade.SERIOUS, 10),
         )
         assert simulate_week(hurt).kind is WeekKind.OFF
@@ -334,7 +381,7 @@ class TestTitleMatchPlacement:
             simulate_week(
                 make_run(
                     seed=s,
-                    week=rules.PLE_INTERVAL_WEEKS * k - 1,
+                    week=FIRST_SHOW_WEEK * k - 1,
                     stats=WrestlerStats(popularity=85),
                 )
             ).is_title_match

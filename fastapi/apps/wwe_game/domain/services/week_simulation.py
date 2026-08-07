@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
     championship,
@@ -88,7 +89,7 @@ def week_kind_of(run: CareerRun) -> WeekKind:
     if run.condition.is_injured:
         return WeekKind.OFF
     upcoming = run.week + 1
-    if upcoming % rules.PLE_INTERVAL_WEEKS == 0:
+    if calendar_for(run.brand).is_show_week(upcoming):
         return WeekKind.PLE
     roll = SeededRoll(run.seed, upcoming, seeded_roll.CARD)
     return (
@@ -99,16 +100,24 @@ def week_kind_of(run: CareerRun) -> WeekKind:
 
 
 def is_ple_stop_week(run: CareerRun) -> bool:
-    """PLE에서 진행을 끊을지. 굵은 틱을 쓰는 모드는 끊지 않는다 (§3-D17)."""
+    """PLE에서 진행을 끊을지. **대형 대회에서만** 끊는다 (§3-D17 · §3-D21-1).
+
+    대회가 연 4회에서 13회로 늘었으므로 전부 끊으면 클릭이 세 배가 된다. 멈춤은
+    "보고 싶은 것"일 때만 의미가 있고, 그 기준이 곧 급이다.
+    """
     if run.mode.weeks_per_tick > rules.PLE_STOP_MAX_TICK_WEEKS:
         return False
-    return week_kind_of(run) is WeekKind.PLE
+    upcoming = run.week + 1
+    calendar = calendar_for(run.brand)
+    if week_kind_of(run) is not WeekKind.PLE:
+        return False
+    return calendar.show_for(upcoming).is_major
 
 
 # ── 부상 ─────────────────────────────────────────────────────
 
 
-def injury_chance(run: CareerRun, kind: WeekKind) -> float:
+def injury_chance(run: CareerRun, kind: WeekKind, *, major: bool = False) -> float:
     if kind is WeekKind.OFF:
         return 0.0
     chance = rules.INJURY_BASE_CHANCE
@@ -116,6 +125,8 @@ def injury_chance(run: CareerRun, kind: WeekKind) -> float:
     chance *= rules.INJURY_STYLE_MULTIPLIER[run.identity.play_style]
     if kind is WeekKind.PLE:
         chance *= rules.INJURY_PLE_MULTIPLIER
+        if major:
+            chance *= rules.MAJOR_INJURY_MULTIPLIER
     return min(1.0, chance)
 
 
@@ -139,6 +150,11 @@ def simulate_week(run: CareerRun) -> WeekReport:
     week = run.week + 1
     kind = week_kind_of(run)
 
+    draft_night = week % championship.DRAFT_INTERVAL_WEEKS == 0
+    """**모든 경로에서 채운다.** 예전에는 매치 주차에서만 세웠는데, 드래프트 주기(52주)가
+    PLE 주기(13주)의 배수라 늘 매치 주차와 겹쳐서 드러나지 않았다. 달력이 달 단위가 되며
+    (§3-D21-1) 겹침이 깨지자 **드래프트가 프로모·결장 주차에 열리면 그냥 사라졌다.**"""
+
     if kind is WeekKind.OFF:
         # 쉬는 동안에도 인기는 식는다 — 오히려 더 빨리 (§career_rules 망각 배수).
         return WeekReport(
@@ -146,6 +162,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
             kind=kind,
             stat_delta=_decay_only(run, week),
             wear_delta=-rules.WEAR_RECOVERY_PER_OFF_WEEK,
+            draft_night=draft_night,
         )
 
     if kind is WeekKind.PROMO:
@@ -156,13 +173,15 @@ def simulate_week(run: CareerRun) -> WeekReport:
             kind=kind,
             stat_delta=promo_delta,
             call_up=_call_up_of(run, promo_delta),
+            draft_night=draft_night,
         )
 
+    show = calendar_for(run.brand).show_for(week) if kind is WeekKind.PLE else None
     match_roll = SeededRoll(run.seed, week, seeded_roll.MATCH)
     score = performance_score(run.stats, run.condition, run.age)
 
     # 대형 대회에서만 타이틀전이 잡힌다. 잡히면 그날의 경기가 곧 타이틀전이다.
-    title = _draw_title_match(run, week, kind)
+    title = _draw_title_match(run, week, kind, show)
     if title is not None:
         if match_roll.chance(championship.title_win_chance(score, title)):
             result = OutcomeKind.WIN
@@ -194,7 +213,9 @@ def simulate_week(run: CareerRun) -> WeekReport:
     injury: InjuryGrade | None = None
     injury_weeks = 0
     injury_roll = SeededRoll(run.seed, week, seeded_roll.INJURY)
-    if injury_roll.chance(injury_chance(run, kind)):
+    if injury_roll.chance(
+        injury_chance(run, kind, major=show is not None and show.is_major)
+    ):
         injury, injury_weeks = _draw_injury_grade(injury_roll)
         # 몸이 약하다는 평판은 실력과 별개로 쌓인다.
         stat_delta["backstage"] = (
@@ -209,10 +230,11 @@ def simulate_week(run: CareerRun) -> WeekReport:
         wear_delta=wear_delta,
         injury=injury,
         injury_weeks=injury_weeks,
+        show=show,
         title_at_stake=title,
         title_defended=title is not None and title in run.titles_held,
         call_up=_call_up_of(run, stat_delta),
-        draft_night=week % championship.DRAFT_INTERVAL_WEEKS == 0,
+        draft_night=draft_night,
     )
 
 
@@ -231,16 +253,20 @@ def _call_up_of(run: CareerRun, stat_delta: dict[str, int]) -> CallUpReason | No
     return CallUpReason.EARNED if championship.should_call_up(projected) else None
 
 
-def _draw_title_match(run: CareerRun, week: int, kind: WeekKind) -> Title | None:
+def _draw_title_match(
+    run: CareerRun, week: int, kind: WeekKind, show: PleShow | None
+) -> Title | None:
     """타이틀전이 잡히는지.
 
-    주무대는 PLE고, 주간 TV에서도 **가끔** 열린다(스펙) — TV 확률은 PLE의 12%다.
+    주무대는 PLE고, 주간 TV에서도 **가끔** 열린다(스펙). 대형 대회는 확률이 두 배다.
     """
     if kind not in (WeekKind.PLE, WeekKind.WEEKLY_SHOW):
         return None
     roll = SeededRoll(run.seed, week, seeded_roll.TITLE)
     chance = championship.title_shot_chance(
-        run.stats.popularity, on_tv=kind is WeekKind.WEEKLY_SHOW
+        run.stats.popularity,
+        on_tv=kind is WeekKind.WEEKLY_SHOW,
+        major=show is not None and show.is_major,
     )
     if not roll.chance(chance):
         return None

@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from wwe_game.domain.constants.ple_calendar import PleShow
 from wwe_game.domain.value_objects.condition import InjuryGrade
 from wwe_game.domain.value_objects.title import Title
 
@@ -57,6 +58,12 @@ class WeekReport:
     injury: InjuryGrade | None = None
     """이 주차에 새로 입은 부상. 회복은 여기 안 나온다."""
     injury_weeks: int = 0
+    show: PleShow | None = None
+    """그 주차의 대형 대회. PLE 주차에만 채워진다 (§3-D21-1).
+
+    이름을 리포트에 담는 이유: 서술이 "대형 대회"가 아니라 **"레슬매니아"**라고 쓸 수
+    있어야 하고, 급에 따라 판정이 갈리므로 화면도 그걸 알아야 한다.
+    """
     title_at_stake: Title | None = None
     """이 주차가 타이틀전이면 걸린 벨트. 대형 대회에서만 생긴다."""
     title_defended: bool = False
@@ -71,6 +78,10 @@ class WeekReport:
     사실이 아닌 문장**이 됐다. 필드가 약속하는 것과 담는 것을 맞춘다.
     """
     narration: str = ""
+
+    @property
+    def is_major_show(self) -> bool:
+        return self.show is not None and self.show.is_major
 
     @property
     def called_up(self) -> bool:

@@ -15,6 +15,9 @@
 3. `track_release` · `track_decline` — 방출·부진 누적 갱신
 4. `close_if_ended` — 은퇴 조건 판정
 
+대회가 연 4회에서 13회로 늘어(§3-D21-1) **멈춤은 대형 대회에서만** 일어난다. 전부
+끊으면 클릭이 세 배가 되고, 멈춤은 "보고 싶은 것"일 때만 의미가 있다.
+
 3번을 2번 뒤에 두는 이유: 누적은 **반영된 상태**를 봐야 한다. 반영 전 상태로 세면 그 주차의
 결장·패배가 한 주 늦게 반영돼, 유예 기간이 실제보다 한 주씩 길어진다.
 """
@@ -30,7 +33,7 @@ from wwe_game.domain.value_objects.advance_outcome import (
     StepMode,
     StopReason,
 )
-from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
+from wwe_game.domain.value_objects.week_report import WeekReport
 
 MAX_WEEKS_PER_ADVANCE = 156
 """한 번의 '다음'이 갈 수 있는 최대 **주** 수 — 3년 (§3-D5).
@@ -45,10 +48,10 @@ MAX_WEEKS_PER_ADVANCE = 156
 
 
 def stops_at_ple(run: CareerRun) -> bool:
-    """이 모드가 대형 대회에서 진행을 끊는지 (§3-D17).
+    """이 모드가 대회에서 진행을 끊는지 (§3-D17).
 
-    굵은 틱을 쓰는 모드는 끊지 않는다 — `yearly`의 한 틱(52주)에는 PLE가 네 번 들어 있어
-    끊으면 틱이 완성되지 않는다.
+    굵은 틱을 쓰는 모드는 끊지 않는다 — `yearly`의 한 틱(52주)에는 대회가 열세 번
+    들어 있어 끊으면 틱이 완성되지 않는다.
     """
     return run.mode.weeks_per_tick <= rules.PLE_STOP_MAX_TICK_WEEKS
 
@@ -102,7 +105,7 @@ def _stop_reason(
         return StopReason.ENDED
     if run.is_blocked:
         return StopReason.EVENT
-    if report.kind is WeekKind.PLE and stops_at_ple(run):
+    if report.is_major_show and stops_at_ple(run):
         return StopReason.PLE
     if step is StepMode.TICK and advanced >= run.mode.weeks_per_tick:
         return StopReason.TICK

@@ -118,7 +118,7 @@ _REQUIRED: Final[dict[str, frozenset[str]]] = {
     for template in templates
 }
 
-OPTIONAL_SLOTS: Final = frozenset({"rival", "title"})
+OPTIONAL_SLOTS: Final = frozenset({"rival", "title", "show"})
 """주차에 따라 비어 있을 수 있는 슬롯. 비면 그 슬롯을 쓰는 템플릿이 후보에서 빠진다."""
 
 TITLE_BEATS: Final = frozenset({Beat.TITLE_WON, Beat.TITLE_DEFENDED, Beat.TITLE_LOST})
@@ -278,6 +278,7 @@ class RuleNarrator(NarrationPort):
             "crowd": roll.pick(CROWDS[stage]),
             "move": roll.pick(MOVES[run.identity.play_style]),
             "reaction": roll.pick(self._reactions(run.stats.popularity)),
+            "show": report.show.name if report.show is not None else None,
             "rival": rival.rival_name if rival is not None else None,
             "title": TITLES[title].display_name if title is not None else None,
         }

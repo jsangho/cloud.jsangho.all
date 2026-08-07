@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.title import (
@@ -31,11 +32,16 @@ from wwe_game.domain.value_objects.week_report import CallUpReason
 
 # ── 기회 ─────────────────────────────────────────────────────
 
-SHOT_CHANCE_BASE = 0.06
-SHOT_CHANCE_SPAN = 0.40
-"""PLE 한 번당 타이틀전이 잡힐 확률 = BASE + SPAN × 인기도/100.
+SHOT_CHANCE_BASE = 0.016
+SHOT_CHANCE_SPAN = 0.108
+"""대회 한 번당 타이틀전이 잡힐 확률 = BASE + SPAN × 인기도/100.
 
-인기도 10이면 10%, 90이면 42%. **인기도가 기회를 만든다**는 결정을 그대로 옮긴 식이다.
+인기도 10이면 2.7%, 90이면 11.3%. **인기도가 기회를 만든다**는 결정을 그대로 옮긴 식이다.
+
+**0.06/0.40에서 내렸다**(2026-08-07, §3-D21-1). 대회가 연 4회에서 11회로 늘자 커리어당
+타이틀전이 47회에서 149회로 뛰었고, 그랜드슬램이 25%에서 75%로 튀었다. 회당 확률을
+낮춰 총량을 되돌린다 — **바뀐 것은 달력이지 벨트의 무게가 아니다.** 같은 시드 60판에서
+타이틀전 42.4회 · 그랜드슬램 25% · 완주 93%로, 개정 전(47.3 · 25% · 92%)과 맞는다.
 """
 
 TV_SHOT_CHANCE_FACTOR = 0.02
@@ -64,8 +70,17 @@ TITLE_LOSS_IN_RING = -1
 """벨트를 잃으면 명성이 실력보다 크게 깎인다. 두 값은 항상 다르다."""
 
 
-def title_shot_chance(popularity: int, *, on_tv: bool = False) -> float:
+def title_shot_chance(
+    popularity: int, *, on_tv: bool = False, major: bool = False
+) -> float:
+    """이번 무대에서 벨트가 걸릴 확률.
+
+    대회가 연 4회에서 13회로 늘면서 회당 확률을 낮췄다(§3-D21-1) — 총량을 지키려면
+    그래야 하지만, 그러면 큰 대회도 밋밋해진다. **급으로 다시 벌린다.**
+    """
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
+    if major:
+        chance *= rules.MAJOR_SHOT_MULTIPLIER
     if on_tv:
         chance *= TV_SHOT_CHANCE_FACTOR
     return min(1.0, chance)
