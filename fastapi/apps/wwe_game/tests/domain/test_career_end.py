@@ -88,11 +88,11 @@ class TestDecline:
 
     def test_decline_needs_the_full_grace_period(self) -> None:
         run = make_run(week=20 * 52, stats=WrestlerStats(popularity=5, in_ring=5))
-        for _ in range(rules.DECLINE_GRACE_WEEKS - 1):
-            run = track_decline(run)
+        for _ in range(rules.RELEASE_GRACE_WEEKS - 1):
+            run = track_release(run)
             assert check_end(run) is None
-        run = track_decline(run)
-        assert check_end(run) is EndReason.DECLINE
+        run = track_release(run)
+        assert check_end(run) is EndReason.RELEASED
 
     def test_recovering_standing_resets_the_counter(self) -> None:
         run = make_run(week=20 * 52, stats=WrestlerStats(popularity=5, in_ring=5))
@@ -112,17 +112,18 @@ class TestPlayerEnding:
         assert closed.end_reason is EndReason.PLAYER
 
 
-class TestAllFourReasonsAreReachable:
+class TestEveryEndingHasAPath:
     def test_each_reason_has_a_producing_path(self) -> None:
         reached = {
             EndReason.AGE_50: check_end(make_run(week=CAREER_WEEKS)),
             EndReason.INJURY: check_end(
                 make_run(condition=Condition().injured(InjuryGrade.CAREER_ENDING, 1))
             ),
-            EndReason.DECLINE: check_end(
+            # 방출은 들어오는 길이 둘이다 — 여기선 입지가 무너진 쪽(§13-Q14).
+            EndReason.RELEASED: check_end(
                 make_run(
                     week=20 * 52, stats=WrestlerStats(popularity=0, in_ring=0)
-                ).evolve(decline_weeks=rules.DECLINE_GRACE_WEEKS)
+                ).evolve(release_weeks=rules.RELEASE_GRACE_WEEKS)
             ),
             EndReason.PLAYER: make_run().ended(EndReason.PLAYER).end_reason,
         }
@@ -207,7 +208,7 @@ class TestRelease:
         ).evolve(release_weeks=999)
         assert check_end(run) is EndReason.AGE_50
 
-    def test_all_five_endings_are_reachable(self) -> None:
+    def test_all_four_endings_are_reachable(self) -> None:
         assert {
             check_end(make_run(week=CAREER_WEEKS)),
             check_end(
@@ -216,7 +217,7 @@ class TestRelease:
             check_end(
                 make_run(
                     week=20 * 52, stats=WrestlerStats(popularity=0, in_ring=0)
-                ).evolve(decline_weeks=rules.DECLINE_GRACE_WEEKS)
+                ).evolve(release_weeks=rules.RELEASE_GRACE_WEEKS)
             ),
             check_end(
                 make_run(stats=WrestlerStats(backstage=0, popularity=0)).evolve(
@@ -227,7 +228,7 @@ class TestRelease:
         } == {
             EndReason.AGE_50,
             EndReason.INJURY,
-            EndReason.DECLINE,
+            EndReason.RELEASED,
             EndReason.RELEASED,
             EndReason.PLAYER,
         }
