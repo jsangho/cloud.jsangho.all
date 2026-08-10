@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { BeltList } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
@@ -22,6 +21,7 @@ import {
   type CareerMode,
   type CareerModeCode,
   type CareerPreset,
+  type CareerStats,
   type CareerWeek,
   type GuestRunState,
 } from "@/lib/career-api";
@@ -111,6 +111,23 @@ const WEEK_KINDS: Record<string, string> = {
   off: "결장",
 };
 
+/** 좌측 메뉴 — FM의 사이드바 자리다. 화면을 나누는 것이 이 개정의 뼈대다. */
+const PANELS = [
+  { key: "profile", label: "프로필" },
+  { key: "schedule", label: "일정" },
+  { key: "rivalries", label: "대립" },
+  { key: "belts", label: "벨트" },
+] as const;
+
+type PanelKey = (typeof PANELS)[number]["key"];
+
+const END_REASONS: Record<string, string> = {
+  age_50: "50세 만기",
+  player: "스스로 은퇴",
+  injury: "중대 부상",
+  released: "방출",
+};
+
 const RIVALRY_STAGES: Record<string, string> = {
   taunt: "도발",
   feud: "대립",
@@ -173,6 +190,7 @@ export default function CareerPage() {
   const [modes, setModes] = useState<CareerMode[]>([]);
   const [presets, setPresets] = useState<CareerPreset[]>([]);
   const [metaFailed, setMetaFailed] = useState(false);
+  const [tab, setTab] = useState<PanelKey>("schedule");
   const [draft, setDraft] = useState<Draft>({
     origin: "custom",
     name: "",
@@ -571,43 +589,53 @@ export default function CareerPage() {
   const { advance, busy } = screen;
   const { run: view, weeks, pendingEvent } = advance;
   const ended = advance.stopReason === "ended";
+  const blocked = pendingEvent !== null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-sport text-2xl font-semibold">
-          {view.year}년차 · {view.age}세
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {view.brand.toUpperCase()}
-          {view.team && ` · ${view.team.label}`}
-        </p>
-      </header>
+    <main className="mx-auto w-full max-w-5xl px-4 py-6">
+      {/* Continue 바 — 화면이 무엇이든 '다음'은 늘 같은 자리에 있다. FM의 구조에서
+          가장 먼저 가져올 것이 이것이다: 진행이 메뉴에 묻히지 않는다. */}
+      <div className="sticky top-16 z-30 -mx-4 mb-4 border-b border-stone-200/70 bg-background/95 px-4 py-3 backdrop-blur dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="font-sport text-lg leading-none">
+            {view.year}년차 <span className="text-muted-foreground">·</span> {view.age}세
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {view.brand.toUpperCase()}
+            {view.team && ` · ${view.team.label}`}
+            {view.condition !== "healthy" && " · 부상"}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            {blocked ? (
+              <span className="text-xs text-brand-link">선택을 기다리는 중</span>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={busy || ended}
+                onClick={handleNext}
+                className="min-w-24"
+              >
+                {busy ? "진행 중…" : ended ? "종료됨" : "다음"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRetire}
+              className="text-muted-foreground"
+            >
+              {ended ? "새 커리어" : "은퇴"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
-      <section className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
-        <Stat label="인기도" value={view.stats.popularity} />
-        <details className="group">
-          <summary className="flex cursor-pointer list-none justify-between">
-            <span className="text-muted-foreground">경기력</span>
-            <span>{view.stats.inRing}</span>
-          </summary>
-          <ul className="mt-1 space-y-0.5 border-l border-stone-300/70 pl-2 text-xs text-muted-foreground dark:border-stone-600/70">
-            {view.stats.skills.map((skill) => (
-              <li key={skill.name} className="flex justify-between">
-                <span>{skill.name}</span>
-                <span>{skill.value}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-        <Stat label="마이크웍" value={view.stats.micWork} />
-        <Stat label="평판" value={view.stats.backstage} />
-        <Stat label="성향" value={view.stats.alignment} />
-        <Stat label="마모" value={view.stats.wear} />
-      </section>
-
-      {pendingEvent ? (
-        <section className="mt-8 rounded-lg bg-card p-4">
+      {/* 대기 이벤트는 어느 화면에 있든 위로 올라온다 — 답하기 전에는 진행이 막힌다. */}
+      {pendingEvent && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/40 ring-inset">
           <h2 className="font-sport text-lg">{pendingEvent.title}</h2>
           <p className="mt-2 text-sm leading-relaxed">{pendingEvent.body}</p>
           <div className="mt-4 flex flex-col gap-1.5">
@@ -626,115 +654,149 @@ export default function CareerPage() {
             ))}
           </div>
         </section>
-      ) : (
-        <div className="mt-8 flex flex-wrap items-center gap-2">
-          {/* '다음'에 골드를 쓰지 않는다 — 가장 많이 눌리는 버튼에 브랜드 액션 색을
-              주면 그 색의 의미가 사라진다 (DESIGN.md §7). */}
-          <Button type="button" variant="outline" disabled={busy || ended} onClick={handleNext}>
-            {busy ? "진행 중…" : "다음"}
-          </Button>
-          {view.id !== null && (
-            <Link href="/career/news" className="text-sm text-brand-link hover:underline">
-              뉴스
-            </Link>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="ml-auto"
-            onClick={handleRetire}
-          >
-            {ended ? "새 커리어" : "은퇴"}
-          </Button>
-        </div>
       )}
 
-      {ended && (
-        <p className="mt-4 text-sm">
-          커리어가 끝났습니다{view.endReason ? ` · ${view.endReason}` : ""}.
-        </p>
-      )}
-
-      {view.rivalries.length > 0 && (
-        <section className="mt-6">
-          <p className="font-sport text-sm text-muted-foreground">대립</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {view.rivalries.map((r) => (
-              <span
-                key={r.rival}
-                className="inline-flex items-center gap-2 rounded-[4px] bg-card px-2.5 py-1.5 text-sm"
-              >
-                <span>{r.rival}</span>
-                <span className="text-xs text-brand-link">
-                  {RIVALRY_STAGES[r.stage] ?? r.stage}
-                </span>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {(view.titlesWon.length > 0 || view.titlesHeld.length > 0) && (
-        <section className="mt-8">
-          <p className="font-sport text-sm text-muted-foreground">벨트</p>
-          <div className="mt-2">
-            <BeltList codes={view.titlesWon} held={view.titlesHeld} />
-          </div>
-        </section>
-      )}
-
-      {/* 한 번의 '다음'이 여러 주를 흘려보낸다(§3-D17). 그 덩어리를 그대로 묶어
-          보여 준다 — 평평하게 늘어놓으면 어디까지가 이번 턴인지 알 수 없다. */}
-      <section className="mt-8 space-y-6">
-        {groupByTick(weeks, view.year).map((chunk) => (
-          <div key={chunk.from}>
-            <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
-              <span className="font-sport text-sm">{chunk.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {chunk.from}~{chunk.to}주
-              </span>
-              {chunk.record && (
-                <span className="ml-auto text-xs text-muted-foreground">{chunk.record}</span>
+      <div className="grid gap-6 lg:grid-cols-[10rem_1fr]">
+        <nav aria-label="커리어 메뉴" className="flex gap-1.5 overflow-x-auto lg:flex-col">
+          {PANELS.map((panel) => (
+            <button
+              key={panel.key}
+              type="button"
+              aria-current={tab === panel.key ? "page" : undefined}
+              onClick={() => setTab(panel.key)}
+              className={cn(
+                "shrink-0 rounded-[4px] px-3 py-2 text-left text-sm transition-colors duration-[120ms]",
+                tab === panel.key
+                  ? "bg-card text-foreground ring-1 ring-brand-400/60 ring-inset"
+                  : "text-muted-foreground hover:bg-card hover:text-foreground",
               )}
-            </div>
-            <div className="mt-2 space-y-1.5">
-              {chunk.weeks.map((week) => (
-                <div
-                  key={week.week}
-                  className="grid grid-cols-[3rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[3.5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
-                >
-                  <span className="text-xs text-muted-foreground">{week.week}주</span>
-                  <span className={cn("text-xs font-semibold", RESULT_TONE[week.result ?? "none"])}>
-                    {RESULT_LABELS[week.result ?? "none"]}
-                  </span>
-                  <span className="truncate text-sm">
-                    {week.opponent && week.result ? (
-                      <>
-                        <span className="text-muted-foreground">vs </span>
-                        {week.opponent}
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>
-                    )}
-                  </span>
-                  <p
-                    className={cn(
-                      "col-span-3 text-sm leading-relaxed sm:col-span-1",
-                      week.cursed && "text-muted-foreground",
-                    )}
-                  >
-                    {week.titleAtStake && (
-                      <span className="mr-1.5 text-xs text-brand-link">타이틀전</span>
-                    )}
-                    {week.narration}
-                  </p>
+            >
+              {panel.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="min-w-0">
+          {tab === "profile" && (
+            <section className="space-y-4">
+              <StatGrid stats={view.stats} />
+              {view.team && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">소속 팀 </span>
+                  {view.team.label}
+                  <span className="text-muted-foreground"> · {view.team.members.join(" · ")}</span>
+                </p>
+              )}
+              {ended && (
+                <p className="text-sm">
+                  커리어가 끝났습니다
+                  {view.endReason ? ` · ${END_REASONS[view.endReason] ?? view.endReason}` : ""}.
+                </p>
+              )}
+            </section>
+          )}
+
+          {tab === "schedule" && (
+            <section className="space-y-6">
+              {weeks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  아직 진행한 주차가 없습니다. 위의 &lsquo;다음&rsquo;을 누르세요.
+                </p>
+              ) : (
+                groupByTick(weeks, view.year).map((chunk) => (
+                  <div key={chunk.from}>
+                    <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
+                      <span className="font-sport text-sm">{chunk.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {chunk.from}~{chunk.to}주
+                      </span>
+                      {chunk.record && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {chunk.record}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      {chunk.weeks.map((week) => (
+                        <div
+                          key={week.week}
+                          className="grid grid-cols-[3rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[3.5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
+                        >
+                          <span className="text-xs text-muted-foreground">{week.week}주</span>
+                          <span
+                            className={cn(
+                              "text-xs font-semibold",
+                              RESULT_TONE[week.result ?? "none"],
+                            )}
+                          >
+                            {RESULT_LABELS[week.result ?? "none"]}
+                          </span>
+                          <span className="truncate text-sm">
+                            {week.opponent && week.result ? (
+                              <>
+                                <span className="text-muted-foreground">vs </span>
+                                {week.opponent}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>
+                            )}
+                          </span>
+                          <p
+                            className={cn(
+                              "col-span-3 text-sm leading-relaxed sm:col-span-1",
+                              week.cursed && "text-muted-foreground",
+                            )}
+                          >
+                            {week.titleAtStake && (
+                              <span className="mr-1.5 text-xs text-brand-link">타이틀전</span>
+                            )}
+                            {week.narration}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </section>
+          )}
+
+          {tab === "rivalries" && (
+            <section>
+              {view.rivalries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">진행 중인 대립이 없습니다.</p>
+              ) : (
+                <div className="space-y-2">
+                  {view.rivalries.map((r) => (
+                    <div
+                      key={r.rival}
+                      className="flex items-baseline gap-3 rounded-[4px] bg-card px-3 py-2"
+                    >
+                      <span className="text-sm">{r.rival}</span>
+                      <span className="text-xs text-brand-link">
+                        {RIVALRY_STAGES[r.stage] ?? r.stage}
+                      </span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {r.startedWeek}주부터
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </section>
+              )}
+            </section>
+          )}
+
+          {tab === "belts" && (
+            <section>
+              {view.titlesWon.length === 0 ? (
+                <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
+              ) : (
+                <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+              )}
+            </section>
+          )}
+        </div>
+      </div>
 
       {/* 실존 이름이 실제로 박히는 곳이 로그다. 캡처·공유되므로 상시 노출한다 (§3-D13). */}
       <p className="mt-10 text-xs text-muted-foreground">이 게임의 전개는 가상입니다.</p>
@@ -779,6 +841,35 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
       weeks: rows,
     };
   });
+}
+
+/** FM의 속성 격자. 값이 아니라 **관계**가 읽혀야 해서 라벨과 숫자를 붙여 둔다. */
+function StatGrid({ stats }: { stats: CareerStats }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+        <Stat label="인기도" value={stats.popularity} />
+        <Stat label="마이크웍" value={stats.micWork} />
+        <Stat label="평판" value={stats.backstage} />
+        <Stat label="성향" value={stats.alignment} />
+        <Stat label="마모" value={stats.wear} />
+      </div>
+      <div>
+        <div className="flex items-baseline justify-between border-b border-stone-300/60 pb-1 text-sm dark:border-stone-700/60">
+          <span>
+            경기력
+            <span className="ml-2 text-xs text-muted-foreground">{stats.playStyleLabel}</span>
+          </span>
+          <span className="font-sport text-lg leading-none">{stats.inRing}</span>
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+          {stats.skills.map((skill) => (
+            <Stat key={skill.name} label={skill.name} value={skill.value} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
