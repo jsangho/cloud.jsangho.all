@@ -21,11 +21,11 @@ type KickoffItem = {
 
 export const KICKOFF_ITEMS: readonly KickoffItem[] = [
   { label: "대화", description: "슈퍼스타와 이야기하기", href: "/chat" },
-  { label: "커리어 시뮬레이터", description: "곧 열립니다" },
+  { label: "커리어 시뮬레이터", description: "20세 데뷔, 30년", href: "/career" },
 ] as const;
 
 /** 킥오프가 활성인 경로들. 항목이 늘면 여기도 함께 늘린다. */
-export const KICKOFF_PATHS: readonly string[] = ["/chat"] as const;
+export const KICKOFF_PATHS: readonly string[] = ["/chat", "/career"] as const;
 
 export function isKickoffPath(pathname: string): boolean {
   return KICKOFF_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
