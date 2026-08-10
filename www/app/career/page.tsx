@@ -26,6 +26,66 @@ import {
 
 const GUEST_SAVE_KEY = "kayfabe.career.guest";
 
+/** 프리셋 없이 만들 때 골라야 하는 값들. **넷을 다 주지 않으면 도메인이 거절한다.** */
+const GENDERS = [
+  { value: "male", label: "남성부" },
+  { value: "female", label: "여성부" },
+] as const;
+
+const COUNTRIES = [
+  ["KR", "한국"],
+  ["US", "미국"],
+  ["CA", "캐나다"],
+  ["MX", "멕시코"],
+  ["GB", "영국"],
+  ["IE", "아일랜드"],
+  ["DE", "독일"],
+  ["FR", "프랑스"],
+  ["ES", "스페인"],
+  ["IT", "이탈리아"],
+  ["PL", "폴란드"],
+  ["SE", "스웨덴"],
+  ["RU", "러시아"],
+  ["GR", "그리스"],
+  ["JP", "일본"],
+  ["BR", "브라질"],
+  ["AR", "아르헨티나"],
+  ["CL", "칠레"],
+  ["CO", "콜롬비아"],
+  ["PR", "푸에르토리코"],
+  ["DO", "도미니카"],
+  ["AU", "호주"],
+  ["NZ", "뉴질랜드"],
+  ["TO", "통가"],
+  ["FJ", "피지"],
+  ["OTHER", "기타"],
+] as const;
+
+/** 경기 유형 21종 — 백엔드 `play_styles.KOREAN_STYLE_NAMES`와 같은 표다. */
+const PLAY_STYLES = [
+  ["technician", "테크니션"],
+  ["submissions", "서브미션"],
+  ["shooter", "슈터"],
+  ["uwf", "U계"],
+  ["powerhouse", "파워하우스"],
+  ["giant", "자이언트"],
+  ["monster", "몬스터"],
+  ["high_flyer", "하이 플라이어"],
+  ["lucha_libre", "루차 리브레"],
+  ["stuntman", "스턴트맨"],
+  ["brawler", "브롤러"],
+  ["hard_hitting", "하드 히팅"],
+  ["strong_style", "스트롱 스타일"],
+  ["kings_road", "왕도 스타일"],
+  ["showman", "쇼맨"],
+  ["heel_style", "힐 스타일"],
+  ["old_school", "올드스쿨"],
+  ["showgirl", "쇼걸"],
+  ["hardcore", "하드코어"],
+  ["all_rounder", "올라운더"],
+  ["underdog", "언더독"],
+] as const;
+
 /** 모드 코드 → 화면 이름. 백엔드는 코드를 그대로 label로 준다. */
 const MODE_LABELS: Record<CareerModeCode, string> = {
   yearly: "연 단위",
@@ -40,12 +100,21 @@ const DISCLAIMER_INTRO = "이 게임의 선수명은 실존하지만, 모든 전
 type Screen =
   | { phase: "loading" }
   | { phase: "create"; error?: string }
+  | { phase: "detail"; error?: string }
   | { phase: "play"; advance: CareerAdvance; state: GuestRunState | null; busy: boolean };
 
 /** 내 선수를 만들 두 갈래 (2026-08-10 사용자 요청). */
 type Origin = "custom" | "real";
 
-type Draft = { origin: Origin; name: string; mode: CareerModeCode; basedOn: string };
+type Draft = {
+  origin: Origin;
+  name: string;
+  mode: CareerModeCode;
+  basedOn: string;
+  gender: "male" | "female";
+  country: string;
+  playStyle: string;
+};
 
 function readGuestSave(): GuestRunState | null {
   try {
@@ -76,6 +145,9 @@ export default function CareerPage() {
     name: "",
     mode: "quarterly",
     basedOn: "",
+    gender: "male",
+    country: "KR",
+    playStyle: "all_rounder",
   });
 
   useEffect(() => {
@@ -135,12 +207,18 @@ export default function CareerPage() {
   const allowedModes = user ? modes : modes.filter((m) => m.guestAllowed);
 
   const handleStart = useCallback(async () => {
-    setScreen({ phase: "create" });
+    setScreen({ phase: draft.basedOn ? "create" : "detail" });
     try {
       const input = {
         name: draft.name.trim(),
         mode: draft.mode,
-        ...(draft.basedOn ? { basedOn: draft.basedOn } : {}),
+        ...(draft.basedOn
+          ? { basedOn: draft.basedOn }
+          : {
+              gender: draft.gender,
+              country: draft.country,
+              playStyle: draft.playStyle,
+            }),
       };
       if (user) {
         const started = await startRun(input);
@@ -153,7 +231,7 @@ export default function CareerPage() {
     } catch (error) {
       const message =
         error instanceof CareerApiError ? error.message : "커리어를 시작하지 못했습니다.";
-      setScreen({ phase: "create", error: message });
+      setScreen({ phase: draft.basedOn ? "create" : "detail", error: message });
     }
   }, [draft, user]);
 
@@ -351,11 +429,106 @@ export default function CareerPage() {
         <Button
           type="button"
           disabled={!ready}
-          onClick={() => void handleStart()}
+          onClick={() =>
+            draft.origin === "custom" ? setScreen({ phase: "detail" }) : void handleStart()
+          }
           className="mt-8 h-11 w-full rounded-full text-base font-semibold sm:w-auto sm:px-10"
         >
-          커리어 시작
+          {draft.origin === "custom" ? "다음" : "커리어 시작"}
         </Button>
+
+        <p className="mt-10 text-xs text-muted-foreground">{DISCLAIMER_INTRO}</p>
+      </main>
+    );
+  }
+
+  if (screen.phase === "detail") {
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <p className="font-sport text-xs tracking-[0.3em] text-brand-link">STEP 2 / 2</p>
+        <h1 className="font-sport mt-1 text-4xl leading-none font-semibold sm:text-5xl">
+          {draft.name.trim()}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          디비전과 국적, 경기 유형을 정합니다. 셋 다 게임에 영향을 줍니다 — 국적은 전용 사건을, 경기
+          유형은 경기력의 구성과 부상 위험을 바꿉니다.
+        </p>
+
+        <section className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <label htmlFor="gender" className="text-sm">
+              디비전
+            </label>
+            <select
+              id="gender"
+              value={draft.gender}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, gender: e.target.value as "male" | "female" }))
+              }
+              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+            >
+              {GENDERS.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="country" className="text-sm">
+              국적
+            </label>
+            <select
+              id="country"
+              value={draft.country}
+              onChange={(e) => setDraft((d) => ({ ...d, country: e.target.value }))}
+              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+            >
+              {COUNTRIES.map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="play-style" className="text-sm">
+              경기 유형
+            </label>
+            <select
+              id="play-style"
+              value={draft.playStyle}
+              onChange={(e) => setDraft((d) => ({ ...d, playStyle: e.target.value }))}
+              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+            >
+              {PLAY_STYLES.map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        {screen.error && <p className="mt-6 text-sm text-live">{screen.error}</p>}
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => void handleStart()}
+            className="h-11 rounded-full px-10 text-base font-semibold"
+          >
+            커리어 시작
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-full px-6"
+            onClick={() => setScreen({ phase: "create" })}
+          >
+            뒤로
+          </Button>
+        </div>
 
         <p className="mt-10 text-xs text-muted-foreground">{DISCLAIMER_INTRO}</p>
       </main>
