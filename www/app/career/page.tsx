@@ -13,6 +13,7 @@ import {
   chooseGuestEvent,
   readCurrentRun,
   readModes,
+  readNews,
   readPresets,
   retireRun,
   startGuestRun,
@@ -21,6 +22,8 @@ import {
   type CareerMode,
   type CareerModeCode,
   type CareerPreset,
+  type CareerNewsItem,
+  type CareerNewsPage,
   type CareerStats,
   type CareerWeek,
   type GuestRunState,
@@ -117,9 +120,30 @@ const PANELS = [
   { key: "schedule", label: "일정" },
   { key: "rivalries", label: "대립" },
   { key: "belts", label: "벨트" },
+  { key: "inbox", label: "인박스" },
 ] as const;
 
 type PanelKey = (typeof PANELS)[number]["key"];
+
+/** 뉴스 한 줄의 성격 → 화면 라벨. 백엔드 `news_feed.NewsKind`와 같은 표다. */
+const NEWS_KINDS: Record<string, string> = {
+  title_won: "대관",
+  title_lost: "벨트 상실",
+  injury: "부상",
+  call_up: "콜업",
+  big_win: "대회 승리",
+  cursed: "저주",
+  team: "팀",
+};
+
+/** 군중 반응 → 색. 환호·구호만 띄우고 나머지는 죽인다 (DESIGN.md §7). */
+const MOOD_TONE: Record<string, string> = {
+  roar: "text-brand-link",
+  chant: "text-brand-link",
+  jeer: "text-muted-foreground",
+  split: "text-muted-foreground",
+  hush: "text-muted-foreground/70",
+};
 
 const END_REASONS: Record<string, string> = {
   age_50: "50세 만기",
@@ -191,6 +215,7 @@ export default function CareerPage() {
   const [presets, setPresets] = useState<CareerPreset[]>([]);
   const [metaFailed, setMetaFailed] = useState(false);
   const [tab, setTab] = useState<PanelKey>("schedule");
+  const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [draft, setDraft] = useState<Draft>({
     origin: "custom",
     name: "",
@@ -256,6 +281,19 @@ export default function CareerPage() {
   }, [isReady, user]);
 
   const allowedModes = user ? modes : modes.filter((m) => m.guestAllowed);
+
+  // 인박스를 열 때만 읽는다. 30년치를 진행할 때마다 따라 받으면 낭비다.
+  const runId = screen.phase === "play" ? screen.advance.run.id : null;
+  useEffect(() => {
+    if (tab !== "inbox" || runId === null) return;
+    let alive = true;
+    readNews(runId, 0, 200)
+      .then((page) => alive && setInbox(page))
+      .catch(() => alive && setInbox(null));
+    return () => {
+      alive = false;
+    };
+  }, [tab, runId, screen]);
 
   const handleStart = useCallback(async () => {
     setScreen({ phase: draft.basedOn ? "create" : "detail" });
@@ -786,6 +824,49 @@ export default function CareerPage() {
             </section>
           )}
 
+          {tab === "inbox" && (
+            <section>
+              {runId === null ? (
+                <p className="text-sm text-muted-foreground">
+                  체험판은 인박스를 남기지 않습니다. 로그인하면 세계선의 사건이 쌓입니다.
+                </p>
+              ) : inbox === null || inbox.items.length === 0 ? (
+                <p className="text-sm text-muted-foreground">아직 남을 만한 사건이 없습니다.</p>
+              ) : (
+                <div className="space-y-5">
+                  {groupNewsByYear(inbox.items).map(([year, rows]) => (
+                    <div key={year}>
+                      <p className="font-sport border-b border-stone-300/60 pb-1 text-sm dark:border-stone-700/60">
+                        {year}년차
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {rows.map((item) => (
+                          <li
+                            key={`${item.week}-${item.headline}`}
+                            className="grid grid-cols-[3rem_1fr] gap-x-3 border-b border-stone-200/40 pb-2 dark:border-stone-800/60"
+                          >
+                            <span className="text-xs text-muted-foreground">{item.week}주</span>
+                            <div className="min-w-0">
+                              <p className="text-sm">
+                                <span className="mr-1.5 text-xs text-muted-foreground">
+                                  {NEWS_KINDS[item.kind] ?? item.kind}
+                                </span>
+                                {item.headline}
+                              </p>
+                              <p className={cn("mt-0.5 text-xs", MOOD_TONE[item.mood])}>
+                                {item.crowdLine}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {tab === "belts" && (
             <section>
               {view.titlesWon.length === 0 ? (
@@ -802,6 +883,17 @@ export default function CareerPage() {
       <p className="mt-10 text-xs text-muted-foreground">이 게임의 전개는 가상입니다.</p>
     </main>
   );
+}
+
+/** 인박스도 해 단위로 묶는다 — 일정과 같은 눈금이라야 서로 대조가 된다. */
+function groupNewsByYear(items: CareerNewsItem[]): [number, CareerNewsItem[]][] {
+  const years = new Map<number, CareerNewsItem[]>();
+  for (const item of items) {
+    const bucket = years.get(item.year);
+    if (bucket) bucket.push(item);
+    else years.set(item.year, [item]);
+  }
+  return [...years.entries()].sort((a, b) => a[0] - b[0]);
 }
 
 type Chunk = {
