@@ -80,6 +80,7 @@ class WeekSchema(_Camel):
     narration: str
     show: str | None = None
     title_at_stake: str | None = None
+    opponent: str | None = None
     cursed: bool = False
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
 
@@ -113,6 +114,15 @@ class TeamSchema(_Camel):
     formed_week: int
 
 
+class RivalrySchema(_Camel):
+    """진행 중인 대립 한 줄 — **누구와, 어느 단계까지** 왔는지 (§2-D4)."""
+
+    rival: str
+    stage: str
+    heat: int
+    started_week: int
+
+
 class RunSchema(_Camel):
     id: int | None
     week: int
@@ -127,6 +137,7 @@ class RunSchema(_Camel):
     titles_held: list[str]
     titles_won: list[str]
     team: TeamSchema | None = None
+    rivalries: list[RivalrySchema] = Field(default_factory=list)
     disclaimer: str = Field(
         default="이 게임의 전개는 가상입니다.",
         description="로그 화면 하단에 상시 노출한다 (§3-D13).",
@@ -232,6 +243,7 @@ def to_week(view: WeekReportView) -> WeekSchema:
         narration=view.narration,
         show=report.show.name if report.show else None,
         title_at_stake=report.title_at_stake.value if report.title_at_stake else None,
+        opponent=report.opponent,
         cursed=report.cursed,
     )
 
@@ -266,6 +278,15 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             condition=run.condition.grade.value,
             titles_held=sorted(t.value for t in run.titles_held),
             titles_won=[t.value for t in run.titles_won],
+            rivalries=[
+                RivalrySchema(
+                    rival=r.rival_name,
+                    stage=r.stage.value,
+                    heat=r.heat,
+                    started_week=r.started_week,
+                )
+                for r in run.rivalries
+            ],
             team=(
                 TeamSchema(
                     label=run.team.label,

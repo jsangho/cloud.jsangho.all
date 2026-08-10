@@ -93,6 +93,18 @@ def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
     return roll.pick(pool) if pool else None
 
 
+def pick_opponent(run: CareerRun, roll: SeededRoll) -> str | None:
+    """그 주차 경기의 상대 (2026-08-10 사용자 요청).
+
+    **대립 중인 상대가 먼저다.** 몇 주째 쌓아 온 이야기가 있는데 엉뚱한 사람과 붙으면
+    그 대립은 화면에서 사라진다. 대립이 없을 때만 급이 맞는 명부에서 뽑는다.
+    """
+    hot = top_rivalry(run)
+    if hot is not None:
+        return hot.rival_name
+    return pick_rival(run, roll)
+
+
 def start_rivalry(run: CareerRun, week: int, roll: SeededRoll) -> Rivalry | None:
     """새 대립을 연다. 자리가 없거나 상대가 없으면 None."""
     if len(run.rivalries) >= MAX_ACTIVE:
