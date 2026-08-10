@@ -21,6 +21,7 @@ from __future__ import annotations
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
+from wwe_game.domain.value_objects.title import Brand
 
 
 def standing_of(run: CareerRun) -> float:
@@ -52,6 +53,12 @@ def track_decline(run: CareerRun) -> CareerRun:
 
 def is_at_release_risk(run: CareerRun) -> bool:
     """평판이 바닥이고, 그걸 덮을 만큼 인기가 있지도 않은 상태."""
+    # **육성 브랜드에 있는 동안은 자르지 않는다** (2026-08-10 사용자 결정).
+    # §3-D24가 말하는 방출은 "단체가 못 참아서 미드카더를 잘라내는 것"이다. NXT는
+    # 다듬는 자리라 평판이 흔들리는 게 정상이고, 여기서 자르면 1년차 신인이 즉사한다 —
+    # 실측에서 과감한 플레이가 0.8년 만에 끝났다.
+    if run.brand is Brand.NXT:
+        return False
     return (
         run.stats.backstage < rules.RELEASE_BACKSTAGE_FLOOR
         and run.stats.popularity < rules.RELEASE_POPULARITY_SHIELD

@@ -385,7 +385,7 @@ RELEASE_POPULARITY_SHIELD = 55
 미드카더는 잘린다. 인기도 우선이라는 이 게임의 대전제가 여기에도 적용된다.
 """
 
-RELEASE_GRACE_WEEKS = 12
+RELEASE_GRACE_WEEKS = 26
 """위험권에 머물러야 하는 주차. 부진(26주)보다 짧다 — **해고는 갑작스럽다.**"""
 
 RELEASE_FLAG_GRACE_DIVISOR = 2

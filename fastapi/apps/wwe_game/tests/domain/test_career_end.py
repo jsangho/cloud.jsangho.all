@@ -231,3 +231,23 @@ class TestRelease:
             EndReason.RELEASED,
             EndReason.PLAYER,
         }
+
+
+class TestRookiesAreNotReleased:
+    """육성 브랜드에 있는 동안은 자르지 않는다 (2026-08-10 사용자 결정 · §3-D24)."""
+
+    def test_nxt_is_immune(self) -> None:
+        from _helpers import make_run
+        from wwe_game.domain.services.career_end import is_at_release_risk
+        from wwe_game.domain.value_objects.title import Brand
+        from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
+
+        broke = WrestlerStats(popularity=10, backstage=0)
+        assert not is_at_release_risk(make_run(brand=Brand.NXT).evolve(stats=broke))
+        assert is_at_release_risk(make_run(brand=Brand.RAW).evolve(stats=broke))
+
+    def test_the_grace_is_half_a_year(self) -> None:
+        from wwe_game.domain.constants import career_rules as rules
+
+        # 12주는 회복할 틈이 없어 1년차 신인이 즉사했다 (실측 0.8년).
+        assert rules.RELEASE_GRACE_WEEKS == 26
