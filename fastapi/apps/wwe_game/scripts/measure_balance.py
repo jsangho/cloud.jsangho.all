@@ -94,7 +94,12 @@ def run_one(seed: int, policy: str) -> tuple[CareerRun, int]:
         report = simulate_week(run)
         if report.injury is not None:
             injuries += 1
-        run = career_end.close_if_ended(apply_week(run, report))
+        run = apply_week(run, report)
+        # **누적기를 빼먹으면 안 된다.** `career_advance.advance()`가 하는 일을 그대로
+        # 따라 한다 — 이걸 건너뛰면 방출·부진이 영영 0건으로 나와 "은퇴 조건이
+        # 죽었다"는 잘못된 결론이 난다 (2026-08-10 실제로 그렇게 오진했다).
+        run = career_end.track_decline(career_end.track_release(run))
+        run = career_end.close_if_ended(run)
     return run, injuries
 
 

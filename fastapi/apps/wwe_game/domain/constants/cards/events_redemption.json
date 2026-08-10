@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 3,
+  "file": "events_redemption.json",
+  "note": "평판 회복 4장 — 바닥난 평판(0~30)에서만 뜬다. 방출이 은퇴 사유의 3분의 2를 차지하던 것을 되돌리는 자리다 (§13-Q14).",
+  "cards": [
+    {
+      "code": "bs_mend_fences",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "먼저 손을 내밀까",
+      "bodies": [
+        "라커룸에서 아무도 말을 걸지 않은 지 몇 주째다. 먼저 가는 수밖에 없다.",
+        "베테랑 하나가 복도에서 눈을 피했다. 그 자리에서 부를 수도 있었다.",
+        "제작진 회의에서 내 이름이 나올 때마다 공기가 식는 게 느껴진다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "stats": {
+          "backstage": [
+            0,
+            30
+          ]
+        },
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "apologize",
+          "label": "먼저 사과한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 2,
+            "backstage": 14
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_proud",
+          "label": "굽히지 않는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 3,
+            "backstage": -5,
+            "alignment": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "bs_carry_the_show",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "아무도 안 맡으려는 자리",
+      "bodies": [
+        "펑크 난 카드를 아무도 안 맡는다. 여기서 손을 들면 빚을 갚는 셈이다.",
+        "제작진이 난감한 표정으로 라커룸을 둘러본다. 눈이 마주쳤다.",
+        "오프닝을 채울 사람이 없다. 가장 안 고마운 자리다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "stats": {
+          "backstage": [
+            0,
+            30
+          ]
+        },
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "take_the_slot",
+          "label": "내가 맡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 6,
+            "backstage": 11,
+            "wear": 2
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "let_it_burn",
+          "label": "모른 척한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 3,
+            "inRing": -2,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "bs_put_over_rookie",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "신인을 세워 주는 일",
+      "bodies": [
+        "신인 하나가 데뷔전 상대를 못 구했다. 져 주면 그 친구가 산다.",
+        "코치가 조심스럽게 물었다. \"이번 주에 한 명만 만들어 줄 수 있을까요?\"",
+        "데뷔 두 달 된 선수가 내 이름을 대고 매치를 요청했다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "stats": {
+          "backstage": [
+            0,
+            30
+          ]
+        },
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "put_him_over",
+          "label": "만들어 준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 4,
+            "backstage": 15
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "passed_the_torch"
+          ]
+        },
+        {
+          "code": "protect_myself",
+          "label": "내 자리부터 지킨다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": 2,
+            "backstage": -7
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "bs_office_sitdown",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "사장실에서의 면담",
+      "bodies": [
+        "단독 면담이 잡혔다. 좋은 신호는 아니라는 걸 서로 안다.",
+        "책상 너머에서 서류를 넘기는 소리가 길었다. 계약 얘기는 아직 안 나왔다.",
+        "\"자네 얘기가 자주 올라와.\" 어떤 얘기인지는 말해 주지 않았다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "stats": {
+          "backstage": [
+            0,
+            22
+          ]
+        },
+        "minWeek": 52
+      },
+      "choices": [
+        {
+          "code": "take_the_note",
+          "label": "고치겠다고 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 3,
+            "backstage": 18
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "push_back",
+          "label": "내 방식대로 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 9,
+            "inRing": 2,
+            "backstage": -9
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "suspension_pending"
+          ]
+        }
+      ]
+    }
+  ]
+}

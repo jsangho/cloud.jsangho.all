@@ -161,7 +161,7 @@ class TestEnding:
         assert ended.status is RunStatus.COMPLETED
 
     @pytest.mark.parametrize(
-        "reason", [EndReason.PLAYER, EndReason.DECLINE, EndReason.INJURY]
+        "reason", [EndReason.PLAYER, EndReason.RELEASED, EndReason.INJURY]
     )
     def test_early_ending_is_retired(self, run: CareerRun, reason: EndReason) -> None:
         ended = run.ended(reason)
@@ -175,7 +175,7 @@ class TestEnding:
     def test_an_ended_run_cannot_end_again(self, run: CareerRun) -> None:
         ended = run.ended(EndReason.PLAYER)
         with pytest.raises(RunNotActiveError):
-            ended.ended(EndReason.DECLINE)
+            ended.ended(EndReason.RELEASED)
 
     def test_require_active_guards_ended_runs(self, run: CareerRun) -> None:
         run.require_active()  # 진행 중이면 통과

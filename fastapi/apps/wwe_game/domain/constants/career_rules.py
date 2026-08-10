@@ -378,14 +378,14 @@ RELEASE_BACKSTAGE_FLOOR = 26
 방출은 백스테이지 평판이다.
 """
 
-RELEASE_POPULARITY_SHIELD = 55
+RELEASE_POPULARITY_SHIELD = 46
 """이만큼 인기가 있으면 평판이 바닥이어도 자르지 않는다.
 
 **돈이 되면 참아준다.** 프로레슬링에서 다루기 힘든 스타는 남고 다루기 힘든
 미드카더는 잘린다. 인기도 우선이라는 이 게임의 대전제가 여기에도 적용된다.
 """
 
-RELEASE_GRACE_WEEKS = 12
+RELEASE_GRACE_WEEKS = 26
 """위험권에 머물러야 하는 주차. 부진(26주)보다 짧다 — **해고는 갑작스럽다.**"""
 
 RELEASE_FLAG_GRACE_DIVISOR = 2

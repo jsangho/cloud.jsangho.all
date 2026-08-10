@@ -70,7 +70,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 career_router = APIRouter(prefix="/career", tags=["career"])
 
-_STATUS: tuple[tuple[type[Exception], int, str], ...] = (
+_STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
     (RunNotFoundError, status.HTTP_404_NOT_FOUND, "커리어를 찾을 수 없습니다."),
     (
         RunAlreadyActiveError,
@@ -93,11 +93,11 @@ _STATUS: tuple[tuple[type[Exception], int, str], ...] = (
         status.HTTP_400_BAD_REQUEST,
         "이 모드는 로그인 후 플레이할 수 있습니다.",
     ),
-    (
-        InvalidCareerRunError,
-        status.HTTP_400_BAD_REQUEST,
-        "저장된 진행 상황을 읽을 수 없습니다.",
-    ),
+    # **문구를 덮지 않는다.** 이 예외는 "무엇이 빠졌는지 짚어서 거절한다"는
+    # §3-D10-1의 구현이라, 도메인이 만든 문장이 곧 사용자가 읽어야 할 문장이다.
+    # 뭉개 놓았더니 생성 실패가 "저장된 진행 상황을 읽을 수 없습니다"로 나와
+    # 무엇을 고쳐야 할지 알 수 없었다 (2026-08-10).
+    (InvalidCareerRunError, status.HTTP_400_BAD_REQUEST, None),
     (ValueError, status.HTTP_400_BAD_REQUEST, "저장된 진행 상황을 읽을 수 없습니다."),
 )
 """§8 매핑표. **위에서부터 먼저 걸리는 것이 이긴다** — 하위 클래스를 앞에 둔다.
@@ -115,7 +115,9 @@ async def _guard[T](call: Callable[[], object]) -> T:
     except Exception as exc:  # noqa: BLE001 - 아래 표에 없으면 그대로 올린다
         for kind, code, detail in _STATUS:
             if isinstance(exc, kind):
-                raise HTTPException(status_code=code, detail=detail) from exc
+                raise HTTPException(
+                    status_code=code, detail=detail or str(exc)
+                ) from exc
         raise
 
 
@@ -126,7 +128,9 @@ def _sync[T](call: Callable[[], T]) -> T:
     except Exception as exc:  # noqa: BLE001 - 표에 없으면 그대로 올린다
         for kind, code, detail in _STATUS:
             if isinstance(exc, kind):
-                raise HTTPException(status_code=code, detail=detail) from exc
+                raise HTTPException(
+                    status_code=code, detail=detail or str(exc)
+                ) from exc
         raise
 
 

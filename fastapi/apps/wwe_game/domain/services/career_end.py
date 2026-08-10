@@ -21,6 +21,7 @@ from __future__ import annotations
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
+from wwe_game.domain.value_objects.title import Brand
 
 
 def standing_of(run: CareerRun) -> float:
@@ -52,10 +53,26 @@ def track_decline(run: CareerRun) -> CareerRun:
 
 def is_at_release_risk(run: CareerRun) -> bool:
     """평판이 바닥이고, 그걸 덮을 만큼 인기가 있지도 않은 상태."""
-    return (
+    # **육성 브랜드에 있는 동안은 자르지 않는다** (2026-08-10 사용자 결정).
+    # §3-D24가 말하는 방출은 "단체가 못 참아서 미드카더를 잘라내는 것"이다. NXT는
+    # 다듬는 자리라 평판이 흔들리는 게 정상이고, 여기서 자르면 1년차 신인이 즉사한다 —
+    # 실측에서 과감한 플레이가 0.8년 만에 끝났다.
+    if run.brand is Brand.NXT:
+        return False
+    # **들어오는 길이 둘이다** (2026-08-10 사용자 결정 · §13-Q14).
+    #
+    # 처음엔 부진(`DECLINE`)을 따로 된 엔딩으로 뒀는데, 실측에서 **한 번도 발생하지
+    # 않았다** — 부진에 걸릴 커리어(인기·경기력 낮음)는 대개 평판도 낮아 방출이
+    # 먼저 물었다. 둘이 같은 사람을 노리고 있었다.
+    #
+    # 임계만 올려 살리려 했더니 "아무도 안 찾아도 경기력이 아주 높으면 자리는
+    # 남는다"는 규칙이 깨졌다(경기력은 가중치 0.5라 최대 50점뿐이다). 그래서
+    # **엔딩을 하나로 접고 사유를 둘로** 뒀다. 계약이 끊기는 사건은 하나다.
+    trouble = (
         run.stats.backstage < rules.RELEASE_BACKSTAGE_FLOOR
         and run.stats.popularity < rules.RELEASE_POPULARITY_SHIELD
     )
+    return trouble or is_declining(run)
 
 
 def release_grace_weeks(run: CareerRun) -> int:
@@ -74,9 +91,11 @@ def track_release(run: CareerRun) -> CareerRun:
 def check_end(run: CareerRun) -> EndReason | None:
     """끝났으면 이유를, 아니면 None.
 
-    순서가 곧 우선순위다 — 만기가 나머지 셋보다 앞선다. 1560주에 도달한 커리어는
-    무슨 상태였든 완주한 것으로 본다. 방출이 부진보다 앞서는 이유: 잘린 선수는
-    밀려날 기회조차 없다.
+    순서가 곧 우선순위다 — 만기가 나머지보다 앞선다. 1560주에 도달한 커리어는
+    무슨 상태였든 완주한 것으로 본다.
+
+    **부진은 따로 된 엔딩이 아니다.** 밀려나는 것도 계약이 끊기는 사건이라
+    `RELEASED`로 모은다 (§13-Q14). 판정은 `is_at_release_risk`가 함께 본다.
     """
     if not run.is_active:
         return None
@@ -86,8 +105,6 @@ def check_end(run: CareerRun) -> EndReason | None:
         return EndReason.INJURY
     if run.release_weeks >= release_grace_weeks(run):
         return EndReason.RELEASED
-    if run.decline_weeks >= rules.DECLINE_GRACE_WEEKS:
-        return EndReason.DECLINE
     return None
 
 
