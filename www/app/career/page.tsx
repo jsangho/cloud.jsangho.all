@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { BeltList } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ import {
   type CareerMode,
   type CareerModeCode,
   type CareerPreset,
+  type CareerWeek,
   type GuestRunState,
 } from "@/lib/career-api";
 
@@ -623,15 +625,41 @@ export default function CareerPage() {
         </p>
       )}
 
-      <section className="mt-8 space-y-2">
-        {weeks.map((week) => (
-          <p
-            key={week.week}
-            className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}
-          >
-            <span className="mr-2 text-xs text-muted-foreground">{week.week}주</span>
-            {week.narration}
-          </p>
+      {(view.titlesWon.length > 0 || view.titlesHeld.length > 0) && (
+        <section className="mt-8">
+          <p className="font-sport text-sm text-muted-foreground">벨트</p>
+          <div className="mt-2">
+            <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+          </div>
+        </section>
+      )}
+
+      {/* 한 번의 '다음'이 여러 주를 흘려보낸다(§3-D17). 그 덩어리를 그대로 묶어
+          보여 준다 — 평평하게 늘어놓으면 어디까지가 이번 턴인지 알 수 없다. */}
+      <section className="mt-8 space-y-6">
+        {groupByTick(weeks, view.year).map((chunk) => (
+          <div key={chunk.from}>
+            <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
+              <span className="font-sport text-sm">{chunk.label}</span>
+              <span className="text-xs text-muted-foreground">
+                {chunk.from}~{chunk.to}주
+              </span>
+              {chunk.record && (
+                <span className="ml-auto text-xs text-muted-foreground">{chunk.record}</span>
+              )}
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {chunk.weeks.map((week) => (
+                <p
+                  key={week.week}
+                  className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}
+                >
+                  <span className="mr-2 text-xs text-muted-foreground">{week.week}주</span>
+                  {week.narration}
+                </p>
+              ))}
+            </div>
+          </div>
         ))}
       </section>
 
@@ -639,6 +667,45 @@ export default function CareerPage() {
       <p className="mt-10 text-xs text-muted-foreground">이 게임의 전개는 가상입니다.</p>
     </main>
   );
+}
+
+type Chunk = {
+  from: number;
+  to: number;
+  label: string;
+  record: string;
+  weeks: CareerWeek[];
+};
+
+/**
+ * 주차 로그를 **해 단위로** 묶는다.
+ *
+ * 한 번의 '다음'이 이벤트를 만날 때까지 여러 주를 흘려보내므로(§3-D17), 평평하게
+ * 늘어놓으면 어디까지가 이번 턴인지 알 수 없다. 틱 경계가 아니라 **연차**로 나누는
+ * 이유: 틱 크기는 모드마다 1~52주로 달라 `weekly`에서는 묶음이 한 줄짜리가 되고,
+ * 사람이 커리어를 기억하는 단위는 어차피 해다.
+ */
+function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
+  const chunks = new Map<number, CareerWeek[]>();
+  for (const week of weeks) {
+    const year = Math.floor((week.week - 1) / 52) + 1;
+    const bucket = chunks.get(year);
+    if (bucket) bucket.push(week);
+    else chunks.set(year, [week]);
+  }
+  return [...chunks.entries()].map(([year, rows]) => {
+    const wins = rows.filter((w) => w.result === "win").length;
+    const losses = rows.filter((w) => w.result === "loss").length;
+    const draws = rows.filter((w) => w.result === "draw").length;
+    const played = wins + losses + draws;
+    return {
+      from: rows[0].week,
+      to: rows[rows.length - 1].week,
+      label: `${year}년차`,
+      record: played > 0 ? `${wins}승 ${losses}패${draws > 0 ? ` ${draws}무` : ""}` : "",
+      weeks: rows,
+    };
+  });
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
