@@ -39,8 +39,7 @@ export function WrestlerChatPanel({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const patchState = useCallback(
-    (patch: Partial<WrestlerChatPanelState>) =>
-      setState((prev) => ({ ...prev, ...patch })),
+    (patch: Partial<WrestlerChatPanelState>) => setState((prev) => ({ ...prev, ...patch })),
     [],
   );
 
@@ -147,9 +146,7 @@ export function WrestlerChatPanel({ className }: { className?: string }) {
               <KayfabeMark className="h-8 w-8" />
             </div>
             <div>
-              <h2 className="font-sport text-2xl text-head-of-table sm:text-3xl">
-                고릴라 포지션
-              </h2>
+              <h2 className="font-sport text-2xl text-head-of-table sm:text-3xl">고릴라 포지션</h2>
               <p className="mt-1.5 text-sm text-stone-500 dark:text-stone-400">
                 선수 정보라면 뭐든 물어보세요
               </p>
@@ -203,9 +200,7 @@ export function WrestlerChatPanel({ className }: { className?: string }) {
 
       {state.errorMessage && (
         <div className="mb-3 rounded-lg border border-red-300/60 dark:border-red-800/60 bg-red-50/60 dark:bg-red-900/20 p-3">
-          <p className="mb-2 text-sm text-red-700 dark:text-red-400">
-            {state.errorMessage}
-          </p>
+          <p className="mb-2 text-sm text-red-700 dark:text-red-400">{state.errorMessage}</p>
           {state.lastPayload && (
             <button
               type="button"

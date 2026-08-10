@@ -12,7 +12,8 @@ export function RecordsSubnav({ active }: { active: "players" | "champions" }) {
   return (
     <div className="mb-6 flex justify-center gap-2">
       {TABS.map((tab, idx) => {
-        const isActive = (idx === 0 && active === "players") || (idx === 1 && active === "champions");
+        const isActive =
+          (idx === 0 && active === "players") || (idx === 1 && active === "champions");
         return (
           <Link
             key={tab.href}

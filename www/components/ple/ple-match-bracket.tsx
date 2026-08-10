@@ -6,11 +6,7 @@ import { cn } from "@/lib/utils";
 import { BRACKET_LABELS } from "@/lib/bracket-labels";
 import type { PleSlug } from "@/lib/wwe-ple";
 import { getBracketTheme } from "@/lib/wwe-ple-bracket-theme";
-import {
-  getPleMatches,
-  isMultiMatch,
-  type PleMatchCard,
-} from "@/lib/wwe-ple-matches";
+import { getPleMatches, isMultiMatch, type PleMatchCard } from "@/lib/wwe-ple-matches";
 import {
   boardMatchesToCards,
   fetchPleBoard,
@@ -85,10 +81,7 @@ function boardMatchFingerprint(board: PleBoard): string {
     .join("|");
 }
 
-function needsStaticResync(
-  board: PleBoard | null,
-  staticCards: PleMatchCard[],
-): boolean {
+function needsStaticResync(board: PleBoard | null, staticCards: PleMatchCard[]): boolean {
   if (!board || board.matches.length === 0) return true;
   return boardMatchFingerprint(board) !== staticMatchFingerprint(staticCards);
 }
@@ -121,10 +114,7 @@ function buildInitialState(matches: PleMatchCard[]): StoredBracketState {
   return state;
 }
 
-function resolveMyPick(
-  m: PleBoardMatch,
-  savedPicks: Record<string, string>,
-): Side | number | null {
+function resolveMyPick(m: PleBoardMatch, savedPicks: Record<string, string>): Side | number | null {
   const raw = m.myPick ?? savedPicks[m.id];
   if (raw == null) return null;
   if (m.format === "multi") {
@@ -150,8 +140,7 @@ function stateFromBoard(
       state[m.id] = { kind: "multi", votes, selected: pickIdx };
     } else {
       const selected = resolveMyPick(m, savedPicks);
-      const side =
-        selected === "left" || selected === "right" ? selected : null;
+      const side = selected === "left" || selected === "right" ? selected : null;
       state[m.id] = {
         kind: "singles",
         votes: { left: m.siteVotes.left, right: m.siteVotes.right },
@@ -172,9 +161,7 @@ function mergePreservedSelections(
     const target = merged[id];
     if (!target || target.selected !== null) continue;
     merged[id] =
-      target.kind === entry.kind
-        ? ({ ...target, selected: entry.selected } as VoteState)
-        : target;
+      target.kind === entry.kind ? ({ ...target, selected: entry.selected } as VoteState) : target;
   }
   return merged;
 }
@@ -183,22 +170,14 @@ function matchShowsResult(m: PleBoardMatch): boolean {
   return m.status === "finished" || !!m.result;
 }
 
-function normalizeStoredEntry(
-  entry: VoteState,
-  match: PleMatchCard,
-): VoteState {
+function normalizeStoredEntry(entry: VoteState, match: PleMatchCard): VoteState {
   if (isMultiMatch(match)) {
     const count = match.competitors.length;
-    const base =
-      entry.kind === "multi" ? [...entry.votes] : emptyMultiVotes(count);
+    const base = entry.kind === "multi" ? [...entry.votes] : emptyMultiVotes(count);
     while (base.length < count) base.push(0);
     const votes = base.slice(0, count);
 
-    if (
-      entry.kind === "multi" &&
-      entry.selected !== null &&
-      entry.selected < count
-    ) {
+    if (entry.kind === "multi" && entry.selected !== null && entry.selected < count) {
       votes[entry.selected] = 1;
       return { kind: "multi", votes, selected: entry.selected };
     }
@@ -248,10 +227,7 @@ const initialBracketUiState: BracketUiState = {
   submitError: null,
 };
 
-function countDraftPicks(
-  matchIds: string[],
-  state: StoredBracketState,
-): number {
+function countDraftPicks(matchIds: string[], state: StoredBracketState): number {
   return matchIds.filter((id) => state[id]?.selected != null).length;
 }
 
@@ -260,10 +236,7 @@ function matchPickable(m: PleBoardMatch, eventFinished: boolean): boolean {
   return !eventFinished && m.status !== "finished";
 }
 
-function ensureVoteEntry(
-  prev: StoredBracketState,
-  match: PleMatchCard,
-): VoteState {
+function ensureVoteEntry(prev: StoredBracketState, match: PleMatchCard): VoteState {
   const existing = prev[match.id];
   if (existing) return existing;
   if (isMultiMatch(match)) {
@@ -276,10 +249,7 @@ function ensureVoteEntry(
   return { kind: "singles", votes: emptySinglesVotes(), selected: null };
 }
 
-function allPredictionsCommitted(
-  board: PleBoard,
-  eventFinished: boolean,
-): boolean {
+function allPredictionsCommitted(board: PleBoard, eventFinished: boolean): boolean {
   const open = board.matches.filter((m) => matchPickable(m, eventFinished));
   if (open.length === 0) return false;
   return open.every((m) => m.myPick != null);
@@ -297,14 +267,10 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
   );
 
   const [ui, setUi] = useState<BracketUiState>(initialBracketUiState);
-  const [state, setState] = useState<StoredBracketState>(() =>
-    buildInitialState(staticMatches),
-  );
+  const [state, setState] = useState<StoredBracketState>(() => buildInitialState(staticMatches));
 
   const patchUi = (
-    patch:
-      | Partial<BracketUiState>
-      | ((prev: BracketUiState) => Partial<BracketUiState>),
+    patch: Partial<BracketUiState> | ((prev: BracketUiState) => Partial<BracketUiState>),
   ) =>
     setUi((prev) => {
       const p = typeof patch === "function" ? patch(prev) : patch;
@@ -312,9 +278,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
     });
 
   const matches: PleBoardMatch[] =
-    ui.useApi && ui.board
-      ? ui.board.matches
-      : (staticMatches as unknown as PleBoardMatch[]);
+    ui.useApi && ui.board ? ui.board.matches : (staticMatches as unknown as PleBoardMatch[]);
   const eventFinished = ui.useApi && ui.board?.status === "finished";
 
   useEffect(() => {
@@ -414,16 +378,9 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
         const finished = live.status === "finished";
         patchUi((prev) => ({
           board: live,
-          committed:
-            prev.committed ||
-            (!finished && allPredictionsCommitted(live, finished)),
+          committed: prev.committed || (!finished && allPredictionsCommitted(live, finished)),
         }));
-        setState((prev) =>
-          mergePreservedSelections(
-            prev,
-            stateFromBoard(live, loadMyPicks(slug)),
-          ),
-        );
+        setState((prev) => mergePreservedSelections(prev, stateFromBoard(live, loadMyPicks(slug))));
       },
       () => {
         /* SSE 실패 시 폴링 없이 마지막 스냅샷 유지 */
@@ -451,11 +408,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
       setState((prev) => {
         const current = ensureVoteEntry(prev, match);
 
-        if (
-          isMultiMatch(match) &&
-          current.kind === "multi" &&
-          typeof pick === "number"
-        ) {
+        if (isMultiMatch(match) && current.kind === "multi" && typeof pick === "number") {
           return {
             ...prev,
             [match.id]: { ...current, selected: pick },
@@ -482,21 +435,14 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
   const canPredict = Boolean(user) && !eventFinished;
 
   const pickableIds = useMemo(
-    () =>
-      matches.filter((m) => matchPickable(m, !!eventFinished)).map((m) => m.id),
+    () => matches.filter((m) => matchPickable(m, !!eventFinished)).map((m) => m.id),
     [matches, eventFinished],
   );
 
-  const draftCount = useMemo(
-    () => countDraftPicks(pickableIds, state),
-    [pickableIds, state],
-  );
+  const draftCount = useMemo(() => countDraftPicks(pickableIds, state), [pickableIds, state]);
 
   const canConfirm =
-    canPredict &&
-    !ui.committed &&
-    pickableIds.length > 0 &&
-    draftCount === pickableIds.length;
+    canPredict && !ui.committed && pickableIds.length > 0 && draftCount === pickableIds.length;
 
   const showActionBar = matches.length > 0;
 
@@ -507,10 +453,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
       .map((matchId) => {
         const entry = state[matchId];
         if (!entry || entry.selected == null) return null;
-        const pick =
-          typeof entry.selected === "number"
-            ? String(entry.selected)
-            : entry.selected;
+        const pick = typeof entry.selected === "number" ? String(entry.selected) : entry.selected;
         return { matchKey: matchId, pick };
       })
       .filter((x): x is { matchKey: string; pick: string } => x != null);
@@ -526,12 +469,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
     }
 
     try {
-      const updated = await submitPlePredictionsBatch(
-        slug,
-        clientId,
-        items,
-        accountUserId,
-      );
+      const updated = await submitPlePredictionsBatch(slug, clientId, items, accountUserId);
       for (const item of items) {
         saveMyPick(slug, item.matchKey, item.pick);
       }
@@ -543,16 +481,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
         submitError: e instanceof Error ? e.message : "예측 저장 실패",
       });
     }
-  }, [
-    canConfirm,
-    ui.submitting,
-    ui.useApi,
-    pickableIds,
-    state,
-    slug,
-    clientId,
-    accountUserId,
-  ]);
+  }, [canConfirm, ui.submitting, ui.useApi, pickableIds, state, slug, clientId, accountUserId]);
 
   const handleEditDraft = useCallback(() => {
     patchUi({ committed: false, submitError: null });
@@ -582,9 +511,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
             : "승부 예측은 로그인한 회원만 할 수 있습니다 · 경기 카드는 조회만 가능"}
           {" · 사이트 투표와 북메이커 승률은 별도 표시"}
           {eventFinished && (
-            <span className="ml-1 text-emerald-400">
-              · {BRACKET_LABELS.liveResults}
-            </span>
+            <span className="ml-1 text-emerald-400">· {BRACKET_LABELS.liveResults}</span>
           )}
         </p>
         {!user && !eventFinished && (
@@ -653,9 +580,7 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
               {!canPredict ? (
                 <span>이 PLE는 종료되어 새 예측을 받지 않습니다.</span>
               ) : ui.committed ? (
-                <span className="text-emerald-700 dark:text-emerald-300/90">
-                  예측 확정 완료
-                </span>
+                <span className="text-emerald-700 dark:text-emerald-300/90">예측 확정 완료</span>
               ) : pickableIds.length === 0 ? (
                 <span>예측 가능한 경기가 없습니다.</span>
               ) : (

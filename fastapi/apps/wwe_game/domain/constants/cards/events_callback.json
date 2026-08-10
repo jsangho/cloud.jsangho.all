@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 3,
+  "file": "events_callback.json",
+  "note": "콜백 — 그때 남긴 표식이 몇 년 뒤 돌아온다. 전부 once이고 requires.flags로만 열린다. 규칙이 읽는 표식(career_flags.py)과 겹치지 않는다. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "cb_favor_called_in",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "빚",
+      "body": "그때 각본대로 져 준 일을 기억하는 사람이 있다. 이번엔 반대로 부탁이 왔다 — 이번 주 카드에서 자리를 하나 비워 달라고. 갚으라는 말은 안 했지만 그런 뜻이다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "flags": ["owed_a_favor"] },
+      "choices": [
+        {
+          "code": "pay_it_back",
+          "label": "갚는다. 이번 주는 뒤로 물러선다",
+          "risk": "safe",
+          "effects": { "popularity": -4, "inRing": 2, "backstage": 14 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "not_this_time",
+          "label": "그건 그때 일이라고 말한다",
+          "risk": "bold",
+          "effects": { "popularity": 7, "inRing": 3, "backstage": -11 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_torch_returns",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "그가 돌아왔다",
+      "body": "몇 해 전 깨끗하게 져 주며 만들어 준 그 선수가 메인이벤터가 되어 돌아왔다. 이번엔 그가 카드 위에 있고, 내가 아래에 있다. 링 위에서 눈이 마주쳤다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "flags": ["passed_the_torch"] },
+      "choices": [
+        {
+          "code": "let_him_lead",
+          "label": "이제 그의 시대라고 인정한다",
+          "risk": "safe",
+          "effects": { "popularity": 6, "inRing": 3, "backstage": 12, "micWork": 5 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "take_it_back",
+          "label": "만들어 준 사람이 누군지 보여 준다",
+          "risk": "bold",
+          "effects": { "popularity": 14, "inRing": 6, "backstage": -6, "wear": 6 },
+          "injuryRisk": 0.1,
+          "heat": 40
+        }
+      ]
+    },
+    {
+      "code": "cb_the_one_who_never_came_back",
+      "kind": "main",
+      "arena": "public",
+      "title": "돌아오지 못한 사람",
+      "body": "그날 이후로 그는 링에 서지 못했다. 기자가 그 경기를 다시 묻는다. 카메라가 돌고 있고, 대답을 안 하면 그것도 대답이 된다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["ended_a_career"] },
+      "choices": [
+        {
+          "code": "own_it",
+          "label": "내 탓이라고 말한다",
+          "risk": "safe",
+          "effects": { "popularity": 5, "inRing": 2, "backstage": 13, "alignment": 14 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "this_is_the_job",
+          "label": "이 바닥이 원래 그렇다고 말한다",
+          "risk": "reckless",
+          "effects": { "popularity": 9, "inRing": 1, "backstage": -14, "alignment": -18 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_second_offence",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "두 번째 봉투",
+      "body": "전에 한 번 벌금을 물었다. 사무실은 그걸 잊지 않았다 — 같은 서류가 다시 책상에 올라왔고, 이번에는 액수 아래에 한 줄이 더 붙어 있다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["fined"] },
+      "choices": [
+        {
+          "code": "sign_quietly",
+          "label": "조용히 서명한다",
+          "risk": "safe",
+          "effects": { "popularity": -2, "inRing": 3, "backstage": 10 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "fight_the_fine",
+          "label": "부당하다고 끝까지 따진다",
+          "risk": "bold",
+          "effects": { "popularity": 6, "inRing": 1, "backstage": -12 },
+          "injuryRisk": 0.0,
+          "flags": ["push_frozen"]
+        }
+      ]
+    },
+    {
+      "code": "cb_last_run_promise",
+      "kind": "main",
+      "arena": "broadcast",
+      "title": "마지막이라고 했던 해",
+      "body": "한 번 더 간다고 말한 그 해가 지나갔다. 은퇴 투어 이야기가 다시 나오고, 이번에는 날짜까지 적힌 문서가 왔다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["last_run"] },
+      "choices": [
+        {
+          "code": "set_the_date",
+          "label": "날짜를 받는다",
+          "risk": "safe",
+          "effects": { "popularity": 12, "inRing": -3, "micWork": 8, "backstage": 8 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "one_more_year",
+          "label": "한 해만 더 미룬다",
+          "risk": "reckless",
+          "effects": { "popularity": 4, "inRing": 6, "wear": 12 },
+          "injuryRisk": 0.16,
+          "flags": ["painkiller_habit"]
+        }
+      ]
+    },
+    {
+      "code": "cb_locker_room_vote",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "라커룸이 묻는다",
+      "body": "대표를 맡은 뒤 처음으로 진짜 문제가 왔다. 일정이 무리라는 불만이 쌓였고, 다들 내가 사무실에 말해 주기를 기다린다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["locker_room_leader"] },
+      "choices": [
+        {
+          "code": "speak_for_them",
+          "label": "대신 말한다",
+          "risk": "bold",
+          "effects": { "popularity": 4, "inRing": 1, "backstage": 16, "micWork": 6 },
+          "injuryRisk": 0.0,
+          "flags": ["push_frozen"]
+        },
+        {
+          "code": "keep_the_peace",
+          "label": "지금은 때가 아니라고 달랜다",
+          "risk": "safe",
+          "effects": { "popularity": 2, "inRing": 4, "backstage": -6 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_pulled_again",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "또 빠진다",
+      "body": "그때 솔직하게 말한 뒤로 의료진이 나를 더 자주 본다. 이번에도 검진에서 걸렸고, 이번 주 카드에서 이름이 빠졌다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["match_pulled"] },
+      "choices": [
+        {
+          "code": "trust_them",
+          "label": "판단을 따른다",
+          "risk": "safe",
+          "effects": { "popularity": -6, "inRing": 2, "backstage": 11, "wear": -10 },
+          "injuryRisk": 0.0,
+          "flags": ["grounded_style"]
+        },
+        {
+          "code": "clear_myself",
+          "label": "다른 병원에서 소견서를 받아 온다",
+          "risk": "reckless",
+          "effects": { "popularity": 8, "inRing": 3, "backstage": -9, "wear": 8 },
+          "injuryRisk": 0.14,
+          "flags": ["painkiller_habit"]
+        }
+      ]
+    },
+    {
+      "code": "cb_revenge_at_the_show",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "참아 온 것",
+      "body": "그때 이를 갈고 참았다. 오늘 그 상대가 같은 카드에 있고, 관중도 그 이야기를 기억한다. 벨 소리가 나기 전부터 함성이 다르다.",
+      "weight": 24,
+      "once": true,
+      "requires": { "flags": ["ple_revenge_buff"] },
+      "choices": [
+        {
+          "code": "finish_it_clean",
+          "label": "깨끗하게 이겨서 끝낸다",
+          "risk": "bold",
+          "effects": { "popularity": 16, "inRing": 8, "wear": 5 },
+          "injuryRisk": 0.09,
+          "heat": -45
+        },
+        {
+          "code": "make_it_hurt",
+          "label": "받은 만큼 돌려준다",
+          "risk": "reckless",
+          "effects": { "popularity": 19, "inRing": 3, "backstage": -10, "wear": 11, "alignment": -12 },
+          "injuryRisk": 0.2,
+          "heat": 35,
+          "flags": ["nemesis_locked"]
+        }
+      ]
+    },
+    {
+      "code": "cb_new_town_reception",
+      "kind": "main",
+      "arena": "public",
+      "title": "옮겨 온 자리",
+      "body": "짐을 싸서 온 지 얼마 되지 않았다. 이 동네 팬들은 아직 나를 손님으로 본다. 지역 방송이 인터뷰를 잡았고, 첫인상이 여기서 정해진다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["relocated"] },
+      "choices": [
+        {
+          "code": "become_local",
+          "label": "이 동네 사람이 되겠다고 말한다",
+          "risk": "safe",
+          "effects": { "popularity": 11, "inRing": 2, "micWork": 6, "backstage": 5 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_the_outsider",
+          "label": "끝까지 이방인으로 남는다",
+          "risk": "bold",
+          "effects": { "popularity": 8, "inRing": 4, "alignment": -14 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_scout_report",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "그날 보고서",
+      "body": "그때 보러 왔던 사람이 쓴 보고서가 돌아다닌다. 좋은 말만 적혀 있지는 않다 — 그리고 그 문장을 이번 편성 회의에서 누가 읽었다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["seen_by_major"] },
+      "choices": [
+        {
+          "code": "prove_it_wrong",
+          "label": "링에서 틀렸다고 증명한다",
+          "risk": "bold",
+          "effects": { "popularity": 10, "inRing": 9, "wear": 7 },
+          "injuryRisk": 0.11
+        },
+        {
+          "code": "fix_the_note",
+          "label": "그 사람을 찾아가 이야기한다",
+          "risk": "safe",
+          "effects": { "popularity": 3, "inRing": 2, "backstage": 13, "micWork": 4 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_the_booked_shot",
+      "kind": "main",
+      "arena": "broadcast",
+      "title": "잡혀 있던 기회",
+      "body": "단체의 결정을 따랐고, 그 대가로 타이틀전이 잡혀 있었다. 그런데 이번 주 카드가 발표되자 그 자리에 다른 이름이 있다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "flags": ["title_shot_booked"] },
+      "choices": [
+        {
+          "code": "demand_the_shot",
+          "label": "약속한 자리를 내놓으라고 한다",
+          "risk": "bold",
+          "effects": { "popularity": 13, "inRing": 2, "backstage": -10, "micWork": 7 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "wait_again",
+          "label": "다음을 기다린다",
+          "risk": "safe",
+          "effects": { "popularity": -5, "inRing": 5, "backstage": 12 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_face_settles",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "환호를 받는 자리",
+      "body": "환호 쪽을 택한 뒤로 아이들이 앞줄에 앉는다. 오늘 상대가 도발하며 반칙을 걸어 왔고, 관중은 내가 어떻게 나올지 보고 있다.",
+      "weight": 24,
+      "once": true,
+      "requires": { "flags": ["turned_face"] },
+      "choices": [
+        {
+          "code": "stay_clean",
+          "label": "끝까지 정공법으로 간다",
+          "risk": "safe",
+          "effects": { "popularity": 9, "inRing": 6, "alignment": 16, "backstage": 6 },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "snap_once",
+          "label": "딱 한 번 똑같이 돌려준다",
+          "risk": "reckless",
+          "effects": { "popularity": 12, "inRing": 2, "alignment": -22, "wear": 6 },
+          "injuryRisk": 0.12,
+          "flags": ["double_turn"]
+        }
+      ]
+    },
+    {
+      "code": "cb_heel_settles",
+      "kind": "main",
+      "arena": "broadcast",
+      "title": "야유를 먹고 사는 법",
+      "body": "뒤집은 뒤로 야유가 따라다닌다. 오늘 마이크 시간이 길게 잡혔고, 관중은 내가 더 미움받을 말을 하기를 기다린다.",
+      "weight": 24,
+      "once": true,
+      "requires": { "flags": ["turned_heel"] },
+      "choices": [
+        {
+          "code": "go_further",
+          "label": "더 미움받을 말을 한다",
+          "risk": "bold",
+          "effects": { "popularity": 15, "inRing": 1, "micWork": 9, "alignment": -20 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "crack_the_mask",
+          "label": "진심을 한 줄 흘린다",
+          "risk": "safe",
+          "effects": { "popularity": 7, "inRing": 3, "micWork": 6, "alignment": 18 },
+          "injuryRisk": 0.0,
+          "flags": ["double_turn"]
+        }
+      ]
+    },
+    {
+      "code": "cb_double_turn_aftermath",
+      "kind": "main",
+      "arena": "public",
+      "title": "뒤집힌 밤 이후",
+      "body": "그 밤에 관중이 통째로 편을 바꿨다. 기사들은 아직도 그 장면을 쓴다 — 어떤 글은 명장면이라 하고, 어떤 글은 사고라고 한다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "flags": ["double_turn"] },
+      "choices": [
+        {
+          "code": "lean_in",
+          "label": "그날의 얼굴로 계속 간다",
+          "risk": "bold",
+          "effects": { "popularity": 14, "inRing": 3, "micWork": 7 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "call_it_an_accident",
+          "label": "사고였다고 정리한다",
+          "risk": "safe",
+          "effects": { "popularity": 2, "inRing": 5, "backstage": 11, "alignment": 10 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "cb_alliance_breaks",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "동맹의 끝",
+      "body": "그때 함께 싸운 사이다. 오늘 같은 경기에 둘 다 있고, 이길 사람은 하나다. 눈을 마주친 순간 둘 다 알았다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "flags": ["uneasy_alliance"] },
+      "choices": [
+        {
+          "code": "shake_first",
+          "label": "먼저 손을 내밀고 정면으로 붙는다",
+          "risk": "bold",
+          "effects": { "popularity": 12, "inRing": 8, "backstage": 8, "wear": 6 },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "strike_first",
+          "label": "먼저 친다",
+          "risk": "reckless",
+          "effects": { "popularity": 16, "inRing": 2, "backstage": -13, "alignment": -16, "wear": 9 },
+          "injuryRisk": 0.17,
+          "heat": 50,
+          "flags": ["nemesis_locked"]
+        }
+      ]
+    }
+  ]
+}

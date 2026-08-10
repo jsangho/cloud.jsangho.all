@@ -4,10 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveCompetitorInfo } from "@/lib/wrestler-info";
-import type {
-  CompetitorProfile,
-  CompetitorMatchRecord,
-} from "@/lib/records-api";
+import type { CompetitorProfile, CompetitorMatchRecord } from "@/lib/records-api";
 import type { TitleAcquisition } from "@/lib/title-history-api";
 import { formatChampionshipDate } from "@/lib/wwe-current-champions";
 
@@ -92,10 +89,7 @@ function groupByPle(matches: CompetitorMatchRecord[]) {
   });
 }
 
-function participantIncludesCompetitor(
-  participantName: string,
-  competitorName: string,
-): boolean {
+function participantIncludesCompetitor(participantName: string, competitorName: string): boolean {
   const info = resolveCompetitorInfo(participantName);
   if (info.members.length > 0) {
     return info.members.some((m) => m.ringName === competitorName);
@@ -112,12 +106,8 @@ function isTitleMatchTitle(title: string): boolean {
 function ProfileStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-stone-300/60 dark:border-stone-700/60 bg-stone-100/40 dark:bg-stone-950/40 px-3 py-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
-        {label}
-      </span>{" "}
-      <span className="text-xs font-semibold text-stone-800 dark:text-stone-100">
-        {value}
-      </span>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">{label}</span>{" "}
+      <span className="text-xs font-semibold text-stone-800 dark:text-stone-100">{value}</span>
     </div>
   );
 }
@@ -197,8 +187,7 @@ function MatchRecordCard({
   competitorName: string;
 }) {
   const opponents = match.opponents ?? [];
-  const showParticipants =
-    match.format === "multi" && (match.participants?.length ?? 0) > 0;
+  const showParticipants = match.format === "multi" && (match.participants?.length ?? 0) > 0;
   const isTitle = isTitleMatchTitle(match.title);
 
   return (
@@ -232,9 +221,7 @@ function MatchRecordCard({
 
           {opponents.length > 0 ? (
             <div>
-              <p className="mb-1.5 text-[11px] font-bold text-stone-500">
-                상대
-              </p>
+              <p className="mb-1.5 text-[11px] font-bold text-stone-500">상대</p>
               <div className="flex flex-wrap gap-1.5">
                 {opponents.map((name) => (
                   <NameChip key={name} name={name} />
@@ -245,18 +232,13 @@ function MatchRecordCard({
 
           {showParticipants ? (
             <div>
-              <p className="mb-1.5 text-[11px] font-bold text-stone-500">
-                참가자
-              </p>
+              <p className="mb-1.5 text-[11px] font-bold text-stone-500">참가자</p>
               <div className="flex flex-wrap gap-1.5">
                 {(match.participants ?? []).map((name) => (
                   <NameChip
                     key={name}
                     name={name}
-                    highlight={participantIncludesCompetitor(
-                      name,
-                      competitorName,
-                    )}
+                    highlight={participantIncludesCompetitor(name, competitorName)}
                   />
                 ))}
               </div>
@@ -265,10 +247,7 @@ function MatchRecordCard({
 
           {match.winnerName ? (
             <p className="text-xs font-medium text-stone-400">
-              승자{" "}
-              <span className="font-semibold text-emerald-200">
-                {match.winnerName}
-              </span>
+              승자 <span className="font-semibold text-emerald-200">{match.winnerName}</span>
             </p>
           ) : null}
         </div>
@@ -324,14 +303,8 @@ export function CompetitorRecordView({
     });
   }, [profile.matches, state.format, state.q, state.result]);
 
-  const singles = useMemo(
-    () => filtered.filter((m) => m.format === "singles"),
-    [filtered],
-  );
-  const multi = useMemo(
-    () => filtered.filter((m) => m.format === "multi"),
-    [filtered],
-  );
+  const singles = useMemo(() => filtered.filter((m) => m.format === "singles"), [filtered]);
+  const multi = useMemo(() => filtered.filter((m) => m.format === "multi"), [filtered]);
 
   const grouped = useMemo(() => groupByPle(filtered), [filtered]);
 
@@ -383,9 +356,7 @@ export function CompetitorRecordView({
             <div className="rounded-xl border border-brand-800/40 bg-stone-950/20 p-3">
               <button
                 type="button"
-                onClick={() =>
-                  patchState({ titleHistoryOpen: !state.titleHistoryOpen })
-                }
+                onClick={() => patchState({ titleHistoryOpen: !state.titleHistoryOpen })}
                 aria-expanded={state.titleHistoryOpen}
                 aria-controls="title-acquisition-history"
                 className="flex w-full items-center justify-between gap-2 rounded-lg text-left transition-colors hover:bg-stone-950/30"
@@ -415,9 +386,7 @@ export function CompetitorRecordView({
                         <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
                           {h.beltName}
                         </span>
-                        <span className="text-xs font-medium text-stone-400">
-                          {h.wonAt}
-                        </span>
+                        <span className="text-xs font-medium text-stone-400">{h.wonAt}</span>
                       </div>
                     </li>
                   ))}
@@ -431,9 +400,7 @@ export function CompetitorRecordView({
       <section className="rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-50/40 dark:bg-stone-950/40 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h2 className="text-sm font-extrabold text-stone-900 dark:text-stone-50">
-              요약
-            </h2>
+            <h2 className="text-sm font-extrabold text-stone-900 dark:text-stone-50">요약</h2>
             <p className="mt-0.5 text-xs font-medium text-stone-400">
               승률은 (승 / (승+패)) 기준입니다. (무효/대기는 제외)
             </p>
@@ -456,21 +423,15 @@ export function CompetitorRecordView({
           </div>
           <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/20 px-3 py-2">
             <div className="text-[11px] font-bold text-emerald-200/80">승</div>
-            <div className="text-sm font-extrabold text-emerald-200">
-              {profile.summary.wins}
-            </div>
+            <div className="text-sm font-extrabold text-emerald-200">{profile.summary.wins}</div>
           </div>
           <div className="rounded-xl border border-rose-700/60 bg-rose-950/20 px-3 py-2">
             <div className="text-[11px] font-bold text-rose-200/80">패</div>
-            <div className="text-sm font-extrabold text-rose-200">
-              {profile.summary.losses}
-            </div>
+            <div className="text-sm font-extrabold text-rose-200">{profile.summary.losses}</div>
           </div>
           <div className="rounded-xl border border-brand-700/60 bg-brand-950/20 px-3 py-2">
             <div className="text-[11px] font-bold text-brand-200/80">무효</div>
-            <div className="text-sm font-extrabold text-brand-200">
-              {profile.summary.noContest}
-            </div>
+            <div className="text-sm font-extrabold text-brand-200">{profile.summary.noContest}</div>
           </div>
           <div className="rounded-xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-100/30 dark:bg-stone-950/30 px-3 py-2">
             <div className="text-[11px] font-bold text-stone-400">대기</div>
@@ -479,9 +440,7 @@ export function CompetitorRecordView({
             </div>
           </div>
           <div className="rounded-xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-100/30 dark:bg-stone-950/30 px-3 py-2">
-            <div className="text-[11px] font-bold text-stone-400">
-              챔피언 출전
-            </div>
+            <div className="text-[11px] font-bold text-stone-400">챔피언 출전</div>
             <div className="text-sm font-extrabold text-stone-800 dark:text-stone-50">
               {profile.summary.championAppearances}
             </div>
@@ -525,9 +484,7 @@ export function CompetitorRecordView({
           />
           <select
             value={state.result}
-            onChange={(e) =>
-              patchState({ result: e.target.value as FilterResult })
-            }
+            onChange={(e) => patchState({ result: e.target.value as FilterResult })}
             className="h-10 w-full rounded-xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-100/40 dark:bg-stone-950/40 px-3 text-sm text-stone-900 dark:text-stone-100"
           >
             <option value="all">결과: 전체</option>
@@ -538,9 +495,7 @@ export function CompetitorRecordView({
           </select>
           <select
             value={state.format}
-            onChange={(e) =>
-              patchState({ format: e.target.value as FilterFormat })
-            }
+            onChange={(e) => patchState({ format: e.target.value as FilterFormat })}
             className="h-10 w-full rounded-xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-100/40 dark:bg-stone-950/40 px-3 text-sm text-stone-900 dark:text-stone-100"
           >
             <option value="all">타입: 전체</option>
@@ -553,9 +508,7 @@ export function CompetitorRecordView({
       <section className="rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-50/40 dark:bg-stone-950/40 p-4">
         <div className="mb-4">
           <h2 className="text-sm font-extrabold text-stone-50">경기 기록</h2>
-          <p className="mt-0.5 text-xs font-medium text-stone-400">
-            필터 결과 {filtered.length}건
-          </p>
+          <p className="mt-0.5 text-xs font-medium text-stone-400">필터 결과 {filtered.length}건</p>
         </div>
 
         {filtered.length === 0 ? (
@@ -573,9 +526,7 @@ export function CompetitorRecordView({
                   <span className="rounded-md border border-stone-200/60 dark:border-stone-700/60 bg-stone-100/50 dark:bg-stone-900/50 px-2 py-0.5 text-[10px] font-bold text-stone-400">
                     {g.slug}
                   </span>
-                  <span className="text-xs font-medium text-stone-500">
-                    {g.items.length}경기
-                  </span>
+                  <span className="text-xs font-medium text-stone-500">{g.items.length}경기</span>
                 </div>
                 <ul className="space-y-3">
                   {g.items.map((m) => (

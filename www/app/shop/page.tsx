@@ -223,10 +223,7 @@ export default function ShopPage() {
       void (async () => {
         try {
           const receipt = await purchaseShopItem(item.code);
-          const [wallet, inventory] = await Promise.all([
-            fetchWallet(),
-            fetchInventory(),
-          ]);
+          const [wallet, inventory] = await Promise.all([fetchWallet(), fetchInventory()]);
           setState((prev) => ({
             ...prev,
             pending: null,

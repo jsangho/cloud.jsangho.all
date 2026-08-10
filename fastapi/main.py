@@ -50,6 +50,7 @@ from pydantic import BaseModel, Field
 from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from wwe_game.adapter.inbound.api.v1.career_router import career_router
 
 from auth.adapter.inbound.api import auth_router
 from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
@@ -132,6 +133,7 @@ app.include_router(vision_router, prefix="/api")
 app.include_router(photo_router, prefix="/api")
 app.include_router(receipt_router, prefix="/api")
 app.include_router(soccer_router, prefix="/api")
+app.include_router(career_router, prefix="/api")
 
 
 @app.middleware("http")

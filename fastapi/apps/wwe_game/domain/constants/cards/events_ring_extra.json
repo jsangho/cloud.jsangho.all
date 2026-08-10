@@ -1,0 +1,1155 @@
+{
+  "schemaVersion": 3,
+  "file": "events_ring_extra.json",
+  "note": "링 내 상시 카드 25장 — 권역·스타일 필터 없음(모든 판에서 후보). 전부 bodies 3개 변주.",
+  "cards": [
+    {
+      "code": "ring_apron_spot",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "에이프런 위",
+      "bodies": [
+        "링 가장자리 30센티 위에서 둘 다 서 있다. 여기서 떨어지면 매트가 아니라 바닥이다.",
+        "에이프런에서 서로 목을 잡았다. 아래는 콘크리트고 보호 매트는 반대편에 있다.",
+        "링 밖 좁은 턱 위. 관중이 \"떨어뜨려\"를 연호하기 시작했다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "back_inside",
+          "label": "링 안으로 끌고 들어간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 4,
+            "backstage": 8
+          },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "take_the_bump",
+          "label": "함께 떨어진다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": 6,
+            "wear": 12
+          },
+          "injuryRisk": 0.35
+        }
+      ]
+    },
+    {
+      "code": "ring_open_challenge",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "오픈 챌린지",
+      "bodies": [
+        "링 위에서 아무나 나오라고 마이크를 잡았다. 커튼 뒤에서 누가 나올지 당신도 모른다.",
+        "오픈 챌린지를 걸었다. 음악이 나오는데 처음 듣는 곡이다.",
+        "\"누구든 나와.\" 3초 정적이 흐르고, 램프 끝에서 낯선 실루엣이 걸어 나온다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 90,
+        "stats": {
+          "micWork": [
+            30,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "give_them_a_match",
+          "label": "제대로 된 경기를 만들어 준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 7,
+            "alignment": 12,
+            "backstage": 10
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "destroy_them",
+          "label": "2분 만에 부숴 놓는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": -2,
+            "alignment": -14
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "raise_the_stakes",
+          "label": "즉석에서 벨트를 건다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 2,
+            "micWork": 8,
+            "backstage": -12
+          },
+          "injuryRisk": 0.12
+        }
+      ]
+    },
+    {
+      "code": "ring_substitute_main_event",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "대타 메인이벤트",
+      "bodies": [
+        "메인이벤터가 식중독으로 쓰러졌다. 두 시간 뒤 메인 경기에 나갈 사람이 필요하다.",
+        "부커가 뛰어와 묻는다. \"오늘 메인 뛸 수 있나? 지금 답해.\"",
+        "경기 40분 전, 대진표가 통째로 바뀌었다. 마지막 칸에 당신 이름이 급하게 적혀 있다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "step_up",
+          "label": "\"제가 나가겠습니다.\"",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": 8,
+            "backstage": 12,
+            "wear": 7
+          },
+          "injuryRisk": 0.2
+        },
+        {
+          "code": "not_ready",
+          "label": "준비가 안 됐다며 거절한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -9,
+            "inRing": -3,
+            "backstage": -10,
+            "wear": -2
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_hot_tag_timing",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "핫태그 3초 전",
+      "bodies": [
+        "12분을 얻어맞았고 파트너가 코너에서 손을 뻗고 있다. 관중이 일어서기 시작했다.",
+        "손끝이 파트너 손끝에 거의 닿는다. 지금 태그하면 관중이 터지고, 한 번 더 끌면 더 크게 터진다.",
+        "코너까지 한 걸음. 파트너는 준비됐는데 상대가 아직 발목을 잡고 있다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "tag_now",
+          "label": "지금 태그한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 6,
+            "backstage": 6
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "delay_it",
+          "label": "한 번 더 끌어 최대치로 만든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 4,
+            "wear": 5
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "no_tag",
+          "label": "태그하지 않고 혼자 뒤집는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": 4,
+            "backstage": -12,
+            "wear": 7
+          },
+          "injuryRisk": 0.18
+        }
+      ]
+    },
+    {
+      "code": "ring_battle_royal_alliance",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "임시 동맹",
+      "bodies": [
+        "배틀로얄 종반, 셋이 남았다. 나머지 둘 중 하나가 눈짓으로 협공을 제안한다.",
+        "링에 넷. 덩치 큰 쪽을 먼저 넘기자는 신호가 온다. 그 다음은 뻔하다.",
+        "숫자가 줄었다. 지금 손을 잡으면 하나는 확실히 넘길 수 있고, 그 뒤는 아무도 모른다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "ally",
+          "label": "손을 잡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 5
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "betray_first",
+          "label": "손을 잡는 척하고 먼저 넘긴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -3,
+            "alignment": -16,
+            "micWork": 4
+          },
+          "injuryRisk": 0.05,
+          "heat": 20
+        },
+        {
+          "code": "fight_both",
+          "label": "혼자 둘을 상대한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 5,
+            "alignment": 12,
+            "wear": 8
+          },
+          "injuryRisk": 0.22
+        }
+      ]
+    },
+    {
+      "code": "ring_countout_win",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "9카운트",
+      "bodies": [
+        "상대가 장외에 뻗었고 심판이 아홉을 셌다. 여기서 이기면 이기는 건데, 벨트는 안 넘어온다.",
+        "카운트 9. 아무것도 안 하면 이긴 채로 끝난다. 관중은 야유할 것이다.",
+        "심판 손이 열 번째를 향한다. 밖으로 나가 상대를 끌고 들어올 시간이 아직 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "take_the_win",
+          "label": "그대로 이긴다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -7,
+            "inRing": -2,
+            "alignment": -10,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "bring_him_back",
+          "label": "끌고 들어와 정면으로 끝낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 5,
+            "alignment": 15,
+            "wear": 4
+          },
+          "injuryRisk": 0.1
+        }
+      ]
+    },
+    {
+      "code": "ring_ref_blind_spot",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "심판 사각",
+      "bodies": [
+        "심판이 반대 코너에서 상대 매니저와 실랑이 중이다. 지금 3초는 아무도 안 본다.",
+        "심판 등이 완전히 돌아갔다. 로프에 발을 걸고 눌러도 걸리지 않는다.",
+        "카메라 각도와 심판 위치가 동시에 죽었다. 이런 순간은 한 경기에 한 번 온다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "cheat",
+          "label": "쓴다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 3,
+            "alignment": -16
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "dont",
+          "label": "쓰지 않는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 5,
+            "alignment": 14
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "ring_opponent_audible",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "바뀐 계획",
+      "bodies": [
+        "상대가 클린치 중에 속삭인다. \"마무리 바꾸자. 네가 진다.\" 대본과 정반대다.",
+        "코너에서 상대가 말한다. \"내가 오늘 이겨야 해. 부탁이다.\" 부커에게 확인할 시간은 없다.",
+        "상대가 즉흥으로 순서를 바꿨다. 준비한 흐름 절반이 날아갔고 관중은 눈치 못 챘다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "go_with_it",
+          "label": "맞춰 준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 5,
+            "backstage": 14
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "refuse_mid_match",
+          "label": "링 위에서 거절하고 원래대로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": 3,
+            "backstage": -14
+          },
+          "injuryRisk": 0.08,
+          "heat": 20
+        }
+      ]
+    },
+    {
+      "code": "ring_trash_thrown",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "날아온 컵",
+      "bodies": [
+        "관중석에서 음료 컵이 날아와 등에 맞았다. 경기는 아직 10분 남았다.",
+        "누가 던진 동전이 이마 옆을 스쳤다. 관중석 한 구역이 웃고 있다.",
+        "링 안에 쓰레기가 세 개째 떨어졌다. 심판이 치우는 동안 흐름이 끊겼다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "ignore_it",
+          "label": "무시하고 경기를 잇는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 1,
+            "inRing": 4,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "confront_crowd",
+          "label": "그 구역을 향해 걸어간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -6,
+            "alignment": -12,
+            "micWork": 5,
+            "backstage": -8
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "ring_kid_at_ringside",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "링사이드의 아이",
+      "bodies": [
+        "링사이드 첫 줄, 여섯 살쯤 되는 아이가 당신 이름을 적은 종이를 들고 울먹인다.",
+        "아이가 펜스에 매달려 손을 뻗는다. 경기 중이고 상대는 등 뒤에 있다.",
+        "앞줄 아이가 당신 티셔츠를 입고 있다. 오늘 밤 당신은 이길 각본이 아니다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "give_something",
+          "label": "손목밴드를 벗어 건넨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": -2,
+            "alignment": 18
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "stay_in_character",
+          "label": "캐릭터를 지키고 지나친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 5,
+            "alignment": -12,
+            "micWork": 5,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_short_notice_defense",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "즉석 방어전",
+      "bodies": [
+        "단장이 링으로 나와 마이크를 잡는다. \"오늘 밤, 지금부터, 타이틀 방어전이다.\"",
+        "방금 20분짜리 경기를 끝냈는데 새 음악이 나온다. 도전자가 걸어 나온다.",
+        "예정에 없던 방어전이 통보됐다. 상대는 오늘 아무 경기도 뛰지 않은 상태다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 120,
+        "flags": [
+          "midcard_champion"
+        ]
+      },
+      "choices": [
+        {
+          "code": "defend",
+          "label": "받는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": 6,
+            "wear": 9
+          },
+          "injuryRisk": 0.22
+        },
+        {
+          "code": "stall",
+          "label": "부상을 핑계로 미룬다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": -3,
+            "alignment": -18,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_finisher_reversed",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "되돌아온 피니셔",
+      "bodies": [
+        "피니셔를 걸었는데 상대가 공중에서 몸을 틀어 그대로 되받았다. 관중이 비명을 질렀다.",
+        "마무리 각을 잡는 순간 상대가 먼저 읽었다. 당신이 바닥에 있다.",
+        "완벽하게 들어갔다고 생각한 순간 무게중심이 넘어갔다. 천장이 보인다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "kick_out_dramatic",
+          "label": "2.9에 어깨를 들어 이야기를 만든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": 6,
+            "wear": 5
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "stay_down",
+          "label": "깨끗하게 진다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 4,
+            "backstage": 14,
+            "alignment": 8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_rope_snaps",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "끊어진 로프",
+      "bodies": [
+        "톱로프가 끊어졌다. 준비한 스팟 대부분이 이 로프를 쓴다.",
+        "로프 하나가 늘어져 바닥에 닿는다. 정비팀이 오려면 최소 5분이다.",
+        "코너 볼트가 빠져 링 한쪽이 기울었다. 관중은 아직 모른다."
+      ],
+      "weight": 14,
+      "once": false,
+      "requires": {
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "improvise",
+          "label": "그라운드로 바꿔 즉흥으로 채운다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 10,
+            "backstage": 12
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "use_it",
+          "label": "끊어진 로프를 무기로 쓴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "alignment": -14,
+            "backstage": -8
+          },
+          "injuryRisk": 0.1
+        }
+      ]
+    },
+    {
+      "code": "ring_music_hits_early",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "일찍 나온 음악",
+      "bodies": [
+        "핀을 따기 전에 당신 승리 음악이 나왔다. 상대는 아직 어깨를 들고 있다.",
+        "음향 사고로 난입 예정 선수의 음악이 3분 일찍 터졌다. 각본이 통째로 새어나갔다.",
+        "카운트 2에서 음악이 나왔다. 관중이 결말을 미리 알아버렸다."
+      ],
+      "weight": 14,
+      "once": false,
+      "requires": {
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "roll_with_it",
+          "label": "예정대로 마무리한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 6,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "change_the_finish",
+          "label": "결말을 즉석에서 바꾼다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": 6,
+            "backstage": -10
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "ring_forgot_the_finish",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "마무리가 기억나지 않는다",
+      "bodies": [
+        "18분째. 다음이 뭐였는지 머리가 하얘졌다. 상대도 당신을 보고 있다.",
+        "합을 맞춘 마지막 순서가 사라졌다. 관중 앞에서 둘 다 멈춰 있을 수는 없다.",
+        "피니시 시퀀스가 통째로 날아갔다. 남은 건 몸이 기억하는 것뿐이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 50
+      },
+      "choices": [
+        {
+          "code": "call_it_loud",
+          "label": "상대를 붙잡고 낮게 불러 맞춘다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 6,
+            "backstage": 8
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "wing_it",
+          "label": "즉흥으로 새 마무리를 만든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": 8,
+            "wear": 4
+          },
+          "injuryRisk": 0.15
+        }
+      ]
+    },
+    {
+      "code": "ring_opponent_no_show",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "나오지 않는 상대",
+      "bodies": [
+        "당신 음악이 끝났는데 상대 음악이 나오지 않는다. 링에 혼자 서 있은 지 40초째다.",
+        "상대가 공항에 발이 묶였다는 연락이 방금 왔다. 관중 만 명이 이미 앉아 있다.",
+        "심판이 귀에 손을 대고 듣더니 고개를 젓는다. 상대는 오지 않는다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "cut_promo",
+          "label": "마이크를 잡고 시간을 채운다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -1,
+            "micWork": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "demand_anyone",
+          "label": "아무나 내보내라고 요구한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 5,
+            "wear": 5,
+            "backstage": -4
+          },
+          "injuryRisk": 0.12
+        },
+        {
+          "code": "walk_off",
+          "label": "그냥 내려간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -11,
+            "inRing": -3,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_shoot_promo_moment",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "진짜 이야기",
+      "bodies": [
+        "마이크가 손에 있고 대본은 끝났다. 지금 진심을 말하면 되돌릴 수 없다.",
+        "관중이 조용하다. 캐릭터를 벗고 진짜 이야기를 할 수 있는 30초가 열렸다.",
+        "카메라가 아직 돌고 있다. 대본에 없는 말을 할 기회는 이런 식으로만 온다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 150,
+        "stats": {
+          "micWork": [
+            45,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "shoot",
+          "label": "진심을 말한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": -5,
+            "micWork": 14,
+            "backstage": -22
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_in_character",
+          "label": "캐릭터 안에 머문다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 6,
+            "micWork": 8,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ring_ten_count",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "여덟, 아홉",
+      "bodies": [
+        "라스트맨스탠딩. 심판이 여덟을 셌고 다리에 힘이 들어가지 않는다.",
+        "카운트 아홉. 지금 일어나면 경기가 이어지고, 안 일어나면 여기서 끝난다.",
+        "여덟에서 무릎을 세웠다. 관중 전체가 서서 열까지 세고 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 130
+      },
+      "choices": [
+        {
+          "code": "rise",
+          "label": "일어난다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 6,
+            "alignment": 12,
+            "wear": 12
+          },
+          "injuryRisk": 0.28
+        },
+        {
+          "code": "stay",
+          "label": "누워 있는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 9,
+            "backstage": 10,
+            "wear": 3
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "ring_cage_door_open",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "열린 케이지 문",
+      "bodies": [
+        "케이지 문이 열려 있다. 세 걸음이면 나가서 이긴다. 상대는 아직 링 가운데다.",
+        "문 앞이다. 걸어 나가면 승리고, 돌아서면 관중이 원하는 걸 준다.",
+        "탈출로가 비었다. 이기는 방법 중 가장 시시한 방법이 눈앞에 있다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "walk_out",
+          "label": "걸어 나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 5,
+            "alignment": -18,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "climb_instead",
+          "label": "문을 닫고 케이지를 타고 넘는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 6,
+            "alignment": 12,
+            "wear": 12
+          },
+          "injuryRisk": 0.3
+        }
+      ]
+    },
+    {
+      "code": "ring_low_number_entry",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "2번",
+      "bodies": [
+        "30인 배틀로얄에서 2번을 뽑았다. 끝까지 가려면 한 시간을 링에 있어야 한다.",
+        "번호는 3번. 앞으로 27명이 더 들어온다.",
+        "가장 먼저 들어가는 조에 걸렸다. 이걸로 이긴 사람은 역사상 몇 없다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "hide_under_ring",
+          "label": "링 밑에 숨어 체력을 아낀다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 1,
+            "wear": -6,
+            "alignment": -12,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "iron_man_run",
+          "label": "한 시간을 정면으로 버틴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 22,
+            "inRing": 8,
+            "wear": 15
+          },
+          "injuryRisk": 0.25
+        }
+      ]
+    },
+    {
+      "code": "ring_fast_count",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "빠른 카운트",
+      "bodies": [
+        "심판 손이 평소보다 빠르다. 이 속도면 다음 핀에서 당신이 진다.",
+        "카운트가 눈에 띄게 빨랐다. 상대 쪽 사람이라는 소문이 있던 심판이다.",
+        "방금 그 셋은 2초도 안 됐다. 관중석 앞줄도 야유하기 시작했다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "confront_ref",
+          "label": "심판을 붙잡고 따진다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -3,
+            "backstage": -8,
+            "alignment": 8
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "avoid_pins",
+          "label": "핀 상황을 아예 안 만든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 6,
+            "wear": 6
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "knock_him_out",
+          "label": "심판을 눕히고 실격을 감수한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": -5,
+            "alignment": -20,
+            "backstage": -18
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "ring_partner_wants_tag",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "손을 내미는 파트너",
+      "bodies": [
+        "파트너가 태그를 요구한다. 그런데 지금 흐름은 당신 쪽으로 완전히 넘어와 있다.",
+        "코너에서 파트너가 손바닥을 두드린다. 관중이 원하는 건 당신의 마무리다.",
+        "파트너가 \"넘겨\"라고 소리친다. 오늘 그는 아직 아무것도 보여주지 못했다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "tag_him",
+          "label": "넘긴다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 8,
+            "backstage": 14,
+            "alignment": 10
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "finish_it_yourself",
+          "label": "무시하고 직접 끝낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -3,
+            "backstage": -12,
+            "alignment": -10
+          },
+          "injuryRisk": 0.05,
+          "heat": 20
+        }
+      ]
+    },
+    {
+      "code": "ring_gear_torn",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "찢어진 의상",
+      "bodies": [
+        "코너에 걸려 의상이 등판부터 찢어졌다. 카메라는 계속 돌고 있다.",
+        "부츠 끈이 끊기고 타이츠 옆선이 벌어졌다. 앞으로 10분이 남았다.",
+        "입장 의상이 로프에 걸려 반쯤 벗겨졌다. 관중이 웃는다."
+      ],
+      "weight": 14,
+      "once": false,
+      "requires": {
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "play_it_up",
+          "label": "웃음을 받아 캐릭터에 넣는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "micWork": 8,
+            "alignment": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "rage",
+          "label": "분노해 경기를 거칠게 몰아간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": 3,
+            "alignment": -12,
+            "wear": 5
+          },
+          "injuryRisk": 0.1
+        }
+      ]
+    },
+    {
+      "code": "ring_ovation_for_opponent",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "상대에게 가는 박수",
+      "bodies": [
+        "경기가 끝나고 관중이 일어섰다. 그런데 박수는 전부 상대에게 간다.",
+        "오늘 최고 경기였다는 데는 이견이 없다. 다만 사람들이 기억하는 이름은 상대다.",
+        "상대가 관중의 기립박수를 받는다. 당신은 코너에 앉아 그걸 보고 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 140
+      },
+      "choices": [
+        {
+          "code": "raise_his_hand",
+          "label": "그의 손을 들어준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7,
+            "alignment": 20,
+            "backstage": 15
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "attack_after",
+          "label": "박수 한가운데서 그를 덮친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "alignment": -25,
+            "backstage": -8
+          },
+          "injuryRisk": 0.05,
+          "heat": 35
+        }
+      ]
+    },
+    {
+      "code": "ring_gauntlet_fatigue",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "세 번째 상대",
+      "bodies": [
+        "건틀릿 매치 세 번째 상대. 앞의 둘을 이기는 데 이미 22분을 썼다.",
+        "쉬지 않고 세 경기째다. 다리가 후들거리고 새 상대는 방금 걸어 나왔다.",
+        "연속 경기 40분째. 상대는 오늘 처음 링에 오른 사람이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "steal_a_win",
+          "label": "롤업 한 방으로 훔친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 5,
+            "alignment": -8,
+            "wear": 2
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "go_the_distance",
+          "label": "정면으로 끝까지 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": 8,
+            "wear": 14
+          },
+          "injuryRisk": 0.3
+        }
+      ]
+    },
+    {
+      "code": "ring_locker_room_watches",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "모니터 앞",
+      "bodies": [
+        "백스테이지 모니터 앞에 선수 전원이 모여 당신 경기를 보고 있다는 걸 방금 들었다.",
+        "라커룸이 비었다. 전부 게이트 옆 모니터 앞에 서 있다고 스태프가 알려준다.",
+        "오늘 경기는 라커룸 전체가 지켜본다. 평가는 관중이 아니라 저쪽에서 나온다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "wrestle_for_them",
+          "label": "동료들이 알아볼 경기를 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 8,
+            "backstage": 18
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "wrestle_for_crowd",
+          "label": "관중이 좋아할 경기를 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": 4,
+            "backstage": -6,
+            "wear": 6
+          },
+          "injuryRisk": 0.12
+        }
+      ]
+    }
+  ]
+}

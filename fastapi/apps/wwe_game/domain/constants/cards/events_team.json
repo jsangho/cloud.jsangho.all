@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 3,
+  "file": "events_team.json",
+  "note": "태그팀·스테이블 6장 — 권유와 거절, 그리고 그 뒤 (2026-08-10 사용자 지시 7-2번). 거절 선택지는 `heat`로 라이벌리를 올린다.",
+  "cards": [
+    {
+      "code": "team_tag_offer_named",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "팀을 하나 만들자는 제안",
+      "bodies": [
+        "라커룸에서 한 선수가 다가왔다. \"둘이 묶으면 태그 벨트 라인에 바로 들어갈 수 있어. 이름도 하나 생각해 뒀고.\"",
+        "제작진이 태그팀 구성을 검토 중이라고 한다. 상대는 이미 승낙했다.",
+        "복도에서 제안을 받았다. \"싱글로 버티는 것도 좋지만, 둘이면 카드에 이름이 두 배로 오르잖아.\""
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 52
+      },
+      "choices": [
+        {
+          "code": "accept_named_team",
+          "label": "팀 이름을 정하고 묶는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 9,
+            "inRing": 3,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "in_tag_team",
+            "team_pending"
+          ]
+        },
+        {
+          "code": "decline_team",
+          "label": "싱글로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -4,
+            "inRing": 7,
+            "backstage": -5
+          },
+          "injuryRisk": 0.0,
+          "heat": 14
+        }
+      ]
+    },
+    {
+      "code": "team_tag_offer_ampersand",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "이름은 됐고, 그냥 둘이",
+      "bodies": [
+        "\"팀 이름 같은 건 안 지어도 돼. 그냥 우리 둘 이름 붙여서 부르면 되잖아.\"",
+        "제안은 간단했다. 이름도 로고도 없이 두 사람 이름을 이어 부르는 팀.",
+        "\"거창한 거 말고. 카드에 이름 두 개만 나란히 적히면 되는 거 아냐?\""
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "accept_ampersand",
+          "label": "이름 없이 둘이 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 4,
+            "backstage": 5
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "in_tag_team",
+            "team_pending"
+          ]
+        },
+        {
+          "code": "decline_ampersand",
+          "label": "거절한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -3,
+            "inRing": 6,
+            "backstage": -4
+          },
+          "injuryRisk": 0.0,
+          "heat": 14
+        }
+      ]
+    },
+    {
+      "code": "team_stable_invite",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "스테이블에 들어오라는 말",
+      "body": "셋이서 문 앞을 막고 섰다. \"우리 밑으로 들어와. 혼자 버티는 것보다 낫다는 건 너도 알잖아.\" 뒤에 선 하나는 이미 웃고 있다.",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "minWeek": 91
+      },
+      "choices": [
+        {
+          "code": "join_stable",
+          "label": "들어간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 14,
+            "inRing": -2,
+            "backstage": 8,
+            "alignment": -6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "in_stable",
+            "team_pending"
+          ]
+        },
+        {
+          "code": "refuse_stable",
+          "label": "혼자 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": -7,
+            "inRing": 9,
+            "backstage": -9
+          },
+          "injuryRisk": 0.06,
+          "heat": 22
+        }
+      ]
+    },
+    {
+      "code": "team_partner_drifting",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "파트너의 눈이 다른 데 가 있다",
+      "bodies": [
+        "태그 코너에서 손을 뻗었는데 파트너가 반 박자 늦게 잡았다.",
+        "경기 뒤 인터뷰에서 파트너가 싱글 벨트 얘기만 했다.",
+        "이번 주 파트너는 링 밖에서 다른 팀 사람들과 오래 이야기했다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "flags": [
+          "in_tag_team"
+        ],
+        "minWeek": 78
+      },
+      "choices": [
+        {
+          "code": "talk_it_out",
+          "label": "먼저 이야기한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 5,
+            "backstage": 7
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "break_it_up",
+          "label": "먼저 갈라선다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -3,
+            "alignment": -8
+          },
+          "injuryRisk": 0.0,
+          "heat": 18
+        }
+      ]
+    },
+    {
+      "code": "team_split_the_belts",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "팀으로 감은 벨트, 혼자 들고 싶어졌다",
+      "body": "태그 벨트를 든 사진이 이번 주 내내 걸렸다. 사진 속에서 벨트를 어깨에 멘 쪽은 파트너다. 제작진이 묻는다. \"싱글 라인으로 옮길 생각 있어요?\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "flags": [
+          "in_tag_team"
+        ],
+        "minWeek": 130
+      },
+      "choices": [
+        {
+          "code": "stay_a_team",
+          "label": "팀으로 남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 8,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "go_solo",
+          "label": "싱글로 옮긴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0,
+          "heat": 20
+        }
+      ]
+    },
+    {
+      "code": "team_stable_orders",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "오늘은 져 주라는 지시",
+      "bodies": [
+        "스테이블의 우두머리가 이번 주 각본을 먼저 정해 왔다. 내 자리는 마지막에 맞아 주는 쪽이다.",
+        "회의는 오 분 만에 끝났다. 결정은 이미 나 있었고 나는 통보를 받았다.",
+        "\"이번엔 네가 받아 줘. 다음이 네 차례야.\" 지난주에도 같은 말을 들었다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "flags": [
+          "in_stable"
+        ],
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "follow_orders",
+          "label": "따른다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 6,
+            "backstage": 9
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "break_ranks",
+          "label": "내 경기를 한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 13,
+            "inRing": -3,
+            "backstage": -11,
+            "alignment": -7
+          },
+          "injuryRisk": 0.05,
+          "heat": 20
+        }
+      ]
+    }
+  ]
+}

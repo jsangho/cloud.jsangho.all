@@ -87,10 +87,7 @@ export function buildSyncPayload(slug: PleSlug, cards: PleMatchCard[]) {
   };
 }
 
-export async function syncPleFromClient(
-  slug: PleSlug,
-  cards: PleMatchCard[],
-): Promise<PleBoard> {
+export async function syncPleFromClient(slug: PleSlug, cards: PleMatchCard[]): Promise<PleBoard> {
   const res = await fetch(`${pleEventsBaseUrl}/${slug}/sync-from-client`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -135,9 +132,7 @@ function parseApiErrorDetail(err: unknown, fallback: string): string {
     if (Array.isArray(detail)) {
       return detail
         .map((d) =>
-          typeof d === "object" && d && "msg" in d
-            ? String((d as { msg: string }).msg)
-            : String(d),
+          typeof d === "object" && d && "msg" in d ? String((d as { msg: string }).msg) : String(d),
         )
         .join(", ");
     }
@@ -157,19 +152,16 @@ export async function submitPleMatchResult(
   matchKey: string,
   body: MatchResultPayload,
 ): Promise<PleBoard> {
-  const res = await fetch(
-    `${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        winnerSide: body.winnerSide,
-        winnerIndex: body.winnerIndex,
-        winnerName: body.winnerName,
-        status: body.status ?? "finished",
-      }),
-    },
-  );
+  const res = await fetch(`${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      winnerSide: body.winnerSide,
+      winnerIndex: body.winnerIndex,
+      winnerName: body.winnerName,
+      status: body.status ?? "finished",
+    }),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(parseApiErrorDetail(err, res.statusText));
@@ -177,10 +169,7 @@ export async function submitPleMatchResult(
   return res.json();
 }
 
-export async function linkPlePredictions(
-  clientId: string,
-  userId: number,
-): Promise<number | null> {
+export async function linkPlePredictions(clientId: string, userId: number): Promise<number | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {
@@ -258,18 +247,15 @@ export async function submitPlePrediction(
   clientId: string,
   userId: number,
 ): Promise<PleBoard> {
-  const res = await fetch(
-    `${pleMatchPicksBaseUrl}/${slug}/matches/${matchKey}/predict`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pick,
-        clientId,
-        userId,
-      }),
-    },
-  );
+  const res = await fetch(`${pleMatchPicksBaseUrl}/${slug}/matches/${matchKey}/predict`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      pick,
+      clientId,
+      userId,
+    }),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { detail?: string }).detail ?? res.statusText);
@@ -282,14 +268,11 @@ export async function setPleMatchResult(
   matchKey: string,
   payload: PleMatchResult,
 ): Promise<PleBoard> {
-  const res = await fetch(
-    `${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
+  const res = await fetch(`${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { detail?: string }).detail ?? res.statusText);

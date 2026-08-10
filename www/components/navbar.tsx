@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LogIn, Menu, ShoppingBag, Trophy, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { KayfabeLogo } from "@/components/kayfabe-logo";
+import { KICKOFF_ITEMS, KickoffMenu, isKickoffPath } from "@/components/kickoff-menu";
 import { PlePickerDialog } from "@/components/ple-picker-dialog";
 import { WeatherWidget } from "@/components/weather-widget";
 import { WweTicker } from "@/components/wwe-ticker";
@@ -77,7 +78,7 @@ export function Navbar() {
   const isRankings = mounted && pathname === "/rankings";
   const isShop = mounted && (pathname === "/shop" || pathname.startsWith("/shop/"));
   const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
-  const isChat = mounted && (pathname === "/chat" || pathname.startsWith("/chat/"));
+  const isKickoff = mounted && isKickoffPath(pathname);
   const isLesson = mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
   const isAdmin = mounted && pathname === "/admin";
   const isLogin = mounted && pathname === "/login";
@@ -151,9 +152,7 @@ export function Navbar() {
           >
             상점
           </NavLink>
-          <NavLink href="/chat" active={isChat}>
-            대화
-          </NavLink>
+          <KickoffMenu active={isKickoff} triggerClassName={navLinkClass(isKickoff)} />
         </div>
 
         <div className="hidden shrink-0 items-center gap-1.5 md:flex">
@@ -212,9 +211,23 @@ export function Navbar() {
             >
               상점
             </NavLink>
-            <NavLink href="/chat" active={isChat} fullWidth>
-              대화
-            </NavLink>
+            <p className="px-1 pt-1 text-xs text-muted-foreground">킥오프</p>
+            {KICKOFF_ITEMS.map((item) =>
+              item.href ? (
+                <NavLink
+                  key={item.label}
+                  href={item.href}
+                  active={mounted && pathname.startsWith(item.href)}
+                  fullWidth
+                >
+                  {item.label}
+                </NavLink>
+              ) : (
+                <span key={item.label} className="px-3 py-1.5 text-sm text-muted-foreground">
+                  {item.label} · {item.description}
+                </span>
+              ),
+            )}
             <NavLink href="/lesson" active={isLesson} fullWidth>
               Lesson
             </NavLink>

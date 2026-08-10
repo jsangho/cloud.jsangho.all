@@ -10,10 +10,7 @@ import {
   type ChampionshipTier,
   type TitleReign,
 } from "@/lib/championship-api";
-import {
-  formatChampionshipDate,
-  groupTitlesByTier,
-} from "@/lib/wwe-current-champions";
+import { formatChampionshipDate, groupTitlesByTier } from "@/lib/wwe-current-champions";
 
 const BRAND_ACCENT: Record<
   BrandRoster["accent"],
@@ -60,13 +57,7 @@ function ChampionNameLink({ name }: { name: string }) {
   );
 }
 
-function ChampionNames({
-  reign,
-  tier,
-}: {
-  reign: TitleReign;
-  tier: ChampionshipTier;
-}) {
+function ChampionNames({ reign, tier }: { reign: TitleReign; tier: ChampionshipTier }) {
   const isTag = tier === "tag" && reign.champions.length > 1;
 
   if (isTag) {
@@ -134,15 +125,9 @@ function TitleCard({
             {reign.beltName}
           </p>
           {isMain ? (
-            <Crown
-              className="h-4 w-4 shrink-0 text-brand-400/80 sm:h-5 sm:w-5"
-              aria-hidden
-            />
+            <Crown className="h-4 w-4 shrink-0 text-brand-400/80 sm:h-5 sm:w-5" aria-hidden />
           ) : isTag ? (
-            <Users
-              className="h-3.5 w-3.5 shrink-0 text-stone-500"
-              aria-hidden
-            />
+            <Users className="h-3.5 w-3.5 shrink-0 text-stone-500" aria-hidden />
           ) : null}
         </div>
 
@@ -172,9 +157,7 @@ function TitleCard({
 
         <p className="mt-2 text-[11px] font-medium text-stone-500 sm:text-xs">
           {formatChampionshipDate(reign.wonAt)}
-          {reign.wonEvent ? (
-            <span className="text-stone-600"> · {reign.wonEvent}</span>
-          ) : null}
+          {reign.wonEvent ? <span className="text-stone-600"> · {reign.wonEvent}</span> : null}
         </p>
       </div>
     </article>
@@ -242,9 +225,7 @@ function BrandSection({ brand }: { brand: BrandRoster }) {
           >
             {brand.label}
           </h2>
-          <p className="mt-1 text-xs font-medium text-stone-500">
-            {brand.tagline}
-          </p>
+          <p className="mt-1 text-xs font-medium text-stone-500">{brand.tagline}</p>
         </div>
         <span
           className={cn(

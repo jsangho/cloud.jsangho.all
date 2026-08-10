@@ -61,11 +61,7 @@ export function DatasetCollectionPipeline() {
         }
         setResult(data as PipelineResult);
       } catch (e) {
-        setError(
-          e instanceof Error
-            ? e.message
-            : "파이프라인 실행 중 오류가 발생했습니다.",
-        );
+        setError(e instanceof Error ? e.message : "파이프라인 실행 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
       }
@@ -154,8 +150,7 @@ export function DatasetCollectionPipeline() {
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
             <p className="mt-1.5 text-xs text-zinc-400">
-              대상 사이트:{" "}
-              {website || "(비어있음 — 레디스 큐에서 자동으로 다음 작업 선택)"}
+              대상 사이트: {website || "(비어있음 — 레디스 큐에서 자동으로 다음 작업 선택)"}
             </p>
           </div>
         )}
@@ -175,11 +170,7 @@ export function DatasetCollectionPipeline() {
           ) : (
             <PlayCircle className="size-4" aria-hidden />
           )}
-          {loading
-            ? "실행 중..."
-            : tab === "crawler"
-              ? "크롤링 실행"
-              : "스크래핑 실행"}
+          {loading ? "실행 중..." : tab === "crawler" ? "크롤링 실행" : "스크래핑 실행"}
         </button>
       </form>
 
@@ -205,25 +196,18 @@ export function DatasetCollectionPipeline() {
 
       {result && tab === "crawler" && (
         <div className="space-y-1.5 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900/80">
-          <p className="font-semibold text-zinc-800 dark:text-zinc-200">
-            크롤링 결과
-          </p>
+          <p className="font-semibold text-zinc-800 dark:text-zinc-200">크롤링 결과</p>
           <p>웹사이트: {result.crawl.website}</p>
           <p>키워드: {result.crawl.keyword || "(없음)"}</p>
           <p>상태 코드: {result.crawl.status_code}</p>
-          <p>
-            본문 길이: {result.crawl.content_length.toLocaleString("ko-KR")}
-            자
-          </p>
+          <p>본문 길이: {result.crawl.content_length.toLocaleString("ko-KR")}자</p>
           <p className="break-all">저장 경로: {result.crawl.saved_path}</p>
         </div>
       )}
 
       {result && tab === "scraper" && (
         <div className="space-y-1.5 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900/80">
-          <p className="font-semibold text-zinc-800 dark:text-zinc-200">
-            스크래핑 결과
-          </p>
+          <p className="font-semibold text-zinc-800 dark:text-zinc-200">스크래핑 결과</p>
           <p>제목: {result.scrape.title ?? "(없음)"}</p>
           <p>메타 설명: {result.scrape.meta_description ?? "(없음)"}</p>
           <p>키워드 포함 여부: {result.scrape.keyword_found ? "예" : "아니오"}</p>

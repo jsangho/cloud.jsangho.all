@@ -1,0 +1,681 @@
+{
+  "schemaVersion": 3,
+  "file": "events_condition.json",
+  "note": "부상·회복 (§3-D16) 8장 + 성향 전환 6장. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "inj_knee_pop",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "무릎에서 소리가 났다",
+      "bodies": [
+        "착지 순간 무릎에서 소리가 났다. 아직 통증은 없는데 체중이 실리지 않는다.",
+        "코너에서 내려서다 무릎이 옆으로 밀렸다. 걷는 데는 지장이 없다.",
+        "발목이 매트에 걸려 돌아갔다. 체중이 안 실린다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 60,
+        "conditionGrades": [
+          "healthy"
+        ]
+      },
+      "choices": [
+        {
+          "code": "finish_safe",
+          "label": "남은 스팟을 빼고 빨리 끝낸다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 7,
+            "backstage": 8,
+            "wear": 4
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "work_through",
+          "label": "티 내지 않고 다 한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 12,
+            "inRing": 5,
+            "wear": 12
+          },
+          "injuryRisk": 0.4
+        }
+      ]
+    },
+    {
+      "code": "inj_hide_from_doctor",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "검진 전날",
+      "bodies": [
+        "내일 정기 검진이다. 지금 상태를 말하면 최소 6주는 빠진다. 다음 주에 커리어 최대 무대가 있다.",
+        "메디컬 체크리스트가 라커에 붙었다. 통증 항목에 뭐라 쓸지 정해야 한다.",
+        "의료진이 이번 주 전원 검진을 통보했다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "conditionGrades": [
+          "minor"
+        ],
+        "minWeek": 80
+      },
+      "choices": [
+        {
+          "code": "tell_truth",
+          "label": "사실대로 말한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -10,
+            "inRing": 11,
+            "backstage": 14,
+            "wear": -12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "pass_the_test",
+          "label": "숨기고 통과한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 12,
+            "inRing": -1,
+            "wear": 14,
+            "backstage": -6
+          },
+          "injuryRisk": 0.42
+        }
+      ]
+    },
+    {
+      "code": "inj_return_too_soon",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "복귀 3주 전",
+      "bodies": [
+        "복귀까지 3주 남았는데, 다음 PLE에 당신 자리를 비워뒀다는 연락이 왔다. 지금 복귀하면 그 자리에 설 수 있다.",
+        "복귀 기자회견 날짜가 먼저 잡혔다. 재활은 아직 안 끝났다.",
+        "재활 중반인데 대진표에 당신 이름이 올라갔다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "conditionGrades": [
+          "minor",
+          "serious"
+        ]
+      },
+      "choices": [
+        {
+          "code": "come_back_now",
+          "label": "지금 복귀한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 1,
+            "wear": 15
+          },
+          "injuryRisk": 0.45
+        },
+        {
+          "code": "full_rehab",
+          "label": "재활을 마친다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -10,
+            "inRing": 11,
+            "wear": -16,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "inj_painkiller_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "누군가 건넨 것",
+      "body": "고참이 아무 말 없이 알약 하나를 건넨다. \"이거 먹으면 오늘 밤은 아무렇지 않을 거야.\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "minWeek": 100,
+        "stats": {
+          "wear": [
+            35,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "take_it",
+          "label": "받는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 8,
+            "inRing": 4,
+            "wear": 12
+          },
+          "injuryRisk": 0.12,
+          "flags": [
+            "painkiller_habit"
+          ]
+        },
+        {
+          "code": "refuse",
+          "label": "거절한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 6,
+            "backstage": 8,
+            "wear": 2
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "inj_rehab_grind",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "재활실 넉 달",
+      "bodies": [
+        "매일 아침 여섯 시, 아무도 안 보는 재활실. TV에서는 당신 자리를 다른 사람이 채우고 있다.",
+        "물리치료사가 오늘로 백 번째 세션이라고 알려준다.",
+        "넉 달째 같은 운동을 반복한다. TV에는 다른 사람이 나온다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "conditionGrades": [
+          "serious"
+        ]
+      },
+      "choices": [
+        {
+          "code": "grind",
+          "label": "묵묵히 채운다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 6,
+            "wear": -18,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_visible",
+          "label": "카메라 앞에 계속 나가 존재를 알린다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -1,
+            "micWork": 8,
+            "wear": -6
+          },
+          "injuryRisk": 0.08
+        }
+      ]
+    },
+    {
+      "code": "inj_doctor_clears_you",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "복귀 승인",
+      "bodies": [
+        "의료진이 서류에 서명했다. \"이제 뛰어도 됩니다. 다만 예전 같지는 않을 겁니다.\"",
+        "의료진이 복귀 승인서에 서명했다.",
+        "복귀 승인 도장이 찍혔다. 조건은 \"단계적 복귀\"다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "conditionGrades": [
+          "minor",
+          "serious"
+        ],
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "return_loud",
+          "label": "생방송 난입으로 복귀를 알린다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": -3,
+            "micWork": 6,
+            "wear": 5
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "return_quiet",
+          "label": "하우스쇼부터 조용히 올라간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 8,
+            "backstage": 10,
+            "wear": -4
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "inj_wear_catches_up",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "아침에 못 일어난다",
+      "bodies": [
+        "아침에 침대에서 일어나는 데 20분이 걸린다. 어제 경기는 8분짜리였다.",
+        "손가락 세 개가 아침마다 안 펴진다. 30분은 지나야 주먹이 쥐어진다.",
+        "어제 8분짜리 경기를 뛰었는데 오늘 계단을 못 내려간다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minAge": 35,
+        "stats": {
+          "wear": [
+            50,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "reduce_schedule",
+          "label": "일정을 줄여 달라고 요청한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -10,
+            "inRing": 10,
+            "wear": -12,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_the_pace",
+          "label": "일정을 그대로 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 8,
+            "inRing": 5,
+            "wear": 12,
+            "backstage": 6
+          },
+          "injuryRisk": 0.25
+        }
+      ]
+    },
+    {
+      "code": "inj_one_bad_landing",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "잘못된 착지 하나",
+      "body": "평범한 백바디드롭. 그런데 목이 이상한 각도로 꺾였고, 손끝에 감각이 없다.",
+      "weight": 14,
+      "once": true,
+      "requires": {
+        "minWeek": 200,
+        "stats": {
+          "wear": [
+            45,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "stop_everything",
+          "label": "즉시 멈추고 들것을 부른다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7,
+            "backstage": 12,
+            "wear": 8
+          },
+          "injuryRisk": 0.6
+        },
+        {
+          "code": "walk_it_off",
+          "label": "일어나서 걸어 나간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 3,
+            "wear": 22
+          },
+          "injuryRisk": 0.34,
+          "careerEnding": true
+        }
+      ]
+    },
+    {
+      "code": "turn_double_turn_live",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "동시에 뒤집힌다",
+      "body": "경기 중 관중이 당신에게 야유를, 상대에게 환호를 보내기 시작했다. 지금 둘 다 성향을 바꾸면 완벽하게 맞아떨어진다.",
+      "weight": 16,
+      "once": true,
+      "requires": {
+        "minWeek": 200,
+        "stats": {
+          "popularity": [
+            50,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "double_turn",
+          "label": "그 자리에서 뒤집는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": -1,
+            "alignment": -60,
+            "micWork": 12,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_heel",
+            "double_turn"
+          ]
+        },
+        {
+          "code": "hold_the_line",
+          "label": "지금 역할을 지킨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 6,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "turn_manager_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "매니저 제안",
+      "body": "악명 높은 매니저가 찾아왔다. \"네 실력에 내 입을 붙이면 6개월 안에 메인이벤트다.\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "minWeek": 90,
+        "stats": {
+          "micWork": [
+            0,
+            45
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "hire_him",
+          "label": "받아들인다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": -3,
+            "alignment": -25,
+            "micWork": -4,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "has_manager"
+          ]
+        },
+        {
+          "code": "alone",
+          "label": "혼자 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 4,
+            "micWork": 8,
+            "alignment": 10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "turn_crowd_split",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "갈라진 관중",
+      "bodies": [
+        "아레나 절반은 환호하고 절반은 야유한다. 어느 쪽으로도 갈 수 있는 순간이다.",
+        "당신이 손을 들면 환호가, 상대가 들면 더 큰 환호가 나온다.",
+        "반응이 매주 바뀐다. 지난주는 야유였고 이번 주는 환호다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 120,
+        "alignment": [
+          -25,
+          25
+        ]
+      },
+      "choices": [
+        {
+          "code": "go_face",
+          "label": "환호 쪽을 택한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": -1,
+            "alignment": 30,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_face"
+          ]
+        },
+        {
+          "code": "go_heel",
+          "label": "야유 쪽을 택한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": -1,
+            "alignment": -30,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_heel"
+          ]
+        },
+        {
+          "code": "stay_gray",
+          "label": "어느 쪽도 택하지 않는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": -2,
+            "micWork": 10,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "turn_betray_your_stable",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "그룹의 등",
+      "body": "2년을 함께한 그룹이 링 위에서 승리를 자축한다. 지금 등을 치면 아무도 예상하지 못한다.",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "minWeek": 250,
+        "alignment": [
+          -100,
+          20
+        ]
+      },
+      "choices": [
+        {
+          "code": "turn_on_them",
+          "label": "친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": -5,
+            "alignment": -40,
+            "micWork": 8,
+            "backstage": -10
+          },
+          "injuryRisk": 0.0,
+          "heat": 45,
+          "flags": [
+            "turned_heel"
+          ]
+        },
+        {
+          "code": "stay_loyal",
+          "label": "함께 남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 6,
+            "alignment": 15,
+            "backstage": 14
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "turn_redemption_arc",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "돌아올 수 있을까",
+      "body": "몇 년째 미움받는 역할이었다. 오늘 링사이드에서 어린 팬이 당신 이름이 적힌 종이를 들고 있다.",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "minWeek": 300,
+        "alignment": [
+          -100,
+          -40
+        ]
+      },
+      "choices": [
+        {
+          "code": "acknowledge",
+          "label": "그 아이에게 손을 흔든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": -4,
+            "alignment": 45,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_face"
+          ]
+        },
+        {
+          "code": "tear_it_up",
+          "label": "종이를 뺏어 찢는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -1,
+            "alignment": -20,
+            "micWork": 8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "turn_scandal_rumor",
+      "kind": "sub",
+      "arena": "public",
+      "title": "터진 소문",
+      "bodies": [
+        "백스테이지 불화설이 기사로 나갔다. 절반은 사실이고 절반은 지어낸 것이다.",
+        "\"익명의 관계자\"를 인용한 기사가 아침에 떴다. 부재중 전화가 스무 통이다.",
+        "익명 인터뷰 기사가 떴다. 내용 대부분이 당신 이야기다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 140,
+        "stats": {
+          "popularity": [
+            45,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "deny",
+          "label": "공식 부인한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 7,
+            "backstage": 10,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "work_it_in",
+          "label": "TV 스토리로 끌어들인다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": -5,
+            "micWork": 10,
+            "backstage": -12,
+            "alignment": -10
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "say_nothing",
+          "label": "아무 말도 하지 않는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 1,
+            "backstage": 4,
+            "alignment": -6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

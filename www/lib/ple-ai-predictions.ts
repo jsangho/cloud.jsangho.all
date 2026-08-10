@@ -57,9 +57,7 @@ export function opponentShare(
   slug: string,
   prediction: AiPrediction,
 ): { name: string; probability: number } | null {
-  const card = getPleMatches(slug).find(
-    (match) => match.id === prediction.matchKey,
-  );
+  const card = getPleMatches(slug).find((match) => match.id === prediction.matchKey);
   if (!card || isMultiMatch(card)) return null;
 
   const opponent = prediction.pick === "left" ? card.right : card.left;
@@ -72,11 +70,7 @@ export function opponentShare(
  * 서버는 채점과 맞추기 위해 코드(`left` · `right` · 다인전 인덱스)를 보낸다.
  * 이름은 정적 카드에 있으므로 화면에서 붙인다 — 못 찾으면 코드를 그대로 보여준다.
  */
-export function resolvePickName(
-  slug: string,
-  matchKey: string,
-  pick: string,
-): string {
+export function resolvePickName(slug: string, matchKey: string, pick: string): string {
   const card = getPleMatches(slug).find((match) => match.id === matchKey);
   if (!card) return pick;
 
@@ -89,9 +83,7 @@ export function resolvePickName(
   return pick;
 }
 
-export async function fetchAiPredictions(
-  slug: string,
-): Promise<AiPredictionsResult> {
+export async function fetchAiPredictions(slug: string): Promise<AiPredictionsResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {

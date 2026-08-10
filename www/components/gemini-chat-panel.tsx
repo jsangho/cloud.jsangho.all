@@ -1,21 +1,7 @@
 "use client";
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  KeyboardEvent,
-  FormEvent,
-  useCallback,
-} from "react";
-import {
-  Loader2,
-  Mic,
-  Plus,
-  RefreshCw,
-  Send,
-  SlidersHorizontal,
-} from "lucide-react";
+import { useState, useRef, useEffect, KeyboardEvent, FormEvent, useCallback } from "react";
+import { Loader2, Mic, Plus, RefreshCw, Send, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getChatEndpoint } from "@/lib/api";
 
@@ -47,15 +33,12 @@ const initialChatPanelState: GeminiChatPanelState = {
 const CHAT_REQUEST_FAILED = "메시지를 전송하지 못했습니다.";
 
 export function GeminiChatPanel({ className }: { className?: string }) {
-  const [state, setState] = useState<GeminiChatPanelState>(
-    initialChatPanelState,
-  );
+  const [state, setState] = useState<GeminiChatPanelState>(initialChatPanelState);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const patchState = useCallback(
-    (patch: Partial<GeminiChatPanelState>) =>
-      setState((prev) => ({ ...prev, ...patch })),
+    (patch: Partial<GeminiChatPanelState>) => setState((prev) => ({ ...prev, ...patch })),
     [],
   );
 
@@ -74,11 +57,7 @@ export function GeminiChatPanel({ className }: { className?: string }) {
   function historyToMessage(history: ChatMessage[]): string {
     if (history.length === 1) return history[0].text.trim();
     return history
-      .map((m) =>
-        m.role === "user"
-          ? `User: ${m.text.trim()}`
-          : `Assistant: ${m.text.trim()}`,
-      )
+      .map((m) => (m.role === "user" ? `User: ${m.text.trim()}` : `Assistant: ${m.text.trim()}`))
       .join("\n");
   }
 
@@ -111,9 +90,7 @@ export function GeminiChatPanel({ className }: { className?: string }) {
       if (!response.ok) {
         patchState({
           errorMessage:
-            typeof data?.error === "string" && data.error.trim()
-              ? data.error
-              : CHAT_REQUEST_FAILED,
+            typeof data?.error === "string" && data.error.trim() ? data.error : CHAT_REQUEST_FAILED,
         });
         return;
       }
@@ -233,16 +210,8 @@ export function GeminiChatPanel({ className }: { className?: string }) {
   };
 
   return (
-    <div
-      className={cn(
-        "flex min-h-[400px] flex-col h-[calc(100vh-14rem)]",
-        className,
-      )}
-    >
-      <div
-        ref={scrollContainerRef}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
-      >
+    <div className={cn("flex min-h-[400px] flex-col h-[calc(100vh-14rem)]", className)}>
+      <div ref={scrollContainerRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="flex min-h-full flex-col justify-end gap-4 pb-4">
           {state.messages.map((msg, idx) => (
             <div
@@ -284,9 +253,7 @@ export function GeminiChatPanel({ className }: { className?: string }) {
 
       {state.errorMessage && (
         <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-400 mb-2">
-            {state.errorMessage}
-          </p>
+          <p className="text-sm text-red-700 dark:text-red-400 mb-2">{state.errorMessage}</p>
           {state.lastPayload && (
             <button
               type="button"

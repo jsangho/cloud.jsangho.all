@@ -1,0 +1,1203 @@
+{
+  "schemaVersion": 3,
+  "file": "events_main.json",
+  "note": "액트별 메인 스토리. 전부 once. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "act1_debut_night",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "데뷔전",
+      "body": "관중 400명짜리 체육관. 커튼 뒤에서 음악을 기다린다. 손이 떨리는데 이게 긴장인지 추위인지 모르겠다.",
+      "weight": 40,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "maxWeek": 52
+      },
+      "choices": [
+        {
+          "code": "by_the_book",
+          "label": "배운 대로만 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 4,
+            "backstage": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "finisher_finish",
+          "label": "준비한 피니셔로 끝낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "open_with_dive",
+          "label": "첫 경기부터 다이브로 연다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 12,
+            "inRing": 2,
+            "wear": 4,
+            "backstage": -5
+          },
+          "injuryRisk": 0.22
+        }
+      ]
+    },
+    {
+      "code": "act1_veteran_hazing",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "군기",
+      "body": "단체 최고참이 복도에서 당신을 세운다. \"요즘 루키들이 예의가 없어. 오늘은 내 기술 그냥 맞고 핀 내줘라.\"",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "minWeek": 8
+      },
+      "choices": [
+        {
+          "code": "obey",
+          "label": "\"알겠습니다, 선배님.\"",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 5,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stand_up",
+          "label": "\"링에서 실력으로 보여드리겠습니다.\"",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 15,
+            "inRing": 5,
+            "backstage": -20,
+            "alignment": -8
+          },
+          "injuryRisk": 0.3
+        }
+      ]
+    },
+    {
+      "code": "act1_botched_finisher",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "어긋난 마무리",
+      "body": "피니셔 각이 어긋나 상대가 목부터 떨어졌다. 관중은 눈치채지 못했지만 상대의 눈이 풀려 있다.",
+      "weight": 30,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "minWeek": 16
+      },
+      "choices": [
+        {
+          "code": "slow_down",
+          "label": "속도를 죽이고 안전하게 끝낸다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 3,
+            "backstage": 10
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "push_through",
+          "label": "아무 일 없던 것처럼 밀어붙인다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 5,
+            "inRing": 2,
+            "backstage": -12
+          },
+          "injuryRisk": 0.12
+        }
+      ]
+    },
+    {
+      "code": "act1_crowd_silence",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "죽은 관중",
+      "body": "8분째 경기 중인데 체육관이 조용하다. 앞줄 관객이 휴대폰을 꺼냈다.",
+      "weight": 30,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "minWeek": 20
+      },
+      "choices": [
+        {
+          "code": "work_harder",
+          "label": "경기로 되찾는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 6,
+            "wear": 2
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "grab_mic",
+          "label": "경기를 멈추고 마이크를 잡는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": -3,
+            "micWork": 9,
+            "backstage": -6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "cheap_heat",
+          "label": "지역 이름을 욕해 야유를 끌어낸다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": -2,
+            "micWork": 4,
+            "alignment": -15
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act1_dark_match_callup",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "TV 녹화 다크매치",
+      "body": "메이저 단체 스카우트가 다음 주 TV 녹화 전 다크매치 자리를 제안했다. 계약 이야기는 없다. 딱 한 경기다.",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "minWeek": 30,
+        "stats": {
+          "inRing": [
+            25,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "take_it",
+          "label": "간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": 4,
+            "backstage": 5
+          },
+          "injuryRisk": 0.1,
+          "flags": [
+            "seen_by_major"
+          ]
+        },
+        {
+          "code": "not_ready",
+          "label": "아직 준비가 안 됐다며 미룬다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 5,
+            "backstage": 3
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act1_signature_move_taken",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "빼앗긴 기술",
+      "body": "당신이 6개월간 다듬은 마무리 기술을, 상위 카드 선수가 다음 주부터 자기 피니셔로 쓰겠다고 통보했다.",
+      "weight": 25,
+      "once": true,
+      "requires": {
+        "acts": [
+          1
+        ],
+        "minWeek": 36
+      },
+      "choices": [
+        {
+          "code": "let_it_go",
+          "label": "넘긴다. 기술은 또 만들면 된다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 4,
+            "backstage": 14
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "confront",
+          "label": "라커룸에서 정면으로 따진다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 4,
+            "inRing": -2,
+            "backstage": -18,
+            "alignment": -5
+          },
+          "injuryRisk": 0.0,
+          "heat": 25,
+          "flags": [
+            "locker_room_grudge"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "act2_tag_team_betrayal",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "등 뒤의 쇠사슬",
+      "body": "타이틀 도전자 결정전 도중, 2년을 함께한 태그팀 파트너가 뒤에서 쇠사슬로 당신을 가격하고 관중석으로 사라졌다.",
+      "weight": 45,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "chase",
+          "label": "피 흘리며 관중석으로 쫓아간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": 4,
+            "wear": 6,
+            "alignment": 10
+          },
+          "injuryRisk": 0.18,
+          "heat": 50,
+          "flags": [
+            "nemesis_locked"
+          ]
+        },
+        {
+          "code": "stay_down",
+          "label": "링에 누운 채 그를 노려본다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -2,
+            "micWork": 5,
+            "alignment": 6
+          },
+          "injuryRisk": 0.0,
+          "heat": 40,
+          "flags": [
+            "nemesis_locked"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "act2_first_title_shot",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "첫 타이틀전",
+      "body": "미드카드 타이틀전. 15분을 버텼고 챔피언의 호흡이 무너졌다. 지금 피니셔를 걸면 닿는다 — 다만 각본에는 당신이 지는 것으로 되어 있다.",
+      "weight": 45,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 80,
+        "stats": {
+          "inRing": [
+            40,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "follow_finish",
+          "label": "각본대로 진다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 6,
+            "backstage": 15
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "owed_a_favor"
+          ]
+        },
+        {
+          "code": "take_it",
+          "label": "피니셔를 걸어 벨트를 가져간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": -5,
+            "backstage": -30,
+            "alignment": -10
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "went_into_business_for_self",
+            "midcard_champion"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "act2_gimmick_change",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "기믹 변경 통보",
+      "body": "경영진이 서류를 내민다. \"경기력은 좋은데 굿즈가 안 팔려. 다음 주부터 새 캐릭터로 간다.\"",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 90
+      },
+      "choices": [
+        {
+          "code": "accept",
+          "label": "받아들이고 소화한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "micWork": 8,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "refuse",
+          "label": "거절하고 지금 캐릭터로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -5,
+            "inRing": 6,
+            "backstage": -15
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "push_frozen"
+          ]
+        },
+        {
+          "code": "counter",
+          "label": "직접 만든 안을 역제안한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 6,
+            "inRing": 1,
+            "micWork": 10,
+            "backstage": 2
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act2_preshow_demotion",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "프리쇼",
+      "body": "이번 PLE 대진표가 붙었다. 당신 경기가 본편에서 빠져 프리쇼로 내려갔다. 아무도 이유를 말해주지 않는다.",
+      "weight": 30,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "steal_the_show",
+          "label": "프리쇼에서 그날 최고 경기를 만든다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": 11,
+            "wear": 5
+          },
+          "injuryRisk": 0.15
+        },
+        {
+          "code": "ask_why",
+          "label": "부커를 찾아가 이유를 묻는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 1,
+            "inRing": 4,
+            "backstage": 6,
+            "micWork": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "phone_it_in",
+          "label": "대충 하고 내려온다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -9,
+            "inRing": -4,
+            "backstage": -6,
+            "wear": -3
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act2_heel_turn_offer",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "돌아서라",
+      "body": "작가진이 제안한다. \"다음 달에 돌아서. 관중이 널 미워하게 만들면 그때부터 진짜 돈이 된다.\"",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 110,
+        "alignment": [
+          -20,
+          100
+        ]
+      },
+      "choices": [
+        {
+          "code": "turn_heel",
+          "label": "돌아선다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": 2,
+            "alignment": -50,
+            "micWork": 12,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "turned_heel"
+          ]
+        },
+        {
+          "code": "stay_face",
+          "label": "지금 자리를 지킨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": -2,
+            "alignment": 15,
+            "backstage": -4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act2_hide_the_injury",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "숨긴 어깨",
+      "body": "어깨가 지난 경기부터 제대로 올라가지 않는다. 다음 주에 커리어 최대 경기가 잡혀 있고, 의료진은 아직 모른다.",
+      "weight": 30,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 120,
+        "conditionGrades": [
+          "healthy",
+          "minor"
+        ]
+      },
+      "choices": [
+        {
+          "code": "report_it",
+          "label": "의료진에게 알린다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 9,
+            "backstage": 10,
+            "wear": -5
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "match_pulled"
+          ]
+        },
+        {
+          "code": "hide_it",
+          "label": "숨기고 나간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 15,
+            "inRing": 5,
+            "wear": 12
+          },
+          "injuryRisk": 0.45
+        }
+      ]
+    },
+    {
+      "code": "act2_ladder_for_the_contract",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "사다리 위의 서류가방",
+      "body": "여섯 명, 사다리 다섯 개. 천장에 매달린 가방 안에는 언제든 쓸 수 있는 타이틀 도전권이 들어 있다.",
+      "weight": 40,
+      "once": true,
+      "requires": {
+        "acts": [
+          2
+        ],
+        "minWeek": 140
+      },
+      "choices": [
+        {
+          "code": "climb_clean",
+          "label": "정면으로 올라가 잡는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": 8,
+            "alignment": 10,
+            "wear": 9
+          },
+          "injuryRisk": 0.25,
+          "flags": [
+            "contract_in_hand"
+          ]
+        },
+        {
+          "code": "wait_and_steal",
+          "label": "다 지칠 때까지 기다렸다 마지막에 뺏는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": 2,
+            "alignment": -18,
+            "micWork": 5,
+            "wear": 3
+          },
+          "injuryRisk": 0.08,
+          "flags": [
+            "contract_in_hand"
+          ]
+        },
+        {
+          "code": "sacrifice_spot",
+          "label": "가방을 포기하고 커리어 최고의 스팟을 만든다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 24,
+            "inRing": 6,
+            "wear": 18
+          },
+          "injuryRisk": 0.45
+        }
+      ]
+    },
+    {
+      "code": "act3_creative_dispute",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "1분 각본",
+      "body": "작가진이 다음 PLE 각본을 넘긴다. 관중 반응이 식었다는 이유로, 당신은 1분 만에 벨트를 잃는다.",
+      "weight": 50,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "flags": [
+          "world_champion"
+        ]
+      },
+      "choices": [
+        {
+          "code": "comply",
+          "label": "단체의 결정을 따른다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -12,
+            "inRing": 11,
+            "backstage": 25
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "title_shot_booked",
+            "lost_world_title"
+          ]
+        },
+        {
+          "code": "shoot",
+          "label": "생방송에서 각본을 무시하고 이긴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 30,
+            "inRing": -5,
+            "backstage": -45,
+            "micWork": 8,
+            "alignment": -10
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "went_into_business_for_self",
+            "suspension_pending"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "act3_world_title_match",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "월드 타이틀전",
+      "body": "메인이벤트. 25분째, 관중 전원이 서 있다. 챔피언이 당신 귀에 대고 묻는다. \"하나 더 갈래?\"",
+      "weight": 55,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "stats": {
+          "inRing": [
+            60,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "one_more",
+          "label": "\"간다.\" 마지막 스팟을 더 넣는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": 12,
+            "wear": 8
+          },
+          "injuryRisk": 0.2,
+          "flags": [
+            "world_champion"
+          ]
+        },
+        {
+          "code": "go_home",
+          "label": "\"끝내자.\" 여기서 마무리한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": 8,
+            "backstage": 8
+          },
+          "injuryRisk": 0.03,
+          "flags": [
+            "world_champion"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "act3_grandest_stage",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "가장 큰 무대",
+      "body": "7만 명. 조명이 꺼지고 당신 음악이 나온다. 15년을 이 30초를 위해 걸었다.",
+      "weight": 55,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "minWeek": 400,
+        "stats": {
+          "popularity": [
+            70,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "the_match",
+          "label": "경기로 증명한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 20,
+            "inRing": 15,
+            "wear": 10
+          },
+          "injuryRisk": 0.18
+        },
+        {
+          "code": "the_moment",
+          "label": "경기를 늦추고 순간을 만든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 22,
+            "inRing": -4,
+            "micWork": 12,
+            "alignment": 15
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "the_stunt",
+          "label": "아무도 안 한 스팟을 시도한다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 32,
+            "inRing": 10,
+            "wear": 18
+          },
+          "injuryRisk": 0.4
+        }
+      ]
+    },
+    {
+      "code": "act3_locker_room_leader",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "라커룸의 무게",
+      "body": "고참이 은퇴하며 라커룸 리더 자리를 넘긴다. 신인 관리, 경영진과의 협상, 사고 수습이 전부 당신 몫이 된다.",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "minWeek": 450,
+        "stats": {
+          "backstage": [
+            55,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "take_role",
+          "label": "맡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 11,
+            "backstage": 22,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "locker_room_leader"
+          ]
+        },
+        {
+          "code": "decline",
+          "label": "\"저는 선수로만 있겠습니다.\"",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 7,
+            "backstage": -10,
+            "wear": -4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act3_rival_career_match",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "커리어를 건 경기",
+      "body": "숙적이 링 위에서 마이크를 잡는다. \"다음 PLE. 지는 쪽이 은퇴한다. 도망칠 거냐?\"",
+      "weight": 45,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "rivalryStage": [
+          "nemesis"
+        ],
+        "minWeek": 500
+      },
+      "choices": [
+        {
+          "code": "accept",
+          "label": "받는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 25,
+            "inRing": 6,
+            "micWork": 10,
+            "wear": 12
+          },
+          "injuryRisk": 0.25,
+          "heat": 60,
+          "flags": [
+            "career_match_booked"
+          ]
+        },
+        {
+          "code": "counter_offer",
+          "label": "조건을 바꿔 되받는다 — 벨트를 건다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 15,
+            "inRing": 1,
+            "micWork": 12,
+            "backstage": 8
+          },
+          "injuryRisk": 0.1,
+          "heat": 40
+        }
+      ]
+    },
+    {
+      "code": "act3_contract_holdout",
+      "kind": "main",
+      "arena": "public",
+      "title": "재계약",
+      "body": "계약이 4개월 남았다. 경쟁 단체가 더 큰 돈과 더 적은 일정을 제시했고, 소문은 이미 인터넷에 돌고 있다.",
+      "weight": 35,
+      "once": true,
+      "requires": {
+        "acts": [
+          3
+        ],
+        "minWeek": 550
+      },
+      "choices": [
+        {
+          "code": "resign",
+          "label": "남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 8,
+            "backstage": 20
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "leverage",
+          "label": "소문을 이용해 조건을 끌어올린다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -5,
+            "backstage": -12,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "go_silent",
+          "label": "아무 말도 하지 않는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -4,
+            "backstage": -5,
+            "alignment": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act4_passing_the_torch",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "횃불",
+      "body": "스물세 살짜리 신인이 당신 앞에 서 있다. 오늘 이 경기가 저 아이를 스타로 만들 수도, 아무것도 아니게 만들 수도 있다.",
+      "weight": 50,
+      "once": true,
+      "requires": {
+        "acts": [
+          4
+        ]
+      },
+      "choices": [
+        {
+          "code": "make_him",
+          "label": "깨끗하게 져주고 그를 만든다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": 5,
+            "backstage": 30,
+            "alignment": 20
+          },
+          "injuryRisk": 0.05,
+          "flags": [
+            "passed_the_torch"
+          ]
+        },
+        {
+          "code": "make_him_earn",
+          "label": "이겨서 아직 이르다는 걸 보여준다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 5,
+            "inRing": 6,
+            "backstage": -15,
+            "alignment": -12
+          },
+          "injuryRisk": 0.1
+        }
+      ]
+    },
+    {
+      "code": "act4_last_run",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "마지막 도전",
+      "body": "경영진이 묻는다. \"한 번 더 벨트를 매고 싶나? 몸이 버틸지는 본인이 판단해라.\"",
+      "weight": 45,
+      "once": true,
+      "requires": {
+        "acts": [
+          4
+        ],
+        "minAge": 44
+      },
+      "choices": [
+        {
+          "code": "one_last_run",
+          "label": "한 번 더 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 20,
+            "inRing": 4,
+            "wear": 20
+          },
+          "injuryRisk": 0.35,
+          "flags": [
+            "last_run"
+          ]
+        },
+        {
+          "code": "step_aside",
+          "label": "물러난다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -7,
+            "inRing": 2,
+            "backstage": 18,
+            "alignment": 12,
+            "wear": -10
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act4_body_gives_out",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "무너지는 몸",
+      "body": "경기 8분째, 무릎이 접혔다. 관중은 앵글인 줄 알고 환호한다. 일어설 수 있을 것 같지 않다.",
+      "weight": 50,
+      "once": true,
+      "requires": {
+        "acts": [
+          4
+        ],
+        "stats": {
+          "wear": [
+            55,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "call_it",
+          "label": "심판에게 신호를 보내 경기를 끊는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -10,
+            "inRing": 10,
+            "backstage": 10,
+            "wear": 5
+          },
+          "injuryRisk": 0.5
+        },
+        {
+          "code": "finish_the_match",
+          "label": "끝까지 간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 25,
+            "inRing": 1,
+            "alignment": 15,
+            "wear": 25
+          },
+          "injuryRisk": 0.38,
+          "careerEnding": true
+        }
+      ]
+    },
+    {
+      "code": "act4_farewell_promo",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "고별사",
+      "body": "빈 링 가운데 마이크 하나. 관중은 조용하고, 무슨 말을 할지 아직 정하지 못했다.",
+      "weight": 55,
+      "once": true,
+      "requires": {
+        "acts": [
+          4
+        ],
+        "minAge": 47
+      },
+      "choices": [
+        {
+          "code": "thank_them",
+          "label": "관중에게 감사를 전한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 20,
+            "inRing": 3,
+            "micWork": 15,
+            "alignment": 25,
+            "backstage": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "one_more_heel",
+          "label": "마지막까지 악역으로 남는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 15,
+            "inRing": -2,
+            "micWork": 18,
+            "alignment": -30
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "no_words",
+          "label": "아무 말 없이 신발을 링 가운데 두고 나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 25,
+            "inRing": -1,
+            "alignment": 15,
+            "backstage": 15
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "act4_hall_of_fame",
+      "kind": "main",
+      "arena": "public",
+      "title": "명예의 전당",
+      "body": "명예의 전당 헌액이 확정됐다. 소개 연설을 누구에게 맡길지 물어온다.",
+      "weight": 40,
+      "once": true,
+      "requires": {
+        "acts": [
+          4
+        ],
+        "minAge": 46,
+        "stats": {
+          "popularity": [
+            65,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "the_veteran",
+          "label": "루키 시절 자신을 갈궜던 고참",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 11,
+            "backstage": 20,
+            "alignment": 12,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "the_nemesis",
+          "label": "커리어 내내 싸운 숙적",
+          "risk": "bold",
+          "effects": {
+            "popularity": 18,
+            "inRing": -2,
+            "micWork": 10,
+            "backstage": 5
+          },
+          "injuryRisk": 0.0,
+          "heat": -40
+        },
+        {
+          "code": "yourself",
+          "label": "직접 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -4,
+            "micWork": 15,
+            "alignment": -15,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

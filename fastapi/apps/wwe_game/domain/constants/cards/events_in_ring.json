@@ -1,0 +1,535 @@
+{
+  "schemaVersion": 3,
+  "file": "events_in_ring.json",
+  "note": "경기력 축 12장. 훈련·기술·합 — 타이틀전 결과를 정하는 스탯이다.",
+  "cards": [
+    {
+      "code": "ir_new_finisher",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "새 피니셔",
+      "bodies": [
+        "체육관에서 새 마무리 기술이 나왔다. 아직 열 번 중 여섯 번만 제대로 들어간다.",
+        "연습 중 우연히 나온 동작이 근사했다. 다시 하려니 재현이 안 된다.",
+        "지금 피니셔가 관중에게 익숙해졌다. 새 무기를 만들 때가 됐다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "drill_it",
+          "label": "확실해질 때까지 연습한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 9,
+            "backstage": 6,
+            "wear": 3
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "debut_it_now",
+          "label": "다음 경기에서 바로 쓴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 11,
+            "inRing": 3,
+            "wear": 6
+          },
+          "injuryRisk": 0.22
+        }
+      ]
+    },
+    {
+      "code": "ir_tape_study",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "테이프 연구",
+      "bodies": [
+        "다음 상대의 지난 20경기가 노트북에 있다. 오늘 밤을 다 쓰면 볼 수 있다.",
+        "자기 경기 영상을 처음부터 다시 보기로 했다. 보기 괴로운 장면이 많다.",
+        "옛 명경기 모음을 구했다. 스무 시간짜리다."
+      ],
+      "weight": 24,
+      "once": false,
+      "requires": {
+        "minWeek": 20
+      },
+      "choices": [
+        {
+          "code": "study_all_night",
+          "label": "밤새 본다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -1,
+            "inRing": 8,
+            "backstage": 5
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "sleep",
+          "label": "자고 몸으로 부딪힌다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 3,
+            "wear": -2
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ir_sparring_partner",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "스파링 상대",
+      "bodies": [
+        "체육관에 당신보다 확실히 잘하는 사람이 왔다. 매일 붙자고 한다.",
+        "고참이 링에 남아 있다. \"올라와. 삼십 분만.\"",
+        "새로 온 선수가 당신을 스무 번 연속으로 눕혔다. 다시 하자고 한다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "spar_daily",
+          "label": "매일 붙는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -3,
+            "inRing": 11,
+            "backstage": 8,
+            "wear": 7
+          },
+          "injuryRisk": 0.14
+        },
+        {
+          "code": "spar_lightly",
+          "label": "가볍게만 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 1,
+            "inRing": 4,
+            "wear": 2
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "ir_cardio_wall",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "8분의 벽",
+      "bodies": [
+        "8분을 넘기면 팔이 안 올라간다. 오늘 경기는 15분으로 잡혀 있다.",
+        "숨이 먼저 죽는다. 기술은 아는데 몸이 안 따라온다.",
+        "10분째 손이 무거워졌다. 관중은 아직 눈치채지 못했다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 50,
+        "stats": {
+          "inRing": [
+            0,
+            70
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "condition_up",
+          "label": "체력 훈련을 커리큘럼에 넣는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 8,
+            "wear": 4,
+            "backstage": 4
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "shorter_matches",
+          "label": "짧은 경기 위주로 짠다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 2,
+            "wear": -3,
+            "backstage": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "hide_it",
+          "label": "숨기고 계속 긴 경기를 뛴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 7,
+            "inRing": 4,
+            "wear": 9
+          },
+          "injuryRisk": 0.2
+        }
+      ]
+    },
+    {
+      "code": "ir_move_ban",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "금지 통보",
+      "bodies": [
+        "안전팀이 당신 주력 기술 하나를 금지했다. 그 기술로 만든 경기가 여럿이다.",
+        "머리부터 떨어지는 동작 전부가 이번 주부터 금지됐다.",
+        "의료팀 권고가 내려왔다. 목에 부담 가는 기술 셋을 빼라는 것이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "rebuild",
+          "label": "그 자리를 다른 기술로 다시 짠다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 7,
+            "backstage": 10,
+            "wear": -2
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "use_it_anyway",
+          "label": "그래도 쓴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 9,
+            "inRing": 2,
+            "backstage": -17,
+            "wear": 8
+          },
+          "injuryRisk": 0.28,
+          "flags": [
+            "suspension_pending"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ir_style_clinic",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "해외 클리닉",
+      "bodies": [
+        "다른 나라 스타일을 가르치는 2주짜리 클리닉 자리가 났다. 그동안 TV에서 사라진다.",
+        "루차 도장에서 초대장이 왔다. 왕복 포함 보름이다.",
+        "슛스타일 코치가 한 달간 문을 열어 두겠다고 했다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "go_learn",
+          "label": "간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -9,
+            "inRing": 12,
+            "backstage": 6
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "stay_on_tv",
+          "label": "TV에 남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": -1,
+            "backstage": -3
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "ir_learn_from_loss",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "복기",
+      "bodies": [
+        "어제 진 경기를 다시 본다. 어디서 흐름을 놓쳤는지 세 번째에야 보인다.",
+        "상대가 먼저 찾아왔다. \"어제 그거, 같이 볼래?\"",
+        "패배 다음 날 아침. 영상을 켜는 데 한 시간이 걸렸다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 35
+      },
+      "choices": [
+        {
+          "code": "break_it_down",
+          "label": "끝까지 뜯어본다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -1,
+            "inRing": 7,
+            "backstage": 7
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "move_on",
+          "label": "덮고 다음 경기를 준비한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 2,
+            "wear": -1
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ir_slump",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "슬럼프",
+      "bodies": [
+        "석 달째 경기가 안 풀린다. 몸은 멀쩡한데 타이밍이 계속 어긋난다.",
+        "쉬운 동작에서 실수가 난다. 데뷔 첫해에도 안 하던 실수다.",
+        "링에 올라가는 게 두려워졌다. 이유를 모르겠다는 게 더 문제다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 200
+      },
+      "choices": [
+        {
+          "code": "back_to_basics",
+          "label": "기본기부터 다시 판다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 10,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "change_style",
+          "label": "스타일을 통째로 바꿔 본다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 5,
+            "inRing": 6,
+            "wear": 5,
+            "backstage": -5
+          },
+          "injuryRisk": 0.12
+        },
+        {
+          "code": "push_through_it",
+          "label": "그냥 밀고 나간다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 2,
+            "inRing": -6,
+            "wear": 7
+          },
+          "injuryRisk": 0.16
+        }
+      ]
+    },
+    {
+      "code": "ir_teach_to_learn",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "가르치며 배운다",
+      "bodies": [
+        "신인 클래스 보조를 맡아 달라는 요청이 왔다. 주 두 번, 무보수다.",
+        "루키가 같은 동작을 스무 번 물어본다. 설명하려니 나도 모르고 있었다.",
+        "도장 수업에 코치가 빠졌다. 오늘 당신이 대신 서야 한다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 180
+      },
+      "choices": [
+        {
+          "code": "teach",
+          "label": "맡는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 6,
+            "backstage": 14,
+            "alignment": 10
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "decline_teaching",
+          "label": "내 훈련 시간을 지킨다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 1,
+            "inRing": 5,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "ir_chain_wrestling_drill",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "그라운드 드릴",
+      "bodies": [
+        "코치가 한 시간 동안 발놀림만 시킨다. 지루하고, 티도 안 난다.",
+        "매트 위에서 같은 전환을 200번 반복하는 훈련이 잡혔다.",
+        "화려한 건 하나도 없는 커리큘럼표를 받았다. 6주짜리다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 15
+      },
+      "choices": [
+        {
+          "code": "grind_it",
+          "label": "끝까지 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 8,
+            "backstage": 7,
+            "wear": 2
+          },
+          "injuryRisk": 0.02
+        },
+        {
+          "code": "practice_spots",
+          "label": "화려한 스팟 연습으로 바꾼다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": 2,
+            "wear": 5
+          },
+          "injuryRisk": 0.15
+        }
+      ]
+    },
+    {
+      "code": "ir_carry_a_bad_worker",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "끌고 가야 하는 경기",
+      "bodies": [
+        "상대가 아직 기본기가 안 됐다. 15분을 혼자 설계해야 한다.",
+        "합이 두 번 어긋났다. 상대는 다음 순서를 모른다.",
+        "경기 5분 만에 알았다. 오늘은 둘이 만드는 경기가 아니다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 90,
+        "stats": {
+          "inRing": [
+            40,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "carry_him",
+          "label": "끝까지 끌고 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": 9,
+            "backstage": 13,
+            "wear": 5
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "keep_it_simple",
+          "label": "간단한 것만 하고 끝낸다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 3,
+            "backstage": 5
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "ir_signature_refinement",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "1인치",
+      "bodies": [
+        "코치가 말한다. \"손 위치를 1인치만 옮겨. 안 아프고 더 커 보일 거야.\"",
+        "10년 쓴 기술의 각도를 바꾸라는 조언을 받았다. 몸이 기억하는 걸 지워야 한다.",
+        "영상으로 보니 마무리 직전 한 박자가 늘어진다. 아무도 지적한 적 없다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 140
+      },
+      "choices": [
+        {
+          "code": "relearn",
+          "label": "몸에 밴 걸 지우고 다시 익힌다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -4,
+            "inRing": 10,
+            "wear": -3,
+            "backstage": 6
+          },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "keep_the_habit",
+          "label": "지금 방식이 편하다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": -2,
+            "wear": 3
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    }
+  ]
+}

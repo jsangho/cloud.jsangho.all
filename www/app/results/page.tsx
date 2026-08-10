@@ -10,8 +10,8 @@ export default function ResultsPage() {
             PLE 경기 결과
           </h1>
           <p className="mt-2 text-sm text-stone-400 sm:text-base">
-            이벤트를 선택한 뒤, 각 경기의 승자를 등록하세요. 등록된 결과는 Neon
-            DB에 저장되며 예측·순위 화면에 반영됩니다.
+            이벤트를 선택한 뒤, 각 경기의 승자를 등록하세요. 등록된 결과는 Neon DB에 저장되며
+            예측·순위 화면에 반영됩니다.
           </p>
         </header>
         <PleEventGrid variant="large" hrefPrefix="/results" />

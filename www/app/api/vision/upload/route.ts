@@ -21,23 +21,18 @@ export async function POST(request: NextRequest) {
     upstream = await fetch(`${backendBase}/api/vision/upload`, {
       method: "POST",
       headers: {
-        "Content-Type":
-          request.headers.get("content-type") || "application/octet-stream",
+        "Content-Type": request.headers.get("content-type") || "application/octet-stream",
       },
       body,
     });
   } catch {
-    return NextResponse.json(
-      { detail: "백엔드에 연결하지 못했습니다." },
-      { status: 503 },
-    );
+    return NextResponse.json({ detail: "백엔드에 연결하지 못했습니다." }, { status: 503 });
   }
 
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {
-      "Content-Type":
-        upstream.headers.get("content-type") || "application/json",
+      "Content-Type": upstream.headers.get("content-type") || "application/json",
     },
   });
 }

@@ -18,19 +18,13 @@ export async function POST(request: NextRequest) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(
-      `${backendBase}/api/ontology/crawl-scrape-pipeline/run`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: body || undefined,
-      },
-    );
+    upstream = await fetch(`${backendBase}/api/ontology/crawl-scrape-pipeline/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body || undefined,
+    });
   } catch {
-    return NextResponse.json(
-      { detail: "백엔드에 연결하지 못했습니다." },
-      { status: 503 },
-    );
+    return NextResponse.json({ detail: "백엔드에 연결하지 못했습니다." }, { status: 503 });
   }
 
   const data = await upstream.json().catch(() => null);

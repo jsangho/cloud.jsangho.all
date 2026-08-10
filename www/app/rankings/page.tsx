@@ -10,11 +10,7 @@ import {
   RankingBadgeTag,
   RankingTitleTag,
 } from "@/components/ranking-cosmetics";
-import {
-  fetchRankings,
-  formatAccuracy,
-  type RankingRow,
-} from "@/lib/rankings-api";
+import { fetchRankings, formatAccuracy, type RankingRow } from "@/lib/rankings-api";
 
 type RankingsPageState = {
   loading: boolean;
@@ -34,11 +30,7 @@ function rankRowClass(rank: number, isMe: boolean) {
   const base = "border-b border-stone-200/35 dark:border-stone-800/35";
 
   if (rank === 1) {
-    return cn(
-      base,
-      "rankings-row-first",
-      isMe && "ring-1 ring-inset ring-brand-400/20",
-    );
+    return cn(base, "rankings-row-first", isMe && "ring-1 ring-inset ring-brand-400/20");
   }
   if (rank === 2 || rank === 3) {
     return cn(
@@ -47,18 +39,13 @@ function rankRowClass(rank: number, isMe: boolean) {
       isMe && "bg-brand-500/[0.04] ring-1 ring-inset ring-brand-500/15",
     );
   }
-  return cn(
-    base,
-    isMe && "bg-brand-500/[0.04] ring-1 ring-inset ring-brand-500/15",
-  );
+  return cn(base, isMe && "bg-brand-500/[0.04] ring-1 ring-inset ring-brand-500/15");
 }
 
 function rankNumberClass(rank: number) {
   const base = "text-sm tabular-nums";
-  if (rank === 1)
-    return cn(base, "font-black text-brand-600 dark:text-brand-300/90");
-  if (rank <= 3)
-    return cn(base, "font-bold text-stone-600 dark:text-stone-300");
+  if (rank === 1) return cn(base, "font-black text-brand-600 dark:text-brand-300/90");
+  if (rank <= 3) return cn(base, "font-bold text-stone-600 dark:text-stone-300");
   return cn(base, "font-semibold text-stone-500");
 }
 
@@ -73,9 +60,7 @@ function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
 
   return (
     <tr className={rankRowClass(row.rank, isMe)}>
-      <td className={cn("py-3.5 pr-3 text-right", rankNumberClass(row.rank))}>
-        {row.rank}
-      </td>
+      <td className={cn("py-3.5 pr-3 text-right", rankNumberClass(row.rank))}>{row.rank}</td>
       <td className={cn("py-3.5 pr-3", text)}>
         <RankingTitleTag item={row.title} />
         <span
@@ -95,33 +80,17 @@ function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
           </span>
         )}
       </td>
-      <td
-        className={cn(
-          "py-3.5 pr-3 text-right text-sm font-medium tabular-nums",
-          text,
-        )}
-      >
+      <td className={cn("py-3.5 pr-3 text-right text-sm font-medium tabular-nums", text)}>
         {row.score}
       </td>
-      <td
-        className={cn(
-          "py-3.5 text-right text-sm font-medium tabular-nums",
-          text,
-        )}
-      >
+      <td className={cn("py-3.5 text-right text-sm font-medium tabular-nums", text)}>
         {formatAccuracy(row.accuracy)}
       </td>
     </tr>
   );
 }
 
-function RankingsTable({
-  rows,
-  userNickname,
-}: {
-  rows: RankingRow[];
-  userNickname?: string;
-}) {
+function RankingsTable({ rows, userNickname }: { rows: RankingRow[]; userNickname?: string }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[520px]">
@@ -191,9 +160,7 @@ export default function RankingsPage() {
   }, [state.rows, state.myRank, user]);
 
   const showMySection =
-    !!user &&
-    myRow != null &&
-    !state.rows.some((r) => r.nickname === user.nickname);
+    !!user && myRow != null && !state.rows.some((r) => r.nickname === user.nickname);
 
   return (
     <WweArenaShell>
@@ -209,8 +176,7 @@ export default function RankingsPage() {
           </h1>
           <p className="relative z-10 mx-auto mt-3 max-w-2xl text-sm font-medium leading-relaxed tracking-tight text-stone-600 dark:text-stone-400 sm:text-base">
             닉네임 · 점수 · 예측 성공 확률(%) 기준으로 표시합니다.
-            <br className="hidden sm:inline" /> 로그인 후 예측한 회원만
-            집계됩니다.
+            <br className="hidden sm:inline" /> 로그인 후 예측한 회원만 집계됩니다.
           </p>
         </header>
 
@@ -234,14 +200,10 @@ export default function RankingsPage() {
 
               {state.rows.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-stone-300/45 dark:border-stone-700/45 bg-stone-100/30 dark:bg-stone-950/30 px-4 py-8 text-center text-sm text-stone-500 dark:text-stone-400">
-                  아직 순위에 올라온 유저가 없습니다. PLE에서 예측하고 결과가
-                  확정되면 표시됩니다.
+                  아직 순위에 올라온 유저가 없습니다. PLE에서 예측하고 결과가 확정되면 표시됩니다.
                 </p>
               ) : (
-                <RankingsTable
-                  rows={state.rows}
-                  userNickname={user?.nickname}
-                />
+                <RankingsTable rows={state.rows} userNickname={user?.nickname} />
               )}
             </section>
 
@@ -259,9 +221,7 @@ export default function RankingsPage() {
 
               {!user ? (
                 <div className="ple-login-callout rounded-xl px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-stone-400">
-                    로그인이 필요합니다.
-                  </p>
+                  <p className="text-sm font-medium text-stone-400">로그인이 필요합니다.</p>
                 </div>
               ) : myRow == null ? (
                 <div className="ple-login-callout rounded-xl px-5 py-6 text-center">

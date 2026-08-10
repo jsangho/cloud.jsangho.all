@@ -54,9 +54,7 @@ export async function fetchCompetitorNames(q?: string): Promise<string[]> {
   }
 }
 
-export async function fetchCompetitorProfile(
-  name: string,
-): Promise<CompetitorProfile | null> {
+export async function fetchCompetitorProfile(name: string): Promise<CompetitorProfile | null> {
   const url = `${pleMatchesBaseUrl}/competitors/${encodeURIComponent(name)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);

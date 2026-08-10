@@ -6,10 +6,7 @@ import { Loader2, Trophy } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import { fetchRankings, type RankingRow } from "@/lib/rankings-api";
-import {
-  nicknameColorClass,
-  RankingBadgeTag,
-} from "@/components/ranking-cosmetics";
+import { nicknameColorClass, RankingBadgeTag } from "@/components/ranking-cosmetics";
 
 type PreviewState = {
   loading: boolean;
@@ -61,9 +58,7 @@ export function LeaderboardPreview({ className }: { className?: string }) {
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">
-            순위표
-          </p>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">순위표</p>
           <h3 className="mt-1 flex items-center gap-1.5 text-lg font-bold text-stone-900 dark:text-stone-50">
             <Trophy className="h-4 w-4 shrink-0 text-brand-400" aria-hidden />
             TOP 5
@@ -83,9 +78,7 @@ export function LeaderboardPreview({ className }: { className?: string }) {
           불러오는 중…
         </div>
       ) : state.unavailable ? (
-        <p className="py-8 text-center text-sm text-stone-400">
-          순위를 불러오지 못했습니다.
-        </p>
+        <p className="py-8 text-center text-sm text-stone-400">순위를 불러오지 못했습니다.</p>
       ) : state.rows.length === 0 ? (
         <p className="py-8 text-center text-sm text-stone-400">
           아직 순위에 올라온 유저가 없습니다.
@@ -97,8 +90,7 @@ export function LeaderboardPreview({ className }: { className?: string }) {
               key={`${row.rank}-${row.nickname}`}
               className={cn(
                 "flex items-center justify-between rounded-lg border border-stone-200/40 dark:border-stone-800/40 px-3 py-2",
-                row.nickname === user?.nickname &&
-                  "border-brand-500/30 bg-brand-500/[0.04]",
+                row.nickname === user?.nickname && "border-brand-500/30 bg-brand-500/[0.04]",
               )}
             >
               <div className="flex min-w-0 items-center gap-2.5">

@@ -1,0 +1,556 @@
+{
+  "schemaVersion": 3,
+  "file": "events_popularity.json",
+  "note": "인기도 축 12장. 화제성·미디어·관중 반응 — 타이틀 기회를 여는 스탯이다.",
+  "cards": [
+    {
+      "code": "pop_viral_clip",
+      "kind": "sub",
+      "arena": "public",
+      "title": "퍼진 30초",
+      "bodies": [
+        "어젯밤 경기의 30초가 SNS에서 돌고 있다. 레슬링을 안 보는 사람들까지 봤다.",
+        "관중이 찍은 흔들리는 영상이 조회수 400만을 넘겼다. 화질은 최악인데 순간은 완벽하다.",
+        "당신 이름이 실시간 검색어에 올라왔다. 이유는 어제 그 한 장면이다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "ride_it",
+          "label": "그 장면을 매주 반복해 각인시킨다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "wear": 4
+          },
+          "injuryRisk": 0.1
+        },
+        {
+          "code": "build_on_it",
+          "label": "다음 경기에서 그 위에 새 것을 쌓는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 7,
+            "inRing": 5,
+            "backstage": 5
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    },
+    {
+      "code": "pop_signature_taunt",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "포즈 하나",
+      "bodies": [
+        "관중이 따라 할 만한 동작이 아직 당신에겐 없다. 오늘 하나 만들어 볼 수 있다.",
+        "앞줄 아이 몇이 당신 동작을 어설프게 흉내 낸다. 다듬으면 아레나 전체가 할 수도 있다.",
+        "링 위에서 손을 들었더니 한 구역이 따라 했다. 우연이었다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "minWeek": 25
+      },
+      "choices": [
+        {
+          "code": "make_it_stick",
+          "label": "매 경기 같은 자리에서 반복한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 9,
+            "inRing": -2,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_wrestling",
+          "label": "포즈 말고 기술로 기억되게 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 7,
+            "backstage": 6
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "pop_merch_line",
+      "kind": "sub",
+      "arena": "public",
+      "title": "굿즈 미팅",
+      "bodies": [
+        "상품팀이 티셔츠 시안 세 장을 내민다. 하나는 유치하고 하나는 멋있고 하나는 안 팔릴 것 같다.",
+        "굿즈 라인을 만들자는 제안이 왔다. 디자인 방향은 당신이 정한다.",
+        "매대에 당신 자리가 생겼다. 뭘 걸어 둘지 골라야 한다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 90,
+        "stats": {
+          "popularity": [
+            30,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "loud_design",
+          "label": "유치해도 눈에 띄는 쪽",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -2,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "cool_design",
+          "label": "멋있지만 무난한 쪽",
+          "risk": "safe",
+          "effects": {
+            "popularity": 5,
+            "inRing": 1,
+            "alignment": 6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "no_merch",
+          "label": "굿즈는 안 하겠다고 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -8,
+            "inRing": 4,
+            "backstage": -7
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_documentary_crew",
+      "kind": "sub",
+      "arena": "public",
+      "title": "카메라가 따라붙는다",
+      "bodies": [
+        "다큐 팀이 3주간 당신을 따라다니겠다고 한다. 집도, 병원도, 라커룸도 찍는다.",
+        "제작진이 \"솔직한 모습\"을 원한다고 했다. 어디까지 열지는 당신이 정한다.",
+        "카메라 두 대가 아침부터 붙었다. 오늘은 무릎 검진이 있는 날이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 150
+      },
+      "choices": [
+        {
+          "code": "open_up",
+          "label": "다 열어 보여준다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 16,
+            "inRing": -1,
+            "backstage": -8,
+            "alignment": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_the_mask",
+          "label": "캐릭터만 보여준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 2,
+            "micWork": 5,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_entrance_overhaul",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "입장 개편",
+      "bodies": [
+        "새 입장 음악과 연출 예산이 나왔다. 지금 테마는 3년째 같은 것이다.",
+        "제작팀이 묻는다. \"등장할 때 관중이 뭘 느꼈으면 좋겠어?\"",
+        "무대 조명과 화염 예산이 배정됐다. 쓸지 말지는 당신 선택이다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 120
+      },
+      "choices": [
+        {
+          "code": "go_big",
+          "label": "화려하게 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 13,
+            "inRing": -3,
+            "backstage": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "go_stark",
+          "label": "음악 없이 걸어 나오는 쪽으로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 8,
+            "inRing": 3,
+            "alignment": -9,
+            "micWork": 3
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_it",
+          "label": "그대로 둔다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 3,
+            "backstage": 5
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_rival_callout",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "이름이 불렸다",
+      "bodies": [
+        "상위 카드 선수가 생방송에서 당신 이름을 꺼냈다. 조롱이지만 어쨌든 이름이 나갔다.",
+        "메인이벤터가 인터뷰에서 당신을 언급했다. \"걔 정도면 상대해 줄 만하지.\"",
+        "당신 이름이 처음으로 큰 무대의 대사에 들어갔다. 좋은 문장은 아니었다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 70
+      },
+      "choices": [
+        {
+          "code": "answer_loud",
+          "label": "다음 주 생방송에서 되받는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -2,
+            "micWork": 7
+          },
+          "injuryRisk": 0.0,
+          "heat": 25
+        },
+        {
+          "code": "answer_in_ring",
+          "label": "말 대신 경기로 답한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": 7,
+            "backstage": 7,
+            "wear": 3
+          },
+          "injuryRisk": 0.08
+        }
+      ]
+    },
+    {
+      "code": "pop_fan_convention",
+      "kind": "sub",
+      "arena": "public",
+      "title": "팬 사인회",
+      "bodies": [
+        "사인회 줄이 예상보다 길다. 예정 시간이 두 시간 지났고 아직 절반이 남았다.",
+        "컨벤션 부스에 배정됐다. 옆 부스는 줄이 건물 밖까지 이어져 있다.",
+        "오전 여섯 시부터 기다린 팬이 있다는 이야기를 들었다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 110
+      },
+      "choices": [
+        {
+          "code": "stay_till_the_end",
+          "label": "마지막 한 명까지 남는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 11,
+            "inRing": -1,
+            "alignment": 15,
+            "wear": 2
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "cut_it_off",
+          "label": "정해진 시간에 끊는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -5,
+            "inRing": 3,
+            "backstage": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_hot_take_backlash",
+      "kind": "sub",
+      "arena": "public",
+      "title": "실언",
+      "bodies": [
+        "어제 인터뷰의 한 문장이 잘려 돌아다닌다. 맥락이 사라진 채로 화제다.",
+        "SNS에 올린 글이 역풍을 맞았다. 지우면 더 커진다는 걸 안다.",
+        "농담이 농담으로 안 읽혔다. 아침부터 알림이 멈추지 않는다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "minWeek": 130,
+        "stats": {
+          "popularity": [
+            35,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "apologize",
+          "label": "공식 사과한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 1,
+            "backstage": 12,
+            "alignment": 8
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "double_down",
+          "label": "물러서지 않는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 13,
+            "inRing": -2,
+            "backstage": -16,
+            "alignment": -18
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "ignore_it",
+          "label": "아무 말 없이 지나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -2,
+            "inRing": 4,
+            "backstage": 2
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_local_hero_night",
+      "kind": "sub",
+      "arena": "public",
+      "title": "연고지의 밤",
+      "bodies": [
+        "고향 도시가 당신 이름을 붙인 행사를 연다. 시장이 열쇠를 준다고 한다.",
+        "모교에서 강연 요청이 왔다. 같은 날 저녁에 경기가 있다.",
+        "지역 방송이 당신 특집을 준비한다. 촬영은 경기 당일 오전이다."
+      ],
+      "weight": 16,
+      "once": false,
+      "requires": {
+        "minWeek": 160
+      },
+      "choices": [
+        {
+          "code": "show_up",
+          "label": "간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 10,
+            "inRing": -3,
+            "alignment": 14,
+            "wear": 3
+          },
+          "injuryRisk": 0.03
+        },
+        {
+          "code": "skip_it",
+          "label": "경기 준비에 집중한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -6,
+            "inRing": 6,
+            "backstage": 5
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_video_game_cover",
+      "kind": "sub",
+      "arena": "public",
+      "title": "게임 커버",
+      "body": "올해 게임 커버 모델 후보에 이름이 올랐다. 최종 결정까지 한 달이고, 나머지 후보 둘은 챔피언이다.",
+      "weight": 14,
+      "once": true,
+      "requires": {
+        "minWeek": 250,
+        "stats": {
+          "popularity": [
+            55,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "campaign",
+          "label": "공개적으로 밀어붙인다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 15,
+            "inRing": -2,
+            "backstage": -9
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "let_it_come",
+          "label": "가만히 있는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 3,
+            "backstage": 8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_crowd_sign_wall",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "플래카드",
+      "bodies": [
+        "관중석 한 구역이 당신 얼굴이 그려진 판을 들었다. 처음 보는 광경이다.",
+        "링에 오르니 앞줄에 손글씨 플래카드가 여섯 장 있다. 전부 당신 이름이다.",
+        "카메라가 관중석을 비추는데 당신 티셔츠를 입은 사람들이 잡힌다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 100,
+        "stats": {
+          "popularity": [
+            40,
+            100
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "acknowledge",
+          "label": "그쪽을 향해 인사한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 8,
+            "inRing": -1,
+            "alignment": 12
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_cold",
+          "label": "못 본 척하고 경기에 들어간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 4,
+            "inRing": 5,
+            "alignment": -14
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "pop_forgotten_month",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "조용한 한 달",
+      "bodies": [
+        "한 달째 대사도 앵글도 없다. 카드에는 있는데 이야기에는 없다.",
+        "이번 분기 기획서에 당신 이름이 한 번도 안 나온다.",
+        "인터뷰 요청이 끊겼다. 굿즈 매출 표에서도 아래로 밀렸다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": {
+        "minWeek": 90,
+        "stats": {
+          "popularity": [
+            0,
+            55
+          ]
+        }
+      },
+      "choices": [
+        {
+          "code": "make_noise",
+          "label": "무슨 수를 써서라도 눈에 띈다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 14,
+            "inRing": -3,
+            "backstage": -13
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "outwork_it",
+          "label": "조용히 경기 질로 올라간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 2,
+            "inRing": 8,
+            "backstage": 9,
+            "wear": 3
+          },
+          "injuryRisk": 0.05
+        }
+      ]
+    }
+  ]
+}

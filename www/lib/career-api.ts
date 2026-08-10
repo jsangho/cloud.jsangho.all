@@ -1,0 +1,254 @@
+/**
+ * 커리어 시뮬레이터 API 클라이언트 (`/api/career/*`).
+ *
+ * 백엔드 계약은 `fastapi/apps/wwe_game/_docs/career-simulator-harness.md` §7이다.
+ *
+ * **두 갈래가 같은 응답 모양을 쓴다.** 로그인 플레이는 서버가 세이브를 들고 있고,
+ * 체험판(`/guest/*`)은 브라우저가 `state`를 통째로 들고 다니며 매 요청에 실어 보낸다
+ * (§3-D8). 화면 입장에서 다른 것은 **`state`를 보관해야 하는가**뿐이라, 진행 결과를
+ * 읽는 코드는 한 벌로 유지된다.
+ *
+ * `null`은 "없음"이고 `throw`는 진짜 실패다 — 진행 중인 커리어가 아직 없는 것은
+ * 정상이므로 `readCurrentRun()`은 null을 돌려준다.
+ */
+
+import { apiBaseUrl, parseApiError, requestTimeoutMs } from "@/lib/api";
+
+const careerBaseUrl = `${apiBaseUrl}/api/career`;
+
+// ── 응답 타입 (백엔드 `career_schema.py`와 1:1) ──────────────
+
+export type CareerModeCode = "yearly" | "quarterly" | "monthly" | "weekly";
+export type StepMode = "auto" | "tick";
+
+export type CareerMode = {
+  code: CareerModeCode;
+  label: string;
+  weeksPerTick: number;
+  ticks: number;
+  eventBudget: number;
+  /** 비로그인으로 플레이할 수 있는지. `yearly`·`quarterly`만 참이다 (§3-D8). */
+  guestAllowed: boolean;
+};
+
+export type CareerPreset = {
+  source: string;
+  gender: "male" | "female";
+  playStyle: string;
+  playStyleLabel: string;
+  /** 목록 밖 출신은 `OTHER`다 — 비어 있지 않다 (§3-D10-1). */
+  country: string;
+};
+
+/** 경기력 드롭다운 한 줄. 앞 셋은 파워·스피드·운영 고정, 넷째만 스타일마다 다르다. */
+export type CareerSkill = { name: string; value: number };
+
+export type CareerStats = {
+  popularity: number;
+  inRing: number;
+  micWork: number;
+  backstage: number;
+  alignment: number;
+  wear: number;
+  playStyle: string;
+  playStyleLabel: string;
+  skills: CareerSkill[];
+};
+
+export type CareerTeam = {
+  /** 화면에 그대로 쓰는 이름. 이름 없는 태그팀은 "A & B"다. */
+  label: string;
+  name: string;
+  members: string[];
+  kind: "tag_team" | "stable";
+  formedWeek: number;
+};
+
+export type CareerWeek = {
+  week: number;
+  kind: "weekly_show" | "promo" | "ple" | "special" | "off";
+  result: "win" | "loss" | "draw" | null;
+  narration: string;
+  show: string | null;
+  titleAtStake: string | null;
+  /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
+  cursed: boolean;
+};
+
+export type CareerRunView = {
+  id: number | null;
+  week: number;
+  year: number;
+  age: number;
+  brand: string;
+  mode: CareerModeCode;
+  status: string;
+  endReason: string | null;
+  stats: CareerStats;
+  condition: string;
+  titlesHeld: string[];
+  titlesWon: string[];
+  team: CareerTeam | null;
+  /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
+  disclaimer: string;
+};
+
+export type CareerChoice = { code: string; label: string };
+
+export type CareerPendingEvent = {
+  code: string;
+  title: string;
+  body: string;
+  choices: CareerChoice[];
+};
+
+export type CareerAdvance = {
+  run: CareerRunView;
+  weeks: CareerWeek[];
+  stopReason: "ready" | "event" | "ple" | "ended";
+  pendingEvent: CareerPendingEvent | null;
+};
+
+/** 체험판 응답 — 로그인 쪽에 **세이브 전체**가 붙는다. 저장은 브라우저가 한다. */
+export type GuestAdvance = CareerAdvance & { state: GuestRunState };
+
+/**
+ * 브라우저가 보관하는 세이브. **안을 들여다보지 않는다** — 서버가 준 것을 그대로
+ * 되돌려 보내는 불투명한 값이다. 필드를 읽기 시작하면 규칙이 프론트로 새고,
+ * 그건 §4-18(프론트에 판정을 복제하지 않는다)이 막는 것이다.
+ */
+export type GuestRunState = Record<string, unknown>;
+
+export type CareerNewsItem = {
+  week: number;
+  year: number;
+  kind: string;
+  headline: string;
+  mood: "roar" | "jeer" | "split" | "hush" | "chant";
+  crowdLine: string;
+};
+
+export type CareerNewsPage = {
+  items: CareerNewsItem[];
+  total: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export type CareerLogPage = {
+  entries: CareerWeek[];
+  total: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export type StartRunInput = {
+  name: string;
+  mode: CareerModeCode;
+  basedOn?: string;
+  gender?: "male" | "female";
+  country?: string;
+  playStyle?: string;
+};
+
+// ── 요청 ─────────────────────────────────────────────────────
+
+/**
+ * 커리어 API 호출 실패. **상태 코드를 들고 있다** — 화면이 409(선택이 먼저다)와
+ * 404(없는 커리어)를 다르게 처리해야 한다.
+ */
+export class CareerApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "CareerApiError";
+    this.status = status;
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${careerBaseUrl}${path}`, {
+      ...init,
+      // httpOnly 쿠키가 교차 출처 요청에 실리려면 반드시 필요하다.
+      credentials: "include",
+      signal: controller.signal,
+      headers: init.body ? { "Content-Type": "application/json" } : undefined,
+    });
+    if (!res.ok) {
+      // `ApiErrorBody`는 lib/api.ts 안에만 있다. 좁게 단언해 넘긴다.
+      const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new CareerApiError(parseApiError(body, res.status), res.status);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function post<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: "POST", body: JSON.stringify(body) });
+}
+
+// ── 메타 (인증 불필요) ───────────────────────────────────────
+
+export function readModes(): Promise<CareerMode[]> {
+  return request<CareerMode[]>("/modes");
+}
+
+export function readPresets(): Promise<CareerPreset[]> {
+  return request<CareerPreset[]>("/presets");
+}
+
+// ── 로그인 플레이 ────────────────────────────────────────────
+
+export function startRun(input: StartRunInput): Promise<CareerAdvance> {
+  return post<CareerAdvance>("/runs", input);
+}
+
+/** 진행 중인 세이브. **아직 시작 안 한 상태는 정상이므로 null이다.** */
+export async function readCurrentRun(): Promise<CareerAdvance | null> {
+  return request<CareerAdvance | null>("/runs/current");
+}
+
+/** '다음'. 대기 이벤트가 있으면 409로 막힌다 (§11-2). */
+export function advanceRun(runId: number, step: StepMode = "auto"): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/advance`, { step });
+}
+
+export function chooseEvent(runId: number, choice: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/choices`, { choice });
+}
+
+export function readLog(runId: number, offset = 0, limit = 50): Promise<CareerLogPage> {
+  return request<CareerLogPage>(`/runs/${runId}/log?offset=${offset}&limit=${limit}`);
+}
+
+export function readNews(runId: number, offset = 0, limit = 50): Promise<CareerNewsPage> {
+  return request<CareerNewsPage>(`/runs/${runId}/news?offset=${offset}&limit=${limit}`);
+}
+
+/** 스스로 커리어를 닫는다 — 은퇴 조건 중 하나다 (§3-D16). */
+export function retireRun(runId: number): Promise<CareerAdvance> {
+  return request<CareerAdvance>(`/runs/${runId}`, { method: "DELETE" });
+}
+
+// ── 체험판 (§3-D8 · 인증 불필요) ─────────────────────────────
+
+export function startGuestRun(input: StartRunInput & { seed?: number }): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/runs", input);
+}
+
+export function advanceGuestRun(
+  state: GuestRunState,
+  step: StepMode = "auto",
+): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/advance", { state, step });
+}
+
+export function chooseGuestEvent(state: GuestRunState, choice: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/choices", { state, choice });
+}

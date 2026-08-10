@@ -8,17 +8,12 @@ const DEFAULT_MODEL = "gemini-2.5-flash";
 const MODEL_FALLBACKS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 
 function resolveApiKey(): string | undefined {
-  return (
-    process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim()
-  );
+  return process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
 }
 
 function extractReplyText(
   result: Awaited<
-    ReturnType<
-      ReturnType<GoogleGenerativeAI["getGenerativeModel"]>["generateContent"]
-    >
+    ReturnType<ReturnType<GoogleGenerativeAI["getGenerativeModel"]>["generateContent"]>
   >,
 ): string {
   try {
@@ -26,9 +21,7 @@ function extractReplyText(
   } catch {
     const feedback = result.response.promptFeedback;
     throw new Error(
-      feedback
-        ? "응답이 차단되었거나 비어 있습니다."
-        : "응답 텍스트를 읽을 수 없습니다.",
+      feedback ? "응답이 차단되었거나 비어 있습니다." : "응답 텍스트를 읽을 수 없습니다.",
     );
   }
 }
@@ -72,20 +65,14 @@ function toClientError(error: unknown): { message: string; status: number } {
   };
 }
 
-async function generateReply(
-  prompt: string,
-  preferredModel: string,
-): Promise<string> {
+async function generateReply(prompt: string, preferredModel: string): Promise<string> {
   const apiKey = resolveApiKey();
   if (!apiKey) {
     throw new Error("API key not configured");
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const tryOrder = [
-    preferredModel,
-    ...MODEL_FALLBACKS.filter((m) => m !== preferredModel),
-  ];
+  const tryOrder = [preferredModel, ...MODEL_FALLBACKS.filter((m) => m !== preferredModel)];
 
   let lastError: unknown;
   for (const modelName of tryOrder) {
@@ -114,10 +101,7 @@ async function streamReply(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const tryOrder = [
-    preferredModel,
-    ...MODEL_FALLBACKS.filter((m) => m !== preferredModel),
-  ];
+  const tryOrder = [preferredModel, ...MODEL_FALLBACKS.filter((m) => m !== preferredModel)];
 
   let lastError: unknown;
   for (const modelName of tryOrder) {
@@ -160,10 +144,7 @@ export async function POST(request: NextRequest) {
     const modelName = body.model?.trim() || DEFAULT_MODEL;
 
     if (!prompt) {
-      return NextResponse.json(
-        { error: "메시지가 비어 있습니다." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "메시지가 비어 있습니다." }, { status: 400 });
     }
 
     if (body.stream) {

@@ -25,7 +25,7 @@ export function ContactsCsvUpload() {
 
         const res = await fetch("/api/contacts/upload", {
           method: "POST",
-            body: form,
+          body: form,
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) {

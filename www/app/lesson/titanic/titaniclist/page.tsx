@@ -54,16 +54,7 @@ const initialListState: ListState = {
 
 export default function LessonTitanicListPage() {
   const [state, setState] = useState<ListState>(initialListState);
-  const {
-    rows,
-    walterId,
-    walterName,
-    walterMemo,
-    loading,
-    error,
-    page,
-    total,
-  } = state;
+  const { rows, walterId, walterName, walterMemo, loading, error, page, total } = state;
 
   const columns = useMemo(
     () =>
@@ -94,9 +85,7 @@ export default function LessonTitanicListPage() {
           `${titanicApiBaseUrl}/walter/openfile?page=${page}&pageSize=${pageSize}`,
           { cache: "no-store", signal: ac.signal },
         );
-        const data = (await res
-          .json()
-          .catch(() => null)) as TitanicPageResponse | null;
+        const data = (await res.json().catch(() => null)) as TitanicPageResponse | null;
         if (!res.ok) {
           const detail =
             (data &&
@@ -159,9 +148,7 @@ export default function LessonTitanicListPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Titanic DB 리스트
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Titanic DB 리스트</h1>
             <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
               Neon DB의{" "}
               <code className="rounded bg-stone-200/40 dark:bg-stone-950/40 px-1.5 py-0.5 text-xs text-stone-800 dark:text-stone-100">
@@ -236,10 +223,7 @@ export default function LessonTitanicListPage() {
                   className="border-b border-stone-200/60 dark:border-stone-900/60"
                 >
                   {columns.map((c) => (
-                    <td
-                      key={c}
-                      className="px-3 py-2 text-stone-700 dark:text-stone-200/90"
-                    >
+                    <td key={c} className="px-3 py-2 text-stone-700 dark:text-stone-200/90">
                       {String(r[c as keyof TitanicRow] ?? "-")}
                     </td>
                   ))}
@@ -247,10 +231,7 @@ export default function LessonTitanicListPage() {
               ))}
               {!loading && !error && rows.length === 0 && (
                 <tr>
-                  <td
-                    className="px-3 py-10 text-center text-stone-400"
-                    colSpan={columns.length}
-                  >
+                  <td className="px-3 py-10 text-center text-stone-400" colSpan={columns.length}>
                     데이터가 없습니다.
                   </td>
                 </tr>
@@ -260,16 +241,11 @@ export default function LessonTitanicListPage() {
         </div>
 
         {!loading && !error && total > 0 && (
-          <nav
-            className="mt-8 flex justify-center"
-            aria-label="Titanic list pagination"
-          >
+          <nav className="mt-8 flex justify-center" aria-label="Titanic list pagination">
             <div className="inline-flex items-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  setState((s) => ({ ...s, page: Math.max(1, s.page - 1) }))
-                }
+                onClick={() => setState((s) => ({ ...s, page: Math.max(1, s.page - 1) }))}
                 disabled={safePage === 1}
                 className={[
                   "inline-flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-semibold transition-colors",
@@ -285,10 +261,7 @@ export default function LessonTitanicListPage() {
               <div className="flex items-center gap-2">
                 {pageItems.map((it, i) =>
                   it === "..." ? (
-                    <span
-                      key={`dots-${i}`}
-                      className="px-1 text-sm text-stone-500"
-                    >
+                    <span key={`dots-${i}`} className="px-1 text-sm text-stone-500">
                       …
                     </span>
                   ) : (
