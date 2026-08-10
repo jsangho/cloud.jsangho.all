@@ -448,7 +448,5 @@ class TestNobodyFightsThemselves:
                 play_style=base.identity.play_style,
             )
         )
-        drawn = {
-            pick_rival(run, SeededRoll(seed, 1, RIVALRY)) for seed in range(200)
-        }
+        drawn = {pick_rival(run, SeededRoll(seed, 1, RIVALRY)) for seed in range(200)}
         assert mine not in drawn, "플레이어가 자기 자신을 라이벌로 만났다"
