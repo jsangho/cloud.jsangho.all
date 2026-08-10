@@ -23,6 +23,7 @@ from wwe_game.domain.value_objects.title import (
     TITLES,
     Brand,
     Title,
+    TitleTier,
     grand_slam_level,
     group_counts,
     missing_groups,
@@ -98,11 +99,19 @@ def title_shot_chance(
 
 
 def eligible_titles(run: CareerRun) -> tuple[Title, ...]:
-    """소속 브랜드에서 지금 인기도로 도전 가능한 벨트, 1선부터."""
+    """소속 브랜드에서 지금 인기도로 도전 가능한 벨트, 1선부터.
+
+    **태그팀 벨트는 팀이 있어야 도전한다** (2026-08-10 버그 수정). 인기도만 보고
+    있었더니 파트너 없이 태그 챔피언이 됐다(실측 12판 중 1건). 그랜드슬램에도
+    물려 있어서(§3-D20의 네 그룹 중 하나) 팀에 한 번도 안 들어간 선수가 훈장을
+    받고 있었다.
+    """
+    solo = run.team is None
     return tuple(
         t
         for t in titles_of(run.brand, run.identity.gender)
         if run.stats.popularity >= TITLES[t].popularity_required
+        and not (solo and TITLES[t].tier is TitleTier.TAG)
     )
 
 

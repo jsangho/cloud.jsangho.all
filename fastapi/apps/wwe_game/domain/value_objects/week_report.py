@@ -14,6 +14,7 @@ from enum import StrEnum
 
 from wwe_game.domain.constants.ple_calendar import PleShow
 from wwe_game.domain.value_objects.condition import InjuryGrade
+from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.title import Title
 
 
@@ -82,6 +83,12 @@ class WeekReport:
     이동 굴림은 `apply_week`이 `championship.draft()`로 돌리고, 평소 확률은 16%다.
     이름이 `drafted`였을 때 서술이 "브랜드가 바뀌었다"로 나가 **다섯 번 중 네 번은
     사실이 아닌 문장**이 됐다. 필드가 약속하는 것과 담는 것을 맞춘다.
+    """
+    match_kind: MatchKind | None = None
+    """그 주차 경기의 형식. 경기 없는 주차는 None이다 (§3-D32).
+
+    **대회의 시그니처 경기는 반드시 열린다** — 로열럼블 없는 로열럼블은 그냥 1월
+    대회일 뿐이다.
     """
     opponent: str | None = None
     """그 주차에 붙은 상대. 경기가 없는 주차는 None이다.

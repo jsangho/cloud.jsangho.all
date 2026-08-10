@@ -30,6 +30,7 @@ from wwe_game.domain.services.championship import (
     wants_transfer,
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import (
     GRAND_SLAM_GROUPS,
     TITLES,
@@ -97,6 +98,11 @@ class TestOpportunityScalesWithPopularity:
         assert title_shot_chance(60, on_tv=True) > 0.0
 
 
+TEAM = Team("리버티 다이너스티", ("장상호", "행크 워커"))
+"""태그 벨트를 노리려면 팀이 있어야 한다 (2026-08-10). 계층 사다리를 재는 테스트는
+태그가 사다리의 맨 아래 칸이라 팀을 붙여야 원래 의도를 잰다."""
+
+
 class TestTierLadder:
     @pytest.mark.parametrize(
         ("popularity", "expected"),
@@ -111,7 +117,9 @@ class TestTierLadder:
     def test_highest_reachable_belt_on_your_brand(
         self, popularity: int, expected: Title | None
     ) -> None:
-        run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=popularity))
+        run = make_run(
+            brand=Brand.RAW, stats=WrestlerStats(popularity=popularity)
+        ).evolve(team=TEAM)
         assert target_title(run, NEVER_CHASE) is expected
 
     def test_smackdown_offers_different_belts(self) -> None:
@@ -123,7 +131,9 @@ class TestTierLadder:
         assert Title.UNITED_STATES_CHAMPIONSHIP not in eligible_titles(run)
 
     def test_falling_popularity_drops_you_down_the_ladder(self) -> None:
-        run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85))
+        run = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85)).evolve(
+            team=TEAM
+        )
         assert target_title(run, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
         cooled = run.evolve(stats=WrestlerStats(popularity=35))
         assert target_title(cooled, NEVER_CHASE) is Title.WORLD_TAG_TEAM_CHAMPIONSHIP
@@ -495,7 +505,7 @@ class TestWomensDivision:
         for brand in (Brand.RAW, Brand.SMACKDOWN):
             run = make_run(
                 gender=Gender.FEMALE, brand=brand, stats=WrestlerStats(popularity=35)
-            )
+            ).evolve(team=TEAM)
             assert (
                 target_title(run, NEVER_CHASE) is Title.WWE_WOMENS_TAG_TEAM_CHAMPIONSHIP
             )
@@ -550,3 +560,40 @@ class TestWomensDivision:
         promoted = call_up(run, SeededRoll(1, 1, "brand"))
         assert promoted.titles_held == frozenset()
         assert promoted.won_count(Title.NXT_WOMENS_CHAMPIONSHIP) == 1
+
+
+class TestTagBeltsNeedAPartner:
+    """혼자서 태그팀 벨트를 딸 수 없다 (2026-08-10 버그 수정)."""
+
+    def test_a_solo_wrestler_cannot_chase_tag_gold(self) -> None:
+        solo = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=35))
+        assert Title.WORLD_TAG_TEAM_CHAMPIONSHIP not in eligible_titles(solo)
+        assert target_title(solo, NEVER_CHASE) is None
+
+    def test_a_partner_opens_the_tag_belt(self) -> None:
+        teamed = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=35)).evolve(
+            team=TEAM
+        )
+        assert Title.WORLD_TAG_TEAM_CHAMPIONSHIP in eligible_titles(teamed)
+
+    def test_solo_still_reaches_singles_belts(self) -> None:
+        # 팀이 없다고 싱글 벨트까지 막히면 안 된다.
+        solo = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85))
+        assert target_title(solo, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+
+
+class TestTeamsStillChaseSinglesGold:
+    """팀에 속해도 싱글 벨트는 그대로 노린다 (2026-08-10 사용자 확인)."""
+
+    def test_a_tag_team_member_can_chase_the_world_title(self) -> None:
+        teamed = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85)).evolve(
+            team=TEAM
+        )
+        assert Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP in eligible_titles(teamed)
+        assert target_title(teamed, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+
+    def test_a_stable_member_too(self) -> None:
+        stable = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=55)).evolve(
+            team=Team("더 컬링", ("장상호", "행크 워커", "케일 딕슨"))
+        )
+        assert Title.INTERCONTINENTAL_CHAMPIONSHIP in eligible_titles(stable)

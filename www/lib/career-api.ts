@@ -65,7 +65,12 @@ export type CareerTeam = {
 };
 
 export type CareerWeek = {
+  /** 커리어 통산 주차(1~1560). 정렬·키에 쓴다. */
   week: number;
+  /** 게임 달력이 되읽은 날짜 — 화면은 "2년차 9월 2주"로 말한다. */
+  year: number;
+  month: number;
+  weekOfMonth: number;
   kind: "weekly_show" | "promo" | "ple" | "special" | "off";
   result: "win" | "loss" | "draw" | null;
   narration: string;
@@ -73,6 +78,11 @@ export type CareerWeek = {
   titleAtStake: string | null;
   /** 그 주차에 붙은 상대. 경기 없는 주차는 null. */
   opponent: string | null;
+  /** 경기 형식 — "로열럼블 매치"처럼 화면에 그대로 쓴다. */
+  matchKind: string | null;
+  matchLabel: string | null;
+  /** 참가 인원. 여럿이 붙는 경기는 상대 한 명을 말하면 안 된다. */
+  matchField: number;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
 };
@@ -132,6 +142,8 @@ export type GuestRunState = Record<string, unknown>;
 export type CareerNewsItem = {
   week: number;
   year: number;
+  month: number;
+  weekOfMonth: number;
   kind: string;
   headline: string;
   mood: "roar" | "jeer" | "split" | "hush" | "chant";

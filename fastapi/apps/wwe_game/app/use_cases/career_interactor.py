@@ -53,12 +53,9 @@ from wwe_game.domain.services import (
     career_end,
     event_draw,
     news_feed,
-    seeded_roll,
     team_engine,
 )
 from wwe_game.domain.services.character_creation import build_identity
-from wwe_game.domain.services.seeded_roll import SeededRoll
-from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
@@ -147,15 +144,10 @@ class CareerInteractor(CareerUseCase):
             run_id, user_id, offset=0, limit=CAREER_WEEKS
         )
         pairs = tuple((view.report, run.stats) for view in entries)
-        team_news: list[TeamNews] = []
-        for week in range(1, run.week + 1):
-            team_news.extend(team_engine.scripted_at(week))
-            rolled = team_engine.roll_change(
-                week, SeededRoll(run.seed, week, seeded_roll.TEAM)
-            )
-            if rolled is not None:
-                team_news.append(rolled)
-        items = news_feed.compile_feed(pairs, tuple(team_news), str(run.identity.name))
+        # 연대기는 살아 있는 팀 목록을 들고 걸어야 한다 — 주차마다 따로 굴리면
+        # 존재한 적 없는 팀이 해체된다 (2026-08-10 감사).
+        team_news = team_engine.chronicle(run.seed, run.week)
+        items = news_feed.compile_feed(pairs, team_news, str(run.identity.name))
         return NewsFeedPage(
             items=items[offset : offset + limit], total=len(items), offset=offset
         )

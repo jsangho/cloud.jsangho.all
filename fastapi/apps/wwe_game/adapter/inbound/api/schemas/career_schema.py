@@ -21,7 +21,9 @@ from wwe_game.app.dtos.career_dto import (
     WeekReportView,
 )
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
+from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.services.news_feed import NewsItem
+from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 
 
 class _Camel(BaseModel):
@@ -75,12 +77,22 @@ class PendingEventSchema(_Camel):
 
 class WeekSchema(_Camel):
     week: int
+    """커리어 통산 주차(1~1560). 정렬·키에 쓴다."""
+    year: int
+    month: int
+    week_of_month: int
+    """게임 달력이 되읽은 날짜 — 화면은 "2년차 9월 2주"로 말한다 (§3-D21-1의 짝)."""
     kind: str
     result: str | None
     narration: str
     show: str | None = None
     title_at_stake: str | None = None
     opponent: str | None = None
+    match_kind: str | None = None
+    match_label: str | None = None
+    """경기 형식 — "로열럼블 매치"처럼 화면에 그대로 나간다 (§3-D32)."""
+    match_field: int = 2
+    """참가 인원. 여럿이 붙는 경기는 화면이 상대 한 명을 말하면 안 된다."""
     cursed: bool = False
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
 
@@ -218,6 +230,8 @@ class LogPageSchema(_Camel):
 class NewsSchema(_Camel):
     week: int
     year: int
+    month: int
+    week_of_month: int
     kind: str
     headline: str
     mood: str
@@ -236,14 +250,25 @@ class NewsPageSchema(_Camel):
 
 def to_week(view: WeekReportView) -> WeekSchema:
     report = view.report
+    year, month, week_of_month = date_of(report.week)
     return WeekSchema(
         week=report.week,
+        year=year,
+        month=month,
+        week_of_month=week_of_month,
         kind=report.kind.value,
         result=report.result.value if report.result else None,
         narration=view.narration,
         show=report.show.name if report.show else None,
         title_at_stake=report.title_at_stake.value if report.title_at_stake else None,
         opponent=report.opponent,
+        match_kind=report.match_kind.value if report.match_kind else None,
+        match_label=(
+            match_format_of(report.match_kind).label if report.match_kind else None
+        ),
+        match_field=(
+            match_format_of(report.match_kind).field if report.match_kind else 2
+        ),
         cursed=report.cursed,
     )
 
@@ -360,9 +385,12 @@ def to_log(page: CareerLogPage) -> LogPageSchema:
 
 
 def to_news_item(item: NewsItem) -> NewsSchema:
+    _, month, week_of_month = date_of(item.week)
     return NewsSchema(
         week=item.week,
         year=item.year,
+        month=month,
+        week_of_month=week_of_month,
         kind=item.kind.value,
         headline=item.headline,
         mood=item.mood.value,

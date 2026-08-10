@@ -78,6 +78,34 @@ class ShowTier(StrEnum):
     """
 
 
+MONTH_FIRST_WEEK: tuple[int, ...] = tuple(
+    (month * WEEKS_PER_YEAR) // MONTHS_PER_YEAR + 1 for month in range(MONTHS_PER_YEAR)
+)
+"""각 달이 시작하는 연중 주차 (1월=1 · 2월=5 · 3월=9 … 12월=48).
+
+`WEEK_OF_MONTH`(달 한가운데)의 짝이다. 저쪽은 대회를 걸 자리를 정하고, 이쪽은
+**주차를 날짜로 되읽는 데** 쓴다 — 화면이 "91주"가 아니라 "2년차 3월 2주"로
+말하려면 필요하다 (2026-08-10 사용자 요청).
+
+**프론트에서 다시 계산하지 않는다.** 달력은 도메인의 것이고, 양쪽이 각자 나누면
+반올림 한 번에 대회 날짜와 표시가 어긋난다.
+"""
+
+
+def date_of(week: int) -> tuple[int, int, int]:
+    """연중 주차(1~1560) → (연차, 달, 그 달의 몇째 주). 전부 1부터 센다."""
+    if week < 1:
+        raise ValueError(f"주차는 1 이상이어야 합니다: {week}")
+    year, in_year = divmod(week - 1, WEEKS_PER_YEAR)
+    in_year += 1
+    month = MONTHS_PER_YEAR
+    for index, first in enumerate(MONTH_FIRST_WEEK):
+        if in_year < first:
+            month = index
+            break
+    return year + 1, month, in_year - MONTH_FIRST_WEEK[month - 1] + 1
+
+
 @dataclass(frozen=True)
 class PleShow:
     name: str

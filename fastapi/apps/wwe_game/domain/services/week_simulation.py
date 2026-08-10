@@ -36,7 +36,15 @@ from wwe_game.domain.services import (
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
-from wwe_game.domain.value_objects.title import TITLES, Brand, Title
+from wwe_game.domain.value_objects.match_kind import (
+    SIGNATURE_MATCHES,
+    STIPULATION_CHANCE,
+    STIPULATION_PLE_MULTIPLIER,
+    MatchKind,
+    stipulation_odds,
+)
+from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
+from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
@@ -201,18 +209,22 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
     # 대형 대회에서만 타이틀전이 잡힌다. 잡히면 그날의 경기가 곧 타이틀전이다.
     title = _draw_title_match(run, week, kind, show)
+    match_kind = _match_kind_of(run, week, kind, show, title)
+    fmt = match_format_of(match_kind)
     # 저주는 **굴림보다 먼저다.** 확률로 옮기면 가끔 이기게 되고 그건 저주가 아니다.
     cursed = CURSED in run.flags
     if cursed:
         result = OutcomeKind.LOSS
     elif title is not None:
-        if match_roll.chance(championship.title_win_chance(score, title)):
+        if match_roll.chance(
+            championship.title_win_chance(score, title) * fmt.win_factor
+        ):
             result = OutcomeKind.WIN
         else:
             result = OutcomeKind.LOSS
     elif match_roll.chance(rules.DRAW_CHANCE):
         result = OutcomeKind.DRAW
-    elif match_roll.chance(win_chance(score)):
+    elif match_roll.chance(win_chance(score) * fmt.win_factor):
         result = OutcomeKind.WIN
     else:
         result = OutcomeKind.LOSS
@@ -231,13 +243,14 @@ def simulate_week(run: CareerRun) -> WeekReport:
             )
         for key, value in swing.items():
             stat_delta[key] = stat_delta.get(key, 0) + value
-    wear_delta = _wear_gain(run, week, kind)
+    wear_delta = _wear_gain(run, week, kind, fmt.wear_factor)
 
     injury: InjuryGrade | None = None
     injury_weeks = 0
     injury_roll = SeededRoll(run.seed, week, seeded_roll.INJURY)
     if injury_roll.chance(
         injury_chance(run, kind, major=show is not None and show.is_major)
+        * fmt.injury_factor
     ):
         injury, injury_weeks = _draw_injury_grade(injury_roll)
         # 몸이 약하다는 평판은 실력과 별개로 쌓인다.
@@ -258,11 +271,53 @@ def simulate_week(run: CareerRun) -> WeekReport:
         title_defended=title is not None and title in run.titles_held,
         call_up=_call_up_of(run, stat_delta),
         draft_night=draft_night,
+        match_kind=match_kind,
         opponent=rivalry_engine.pick_opponent(
             run, SeededRoll(run.seed, week, seeded_roll.OPPONENT)
         ),
         cursed=cursed,
     )
+
+
+def _match_kind_of(
+    run: CareerRun,
+    week: int,
+    kind: WeekKind,
+    show: PleShow | None,
+    title: Title | None,
+) -> MatchKind:
+    """그 주차 경기의 형식 (§3-D32).
+
+    **대회의 시그니처가 가장 앞이다** — 로열럼블 주차에는 럼블이 열린다. 그다음이
+    태그팀(팀이 있고 태그 벨트가 걸렸으면), 나머지는 싱글이다.
+    """
+    if show is not None and show.name in SIGNATURE_MATCHES:
+        return SIGNATURE_MATCHES[show.name]
+    if title is not None and TITLES[title].tier is TitleTier.TAG:
+        return MatchKind.TAG
+    return _stipulation_of(run, week, kind)
+
+
+def _stipulation_of(run: CareerRun, week: int, kind: WeekKind) -> MatchKind:
+    """평범한 경기가 가끔 특수 경기가 된다 (2026-08-10 사용자 요청).
+
+    **시그니처와 다른 자리다.** 시그니처는 달력이 반드시 실행하고, 이쪽은 굴림이다 —
+    래더나 케이지는 MITB가 아닌 밤에도 걸린다.
+    """
+    chance = STIPULATION_CHANCE
+    if kind in (WeekKind.PLE, WeekKind.SPECIAL):
+        chance *= STIPULATION_PLE_MULTIPLIER
+    roll = SeededRoll(run.seed, week, seeded_roll.STIPULATION)
+    if not roll.chance(chance):
+        return MatchKind.SINGLES
+    odds = stipulation_odds(run.identity.play_style.value)
+    total = sum(weight for _, weight in odds)
+    ticket = roll.between(1, total)
+    for stipulation, weight in odds:
+        ticket -= weight
+        if ticket <= 0:
+            return stipulation
+    return MatchKind.SINGLES
 
 
 def _call_up_of(run: CareerRun, stat_delta: dict[str, int]) -> CallUpReason | None:
@@ -353,13 +408,15 @@ def _decay_only(run: CareerRun, week: int) -> dict[str, int]:
     return delta
 
 
-def _wear_gain(run: CareerRun, week: int, kind: WeekKind) -> int:
+def _wear_gain(
+    run: CareerRun, week: int, kind: WeekKind, format_factor: float = 1.0
+) -> int:
     """마모는 확률로 쌓인다 (`WEAR_GAIN_CHANCE_*`). 스타일이 배수로 곱해진다."""
     base = {
         WeekKind.PLE: rules.WEAR_GAIN_CHANCE_PLE,
         WeekKind.SPECIAL: rules.SPECIAL_WEAR_CHANCE,
     }.get(kind, rules.WEAR_GAIN_CHANCE_SHOW)
-    chance = base * INJURY_STYLE_MULTIPLIER[run.identity.play_style]
+    chance = base * INJURY_STYLE_MULTIPLIER[run.identity.play_style] * format_factor
     roll = SeededRoll(run.seed, week, seeded_roll.WEAR)
     return 1 if roll.chance(min(1.0, chance)) else 0
 
@@ -457,6 +514,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             str(moved.identity.name),
             report.week,
             SeededRoll(run.seed, report.week, seeded_roll.TEAM),
+            moved.identity.gender,
         )
         if formed is not None:
             team = formed

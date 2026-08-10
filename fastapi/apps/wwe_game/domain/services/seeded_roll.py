@@ -31,6 +31,7 @@ RIVALRY: Final = "rivalry"
 NARRATION: Final = "narration"
 TEAM: Final = "team"
 OPPONENT: Final = "opponent"
+STIPULATION: Final = "stipulation"
 
 
 def _derive(seed: int, week: int, channel: str) -> int:

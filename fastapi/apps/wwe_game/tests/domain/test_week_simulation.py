@@ -562,3 +562,144 @@ class TestAlignmentClarity:
             )
 
         assert gains(90) > gains(0)
+
+
+class TestSignatureMatches:
+    """대회의 시그니처 경기는 **반드시** 열린다 (2026-08-10 사용자 요청 · §3-D32).
+
+    확률로 두면 로열럼블이 없는 해가 생기고, 그건 그 대회가 아니다.
+    """
+
+    def test_every_signature_ple_runs_its_match(self) -> None:
+        from wwe_game.domain.constants.ple_calendar import calendar_for
+        from wwe_game.domain.value_objects.match_kind import SIGNATURE_MATCHES
+        from wwe_game.domain.value_objects.title import Brand
+
+        calendar = calendar_for(Brand.RAW)
+        for show in calendar.shows:
+            if show.name not in SIGNATURE_MATCHES:
+                continue
+            run = make_run(week=show.week_of_year - 1, brand=Brand.RAW)
+            report = simulate_week(run)
+            if report.show is None or report.show.name != show.name:
+                continue
+            assert report.match_kind is SIGNATURE_MATCHES[show.name]
+
+    def test_a_crowded_match_is_harder_to_win(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import MatchKind, format_of
+
+        singles = format_of(MatchKind.SINGLES).win_factor
+        for kind in (MatchKind.CHAMBER, MatchKind.LADDER, MatchKind.BATTLE_ROYAL):
+            assert format_of(kind).win_factor < singles
+        # 자리가 늘수록 내 몫이 준다.
+        assert (
+            format_of(MatchKind.BATTLE_ROYAL).win_factor
+            < format_of(MatchKind.CHAMBER).win_factor
+        )
+
+    def test_a_singles_week_stays_singles(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import MatchKind
+
+        run = make_run(week=3)
+        report = simulate_week(run)
+        if report.result is not None:
+            assert report.match_kind is MatchKind.SINGLES
+
+
+class TestStipulationMatches:
+    """평범한 경기가 가끔 특수 경기가 된다 (2026-08-10 사용자 요청).
+
+    시그니처와 다른 자리다 — 시그니처는 달력이 반드시 실행하고 이쪽은 굴림이다.
+    """
+
+    def test_arena_bound_matches_are_not_rolled(self) -> None:
+        # 5월 백래시에서 챔버가 열리면 챔버가 특별할 이유가 사라진다.
+        from wwe_game.domain.value_objects.match_kind import (
+            STIPULATION_ODDS,
+            MatchKind,
+        )
+
+        rolled = {kind for kind, _ in STIPULATION_ODDS}
+        assert MatchKind.BATTLE_ROYAL not in rolled
+        assert MatchKind.CHAMBER not in rolled
+        assert MatchKind.WARGAMES not in rolled
+
+    def test_stipulations_happen_but_stay_rare(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import (
+            SIGNATURE_MATCHES,
+            MatchKind,
+        )
+
+        ordinary = 0
+        special = 0
+        run = make_run(seed=11)
+        for _ in range(600):
+            if not run.is_active:
+                break
+            report = simulate_week(run)
+            run = apply_week(run.evolve(pending_event=None), report)
+            if report.match_kind is None or report.result is None:
+                continue
+            if report.show is not None and report.show.name in SIGNATURE_MATCHES:
+                continue
+            ordinary += 1
+            if report.match_kind not in (MatchKind.SINGLES, MatchKind.TAG):
+                special += 1
+        assert special > 0, "특수 경기가 한 번도 안 열렸다"
+        assert special / ordinary < 0.2, (
+            f"특수 경기가 너무 흔하다: {special}/{ordinary}"
+        )
+
+    def test_a_bigger_night_is_more_likely_to_be_special(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import (
+            STIPULATION_CHANCE,
+            STIPULATION_PLE_MULTIPLIER,
+        )
+
+        assert STIPULATION_PLE_MULTIPLIER > 1.0
+        assert STIPULATION_CHANCE * STIPULATION_PLE_MULTIPLIER < 0.5
+
+
+class TestStipulationVariety:
+    def test_every_kind_has_a_format(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import FORMATS, MatchKind
+
+        assert set(FORMATS) == set(MatchKind)
+
+    def test_the_rougher_the_stipulation_the_higher_the_price(self) -> None:
+        # 이름만 다르면 장식이다 — 형식마다 몸값이 달라야 한다.
+        from wwe_game.domain.value_objects.match_kind import MatchKind, format_of
+
+        plain = format_of(MatchKind.SINGLES)
+        for kind in (
+            MatchKind.NO_DQ,
+            MatchKind.NO_HOLDS_BARRED,
+            MatchKind.EXTREME_RULES,
+            MatchKind.HELL_IN_A_CELL,
+            MatchKind.TLC,
+        ):
+            assert format_of(kind).injury_factor > plain.injury_factor
+        # 언생션드가 가장 비싸다 — 단체가 승인하지 않아 보호받지 못한다.
+        assert format_of(MatchKind.UNSANCTIONED).injury_factor == max(
+            format_of(k).injury_factor for k in MatchKind
+        )
+
+    def test_technical_stipulations_are_long_not_dangerous(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import MatchKind, format_of
+
+        for kind in (MatchKind.SUBMISSION_MATCH, MatchKind.IRON_MAN):
+            fmt = format_of(kind)
+            assert fmt.wear_factor > 1.0, "길게 끌면 마모는 쌓인다"
+            assert fmt.injury_factor < 1.0, "기술 경기는 덜 다친다"
+
+    def test_style_pulls_its_own_stipulations(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import (
+            MatchKind,
+            stipulation_odds,
+        )
+
+        hardcore = dict(stipulation_odds("hardcore"))
+        showman = dict(stipulation_odds("showman"))
+        assert hardcore[MatchKind.NO_HOLDS_BARRED] > showman[MatchKind.NO_HOLDS_BARRED]
+        # 다른 경기가 막히지는 않는다 — 가중치를 곱할 뿐이다.
+        assert hardcore[MatchKind.SUBMISSION_MATCH] > 0
