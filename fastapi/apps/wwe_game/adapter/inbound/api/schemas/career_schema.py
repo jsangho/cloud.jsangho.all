@@ -23,6 +23,7 @@ from wwe_game.app.dtos.career_dto import (
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.services.news_feed import NewsItem
+from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 
 
 class _Camel(BaseModel):
@@ -87,6 +88,11 @@ class WeekSchema(_Camel):
     show: str | None = None
     title_at_stake: str | None = None
     opponent: str | None = None
+    match_kind: str | None = None
+    match_label: str | None = None
+    """경기 형식 — "로열럼블 매치"처럼 화면에 그대로 나간다 (§3-D32)."""
+    match_field: int = 2
+    """참가 인원. 여럿이 붙는 경기는 화면이 상대 한 명을 말하면 안 된다."""
     cursed: bool = False
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
 
@@ -256,6 +262,13 @@ def to_week(view: WeekReportView) -> WeekSchema:
         show=report.show.name if report.show else None,
         title_at_stake=report.title_at_stake.value if report.title_at_stake else None,
         opponent=report.opponent,
+        match_kind=report.match_kind.value if report.match_kind else None,
+        match_label=(
+            match_format_of(report.match_kind).label if report.match_kind else None
+        ),
+        match_field=(
+            match_format_of(report.match_kind).field if report.match_kind else 2
+        ),
         cursed=report.cursed,
     )
 

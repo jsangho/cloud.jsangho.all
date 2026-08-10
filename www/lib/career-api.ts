@@ -78,6 +78,11 @@ export type CareerWeek = {
   titleAtStake: string | null;
   /** 그 주차에 붙은 상대. 경기 없는 주차는 null. */
   opponent: string | null;
+  /** 경기 형식 — "로열럼블 매치"처럼 화면에 그대로 쓴다. */
+  matchKind: string | null;
+  matchLabel: string | null;
+  /** 참가 인원. 여럿이 붙는 경기는 상대 한 명을 말하면 안 된다. */
+  matchField: number;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
 };

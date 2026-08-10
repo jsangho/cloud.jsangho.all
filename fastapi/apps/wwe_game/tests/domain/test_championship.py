@@ -580,3 +580,20 @@ class TestTagBeltsNeedAPartner:
         # 팀이 없다고 싱글 벨트까지 막히면 안 된다.
         solo = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85))
         assert target_title(solo, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+
+
+class TestTeamsStillChaseSinglesGold:
+    """팀에 속해도 싱글 벨트는 그대로 노린다 (2026-08-10 사용자 확인)."""
+
+    def test_a_tag_team_member_can_chase_the_world_title(self) -> None:
+        teamed = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=85)).evolve(
+            team=TEAM
+        )
+        assert Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP in eligible_titles(teamed)
+        assert target_title(teamed, NEVER_CHASE) is Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP
+
+    def test_a_stable_member_too(self) -> None:
+        stable = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=55)).evolve(
+            team=Team("더 컬링", ("장상호", "행크 워커", "케일 딕슨"))
+        )
+        assert Title.INTERCONTINENTAL_CHAMPIONSHIP in eligible_titles(stable)

@@ -562,3 +562,45 @@ class TestAlignmentClarity:
             )
 
         assert gains(90) > gains(0)
+
+
+class TestSignatureMatches:
+    """대회의 시그니처 경기는 **반드시** 열린다 (2026-08-10 사용자 요청 · §3-D32).
+
+    확률로 두면 로열럼블이 없는 해가 생기고, 그건 그 대회가 아니다.
+    """
+
+    def test_every_signature_ple_runs_its_match(self) -> None:
+        from wwe_game.domain.constants.ple_calendar import calendar_for
+        from wwe_game.domain.value_objects.match_kind import SIGNATURE_MATCHES
+        from wwe_game.domain.value_objects.title import Brand
+
+        calendar = calendar_for(Brand.RAW)
+        for show in calendar.shows:
+            if show.name not in SIGNATURE_MATCHES:
+                continue
+            run = make_run(week=show.week_of_year - 1, brand=Brand.RAW)
+            report = simulate_week(run)
+            if report.show is None or report.show.name != show.name:
+                continue
+            assert report.match_kind is SIGNATURE_MATCHES[show.name]
+
+    def test_a_crowded_match_is_harder_to_win(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import MatchKind, format_of
+
+        singles = format_of(MatchKind.SINGLES).win_factor
+        for kind in (MatchKind.CHAMBER, MatchKind.LADDER, MatchKind.BATTLE_ROYAL):
+            assert format_of(kind).win_factor < singles
+        # 자리가 늘수록 내 몫이 준다.
+        assert (
+            format_of(MatchKind.BATTLE_ROYAL).win_factor
+            < format_of(MatchKind.CHAMBER).win_factor
+        )
+
+    def test_a_singles_week_stays_singles(self) -> None:
+        from wwe_game.domain.value_objects.match_kind import MatchKind
+
+        run = make_run(week=3)
+        report = simulate_week(run)
+        if report.result is not None:
+            assert report.match_kind is MatchKind.SINGLES
