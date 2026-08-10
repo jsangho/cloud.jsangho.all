@@ -259,3 +259,33 @@ class TestRetire:
         body = client.delete(f"/api/career/runs/{run_id}").json()
         assert body["run"]["endReason"] == "player"
         assert client.get("/api/career/runs/current").json() is None
+
+
+class TestErrorMessagesAreUseful:
+    def test_a_missing_field_is_named(self, client: TestClient) -> None:
+        # 무엇이 빠졌는지 짚어서 거절한다(§3-D10-1). 뭉개면 고칠 데를 알 수 없다.
+        response = client.post(
+            "/api/career/runs",
+            json={
+                "name": "장상호",
+                "mode": "yearly",
+                "gender": "male",
+                "country": "KR",
+            },
+        )
+        assert response.status_code == 400
+        assert "플레이스타일" in response.json()["detail"]
+
+    def test_all_four_given_succeeds(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/career/runs",
+            json={
+                "name": "장상호",
+                "mode": "yearly",
+                "gender": "male",
+                "country": "KR",
+                "playStyle": "kings_road",
+            },
+        )
+        assert response.status_code == 201
+        assert response.json()["run"]["stats"]["playStyleLabel"] == "왕도 스타일"
