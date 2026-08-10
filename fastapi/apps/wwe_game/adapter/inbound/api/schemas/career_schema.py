@@ -21,6 +21,7 @@ from wwe_game.app.dtos.career_dto import (
     WeekReportView,
 )
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
+from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.services.news_feed import NewsItem
 
 
@@ -75,6 +76,11 @@ class PendingEventSchema(_Camel):
 
 class WeekSchema(_Camel):
     week: int
+    """커리어 통산 주차(1~1560). 정렬·키에 쓴다."""
+    year: int
+    month: int
+    week_of_month: int
+    """게임 달력이 되읽은 날짜 — 화면은 "2년차 9월 2주"로 말한다 (§3-D21-1의 짝)."""
     kind: str
     result: str | None
     narration: str
@@ -218,6 +224,8 @@ class LogPageSchema(_Camel):
 class NewsSchema(_Camel):
     week: int
     year: int
+    month: int
+    week_of_month: int
     kind: str
     headline: str
     mood: str
@@ -236,8 +244,12 @@ class NewsPageSchema(_Camel):
 
 def to_week(view: WeekReportView) -> WeekSchema:
     report = view.report
+    year, month, week_of_month = date_of(report.week)
     return WeekSchema(
         week=report.week,
+        year=year,
+        month=month,
+        week_of_month=week_of_month,
         kind=report.kind.value,
         result=report.result.value if report.result else None,
         narration=view.narration,
@@ -360,9 +372,12 @@ def to_log(page: CareerLogPage) -> LogPageSchema:
 
 
 def to_news_item(item: NewsItem) -> NewsSchema:
+    _, month, week_of_month = date_of(item.week)
     return NewsSchema(
         week=item.week,
         year=item.year,
+        month=month,
+        week_of_month=week_of_month,
         kind=item.kind.value,
         headline=item.headline,
         mood=item.mood.value,

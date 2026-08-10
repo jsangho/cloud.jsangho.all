@@ -457,6 +457,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             str(moved.identity.name),
             report.week,
             SeededRoll(run.seed, report.week, seeded_roll.TEAM),
+            moved.identity.gender,
         )
         if formed is not None:
             team = formed

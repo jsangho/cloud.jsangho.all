@@ -237,3 +237,34 @@ class TestThePlayerJoinsATeam:
         assert pair.without("행크 워커") is None
         trio = Team("더 컬링", ("장상호", "행크 워커", "케일 딕슨"))
         assert trio.without("케일 딕슨") is not None
+
+
+class TestTeamsDoNotMixDivisions:
+    """혼성 태그팀이 나오면 안 된다 (2026-08-10 버그).
+
+    태그팀 벨트부터 남녀가 갈려 있고(§3-D20) 라이벌 풀도 디비전으로 나뉘는데
+    (§3-D11) 팀만 섞이고 있었다 — "자리아 & 그레이슨 월러"가 나왔다.
+    """
+
+    def test_no_mixed_team_in_thirty_years(self) -> None:
+        from wwe_game.domain.constants.roster import ROSTER
+
+        by_name = {m.name: m.gender for m in ROSTER}
+        for item in _chronicle(seed=99, weeks=30 * WEEKS_PER_YEAR):
+            genders = {by_name[m] for m in item.team.members if m in by_name}
+            assert len(genders) <= 1, f"혼성 팀: {item.team.members}"
+
+    def test_the_player_gets_a_same_division_partner(self) -> None:
+        from wwe_game.domain.constants.roster import ROSTER
+        from wwe_game.domain.services.seeded_roll import TEAM, SeededRoll
+        from wwe_game.domain.value_objects.wrestler_identity import Gender
+
+        by_name = {m.name: m.gender for m in ROSTER}
+        for gender in Gender:
+            team = team_engine.form_for_player(
+                "장상호", 200, SeededRoll(1, 200, TEAM), gender
+            )
+            assert team is not None
+            partners = [m for m in team.members if m != "장상호"]
+            assert partners
+            assert all(by_name[p] is gender for p in partners)

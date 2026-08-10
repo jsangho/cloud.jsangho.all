@@ -65,7 +65,12 @@ export type CareerTeam = {
 };
 
 export type CareerWeek = {
+  /** 커리어 통산 주차(1~1560). 정렬·키에 쓴다. */
   week: number;
+  /** 게임 달력이 되읽은 날짜 — 화면은 "2년차 9월 2주"로 말한다. */
+  year: number;
+  month: number;
+  weekOfMonth: number;
   kind: "weekly_show" | "promo" | "ple" | "special" | "off";
   result: "win" | "loss" | "draw" | null;
   narration: string;
@@ -132,6 +137,8 @@ export type GuestRunState = Record<string, unknown>;
 export type CareerNewsItem = {
   week: number;
   year: number;
+  month: number;
+  weekOfMonth: number;
   kind: string;
   headline: string;
   mood: "roar" | "jeer" | "split" | "hush" | "chant";

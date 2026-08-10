@@ -745,9 +745,7 @@ export default function CareerPage() {
                   <div key={chunk.from}>
                     <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
                       <span className="font-sport text-sm">{chunk.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {chunk.from}~{chunk.to}주
-                      </span>
+                      <span className="text-xs text-muted-foreground">{chunk.weeks.length}주</span>
                       {chunk.record && (
                         <span className="ml-auto text-xs text-muted-foreground">
                           {chunk.record}
@@ -758,9 +756,11 @@ export default function CareerPage() {
                       {chunk.weeks.map((week) => (
                         <div
                           key={week.week}
-                          className="grid grid-cols-[3rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[3.5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
+                          className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
                         >
-                          <span className="text-xs text-muted-foreground">{week.week}주</span>
+                          <span className="text-xs text-muted-foreground">
+                            {week.month}월 {week.weekOfMonth}주
+                          </span>
                           <span
                             className={cn(
                               "text-xs font-semibold",
@@ -815,7 +815,7 @@ export default function CareerPage() {
                         {RIVALRY_STAGES[r.stage] ?? r.stage}
                       </span>
                       <span className="ml-auto text-xs text-muted-foreground">
-                        {r.startedWeek}주부터
+                        {Math.floor((r.startedWeek - 1) / 52) + 1}년차부터
                       </span>
                     </div>
                   ))}
@@ -843,9 +843,11 @@ export default function CareerPage() {
                         {rows.map((item) => (
                           <li
                             key={`${item.week}-${item.headline}`}
-                            className="grid grid-cols-[3rem_1fr] gap-x-3 border-b border-stone-200/40 pb-2 dark:border-stone-800/60"
+                            className="grid grid-cols-[4.5rem_1fr] gap-x-3 border-b border-stone-200/40 pb-2 dark:border-stone-800/60"
                           >
-                            <span className="text-xs text-muted-foreground">{item.week}주</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.month}월 {item.weekOfMonth}주
+                            </span>
                             <div className="min-w-0">
                               <p className="text-sm">
                                 <span className="mr-1.5 text-xs text-muted-foreground">

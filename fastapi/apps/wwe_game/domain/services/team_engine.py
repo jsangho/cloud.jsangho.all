@@ -21,6 +21,7 @@ from wwe_game.domain.constants.teams import (
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.team import Team
+from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 WEEKS_PER_YEAR = team_rules.WEEKS_PER_YEAR
 
@@ -146,12 +147,23 @@ def roll_change(week: int, roll: SeededRoll) -> TeamNews | None:
     return None
 
 
-def _pick_partners(week: int, roll: SeededRoll) -> tuple[str, ...] | None:
-    """그 주차 명부에서 팀을 이룰 사람들. 같은 이름이 두 번 들어가지 않는다."""
+def _pick_partners(
+    week: int, roll: SeededRoll, gender: Gender | None = None
+) -> tuple[str, ...] | None:
+    """그 주차 명부에서 팀을 이룰 사람들. 같은 이름이 두 번 들어가지 않는다.
+
+    **디비전을 섞지 않는다** (2026-08-10 버그 수정). 성별을 안 걸렀더니 "자리아 &
+    그레이슨 월러" 같은 혼성 태그팀이 나왔다. 태그팀 벨트부터 남녀가 갈려 있고
+    (§3-D20) 라이벌 풀도 디비전으로 나뉘는데(§3-D11) 팀만 섞이고 있었다.
+
+    `gender`가 None이면 **한쪽을 뽑아 그쪽으로 통일한다** — NPC끼리 묶는 자리다.
+    """
+    if gender is None:
+        gender = Gender.FEMALE if roll.chance(0.5) else Gender.MALE
     pool = [
         ring_name_at(m.name, week)
         for m in active_at(week)
-        if tier_at(m, week) is not RivalTier.MAIN_EVENT
+        if m.gender is gender and tier_at(m, week) is not RivalTier.MAIN_EVENT
     ]
     if len(pool) < 3:
         return None
@@ -166,7 +178,9 @@ def _pick_partners(week: int, roll: SeededRoll) -> tuple[str, ...] | None:
     return tuple(picked) if len(picked) == size else None
 
 
-def form_for_player(player: str, week: int, roll: SeededRoll) -> Team | None:
+def form_for_player(
+    player: str, week: int, roll: SeededRoll, gender: Gender
+) -> Team | None:
     """플레이어가 들어갈 팀을 만든다 (§3-D30).
 
     **카드는 팀을 직접 만들지 않는다.** 선택지가 `in_tag_team`·`in_stable` 표식만 남기고,
@@ -174,7 +188,7 @@ def form_for_player(player: str, week: int, roll: SeededRoll) -> Team | None:
     덱 데이터가 명부를 알게 되면 "콘텐츠 추가에 코드 리뷰가 필요 없다"는 §3-D19의 전제가
     깨진다.
     """
-    partners = _pick_partners(week, roll)
+    partners = _pick_partners(week, roll, gender)
     if partners is None:
         return None
     members = (player, *partners[:1]) if len(partners) == 2 else (player, *partners)
