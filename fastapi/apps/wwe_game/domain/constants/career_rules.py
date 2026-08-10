@@ -378,7 +378,7 @@ RELEASE_BACKSTAGE_FLOOR = 26
 방출은 백스테이지 평판이다.
 """
 
-RELEASE_POPULARITY_SHIELD = 55
+RELEASE_POPULARITY_SHIELD = 46
 """이만큼 인기가 있으면 평판이 바닥이어도 자르지 않는다.
 
 **돈이 되면 참아준다.** 프로레슬링에서 다루기 힘든 스타는 남고 다루기 힘든
