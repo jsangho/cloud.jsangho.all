@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  fetchPleAiStats,
-  type PleAiRecord,
-  type PleAiStats,
-} from "@/lib/ple-ai-stats";
+import { fetchPleAiStats, type PleAiRecord, type PleAiStats } from "@/lib/ple-ai-stats";
 import {
   fetchAiPredictions,
   type AiPrediction,
@@ -31,10 +27,7 @@ type AiScoreboardUi = {
 };
 
 /** PLE별 예측 캐시. 펼친 대회만 담긴다 — 접힌 대회까지 미리 받지 않는다. */
-type PredictionCache = Record<
-  string,
-  AiPredictionsResult | { status: "loading" }
->;
+type PredictionCache = Record<string, AiPredictionsResult | { status: "loading" }>;
 
 const initialUi: AiScoreboardUi = {
   sectionOpen: false,
@@ -60,15 +53,11 @@ function groupRecordsByPle(records: PleAiRecord[]): PleAiGroup[] {
     if (row.correct) group.correct += 1;
   }
 
-  const order = new Map(
-    WWE_PLE_MONTHLY_ORDER.map((e, i) => [e.slug, i] as const),
-  );
+  const order = new Map(WWE_PLE_MONTHLY_ORDER.map((e, i) => [e.slug, i] as const));
 
   return [...map.values()]
     .map((group) => {
-      const cardOrder = new Map(
-        getPleMatches(group.slug).map((m, i) => [m.id, i] as const),
-      );
+      const cardOrder = new Map(getPleMatches(group.slug).map((m, i) => [m.id, i] as const));
       const rows = [...group.rows].sort((a, b) => {
         const ai = cardOrder.get(a.matchKey) ?? 999;
         const bi = cardOrder.get(b.matchKey) ?? 999;
@@ -84,13 +73,7 @@ function groupRecordsByPle(records: PleAiRecord[]): PleAiGroup[] {
     });
 }
 
-function AiMatchRow({
-  row,
-  prediction,
-}: {
-  row: PleAiRecord;
-  prediction?: AiPrediction;
-}) {
+function AiMatchRow({ row, prediction }: { row: PleAiRecord; prediction?: AiPrediction }) {
   return (
     <li
       className={cn(
@@ -106,16 +89,11 @@ function AiMatchRow({
       <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs sm:text-sm">
         <span className="text-stone-400">
           AI:{" "}
-          <span className="font-medium text-violet-700 dark:text-violet-200">
-            {row.aiPickName}
-          </span>
+          <span className="font-medium text-violet-700 dark:text-violet-200">{row.aiPickName}</span>
         </span>
         {row.winnerName && (
           <span className="text-stone-500">
-            실제:{" "}
-            <span className="text-stone-700 dark:text-stone-300">
-              {row.winnerName}
-            </span>
+            실제: <span className="text-stone-700 dark:text-stone-300">{row.winnerName}</span>
           </span>
         )}
         <span
@@ -152,11 +130,7 @@ function GroupFooter({ entry }: { entry: PredictionCache[string] | undefined }) 
   if (!entry || entry.status === "loading") return null;
 
   if (entry.status === "error") {
-    return (
-      <p className="mt-2 text-xs text-stone-500">
-        분석 근거를 불러오지 못했습니다.
-      </p>
-    );
+    return <p className="mt-2 text-xs text-stone-500">분석 근거를 불러오지 못했습니다.</p>;
   }
 
   return null;
@@ -168,8 +142,7 @@ export function PleAiScoreboard() {
   const [ui, setUi] = useState<AiScoreboardUi>(initialUi);
   const [predictions, setPredictions] = useState<PredictionCache>({});
 
-  const patchUi = (patch: Partial<AiScoreboardUi>) =>
-    setUi((prev) => ({ ...prev, ...patch }));
+  const patchUi = (patch: Partial<AiScoreboardUi>) => setUi((prev) => ({ ...prev, ...patch }));
 
   const pleGroups = useMemo(
     () => (stats?.recent.length ? groupRecordsByPle(stats.recent) : []),
@@ -232,9 +205,7 @@ export function PleAiScoreboard() {
               <div className="flex gap-6 rounded-xl border border-stone-300/50 dark:border-stone-600/50 bg-stone-100/50 dark:bg-stone-900/50 px-5 py-3">
                 <div className="text-center">
                   <p className="text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
-                    {stats.accuracyPercent != null
-                      ? `${stats.accuracyPercent}%`
-                      : "—"}
+                    {stats.accuracyPercent != null ? `${stats.accuracyPercent}%` : "—"}
                   </p>
                   <p className="text-xs text-stone-500">적중률</p>
                 </div>
@@ -257,10 +228,7 @@ export function PleAiScoreboard() {
                 >
                   {ui.sectionOpen ? "접기" : "PLE별 기록 보기"}
                   <ChevronDown
-                    className={cn(
-                      "size-4 transition-transform",
-                      ui.sectionOpen && "rotate-180",
-                    )}
+                    className={cn("size-4 transition-transform", ui.sectionOpen && "rotate-180")}
                     aria-hidden
                   />
                 </button>
@@ -277,8 +245,8 @@ export function PleAiScoreboard() {
 
         {!loading && (!stats || stats.totalGraded === 0) && (
           <p className="border-t border-stone-200/50 dark:border-stone-700/50 px-5 py-6 text-center text-sm text-stone-500 sm:px-6">
-            아직 채점된 AI 예측이 없습니다. PLE 페이지에서 카드를 동기화하고
-            결과를 등록하면 기록이 쌓입니다.
+            아직 채점된 AI 예측이 없습니다. PLE 페이지에서 카드를 동기화하고 결과를 등록하면 기록이
+            쌓입니다.
           </p>
         )}
 
@@ -288,9 +256,7 @@ export function PleAiScoreboard() {
               {pleGroups.map((group) => {
                 const isOpen = ui.expandedSlug === group.slug;
                 const accuracy =
-                  group.total > 0
-                    ? Math.round((group.correct / group.total) * 100)
-                    : 0;
+                  group.total > 0 ? Math.round((group.correct / group.total) * 100) : 0;
                 return (
                   <li
                     key={group.slug}
@@ -327,10 +293,7 @@ export function PleAiScoreboard() {
                             <AiMatchRow
                               key={`${row.eventSlug}-${row.matchKey}`}
                               row={row}
-                              prediction={pickPrediction(
-                                predictions[group.slug],
-                                row.matchKey,
-                              )}
+                              prediction={pickPrediction(predictions[group.slug], row.matchKey)}
                             />
                           ))}
                         </ul>

@@ -20,12 +20,8 @@ export function NextPleCountdownCard({ className }: { className?: string }) {
           className,
         )}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">
-          다음 PLE
-        </p>
-        <p className="mt-2 text-sm text-stone-500">
-          예정된 다음 PLE 일정이 아직 없습니다.
-        </p>
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">다음 PLE</p>
+        <p className="mt-2 text-sm text-stone-500">예정된 다음 PLE 일정이 아직 없습니다.</p>
       </div>
     );
   }
@@ -42,9 +38,7 @@ export function NextPleCountdownCard({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="ple-hero-tag absolute left-5 top-5 sm:left-6 sm:top-6">
-        다음 PLE
-      </span>
+      <span className="ple-hero-tag absolute left-5 top-5 sm:left-6 sm:top-6">다음 PLE</span>
       {days != null && (
         <span className="absolute right-5 top-5 rounded-full border border-brand-400/40 bg-brand-500/15 px-2.5 py-1 text-xs font-bold tabular-nums text-brand-700 dark:text-brand-300 sm:right-6 sm:top-6">
           D-{days}

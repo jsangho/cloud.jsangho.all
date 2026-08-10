@@ -2,19 +2,9 @@
 
 import { cn } from "@/lib/utils";
 import { BRACKET_LABELS } from "@/lib/bracket-labels";
-import {
-  normalizedMultiMarket,
-  normalizedTwoWayMarket,
-} from "@/lib/betting-odds";
-import type {
-  PleBracketTheme,
-  BracketSideStyle,
-} from "@/lib/wwe-ple-bracket-theme";
-import type {
-  PleCompetitor,
-  PleMatchCard,
-  PleMatchResultHint,
-} from "@/lib/wwe-ple-matches";
+import { normalizedMultiMarket, normalizedTwoWayMarket } from "@/lib/betting-odds";
+import type { PleBracketTheme, BracketSideStyle } from "@/lib/wwe-ple-bracket-theme";
+import type { PleCompetitor, PleMatchCard, PleMatchResultHint } from "@/lib/wwe-ple-matches";
 import { isMultiMatch } from "@/lib/wwe-ple-matches";
 import type { PleMatchResult } from "@/lib/ple-api";
 
@@ -60,13 +50,9 @@ function AiPickBanner({
     >
       <span className="font-semibold text-brand-400/90">AI 예측</span>
       <span className="mx-1 text-stone-600">·</span>
-      <span className="font-medium text-stone-700 dark:text-stone-300">
-        {aiPickName}
-      </span>
+      <span className="font-medium text-stone-700 dark:text-stone-300">{aiPickName}</span>
       {showResults && aiCorrect != null && (
-        <span className="ml-2 font-bold">
-          {aiCorrect ? "✓ 적중" : "✗ 실패"}
-        </span>
+        <span className="ml-2 font-bold">{aiCorrect ? "✓ 적중" : "✗ 실패"}</span>
       )}
     </p>
   );
@@ -97,11 +83,7 @@ function pickOutcome(
     if (result.winnerSide) return "loss";
     return null;
   }
-  if (
-    format === "multi" &&
-    typeof index === "number" &&
-    result.winnerIndex === index
-  ) {
+  if (format === "multi" && typeof index === "number" && result.winnerIndex === index) {
     return "win";
   }
   if (format === "multi" && typeof result.winnerIndex === "number") {
@@ -112,11 +94,7 @@ function pickOutcome(
 
 function ChampionBelt() {
   return (
-    <span
-      className="text-base leading-none"
-      aria-hidden
-      title={BRACKET_LABELS.championTitle}
-    >
+    <span className="text-base leading-none" aria-hidden title={BRACKET_LABELS.championTitle}>
       {BRACKET_LABELS.trophy}
     </span>
   );
@@ -154,8 +132,7 @@ function CompetitorPick({
         "ple-pick-hover relative flex flex-col items-center justify-center gap-1 border-0 bg-transparent transition-all duration-200",
         compact ? "min-h-[56px] px-2 py-2" : "min-h-[80px] flex-1 px-2 py-3",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-400/60",
-        outcome === "win" &&
-          "bg-emerald-950/50 ring-2 ring-inset ring-emerald-500/70",
+        outcome === "win" && "bg-emerald-950/50 ring-2 ring-inset ring-emerald-500/70",
         outcome === "loss" && "bg-stone-900/50 opacity-60",
         outcome == null && isSelected && "ple-pick-selected",
         outcome != null && isSelected && "ring-2 ring-inset ring-brand-400/50",
@@ -216,9 +193,7 @@ function SiteVoteBarTwoWay({
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between text-[10px] sm:text-xs">
-          <span className="font-medium text-stone-500">
-            {BRACKET_LABELS.siteVote}
-          </span>
+          <span className="font-medium text-stone-500">{BRACKET_LABELS.siteVote}</span>
           <span className="text-stone-600">{BRACKET_LABELS.noVotesYet}</span>
         </div>
         <div className="h-2 rounded-full bg-stone-200/60 dark:bg-white/10" />
@@ -255,9 +230,7 @@ function SiteVoteMulti({
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between text-[10px] sm:text-xs">
-          <span className="font-medium text-stone-500">
-            {BRACKET_LABELS.siteVote}
-          </span>
+          <span className="font-medium text-stone-500">{BRACKET_LABELS.siteVote}</span>
           <span className="text-stone-600">{BRACKET_LABELS.noVotesYet}</span>
         </div>
         <div className="h-2 rounded-full bg-stone-200/60 dark:bg-white/10" />
@@ -276,12 +249,8 @@ function SiteVoteMulti({
           return (
             <li key={`${c.name}-${i}`} className="space-y-0.5">
               <div className="flex justify-between gap-2 text-[10px] sm:text-xs">
-                <span className="truncate font-medium text-stone-400">
-                  {c.name}
-                </span>
-                <span className="shrink-0 tabular-nums font-semibold text-stone-300">
-                  {pct}%
-                </span>
+                <span className="truncate font-medium text-stone-400">{c.name}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-stone-300">{pct}%</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-stone-200/60 dark:bg-white/10">
                 <div
@@ -315,12 +284,7 @@ function DualStatBar({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-[10px] sm:text-xs">
-        <span
-          className={cn(
-            "font-medium",
-            muted ? "text-stone-400" : "text-stone-500",
-          )}
-        >
+        <span className={cn("font-medium", muted ? "text-stone-400" : "text-stone-500")}>
           {label}
         </span>
         <span className="tabular-nums text-stone-400">
@@ -420,17 +384,11 @@ export function MatchBracketCard({
                     competitor={competitor}
                     nameStyle={style}
                     isSelected={selectedIndex === index}
-                    isOtherSelected={
-                      selectedIndex !== null && selectedIndex !== index
-                    }
+                    isOtherSelected={selectedIndex !== null && selectedIndex !== index}
                     locked={locked}
                     onSelect={() => onSelect(index)}
                     compact
-                    outcome={
-                      displayResults
-                        ? pickOutcome(result, "multi", index)
-                        : null
-                    }
+                    outcome={displayResults ? pickOutcome(result, "multi", index) : null}
                   />
                 );
               })}
@@ -438,20 +396,11 @@ export function MatchBracketCard({
           </div>
 
           <div className="space-y-2.5 border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-white/[0.03] px-3 py-2.5 sm:px-4">
-            <SiteVoteMulti
-              competitors={match.competitors}
-              votes={multiVotes}
-              barClass={barClass}
-            />
+            <SiteVoteMulti competitors={match.competitors} votes={multiVotes} barClass={barClass} />
             {match.bookmakerDecimal && (
-              <BookmakerMulti
-                competitors={match.competitors}
-                decimals={match.bookmakerDecimal}
-              />
+              <BookmakerMulti competitors={match.competitors} decimals={match.bookmakerDecimal} />
             )}
-            <p className="text-center text-[9px] text-stone-600">
-              {BRACKET_LABELS.bookNote}
-            </p>
+            <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
           </div>
         </div>
       </article>
@@ -459,10 +408,7 @@ export function MatchBracketCard({
   }
 
   const singlesVotes = votes as SinglesVotes;
-  const book = normalizedTwoWayMarket(
-    match.bookmakerDecimal.left,
-    match.bookmakerDecimal.right,
-  );
+  const book = normalizedTwoWayMarket(match.bookmakerDecimal.left, match.bookmakerDecimal.right);
 
   return (
     <article className="ple-match-card overflow-hidden rounded-xl">
@@ -470,11 +416,7 @@ export function MatchBracketCard({
         <div className="ple-match-card-header px-3 py-2.5 text-center text-xs font-semibold leading-snug text-white sm:text-sm">
           {match.title}
         </div>
-        <AiPickBanner
-          aiPickName={aiPickName}
-          aiCorrect={aiCorrect}
-          showResults={displayResults}
-        />
+        <AiPickBanner aiPickName={aiPickName} aiCorrect={aiCorrect} showResults={displayResults} />
 
         <div className="relative flex border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-black/20">
           <CompetitorPick
@@ -484,9 +426,7 @@ export function MatchBracketCard({
             isOtherSelected={selected === "right"}
             locked={locked}
             onSelect={() => onSelect("left")}
-            outcome={
-              displayResults ? pickOutcome(result, "singles", "left") : null
-            }
+            outcome={displayResults ? pickOutcome(result, "singles", "left") : null}
           />
           <VsDivider />
           <CompetitorPick
@@ -496,9 +436,7 @@ export function MatchBracketCard({
             isOtherSelected={selected === "left"}
             locked={locked}
             onSelect={() => onSelect("right")}
-            outcome={
-              displayResults ? pickOutcome(result, "singles", "right") : null
-            }
+            outcome={displayResults ? pickOutcome(result, "singles", "right") : null}
           />
         </div>
 
@@ -516,9 +454,7 @@ export function MatchBracketCard({
             rightBarClass="bg-stone-400"
             muted
           />
-          <p className="text-center text-[9px] text-stone-600">
-            {BRACKET_LABELS.bookNote}
-          </p>
+          <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
         </div>
       </div>
     </article>

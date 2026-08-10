@@ -4,9 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { parseApiError } from "@/lib/api";
 
-type UploadState =
-  | { kind: "empty" }
-  | { kind: "ready"; fileName: string; previewUrl: string };
+type UploadState = { kind: "empty" } | { kind: "ready"; fileName: string; previewUrl: string };
 
 type UploadResult = {
   filename: string;
@@ -48,9 +46,7 @@ export function TitanicVisionUpload() {
         savedPath: String(body.saved_path ?? ""),
       });
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "업로드 중 오류가 발생했습니다.",
-      );
+      setError(e instanceof Error ? e.message : "업로드 중 오류가 발생했습니다.");
     } finally {
       setUploading(false);
     }
@@ -142,15 +138,9 @@ export function TitanicVisionUpload() {
                   : "border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60",
             ].join(" ")}
           >
-            <Upload
-              className="mb-3 size-10 text-zinc-400"
-              strokeWidth={1.25}
-              aria-hidden
-            />
+            <Upload className="mb-3 size-10 text-zinc-400" strokeWidth={1.25} aria-hidden />
             <p className="text-base font-medium text-zinc-800 dark:text-zinc-200">
-              {uploading
-                ? "서버로 전송 중..."
-                : "이미지를 이 영역에 끌어다 놓기"}
+              {uploading ? "서버로 전송 중..." : "이미지를 이 영역에 끌어다 놓기"}
             </p>
             <p className="mt-1 text-sm text-zinc-500">
               {uploading
@@ -165,9 +155,7 @@ export function TitanicVisionUpload() {
             <div className="w-full border-t border-zinc-200" />
           </div>
           <div className="relative flex justify-center text-xs uppercase tracking-wide text-zinc-400">
-            <span className="bg-white dark:bg-stone-900 px-3 dark:text-zinc-400">
-              또는
-            </span>
+            <span className="bg-white dark:bg-stone-900 px-3 dark:text-zinc-400">또는</span>
           </div>
         </div>
 
@@ -222,8 +210,7 @@ export function TitanicVisionUpload() {
           />
           {result && (
             <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-              서버 저장 완료 · {result.contentType} ·{" "}
-              {result.sizeBytes.toLocaleString("ko-KR")}
+              서버 저장 완료 · {result.contentType} · {result.sizeBytes.toLocaleString("ko-KR")}
               바이트
             </p>
           )}

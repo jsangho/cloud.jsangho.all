@@ -12,8 +12,8 @@ export default function LessonDatasetCollectionCrawlerScraperPage() {
             Crawler / Scraper
           </h1>
           <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-            사이트 주소와 자연어 명령어를 입력해 크롤링·스크래핑을 실행하고,
-            탭으로 각 단계 결과를 확인합니다.
+            사이트 주소와 자연어 명령어를 입력해 크롤링·스크래핑을 실행하고, 탭으로 각 단계 결과를
+            확인합니다.
           </p>
         </div>
         <DatasetCollectionPipeline />

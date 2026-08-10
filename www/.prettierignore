@@ -1,0 +1,13 @@
+# 생성 파일 — prettier가 8천 줄을 다시 쓴다. pnpm이 소유한 포맷이다.
+pnpm-lock.yaml
+package-lock.json
+.next/
+node_modules/
+tsconfig.tsbuildinfo
+
+# 도구가 소유한 문서 — oh-my-design(omd)이 해시로 블록을 관리한다.
+# 포맷이 바뀌면 shim 동기화 검사가 drift로 읽는다.
+CLAUDE.md
+AGENTS.md
+DESIGN.md
+.omd/

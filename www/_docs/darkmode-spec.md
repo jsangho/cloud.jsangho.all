@@ -73,11 +73,7 @@ export function ThemeToggle() {
       aria-label="테마 전환"
       className="p-2 rounded-md text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
     >
-      {theme === "dark" ? (
-        <SunIcon className="w-4 h-4" />
-      ) : (
-        <MoonIcon className="w-4 h-4" />
-      )}
+      {theme === "dark" ? <SunIcon className="w-4 h-4" /> : <MoonIcon className="w-4 h-4" />}
     </button>
   );
 }
@@ -187,13 +183,9 @@ Tailwind `dark:` 클래스와 병행해서 CSS 변수로 시맨틱 토큰 관리
 "
 >
   {/* active 항목 */}
-  <span className="text-blue-600 dark:text-blue-400 font-medium">
-    데이터 수집
-  </span>
+  <span className="text-blue-600 dark:text-blue-400 font-medium">데이터 수집</span>
   {/* 일반 항목 */}
-  <span className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
-    탐승자 목록
-  </span>
+  <span className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">탐승자 목록</span>
 </nav>
 ```
 

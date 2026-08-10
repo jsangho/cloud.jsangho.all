@@ -12,11 +12,7 @@ import {
 } from "@/lib/ple-api";
 import type { PleSlug } from "@/lib/wwe-ple";
 import { PleResultsAdminGate } from "@/components/results/ple-results-admin-gate";
-import {
-  getPleMatches,
-  isMultiMatch,
-  type PleMatchCard,
-} from "@/lib/wwe-ple-matches";
+import { getPleMatches, isMultiMatch, type PleMatchCard } from "@/lib/wwe-ple-matches";
 
 type PleResultsBoardProps = {
   slug: PleSlug;
@@ -47,15 +43,11 @@ function draftFromMatch(
   return { winnerIndex: pick.index, winnerName: pick.name };
 }
 
-function pickFromExisting(
-  matchRow: PleBoardMatch,
-  matchCard: PleMatchCard,
-): DraftPick | null {
+function pickFromExisting(matchRow: PleBoardMatch, matchCard: PleMatchCard): DraftPick | null {
   const r = matchRow.result;
   if (!r) return null;
   if (matchCard.format === "multi" && r.winnerIndex != null) {
-    const name =
-      matchCard.competitors[r.winnerIndex]?.name ?? r.winnerName ?? "";
+    const name = matchCard.competitors[r.winnerIndex]?.name ?? r.winnerName ?? "";
     return { kind: "multi", index: r.winnerIndex, name };
   }
   if (r.winnerSide === "left" || r.winnerSide === "right") {
@@ -76,10 +68,7 @@ function pickFromExisting(
   return null;
 }
 
-function winnerLabel(
-  matchRow: PleBoardMatch,
-  matchCard: PleMatchCard,
-): string | null {
+function winnerLabel(matchRow: PleBoardMatch, matchCard: PleMatchCard): string | null {
   const r = matchRow.result;
   if (!r) return null;
   if (r.winnerName) return r.winnerName;
@@ -161,9 +150,7 @@ function MatchResultRow({
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="font-semibold text-stone-800 dark:text-stone-100">
-          {matchRow.title}
-        </h3>
+        <h3 className="font-semibold text-stone-800 dark:text-stone-100">{matchRow.title}</h3>
         {hasResult && (
           <span className="rounded-full bg-emerald-900/80 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
             결과 등록됨
@@ -178,17 +165,14 @@ function MatchResultRow({
       )}
 
       {!canEdit && !hasResult && (
-        <p className="mt-3 text-sm text-stone-500">
-          아직 등록된 결과가 없습니다.
-        </p>
+        <p className="mt-3 text-sm text-stone-500">아직 등록된 결과가 없습니다.</p>
       )}
 
       {canEdit && (
         <div className="mt-3 flex flex-wrap gap-2">
           {!isMultiMatch(matchCard)
             ? (["left", "right"] as const).map((side) => {
-                const competitor =
-                  side === "left" ? matchCard.left : matchCard.right;
+                const competitor = side === "left" ? matchCard.left : matchCard.right;
                 const selected = pick?.kind === "singles" && pick.side === side;
                 return (
                   <button
@@ -221,9 +205,7 @@ function MatchResultRow({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() =>
-                      onPick({ kind: "multi", index: idx, name: c.name })
-                    }
+                    onClick={() => onPick({ kind: "multi", index: idx, name: c.name })}
                     className={cn(
                       "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                       selected
@@ -232,9 +214,7 @@ function MatchResultRow({
                     )}
                   >
                     {c.name}
-                    {c.isChampion && (
-                      <span className="ml-1 text-xs text-brand-400">(C)</span>
-                    )}
+                    {c.isChampion && <span className="ml-1 text-xs text-brand-400">(C)</span>}
                   </button>
                 );
               })}
@@ -243,10 +223,7 @@ function MatchResultRow({
 
       {canEdit && pick && (
         <p className="mt-2 text-xs text-stone-400">
-          선택:{" "}
-          <span className="text-stone-800 dark:text-stone-200">
-            {pick.name}
-          </span>
+          선택: <span className="text-stone-800 dark:text-stone-200">{pick.name}</span>
         </p>
       )}
     </li>
@@ -265,8 +242,7 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
     submitError: null,
   });
 
-  const patchUi = (patch: Partial<ResultsUiState>) =>
-    setUi((prev) => ({ ...prev, ...patch }));
+  const patchUi = (patch: Partial<ResultsUiState>) => setUi((prev) => ({ ...prev, ...patch }));
 
   const load = useCallback(async () => {
     const cards = getPleMatches(slug);
@@ -348,11 +324,7 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
   );
 
   const canSubmit =
-    canEdit &&
-    board != null &&
-    !syncError &&
-    draftCount === matches.length &&
-    matches.length > 0;
+    canEdit && board != null && !syncError && draftCount === matches.length && matches.length > 0;
 
   const handleSubmitAll = async () => {
     if (!canSubmit || ui.submitting) return;
@@ -399,21 +371,16 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
       <PleResultsAdminGate onAdminChange={setCanEdit} />
       {syncError && (
         <p className="rounded-lg border border-brand-500/60 bg-brand-100/60 dark:bg-brand-950/30 px-4 py-3 text-sm text-brand-800 dark:text-brand-200">
-          서버 연결 없음 — 결과를 등록하려면 백엔드가 실행 중이어야 합니다. (
-          {syncError})
+          서버 연결 없음 — 결과를 등록하려면 백엔드가 실행 중이어야 합니다. ({syncError})
         </p>
       )}
-      {loading && (
-        <p className="text-center text-sm text-stone-500">
-          경기 목록 불러오는 중…
-        </p>
-      )}
+      {loading && <p className="text-center text-sm text-stone-500">경기 목록 불러오는 중…</p>}
       {!loading && (
         <>
           {canEdit && (
             <p className="text-sm text-stone-400">
-              모든 경기의 승자를 고른 뒤 맨 아래 「결과 일괄 등록」을 눌러
-              주세요. 확정 전까지 언제든지 변경할 수 있습니다.
+              모든 경기의 승자를 고른 뒤 맨 아래 「결과 일괄 등록」을 눌러 주세요. 확정 전까지
+              언제든지 변경할 수 있습니다.
             </p>
           )}
           <ul className="space-y-4">
@@ -459,10 +426,7 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
                 </button>
               </div>
               {ui.submitError && (
-                <p
-                  className="mt-2 text-center text-sm text-red-400"
-                  role="alert"
-                >
+                <p className="mt-2 text-center text-sm text-red-400" role="alert">
                   {ui.submitError}
                 </p>
               )}

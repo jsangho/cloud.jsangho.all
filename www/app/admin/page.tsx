@@ -552,8 +552,7 @@ function EmailComposeCard() {
     clearTimeout(debounceRef.current);
     if (!value) return;
     debounceRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/contacts?q=${encodeURIComponent(value)}`, {
-      });
+      const res = await fetch(`/api/contacts?q=${encodeURIComponent(value)}`, {});
       if (res.ok) setSuggestions(await res.json());
     }, 300);
   };
@@ -835,8 +834,7 @@ function ReceiverPanel() {
   const fetchEmails = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/receiver", {
-      });
+      const res = await fetch("/api/receiver", {});
       if (res.ok) setEmails(await res.json());
     } finally {
       setLoading(false);
@@ -981,8 +979,7 @@ function AddressBookPanel() {
 
   const fetchContacts = async () => {
     try {
-      const res = await fetch("/api/contacts/list", {
-      });
+      const res = await fetch("/api/contacts/list", {});
       if (res.ok) setContacts(await res.json());
     } catch {}
   };

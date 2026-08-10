@@ -82,12 +82,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
         detail: "남·여 단일·태그 타이틀 방어가 동시 진행되기도 함",
       },
     ],
-    predictionFocus: [
-      "챔피언 방어 여부",
-      "탈락 순서",
-      "마지막 2인",
-      "핀/sub 승리 방식",
-    ],
+    predictionFocus: ["챔피언 방어 여부", "탈락 순서", "마지막 2인", "핀/sub 승리 방식"],
   },
   "stand-and-deliver": {
     slug: "stand-and-deliver",
@@ -129,12 +124,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       { title: "최고 대접", detail: "입장·세트·스토리텔링이 시즌 최고조" },
       { title: "레전드 복귀", detail: "깜짝 등장과 스토리 마무리의 무대" },
     ],
-    predictionFocus: [
-      "메인 이벤트 승자",
-      "스틸 케이지/노 DQ",
-      "서프라이즈 등장",
-      "챔피언십 변동",
-    ],
+    predictionFocus: ["메인 이벤트 승자", "스틸 케이지/노 DQ", "서프라이즈 등장", "챔피언십 변동"],
   },
   backlash: {
     slug: "backlash",
@@ -256,11 +246,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
         detail: "Brock Lesnar vs Oba Femi",
       },
     ],
-    predictionFocus: [
-      "Undisputed·WHC 방어",
-      "여자 챔피언십 2장",
-      "레스너·페미 리매치",
-    ],
+    predictionFocus: ["Undisputed·WHC 방어", "여자 챔피언십 2장", "레스너·페미 리매치"],
   },
   "night-of-champions": {
     slug: "night-of-champions",
@@ -326,8 +312,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       accent: "text-blue-300",
       accentMuted: "text-red-200/65",
       border: "border-blue-600/35",
-      badge:
-        "bg-gradient-to-r from-blue-950/50 to-red-950/50 text-stone-100 ring-stone-500/30",
+      badge: "bg-gradient-to-r from-blue-950/50 to-red-950/50 text-stone-100 ring-stone-500/30",
       glow: "shadow-[0_0_80px_-20px_rgba(59,130,246,0.3)]",
     },
     highlights: [
@@ -335,12 +320,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       { title: "브랜드 대전", detail: "Raw·SmackDown 우위가 갈림" },
       { title: "시즌 마무리", detail: "연말 스토리와 WM 시드" },
     ],
-    predictionFocus: [
-      "서바이버 승리 팀",
-      "최후 1인",
-      "브랜드 우위",
-      "챔피언 방어",
-    ],
+    predictionFocus: ["서바이버 승리 팀", "최후 1인", "브랜드 우위", "챔피언 방어"],
   },
 };
 

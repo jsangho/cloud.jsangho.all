@@ -81,22 +81,17 @@ export function PleEventGrid({
           )}
         >
           <span className="ple-hero-tag absolute left-5 top-5 sm:left-7 sm:top-7">
-            {(badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle))
-              .variant === "deadline"
+            {(badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle)).variant === "deadline"
               ? "마감임박"
               : "다음 예측 이벤트"}
           </span>
           <span
             className={cn(
               "ple-status-badge absolute right-5 top-5 sm:right-7 sm:top-7",
-              STATUS_CLASS[
-                (badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle))
-                  .variant
-              ],
+              STATUS_CLASS[(badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle)).variant],
             )}
           >
-            {(badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle))
-              .label}
+            {(badges[featuredPle.slug] ?? getPleStatusBadge(featuredPle)).label}
           </span>
           <span className="font-sport text-4xl font-bold uppercase tracking-[-0.03em] text-stone-800 dark:text-white sm:text-5xl">
             {featuredPle.label}
@@ -125,10 +120,7 @@ export function PleEventGrid({
           return (
             <li
               key={ple.slug}
-              className={cn(
-                "min-w-0",
-                !isLarge && "w-[calc(50%-0.25rem)] sm:w-[9.5rem]",
-              )}
+              className={cn("min-w-0", !isLarge && "w-[calc(50%-0.25rem)] sm:w-[9.5rem]")}
             >
               <Link
                 href={`${hrefPrefix}/${ple.slug}`}
@@ -153,12 +145,7 @@ export function PleEventGrid({
                   {badge.label}
                 </span>
 
-                <span
-                  className={cn(
-                    "ple-month-badge absolute left-3 top-3",
-                    tbd && "opacity-60",
-                  )}
-                >
+                <span className={cn("ple-month-badge absolute left-3 top-3", tbd && "opacity-60")}>
                   {formatPleMonth(ple.month)}
                 </span>
 
@@ -168,9 +155,7 @@ export function PleEventGrid({
                     tbd
                       ? "text-stone-400 dark:text-stone-600"
                       : "text-stone-800 dark:text-stone-50",
-                    isLarge
-                      ? "font-sport text-xl sm:text-2xl"
-                      : "font-semibold",
+                    isLarge ? "font-sport text-xl sm:text-2xl" : "font-semibold",
                   )}
                 >
                   {ple.label}

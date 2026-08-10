@@ -39,9 +39,7 @@ async function fetchSeoulWeather() {
     /* ignore */
   }
   if (!res.ok) {
-    throw new Error(
-      typeof data.detail === "string" ? data.detail : `weather ${res.status}`,
-    );
+    throw new Error(typeof data.detail === "string" ? data.detail : `weather ${res.status}`);
   }
   if (data.temp_c == null || data.condition_id == null) {
     throw new Error("invalid weather payload");

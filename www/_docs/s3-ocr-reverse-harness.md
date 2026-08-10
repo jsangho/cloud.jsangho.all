@@ -28,20 +28,20 @@
 
 > 추측이 아니라 아래 파일을 직접 읽고 정리한 것이다. 새 코드를 쓰기 전 이 표가 여전히 맞는지 확인한다.
 
-| 구성요소 | 실제 위치 | 현재 상태 |
-|---|---|---|
-| API 베이스 URL | `lib/api.ts` | `apiBaseUrl = NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"`. 도메인별 상수를 여기 모아둔다 (`shopBaseUrl = ${apiBaseUrl}/api/shop` 식) |
-| 공통 에러 처리 | `lib/api.ts` | `parseApiError(data, status)` · `isAbortError` · `getRequestTimeoutMessage` · `requestTimeoutMs = 20000` |
-| API 클라이언트 패턴 | `lib/shop-api.ts` | `AbortController` + `setTimeout(requestTimeoutMs)` + `credentials: "include"`. 실패 시 `null`/`[]` 반환 |
-| 인증 | `context/auth-context.tsx` | **액세스 토큰은 httpOnly 쿠키에만 있고 JS가 읽을 수 없다.** 컨텍스트가 들고 있는 건 표시용 프로필 캐시뿐이다 |
-| `authHeader(token)` | `lib/api.ts` | **어드민 전용 Next.js Route Handler 호출용**이다. FastAPI 직접 호출에는 쓰지 않는다 |
-| 이미지 업로드 UI 선례 | `components/titanic-vision-upload.tsx` | `useState` 판별 유니온 + `useCallback` + `FormData` + `parseApiError`. 상태 라이브러리 없음 |
-| 상태 관리 | — | **전역은 `context/auth-context.tsx` 하나뿐.** Redux·Zustand·react-query·SWR **전부 없다** (`package.json` 확인) |
-| 스택 버전 | `package.json` | `next@16.2.4` · `react@19` · Tailwind · Radix · `sonner`(토스트) · `zod` · `date-fns` |
-| 이미지 최적화 | `next.config.mjs` | `images.unoptimized: true` — 원격 호스트를 `remotePatterns`에 등록하지 않아도 `next/image`가 통과한다 |
-| **빌드 타입 검사** | `next.config.mjs` | `typescript.ignoreBuildErrors: true` — **`pnpm build`는 타입 오류를 잡지 못한다.** 실질 게이트는 `pnpm type-check`다 |
-| **가계부 화면** | — | **전무하다.** `app/`에 해당 라우트 없음 |
-| **영수증/사진 API 클라이언트** | — | **전무하다.** `lib/`에 `photos`·`receipt` 관련 파일 없음. www는 `lion_king`(`/api/photos`)을 **한 번도 호출한 적이 없다** |
+| 구성요소                       | 실제 위치                              | 현재 상태                                                                                                                                     |
+| ------------------------------ | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| API 베이스 URL                 | `lib/api.ts`                           | `apiBaseUrl = NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"`. 도메인별 상수를 여기 모아둔다 (`shopBaseUrl = ${apiBaseUrl}/api/shop` 식) |
+| 공통 에러 처리                 | `lib/api.ts`                           | `parseApiError(data, status)` · `isAbortError` · `getRequestTimeoutMessage` · `requestTimeoutMs = 20000`                                      |
+| API 클라이언트 패턴            | `lib/shop-api.ts`                      | `AbortController` + `setTimeout(requestTimeoutMs)` + `credentials: "include"`. 실패 시 `null`/`[]` 반환                                       |
+| 인증                           | `context/auth-context.tsx`             | **액세스 토큰은 httpOnly 쿠키에만 있고 JS가 읽을 수 없다.** 컨텍스트가 들고 있는 건 표시용 프로필 캐시뿐이다                                  |
+| `authHeader(token)`            | `lib/api.ts`                           | **어드민 전용 Next.js Route Handler 호출용**이다. FastAPI 직접 호출에는 쓰지 않는다                                                           |
+| 이미지 업로드 UI 선례          | `components/titanic-vision-upload.tsx` | `useState` 판별 유니온 + `useCallback` + `FormData` + `parseApiError`. 상태 라이브러리 없음                                                   |
+| 상태 관리                      | —                                      | **전역은 `context/auth-context.tsx` 하나뿐.** Redux·Zustand·react-query·SWR **전부 없다** (`package.json` 확인)                               |
+| 스택 버전                      | `package.json`                         | `next@16.2.4` · `react@19` · Tailwind · Radix · `sonner`(토스트) · `zod` · `date-fns`                                                         |
+| 이미지 최적화                  | `next.config.mjs`                      | `images.unoptimized: true` — 원격 호스트를 `remotePatterns`에 등록하지 않아도 `next/image`가 통과한다                                         |
+| **빌드 타입 검사**             | `next.config.mjs`                      | `typescript.ignoreBuildErrors: true` — **`pnpm build`는 타입 오류를 잡지 못한다.** 실질 게이트는 `pnpm type-check`다                          |
+| **가계부 화면**                | —                                      | **전무하다.** `app/`에 해당 라우트 없음                                                                                                       |
+| **영수증/사진 API 클라이언트** | —                                      | **전무하다.** `lib/`에 `photos`·`receipt` 관련 파일 없음. www는 `lion_king`(`/api/photos`)을 **한 번도 호출한 적이 없다**                     |
 
 ---
 
@@ -58,12 +58,12 @@ Flutter 대응 문서가 필요하면 `flutter/_docs/`에 별도로 만든다 �
 
 지시서의 Flutter 용어는 아래로 치환한다.
 
-| 지시서 (Flutter) | 이 저장소 (www) |
-|---|---|
-| Domain Layer | `lib/receipt-api.ts`의 `export type` — 도메인 타입은 소유 모듈에서 export (typescript.md §2) |
-| Data Layer / DataSource | `lib/receipt-api.ts` fetch 함수 (`lib/shop-api.ts` 패턴) |
-| Presentation Layer | `app/ledger/page.tsx` + `components/ledger/*` |
-| BLoC / Provider | **없음.** `useState` 판별 유니온 + `useCallback` (§2-D5) |
+| 지시서 (Flutter)        | 이 저장소 (www)                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| Domain Layer            | `lib/receipt-api.ts`의 `export type` — 도메인 타입은 소유 모듈에서 export (typescript.md §2) |
+| Data Layer / DataSource | `lib/receipt-api.ts` fetch 함수 (`lib/shop-api.ts` 패턴)                                     |
+| Presentation Layer      | `app/ledger/page.tsx` + `components/ledger/*`                                                |
+| BLoC / Provider         | **없음.** `useState` 판별 유니온 + `useCallback` (§2-D5)                                     |
 
 ### D-2. 브라우저가 S3에 직접 접근하는 요구사항은 그대로 구현할 수 없다
 
@@ -116,22 +116,27 @@ Flutter 대응 문서가 필요하면 `flutter/_docs/`에 별도로 만든다 �
 ## 3. 확정된 결정사항 (변경 금지)
 
 ### D-1. 화면 진입 시에는 **목록만** 부른다. OCR은 사용자가 고른 한 장에만 돌린다
+
 진입과 동시에 N장을 판독하면 Textract/Gemini 호출이 목록 길이만큼 곱해진다. 비용도 지연도 사용자가 원한 적 없는 값이다.
 → 진입: `GET` 목록 1회. OCR: 카드 클릭 시 `POST` 1회.
 
 ### D-2. 인증은 `credentials: "include"` 하나로 통일한다
+
 토큰을 JS로 읽어 헤더에 넣으려 시도하지 않는다 — 읽을 수 없다(§2-D4).
 
 ### D-3. OCR 요청은 **별도 타임아웃 상수**를 쓴다
+
 `lib/api.ts`의 `requestTimeoutMs = 20000`은 일반 조회 기준이다. OCR은 이미지 다운로드 + 엔진 왕복이라 이보다 오래 걸릴 수 있다.
 → `lib/receipt-api.ts`에 `ocrTimeoutMs = 60000`을 따로 두고 사유를 주석으로 남긴다. **기존 `requestTimeoutMs`를 키우지 않는다** — 다른 화면 전체의 응답 기준이 함께 늘어난다.
 
 ### D-4. `needsReview`를 화면에서 반드시 드러낸다
+
 백엔드는 확정 내역이 아니라 **초안(draft)** 을 돌려준다(백엔드 하네스 §3-D6).
 `needsReview: true`면 "확인 필요" 배지를 붙이고, 사용자 확인 없이 확정된 값처럼 보이게 하지 않는다.
 `totalAmount`가 `null`인 자리에 `0`을 채워 넣지 않는다 — 미판독과 0원은 다르다.
 
 ### D-5. 상태는 판별 유니온 하나로 든다
+
 `loading`·`error`·`data` 불리언 3개를 각각 두면 "로딩 중인데 에러도 있는" 표현 불가능한 상태가 만들어진다.
 
 ```ts
@@ -143,13 +148,16 @@ type OcrState =
 ```
 
 ### D-6. 금액은 정수 원 단위로 받아 표시할 때만 포맷한다
+
 백엔드가 `int`(KRW)로 준다(백엔드 하네스 §3-D5). 클라이언트에서 `parseFloat`·나눗셈을 하지 않는다.
 표시는 `toLocaleString("ko-KR")`.
 
 ### D-7. 목록·OCR 응답 타입은 `lib/receipt-api.ts`가 소유하고 `export`한다
+
 컴포넌트에서 같은 타입을 다시 선언하지 않는다 (`.claude/rules/typescript.md` §2).
 
 ### D-8. 실패는 `parseApiError`를 거쳐 한국어 문구로만 노출한다
+
 상태 코드·스택·백엔드 원문을 화면에 그대로 찍지 않는다.
 
 ---
@@ -271,8 +279,8 @@ export type ReceiptLineItem = {
 export type ReceiptDraft = {
   merchantName: string | null;
   businessNo: string | null;
-  transactedAt: string | null;   // ISO 문자열. Date 변환은 표시 직전에만
-  totalAmount: number | null;    // KRW 정수
+  transactedAt: string | null; // ISO 문자열. Date 변환은 표시 직전에만
+  totalAmount: number | null; // KRW 정수
   vatAmount: number | null;
   currency: "KRW";
   lineItems: ReceiptLineItem[];
@@ -289,18 +297,18 @@ export type ReceiptDraft = {
 
 백엔드 `detail`을 `parseApiError`로 뽑되, 아래는 화면 동작이 달라지므로 상태 코드로 분기한다.
 
-| 상태 | 상황 | 화면 동작 |
-|---|---|---|
-| 401 | 세션 만료 | 로그인 유도로 전환. **`refresh()`를 부르지 않는다** — 이 결정은 2026-08-04에 뒤집혔다(아래) |
+| 상태 | 상황      | 화면 동작                                                                                   |
+| ---- | --------- | ------------------------------------------------------------------------------------------- |
+| 401  | 세션 만료 | 로그인 유도로 전환. **`refresh()`를 부르지 않는다** — 이 결정은 2026-08-04에 뒤집혔다(아래) |
 
 > **§8-401 정정 (2026-08-04).** 원래 이 표는 "`auth-context`의 `refresh()`를 한 번 시도"하라고 적었지만,
 > `refresh()`는 `/auth/me`가 한 번 실패하기만 해도 `setUser(null)`로 **전역 세션을 지운다**(`context/auth-context.tsx`).
 > 그래서 목록 401 하나가 다른 화면까지 로그아웃시키는 사고가 실제로 났다. 데이터 엔드포인트의 401은
 > 화면 안에서만 처리하고, 세션 판정은 `auth-context`에 맡긴다.
-| 404 | 없는 키 / 남의 키 | "영수증 이미지를 찾을 수 없습니다." 카드를 목록에서 제거하고 목록을 다시 부른다 |
-| 422 | 영수증이 아님 | "영수증을 인식하지 못했습니다. 다시 촬영해 주세요." — **재시도 버튼을 주지 않는다** (같은 이미지로 다시 해도 같다) |
-| 503 | 보관소·OCR 일시 장애 | 문구 + **[다시 시도]** 버튼 |
-| 타임아웃 | `AbortError` | `isAbortError`로 판별 후 `getRequestTimeoutMessage()` |
+> | 404 | 없는 키 / 남의 키 | "영수증 이미지를 찾을 수 없습니다." 카드를 목록에서 제거하고 목록을 다시 부른다 |
+> | 422 | 영수증이 아님 | "영수증을 인식하지 못했습니다. 다시 촬영해 주세요." — **재시도 버튼을 주지 않는다** (같은 이미지로 다시 해도 같다) |
+> | 503 | 보관소·OCR 일시 장애 | 문구 + **[다시 시도]** 버튼 |
+> | 타임아웃 | `AbortError` | `isAbortError`로 판별 후 `getRequestTimeoutMessage()` |
 
 ---
 
@@ -318,15 +326,15 @@ AWS 관련 키를 프론트에 추가하려는 시도가 나오면 그 설계가
 
 ## 10. 작업 단위
 
-| # | 작업 | 산출물 | 완료 판정 |
-|---|---|---|---|
-| **T0** | **백엔드 선행 — 목록 엔드포인트** | `fastapi/` 쪽 작업 | `GET /api/receipts`가 `/docs`에 뜨고 presigned URL을 돌려준다. **§13-Q1·Q2가 먼저 결정돼야 한다.** 미결이면 여기서 멈춘다 |
-| **T1** | 백엔드 OCR 엔드포인트 | `fastapi/` 쪽 작업 | 백엔드 하네스 §11 DoD 통과 |
-| **T2** | API 클라이언트 | `lib/api.ts`(1줄) · `lib/receipt-api.ts` | `credentials: "include"`, `AbortController`, `ocrTimeoutMs` 별도 상수. 실패 시 throw가 아니라 결과 타입으로 표현 |
-| **T3** | 카드·패널 컴포넌트 | `components/ledger/*` | 백엔드 없이 고정 목 데이터로 렌더링 확인. `needsReview` 배지 포함 |
-| **T4** | 페이지 조립 | `app/ledger/page.tsx` | `isReady`·`user` 분기, 목록 4상태(로딩/빈/실패/성공) 전부 화면에 존재 |
-| **T5** | OCR 연동 | 카드 클릭 → `POST` | 카드별 로딩. §8 표의 상태 코드 분기 구현 |
-| **T6** | 내비 진입점 | `components/navbar.tsx` | 기존 링크 패턴을 따라 추가. **요청 범위 밖 리팩터 금지** |
+| #      | 작업                              | 산출물                                   | 완료 판정                                                                                                                 |
+| ------ | --------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **T0** | **백엔드 선행 — 목록 엔드포인트** | `fastapi/` 쪽 작업                       | `GET /api/receipts`가 `/docs`에 뜨고 presigned URL을 돌려준다. **§13-Q1·Q2가 먼저 결정돼야 한다.** 미결이면 여기서 멈춘다 |
+| **T1** | 백엔드 OCR 엔드포인트             | `fastapi/` 쪽 작업                       | 백엔드 하네스 §11 DoD 통과                                                                                                |
+| **T2** | API 클라이언트                    | `lib/api.ts`(1줄) · `lib/receipt-api.ts` | `credentials: "include"`, `AbortController`, `ocrTimeoutMs` 별도 상수. 실패 시 throw가 아니라 결과 타입으로 표현          |
+| **T3** | 카드·패널 컴포넌트                | `components/ledger/*`                    | 백엔드 없이 고정 목 데이터로 렌더링 확인. `needsReview` 배지 포함                                                         |
+| **T4** | 페이지 조립                       | `app/ledger/page.tsx`                    | `isReady`·`user` 분기, 목록 4상태(로딩/빈/실패/성공) 전부 화면에 존재                                                     |
+| **T5** | OCR 연동                          | 카드 클릭 → `POST`                       | 카드별 로딩. §8 표의 상태 코드 분기 구현                                                                                  |
+| **T6** | 내비 진입점                       | `components/navbar.tsx`                  | 기존 링크 패턴을 따라 추가. **요청 범위 밖 리팩터 금지**                                                                  |
 
 ---
 
@@ -370,8 +378,8 @@ www에는 테스트 러너가 없다 — 위 세 명령이 그 자리를 대신�
 
 ## 14. 작업 로그
 
-| 날짜 | 단위 | 내용 | 검증 |
-|---|---|---|---|
-| 2026-08-04 | — | 원본 지시서(Flutter 대상)를 `www` 맥락으로 옮겨 하네스 계약 작성. `lib/api.ts`·`lib/shop-api.ts`·`context/auth-context.tsx`·`components/titanic-vision-upload.tsx`·`package.json`·`next.config.mjs` 실측 후 델타 7건(§2)·미해결 질문 6건(§13) 도출. **목록 엔드포인트 부재로 프론트 단독 착수 불가**를 확인 | 문서만 작성, 코드 변경 없음 |
-| 2026-08-04 | 사후 | 배포 후 "가계부 페이지에 들어가면 로그아웃" 신고. 원인은 **`login-form.tsx`의 로그인 fetch에 `credentials: "include"`가 빠져** 교차 출처 응답의 `Set-Cookie`가 버려진 것 — 로그인은 200인데 이후 모든 API가 401이었다(`/api/shop/wallet`도 같은 증상). 가계부 화면이 그 401에 `refresh()`로 반응해 전역 로그아웃까지 갔다. 로그인 요청에 `credentials`를 넣고, 데이터 401은 화면 안에서만 처리하도록 §8을 정정 | `pnpm type-check`·`pnpm lint` 무오류 · EC2 backend/auth 로그로 401 원인 확인 |
-| 2026-08-04 | T2~T6 | `lib/api.ts`에 `receiptsBaseUrl` 1줄 · `lib/receipt-api.ts`(타입 + 목록/OCR 호출) · `components/ledger/*` 3종 · `app/lesson/ledger/page.tsx`. 상태는 판별 유니온, OCR 타임아웃은 `ocrTimeoutMs = 60000` 별도 상수. FastAPI 기본 영문 detail(`Not Found` 등)은 걸러 한국어 문구로 대체 | `pnpm type-check` 무오류 · `pnpm lint` 에러 0 · Prettier 적용 · `/lesson/ledger` 200 렌더 |
+| 날짜       | 단위  | 내용                                                                                                                                                                                                                                                                                                                                                                                                           | 검증                                                                                      |
+| ---------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 2026-08-04 | —     | 원본 지시서(Flutter 대상)를 `www` 맥락으로 옮겨 하네스 계약 작성. `lib/api.ts`·`lib/shop-api.ts`·`context/auth-context.tsx`·`components/titanic-vision-upload.tsx`·`package.json`·`next.config.mjs` 실측 후 델타 7건(§2)·미해결 질문 6건(§13) 도출. **목록 엔드포인트 부재로 프론트 단독 착수 불가**를 확인                                                                                                    | 문서만 작성, 코드 변경 없음                                                               |
+| 2026-08-04 | 사후  | 배포 후 "가계부 페이지에 들어가면 로그아웃" 신고. 원인은 **`login-form.tsx`의 로그인 fetch에 `credentials: "include"`가 빠져** 교차 출처 응답의 `Set-Cookie`가 버려진 것 — 로그인은 200인데 이후 모든 API가 401이었다(`/api/shop/wallet`도 같은 증상). 가계부 화면이 그 401에 `refresh()`로 반응해 전역 로그아웃까지 갔다. 로그인 요청에 `credentials`를 넣고, 데이터 401은 화면 안에서만 처리하도록 §8을 정정 | `pnpm type-check`·`pnpm lint` 무오류 · EC2 backend/auth 로그로 401 원인 확인              |
+| 2026-08-04 | T2~T6 | `lib/api.ts`에 `receiptsBaseUrl` 1줄 · `lib/receipt-api.ts`(타입 + 목록/OCR 호출) · `components/ledger/*` 3종 · `app/lesson/ledger/page.tsx`. 상태는 판별 유니온, OCR 타임아웃은 `ocrTimeoutMs = 60000` 별도 상수. FastAPI 기본 영문 detail(`Not Found` 등)은 걸러 한국어 문구로 대체                                                                                                                          | `pnpm type-check` 무오류 · `pnpm lint` 에러 0 · Prettier 적용 · `/lesson/ledger` 200 렌더 |

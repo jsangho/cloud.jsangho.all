@@ -13,7 +13,9 @@ type OAuthPopupMessage = {
 
 function isOAuthPopupMessage(data: unknown): data is OAuthPopupMessage {
   return (
-    !!data && typeof data === "object" && (data as { type?: unknown }).type === OAUTH_POPUP_MESSAGE_TYPE
+    !!data &&
+    typeof data === "object" &&
+    (data as { type?: unknown }).type === OAUTH_POPUP_MESSAGE_TYPE
   );
 }
 
@@ -32,7 +34,11 @@ export function openOAuthPopup(
   const left = window.screenX + (window.outerWidth - width) / 2;
   const top = window.screenY + (window.outerHeight - height) / 2;
 
-  const popup = window.open(url, "sns-login", `width=${width},height=${height},left=${left},top=${top}`);
+  const popup = window.open(
+    url,
+    "sns-login",
+    `width=${width},height=${height},left=${left},top=${top}`,
+  );
   if (!popup) return false;
 
   let settled = false;

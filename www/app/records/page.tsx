@@ -9,10 +9,7 @@ import { WweArenaShell } from "@/components/wwe-arena-shell";
 import { fetchChampionshipBoard } from "@/lib/championship-api";
 import { fetchCompetitorNames } from "@/lib/records-api";
 import { cn } from "@/lib/utils";
-import {
-  buildChampionBeltMap,
-  type ChampionBeltInfo,
-} from "@/lib/wwe-current-champions";
+import { buildChampionBeltMap, type ChampionBeltInfo } from "@/lib/wwe-current-champions";
 
 type RecordsPageState = {
   query: string;
@@ -82,10 +79,8 @@ export default function RecordsPage() {
           </h1>
           <p className="relative z-10 mx-auto mt-3 max-w-lg text-sm font-medium leading-relaxed text-stone-400 sm:text-base">
             PLE 출전 선수 목록에서 선택하면{" "}
-            <span className="font-semibold text-stone-700 dark:text-stone-200">
-              승패 기록
-            </span>
-            을 확인할 수 있습니다.
+            <span className="font-semibold text-stone-700 dark:text-stone-200">승패 기록</span>을
+            확인할 수 있습니다.
           </p>
         </header>
 

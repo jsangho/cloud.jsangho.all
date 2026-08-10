@@ -172,8 +172,7 @@
   --font-mono: var(--font-geist-mono), "Geist Mono", "Geist Mono Fallback";
   --font-sport: var(--font-sport), "Oswald", sans-serif;
   --font-kr:
-    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-    system-ui, sans-serif;
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-kr-display: var(--font-kr-display), "Black Han Sans", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -384,11 +383,7 @@
 
   .dark .ple-status-badge--deadline {
     border-color: rgba(239, 68, 68, 0.65);
-    background: linear-gradient(
-      135deg,
-      rgba(127, 29, 29, 0.9),
-      rgba(69, 10, 10, 0.95)
-    );
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.9), rgba(69, 10, 10, 0.95));
     color: #fecaca;
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
   }
@@ -512,22 +507,14 @@
     position: absolute;
     inset: 0;
     clip-path: polygon(82% 0, 100% 0, 100% 100%, 92% 100%);
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.14),
-      transparent 70%
-    );
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 70%);
     pointer-events: none;
     opacity: 0.7;
     transition: opacity 0.3s ease;
   }
 
   .dark .ple-card::after {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.08),
-      transparent 70%
-    );
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 70%);
   }
 
   .ple-card:hover::after {
@@ -568,11 +555,7 @@
     position: absolute;
     inset: 0;
     clip-path: polygon(88% 0, 100% 0, 100% 100%, 96% 100%);
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.16),
-      transparent 65%
-    );
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 65%);
     pointer-events: none;
   }
 

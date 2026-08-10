@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PleResultsBoard } from "@/components/results/ple-results-board";
-import {
-  formatPleMonth,
-  getPleBySlug,
-  WWE_PLE_MONTHLY_ORDER,
-} from "@/lib/wwe-ple";
+import { formatPleMonth, getPleBySlug, WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
 import type { PleSlug } from "@/lib/wwe-ple";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -22,9 +18,7 @@ export default async function ResultsEventPage({ params }: Props) {
   const idx = WWE_PLE_MONTHLY_ORDER.findIndex((e) => e.slug === slug);
   const prev = idx > 0 ? WWE_PLE_MONTHLY_ORDER[idx - 1] : undefined;
   const next =
-    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1
-      ? WWE_PLE_MONTHLY_ORDER[idx + 1]
-      : undefined;
+    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1 ? WWE_PLE_MONTHLY_ORDER[idx + 1] : undefined;
 
   return (
     <main className="min-h-[calc(100dvh-5.5rem)] w-full min-w-0 bg-stone-50 dark:bg-stone-900 px-4 py-10 text-stone-900 dark:text-stone-100">
@@ -64,8 +58,7 @@ export default async function ResultsEventPage({ params }: Props) {
             {ple.label}
           </h1>
           <p className="mt-2 text-sm text-stone-400">
-            등록된 승자는 누구나 확인할 수 있습니다. 등록·수정은 관리자 인증
-            후에만 가능합니다.
+            등록된 승자는 누구나 확인할 수 있습니다. 등록·수정은 관리자 인증 후에만 가능합니다.
           </p>
         </header>
 

@@ -1,14 +1,6 @@
-import type {
-  BrandRoster,
-  ChampionshipTier,
-  TitleReign,
-} from "@/lib/championship-api";
+import type { BrandRoster, ChampionshipTier, TitleReign } from "@/lib/championship-api";
 
-export type {
-  ChampionshipTier,
-  TitleReign,
-  BrandRoster,
-} from "@/lib/championship-api";
+export type { ChampionshipTier, TitleReign, BrandRoster } from "@/lib/championship-api";
 
 export type ChampionBeltInfo = {
   beltName: string;
@@ -23,12 +15,7 @@ export const TIER_LABELS: Record<ChampionshipTier, string> = {
   other: "그 외",
 };
 
-export const TIER_ORDER: ChampionshipTier[] = [
-  "main",
-  "secondary",
-  "tag",
-  "other",
-];
+export const TIER_ORDER: ChampionshipTier[] = ["main", "secondary", "tag", "other"];
 
 export function formatChampionshipDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -41,9 +28,7 @@ export function formatChampionshipDate(iso: string): string {
 }
 
 /** 선수 이름 → 보유 중인 벨트 목록 (기록 페이지에서 챔피언 뱃지 표시용) */
-export function buildChampionBeltMap(
-  brands: BrandRoster[],
-): Map<string, ChampionBeltInfo[]> {
+export function buildChampionBeltMap(brands: BrandRoster[]): Map<string, ChampionBeltInfo[]> {
   const map = new Map<string, ChampionBeltInfo[]>();
   for (const brand of brands) {
     for (const title of brand.titles) {

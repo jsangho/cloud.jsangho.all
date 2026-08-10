@@ -82,11 +82,7 @@ function AgentRow({
   );
 }
 
-export function AiReportDialog({
-  slug,
-  matchTitle,
-  prediction,
-}: AiReportDialogProps) {
+export function AiReportDialog({ slug, matchTitle, prediction }: AiReportDialogProps) {
   const [open, setOpen] = useState(false);
   const fallback = isBookmakerFallback(prediction);
   const opponent = opponentShare(slug, prediction);
@@ -107,9 +103,7 @@ export function AiReportDialog({
         showCloseButton
       >
         <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg">
-            {matchTitle}
-          </DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">{matchTitle}</DialogTitle>
           <DialogDescription className="text-sm text-stone-500">
             {fallback
               ? "분석 근거를 모으지 못해 북메이커 배당으로 대체한 예측입니다."
@@ -133,9 +127,7 @@ export function AiReportDialog({
           <span
             className={cn(
               "text-sm tabular-nums",
-              prediction.confidence > 0
-                ? "text-stone-600 dark:text-stone-300"
-                : "text-stone-500",
+              prediction.confidence > 0 ? "text-stone-600 dark:text-stone-300" : "text-stone-500",
             )}
           >
             확신 {toPercent(prediction.confidence)}%
@@ -160,9 +152,7 @@ export function AiReportDialog({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-stone-500">
-            분석 리포트가 없는 예측입니다.
-          </p>
+          <p className="text-sm text-stone-500">분석 리포트가 없는 예측입니다.</p>
         )}
       </DialogContent>
     </Dialog>

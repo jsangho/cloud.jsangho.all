@@ -5,9 +5,7 @@ import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseApiError } from "@/lib/api";
 
-type UploadState =
-  | { kind: "empty" }
-  | { kind: "ready"; fileName: string; previewUrl: string };
+type UploadState = { kind: "empty" } | { kind: "ready"; fileName: string; previewUrl: string };
 
 type FaceBoundingBox = {
   x1: number;
@@ -30,9 +28,7 @@ type ImageSize = { width: number; height: number };
 
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png"]);
 
-function topPrediction(
-  identification: FaceIdentification,
-): FacePrediction | undefined {
+function topPrediction(identification: FaceIdentification): FacePrediction | undefined {
   return identification.predictions[0];
 }
 
@@ -148,15 +144,9 @@ export function FaceObjectDetection({ className }: { className?: string }) {
               : "border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/60",
         ].join(" ")}
       >
-        <Upload
-          className="mb-3 size-10 text-zinc-400"
-          strokeWidth={1.25}
-          aria-hidden
-        />
+        <Upload className="mb-3 size-10 text-zinc-400" strokeWidth={1.25} aria-hidden />
         <p className="text-base font-medium text-zinc-800 dark:text-zinc-200">
-          {submitting
-            ? "얼굴 인식 중..."
-            : "얼굴 이미지를 이 영역에 끌어다 놓기"}
+          {submitting ? "얼굴 인식 중..." : "얼굴 이미지를 이 영역에 끌어다 놓기"}
         </p>
         <p className="mt-1 text-sm text-zinc-500">
           {submitting
@@ -215,8 +205,7 @@ export function FaceObjectDetection({ className }: { className?: string }) {
                   >
                     {prediction && (
                       <span className="absolute -top-6 left-0 whitespace-nowrap rounded bg-emerald-500 px-1.5 py-0.5 text-xs font-semibold text-white">
-                        {prediction.name}{" "}
-                        {(prediction.confidence * 100).toFixed(0)}%
+                        {prediction.name} {(prediction.confidence * 100).toFixed(0)}%
                       </span>
                     )}
                   </div>
@@ -234,16 +223,10 @@ export function FaceObjectDetection({ className }: { className?: string }) {
               {result.identifications.map((identification, index) => {
                 const prediction = topPrediction(identification);
                 return (
-                  <p
-                    key={index}
-                    className="text-sm text-zinc-700 dark:text-zinc-300"
-                  >
+                  <p key={index} className="text-sm text-zinc-700 dark:text-zinc-300">
                     얼굴 {index + 1}:{" "}
-                    <span className="font-semibold">
-                      {prediction?.name ?? "알 수 없음"}
-                    </span>
-                    {prediction &&
-                      ` (확신도 ${(prediction.confidence * 100).toFixed(0)}%)`}
+                    <span className="font-semibold">{prediction?.name ?? "알 수 없음"}</span>
+                    {prediction && ` (확신도 ${(prediction.confidence * 100).toFixed(0)}%)`}
                   </p>
                 );
               })}

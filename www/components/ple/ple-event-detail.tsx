@@ -2,11 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { PleEventDetail, PleLayoutVariant } from "@/lib/wwe-ple-detail";
 import type { PleSlug } from "@/lib/wwe-ple";
-import {
-  formatPleMonth,
-  formatPleSchedule,
-  WWE_PLE_MONTHLY_ORDER,
-} from "@/lib/wwe-ple";
+import { formatPleMonth, formatPleSchedule, WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
 import { PleMatchBracket } from "@/components/ple/ple-match-bracket";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
 
@@ -28,9 +24,7 @@ export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
   const idx = WWE_PLE_MONTHLY_ORDER.findIndex((e) => e.slug === ple.slug);
   const prev = idx > 0 ? WWE_PLE_MONTHLY_ORDER[idx - 1] : undefined;
   const next =
-    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1
-      ? WWE_PLE_MONTHLY_ORDER[idx + 1]
-      : undefined;
+    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1 ? WWE_PLE_MONTHLY_ORDER[idx + 1] : undefined;
 
   const bannerModifier = HERO_BANNER_CLASS[detail.layout];
 
@@ -79,12 +73,8 @@ export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
           <p className="font-kr-hero mt-3 text-lg text-stone-700 dark:text-stone-200 sm:text-xl">
             {detail.tagline}
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-stone-500">
-            {formatPleSchedule(ple)}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-stone-600">
-            {ple.highlight}
-          </p>
+          <p className="mt-4 text-sm leading-relaxed text-stone-500">{formatPleSchedule(ple)}</p>
+          <p className="mt-1 text-xs leading-relaxed text-stone-600">{ple.highlight}</p>
         </header>
 
         <PleMatchBracket slug={ple.slug as PleSlug} className="mt-8" />
@@ -140,9 +130,7 @@ function HighlightList({
             theme.border,
           )}
         >
-          <p className="font-semibold text-stone-700 dark:text-stone-200">
-            {h.title}
-          </p>
+          <p className="font-semibold text-stone-700 dark:text-stone-200">{h.title}</p>
           <p className="mt-1 text-sm text-stone-500">{h.detail}</p>
         </li>
       ))}

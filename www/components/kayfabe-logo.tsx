@@ -17,23 +17,12 @@ export function KayfabeMark({ className }: { className?: string }) {
       aria-hidden
     >
       <rect width="32" height="32" rx="9" fill="#050505" />
-      <rect
-        width="32"
-        height="32"
-        rx="9"
-        stroke="#52525b"
-        strokeWidth="0.5"
-        fill="none"
-      />
+      <rect width="32" height="32" rx="9" stroke="#52525b" strokeWidth="0.5" fill="none" />
 
       <rect width="32" height="32" rx="9" fill={`url(#kf-arena-${uid})`} />
 
       <path d="M0 32V24.5L16 19.8L32 24.5V32H0Z" fill={`url(#kf-mat-${uid})`} />
-      <path
-        d="M2 32V25.8L16 21.6L30 25.8V32H2Z"
-        fill="#1c1917"
-        opacity="0.55"
-      />
+      <path d="M2 32V25.8L16 21.6L30 25.8V32H2Z" fill="#1c1917" opacity="0.55" />
 
       <path d="M1.5 8.2V21.5L4.2 20.8V9.4L1.5 8.2Z" fill="#3f3f46" />
       <path d="M30.5 8.2V21.5L27.8 20.8V9.4L30.5 8.2Z" fill="#3f3f46" />

@@ -40,9 +40,7 @@ export function PlePickerDialog({ triggerClassName }: PlePickerDialogProps) {
         showCloseButton
       >
         <DialogHeader>
-          <DialogTitle className="text-center text-xl text-stone-50">
-            월별 PLE
-          </DialogTitle>
+          <DialogTitle className="text-center text-xl text-stone-50">월별 PLE</DialogTitle>
           <DialogDescription className="text-center text-sm text-stone-400">
             예측할 이벤트를 선택하세요
           </DialogDescription>
