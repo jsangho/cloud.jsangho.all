@@ -31,6 +31,29 @@ class MatchKind(StrEnum):
     """머니 인 더 뱅크 — 사다리 위의 가방."""
     WARGAMES = "wargames"
     """서바이버 시리즈 — 두 팀이 두 링 위에서."""
+    STREET_FIGHT = "street_fight"
+    """노 디스퀄리피케이션 — 둘이 붙되 규칙이 없다."""
+    STEEL_CAGE = "steel_cage"
+    """스틸 케이지 — 도망칠 데가 없다."""
+    # ── 무규칙 계열 — 반칙이 없으니 몸으로 갚는다 ──────────────
+    NO_DQ = "no_dq"
+    NO_HOLDS_BARRED = "no_holds_barred"
+    EXTREME_RULES = "extreme_rules"
+    UNSANCTIONED = "unsanctioned"
+    """언생션드 — 단체가 승인하지 않은 경기. 다쳐도 보호받지 못한다."""
+    HELL_IN_A_CELL = "hell_in_a_cell"
+    TLC = "tlc"
+    TABLES = "tables"
+    LAST_MAN_STANDING = "last_man_standing"
+    # ── 기술 계열 — 오래 끌되 덜 다친다 ────────────────────────
+    SUBMISSION_MATCH = "submission_match"
+    IRON_MAN = "iron_man"
+    TWO_OUT_OF_THREE_FALLS = "two_out_of_three_falls"
+    I_QUIT = "i_quit"
+    # ── 머릿수 계열 — 이기기가 어렵다 ──────────────────────────
+    HANDICAP = "handicap"
+    GAUNTLET = "gauntlet"
+    LUMBERJACK = "lumberjack"
 
 
 @dataclass(frozen=True)
@@ -54,6 +77,30 @@ FORMATS: dict[MatchKind, MatchFormat] = {
     MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.44, 1.5, 1.5),
     MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.38, 1.6, 1.7),
     MatchKind.WARGAMES: MatchFormat("워게임즈 매치", 10, 0.50, 1.5, 1.4),
+    # 둘이 붙는 특수 경기 — 승률은 싱글과 같고 몸만 더 상한다.
+    MatchKind.STREET_FIGHT: MatchFormat("스트리트 파이트", 2, 1.0, 1.5, 1.6),
+    MatchKind.STEEL_CAGE: MatchFormat("스틸 케이지 매치", 2, 1.0, 1.3, 1.3),
+    # 무규칙 계열 — 승률은 그대로고 몸값만 오른다. 언생션드가 가장 비싸다:
+    # 단체가 승인하지 않은 경기라 다쳐도 보호받지 못한다.
+    MatchKind.NO_DQ: MatchFormat("노 디스퀄리피케이션 매치", 2, 1.0, 1.4, 1.5),
+    MatchKind.NO_HOLDS_BARRED: MatchFormat("노 홀즈 바드 매치", 2, 1.0, 1.5, 1.6),
+    MatchKind.EXTREME_RULES: MatchFormat("엑스트림 룰즈 매치", 2, 1.0, 1.6, 1.7),
+    MatchKind.UNSANCTIONED: MatchFormat("언생션드 매치", 2, 1.0, 1.8, 2.1),
+    MatchKind.HELL_IN_A_CELL: MatchFormat("헬 인 어 셀", 2, 1.0, 1.9, 1.9),
+    MatchKind.TLC: MatchFormat("TLC 매치", 2, 1.0, 1.8, 1.8),
+    MatchKind.TABLES: MatchFormat("테이블 매치", 2, 1.0, 1.4, 1.5),
+    MatchKind.LAST_MAN_STANDING: MatchFormat("라스트 맨 스탠딩", 2, 1.0, 1.7, 1.6),
+    # 기술 계열 — 길게 끌어 마모는 쌓이되 다치지는 않는다.
+    MatchKind.SUBMISSION_MATCH: MatchFormat("서브미션 매치", 2, 1.0, 1.2, 0.8),
+    MatchKind.IRON_MAN: MatchFormat("아이언맨 매치", 2, 1.0, 1.9, 0.9),
+    MatchKind.TWO_OUT_OF_THREE_FALLS: MatchFormat(
+        "2 아웃 오브 3 폴스", 2, 1.0, 1.5, 0.9
+    ),
+    MatchKind.I_QUIT: MatchFormat("아이 큇 매치", 2, 1.0, 1.4, 1.2),
+    # 머릿수 계열 — 몸은 덜 상해도 이기기가 어렵다.
+    MatchKind.HANDICAP: MatchFormat("핸디캡 매치", 3, 0.55, 1.3, 1.2),
+    MatchKind.GAUNTLET: MatchFormat("가운틀릿 매치", 5, 0.40, 1.8, 1.3),
+    MatchKind.LUMBERJACK: MatchFormat("럼버잭 매치", 2, 0.90, 1.2, 1.2),
 }
 
 
@@ -70,6 +117,77 @@ SIGNATURE_MATCHES: dict[str, MatchKind] = {
 공석 토너먼트(§3-D33)와 같은 자리에서 다룬다.
 """
 
+STIPULATION_ODDS: tuple[tuple[MatchKind, int], ...] = (
+    # 흔한 것부터. 트리플 스렛은 TV에서도 자주 보이고, 헬 인 어 셀은 한 해에
+    # 한두 번 있을까 말까다.
+    (MatchKind.TRIPLE_THREAT, 30),
+    (MatchKind.NO_DQ, 22),
+    (MatchKind.STEEL_CAGE, 18),
+    (MatchKind.STREET_FIGHT, 18),
+    (MatchKind.SUBMISSION_MATCH, 16),
+    (MatchKind.FATAL_FOUR_WAY, 14),
+    (MatchKind.LUMBERJACK, 12),
+    (MatchKind.NO_HOLDS_BARRED, 12),
+    (MatchKind.TABLES, 11),
+    (MatchKind.TWO_OUT_OF_THREE_FALLS, 10),
+    (MatchKind.EXTREME_RULES, 10),
+    (MatchKind.LADDER, 10),
+    (MatchKind.LAST_MAN_STANDING, 8),
+    (MatchKind.HANDICAP, 7),
+    (MatchKind.I_QUIT, 6),
+    (MatchKind.TLC, 6),
+    (MatchKind.GAUNTLET, 5),
+    (MatchKind.IRON_MAN, 4),
+    (MatchKind.HELL_IN_A_CELL, 3),
+    (MatchKind.UNSANCTIONED, 2),
+)
+"""평범한 주차가 특수 경기로 바뀔 때의 가중치 (2026-08-10 사용자 요청).
+
+**시그니처와 다르다.** 시그니처는 그 대회에만 있는 경기라 달력이 반드시 실행하고,
+이쪽은 아무 경기나 가끔 특별해지는 것이다 — 실제로도 래더나 케이지는 MITB가
+아닌 밤에도 걸린다.
+
+럼블·챔버·워게임즈는 여기 없다. 그 셋은 무대 장치가 그 대회의 것이라, 5월
+백래시에서 엘리미네이션 챔버가 열리면 챔버가 특별할 이유가 사라진다.
+
+가중치는 **자주 볼수록 높다** — 트리플 스렛이 가장 흔하고 래더가 가장 드물다.
+"""
+
+STIPULATION_CHANCE = 0.035
+"""경기 한 번이 특수 경기가 될 기본 확률. 커리어당 서른 번쯤 나온다."""
+
+STIPULATION_PLE_MULTIPLIER = 3.0
+"""대회에서는 세 배. **특수 경기는 큰 밤의 것**이라 주간 방송에서는 드물어야 한다."""
+
+STYLE_AFFINITY: dict[str, tuple[MatchKind, ...]] = {
+    "hardcore": (
+        MatchKind.NO_DQ,
+        MatchKind.NO_HOLDS_BARRED,
+        MatchKind.EXTREME_RULES,
+        MatchKind.TLC,
+        MatchKind.TABLES,
+        MatchKind.STREET_FIGHT,
+        MatchKind.UNSANCTIONED,
+    ),
+    "stuntman": (MatchKind.LADDER, MatchKind.TLC, MatchKind.TABLES),
+    "submissions": (MatchKind.SUBMISSION_MATCH, MatchKind.I_QUIT),
+    "technician": (MatchKind.SUBMISSION_MATCH, MatchKind.IRON_MAN),
+    "uwf": (MatchKind.SUBMISSION_MATCH, MatchKind.I_QUIT),
+    "kings_road": (MatchKind.IRON_MAN, MatchKind.TWO_OUT_OF_THREE_FALLS),
+    "monster": (MatchKind.HANDICAP, MatchKind.LAST_MAN_STANDING),
+    "giant": (MatchKind.HANDICAP, MatchKind.GAUNTLET),
+    "heel_style": (MatchKind.LUMBERJACK, MatchKind.STEEL_CAGE),
+}
+"""경기 유형 → 그 선수에게 더 자주 걸리는 특수 경기 (2026-08-10).
+
+**하드코어 선수에게 서브미션 매치만 걸리면 그 스타일을 고른 의미가 없다.** 자기
+색깔에 맞는 무대가 더 자주 오는 편이 맞고, 그렇다고 다른 경기가 막히지는 않는다 —
+가중치를 곱할 뿐이다.
+"""
+
+STYLE_AFFINITY_MULTIPLIER = 3
+"""자기 계열 특수 경기의 가중치 배수."""
+
 QUALIFIER_KINDS: tuple[MatchKind, ...] = (
     MatchKind.SINGLES,
     MatchKind.TRIPLE_THREAT,
@@ -80,6 +198,15 @@ QUALIFIER_KINDS: tuple[MatchKind, ...] = (
 
 def format_of(kind: MatchKind) -> MatchFormat:
     return FORMATS[kind]
+
+
+def stipulation_odds(play_style: str) -> tuple[tuple[MatchKind, int], ...]:
+    """그 스타일이 겪는 특수 경기 가중치. 자기 계열이 세 배로 자주 온다."""
+    favored = set(STYLE_AFFINITY.get(play_style, ()))
+    return tuple(
+        (kind, weight * STYLE_AFFINITY_MULTIPLIER if kind in favored else weight)
+        for kind, weight in STIPULATION_ODDS
+    )
 
 
 for _kind in MatchKind:  # pragma: no cover - 임포트 시 구조 검증

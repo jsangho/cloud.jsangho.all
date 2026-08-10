@@ -38,7 +38,10 @@ from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.match_kind import (
     SIGNATURE_MATCHES,
+    STIPULATION_CHANCE,
+    STIPULATION_PLE_MULTIPLIER,
     MatchKind,
+    stipulation_odds,
 )
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
@@ -292,6 +295,28 @@ def _match_kind_of(
         return SIGNATURE_MATCHES[show.name]
     if title is not None and TITLES[title].tier is TitleTier.TAG:
         return MatchKind.TAG
+    return _stipulation_of(run, week, kind)
+
+
+def _stipulation_of(run: CareerRun, week: int, kind: WeekKind) -> MatchKind:
+    """평범한 경기가 가끔 특수 경기가 된다 (2026-08-10 사용자 요청).
+
+    **시그니처와 다른 자리다.** 시그니처는 달력이 반드시 실행하고, 이쪽은 굴림이다 —
+    래더나 케이지는 MITB가 아닌 밤에도 걸린다.
+    """
+    chance = STIPULATION_CHANCE
+    if kind in (WeekKind.PLE, WeekKind.SPECIAL):
+        chance *= STIPULATION_PLE_MULTIPLIER
+    roll = SeededRoll(run.seed, week, seeded_roll.STIPULATION)
+    if not roll.chance(chance):
+        return MatchKind.SINGLES
+    odds = stipulation_odds(run.identity.play_style.value)
+    total = sum(weight for _, weight in odds)
+    ticket = roll.between(1, total)
+    for stipulation, weight in odds:
+        ticket -= weight
+        if ticket <= 0:
+            return stipulation
     return MatchKind.SINGLES
 
 
