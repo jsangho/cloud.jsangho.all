@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_flags as _flags
 from wwe_game.domain.value_objects.condition import InjuryGrade
-from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 
 # ── 주차 구조 ────────────────────────────────────────────────
 
@@ -135,15 +134,6 @@ INJURY_PLE_MULTIPLIER = 1.0
 (`MAJOR_INJURY_MULTIPLIER`) — 모든 대회가 위험한 게 아니라 **대형이** 위험하다.
 """
 """대형 대회는 스팟이 크다."""
-
-INJURY_STYLE_MULTIPLIER: dict[PlayStyle, float] = {
-    PlayStyle.HIGH_FLYER: 1.6,
-    PlayStyle.BRAWLER: 1.3,
-    PlayStyle.POWERHOUSE: 1.1,
-    PlayStyle.TECHNICIAN: 0.8,
-    PlayStyle.SHOWMAN: 0.9,
-}
-"""스타일별 위험도. 하이플라이어가 가장 높고 테크니션이 가장 낮다 (§5)."""
 
 INJURY_GRADE_WEIGHTS: tuple[tuple[InjuryGrade, int, int, int], ...] = (
     # (등급, 가중치, 회복 최소 주차, 회복 최대 주차)
@@ -281,7 +271,7 @@ ALIGNMENT_CLARITY_BONUS = 0.55
 읽지 않아, 힐턴을 하든 페이스로 남든 결과가 같았다(`backstage`와 같은 문제였다).
 """
 
-POPULARITY_DECAY_CHANCE = 0.041
+POPULARITY_DECAY_CHANCE = 0.55
 """**인기는 가만히 있으면 식는다.** 매주 `인기도/100`에 비례해 하락을 굴린다.
 
 0.055 → 0.030 → 0.041로 두 번 움직였다. 0.055에서는 균형점이 60대 중반이라 정상급도
@@ -311,6 +301,18 @@ CHAMPION_DECAY_RELIEF: dict[str, float] = {
 
 이 규칙이 고리를 닫는다: **인기도가 기회를 만들고, 기회가 벨트를 만들고, 벨트가
 인기도를 지킨다.** 방어전에 의미가 생기는 것도 여기서다.
+"""
+
+POPULARITY_DECAY_EXPONENT = 3.0
+"""망각이 인기도에 **볼록하게** 붙는다: `기준값 × (인기도/100) ** 지수` (§13-Q13).
+
+선형(1.0)일 때는 위쪽을 잡는 힘이 모자랐다. 이벤트 공급은 인기도와 거의 무관한
+상수인데 망각만 선형이면 **균형점이 상한 밖에 생긴다.**
+
+3.0이면 인기도 30에서 2.7% · 50에서 12.5% · 70에서 34% · 90에서 73%의 힘으로 붙는다.
+**아래쪽은 거의 안 건드리고 위쪽만 잡는 모양**이다 — 올라가는 길은 그대로 두고
+눌러앉는 것만 막는다. 기준값을 0.041에서 0.55로 올린 것도 같은 이유이며, 지수 때문에
+실효 확률은 인기도 60 아래에서 오히려 예전보다 낮다.
 """
 
 POPULARITY_DECAY_OFF_MULTIPLIER = 2.2

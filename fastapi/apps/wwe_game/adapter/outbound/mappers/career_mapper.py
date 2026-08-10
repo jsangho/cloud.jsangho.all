@@ -28,6 +28,7 @@ from wwe_game.domain.entities.career_run import (
 )
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.game_mode import game_mode_of
+from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import (
@@ -103,6 +104,7 @@ class CareerMapper:
             seen_events=seen_events,
             recent_events=tuple(row.recent_events or ()),
             flags=frozenset(row.flags or ()),
+            team=_team_from_row(row.team),
             events_fired=row.events_fired,
             release_weeks=row.release_weeks,
             decline_weeks=row.decline_weeks,
@@ -122,6 +124,7 @@ class CareerMapper:
         row.gender = run.identity.gender.value
         row.country = run.identity.country.value
         row.play_style = run.identity.play_style.value
+        row.team = _team_to_row(run.team)
         row.mode_code = run.mode.code.value
         row.seed = run.seed
         row.week = run.week
@@ -178,3 +181,24 @@ class CareerMapper:
             ),
             narration=row.narration,
         )
+
+
+def _team_to_row(team: Team | None) -> dict[str, object] | None:
+    if team is None:
+        return None
+    return {
+        "name": team.name,
+        "members": list(team.members),
+        "formed_week": team.formed_week,
+    }
+
+
+def _team_from_row(raw: dict[str, object] | None) -> Team | None:
+    """행에 없으면 혼자다. **옛 세이브에는 이 칸이 없다** — None이 정상이다."""
+    if not raw:
+        return None
+    return Team(
+        name=str(raw.get("name", "")),
+        members=tuple(str(m) for m in raw.get("members", ())),
+        formed_week=int(raw.get("formed_week", 0)),  # type: ignore[arg-type]
+    )

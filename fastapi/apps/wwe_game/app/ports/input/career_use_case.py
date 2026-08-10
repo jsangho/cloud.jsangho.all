@@ -21,6 +21,7 @@ from wwe_game.app.dtos.career_dto import (
     GuestChooseCommand,
     GuestStartCommand,
     ModeView,
+    NewsFeedPage,
     PresetView,
     StartRunCommand,
 )
@@ -82,6 +83,16 @@ class CareerUseCase(ABC):
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
         """커리어 로그 한 페이지. 30년이면 1560줄이라 전부 내려보내지 않는다."""
+
+    @abstractmethod
+    async def read_news(
+        self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
+    ) -> NewsFeedPage:
+        """내 세계선의 뉴스 한 페이지 (§3-D31).
+
+        로그와 따로 두는 이유는 담는 것이 달라서다 — 로그는 모든 주차이고 뉴스는 남을
+        만한 사건만이다. **팀 세계의 소식이 함께 들어온다**(§3-D30).
+        """
 
     @abstractmethod
     async def retire(self, run_id: int, user_id: int) -> AdvanceResult:

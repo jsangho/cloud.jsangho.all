@@ -49,41 +49,6 @@ _COLUMNS = (
     "finisher",
 )
 
-# 원본 CSV 145~146행: Tank Ledger의 trainer 값(`"WWE Performance Center...`)에 닫는 따옴표가
-# 누락되어, 표준 CSV 파서가 다음 줄(Tate Wilder 전체 행)까지 하나의 필드로 삼켜버린다.
-# 원본 CSV는 건드리지 않고, 파싱 직후 알려진 값으로 두 행을 수동 분리한다
-# (wwe-roster-database.md 3번 섹션 가정 h 참고).
-_MERGED_ROW_FIX: dict[str, list[list[str]]] = {
-    "Tank Ledger": [
-        [
-            "Tank Ledger",
-            "Joe Spivak",
-            "Tank Ledger",
-            "Hank & Tank",
-            "180cm",
-            "136kg",
-            "1999-10-11",
-            "Chicago, Illinois",
-            "Chicago, Illinois",
-            "WWE Performance Center",
-            "Baba Bomb | Fisherman's Spinebuster",
-        ],
-        [
-            "Tate Wilder",
-            "Case Hatch",
-            "Tate Wilder",
-            "",
-            "182cm",
-            "104kg",
-            "19997-09-06",
-            "Gilbert, Arizona, United States",
-            "Gilbert, Arizona, United States",
-            "WWE Performance Center",
-            "Wild Ride",
-        ],
-    ]
-}
-
 
 def _clean(value: str | None) -> str | None:
     if value is None:
@@ -109,11 +74,7 @@ def _read_rows() -> list[tuple[str | None, list[str]]]:
             brand = r[0][1:]
             continue
         if len(r) != len(_CSV_HEADER):
-            fix = _MERGED_ROW_FIX.get(r[0])
-            if fix is None:
-                raise ValueError(f"malformed CSV row (unexpected column count): {r}")
-            rows.extend((brand, fixed) for fixed in fix)
-            continue
+            raise ValueError(f"malformed CSV row (unexpected column count): {r}")
         rows.append((brand, r))
     return rows
 

@@ -10,7 +10,12 @@ from wwe_game.domain.services.character_creation import (
     UnknownPresetError,
     build_identity,
 )
-from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
+from wwe_game.domain.value_objects.wrestler_identity import (
+    Gender,
+    PlayStyle,
+    StyleFamily,
+    family_of,
+)
 
 BASE = "로만 레인즈"
 
@@ -29,9 +34,23 @@ class TestPresetTable:
         genders = {p.gender for p in PRESETS}
         assert genders == set(Gender)
 
-    def test_every_play_style_is_reachable(self) -> None:
-        # 한 스타일이라도 비면 그 스타일을 바탕으로 시작할 방법이 없다.
-        assert {p.play_style for p in PRESETS} == set(PlayStyle)
+    def test_every_style_family_is_reachable(self) -> None:
+        # 프리셋은 실존 선수의 값이라(2026-08-10) 21종을 다 덮지는 못한다 — 178명 중
+        # U계나 왕도 스타일을 주 유형으로 쓰는 선수가 없다. **계열은 여섯이 다 있어야
+        # 한다**: 한 계열이 통째로 비면 그쪽 전용 카드를 프리셋으로는 못 만난다.
+        assert {family_of(p.play_style) for p in PRESETS} == set(StyleFamily)
+
+    def test_every_play_style_is_selectable(self) -> None:
+        # 프리셋에 없는 스타일도 **직접 고르면** 만들어진다 — 그게 프리셋 없이 넷을
+        # 정하는 길이 열려 있는 이유다(§3-D10-1).
+        for style in PlayStyle:
+            identity = build_identity(
+                name="장상호",
+                gender=Gender.MALE,
+                country=Country.KR,
+                play_style=style,
+            )
+            assert identity.play_style is style
 
 
 class TestBuildFromPreset:

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "file": "events_style.json",
-  "note": "플레이스타일 5종 × 5장 (§3-D11·§11-7). 스키마는 _docs/event-deck-schema.md",
+  "note": "계열 6종 × 5장 (§3-D11·§3-D27·§11-7). 스키마는 _docs/event-deck-schema.md",
   "cards": [
     {
       "code": "tech_submission_purist",
@@ -12,8 +12,8 @@
       "weight": 20,
       "once": true,
       "requires": {
-        "playStyles": [
-          "technician"
+        "styleFamily": [
+          "grapple"
         ],
         "minWeek": 70
       },
@@ -55,8 +55,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "technician"
+        "styleFamily": [
+          "grapple"
         ],
         "minWeek": 50
       },
@@ -94,8 +94,8 @@
       "weight": 18,
       "once": true,
       "requires": {
-        "playStyles": [
-          "technician"
+        "styleFamily": [
+          "grapple"
         ],
         "minWeek": 150
       },
@@ -136,8 +136,8 @@
       "weight": 16,
       "once": true,
       "requires": {
-        "playStyles": [
-          "technician"
+        "styleFamily": [
+          "grapple"
         ],
         "minWeek": 180,
         "stats": {
@@ -186,8 +186,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "technician"
+        "styleFamily": [
+          "grapple"
         ],
         "minWeek": 110
       },
@@ -227,8 +227,8 @@
       "weight": 20,
       "once": true,
       "requires": {
-        "playStyles": [
-          "powerhouse"
+        "styleFamily": [
+          "power"
         ],
         "minWeek": 60
       },
@@ -273,8 +273,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "powerhouse"
+        "styleFamily": [
+          "power"
         ],
         "minWeek": 40
       },
@@ -313,8 +313,8 @@
       "weight": 18,
       "once": true,
       "requires": {
-        "playStyles": [
-          "powerhouse"
+        "styleFamily": [
+          "power"
         ],
         "minWeek": 100
       },
@@ -358,8 +358,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "powerhouse"
+        "styleFamily": [
+          "power"
         ],
         "minWeek": 80
       },
@@ -403,8 +403,8 @@
       "weight": 16,
       "once": false,
       "requires": {
-        "playStyles": [
-          "powerhouse"
+        "styleFamily": [
+          "power"
         ],
         "minWeek": 90
       },
@@ -444,8 +444,8 @@
       "weight": 22,
       "once": true,
       "requires": {
-        "playStyles": [
-          "high_flyer"
+        "styleFamily": [
+          "aerial"
         ],
         "minWeek": 120
       },
@@ -493,8 +493,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "high_flyer"
+        "styleFamily": [
+          "aerial"
         ],
         "minWeek": 90
       },
@@ -537,8 +537,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "high_flyer"
+        "styleFamily": [
+          "aerial"
         ],
         "minWeek": 130
       },
@@ -576,8 +576,8 @@
       "weight": 18,
       "once": true,
       "requires": {
-        "playStyles": [
-          "high_flyer"
+        "styleFamily": [
+          "aerial"
         ],
         "minWeek": 200,
         "stats": {
@@ -629,8 +629,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "high_flyer"
+        "styleFamily": [
+          "aerial"
         ],
         "minWeek": 60
       },
@@ -668,8 +668,8 @@
       "weight": 22,
       "once": true,
       "requires": {
-        "playStyles": [
-          "brawler"
+        "styleFamily": [
+          "strike"
         ],
         "minWeek": 100
       },
@@ -718,8 +718,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "brawler"
+        "styleFamily": [
+          "strike"
         ],
         "minWeek": 80
       },
@@ -758,8 +758,8 @@
       "weight": 20,
       "once": true,
       "requires": {
-        "playStyles": [
-          "brawler"
+        "styleFamily": [
+          "strike"
         ],
         "minWeek": 110
       },
@@ -802,8 +802,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "brawler"
+        "styleFamily": [
+          "strike"
         ],
         "minWeek": 40
       },
@@ -847,8 +847,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "brawler"
+        "styleFamily": [
+          "strike"
         ],
         "minWeek": 70
       },
@@ -891,8 +891,8 @@
       "weight": 22,
       "once": false,
       "requires": {
-        "playStyles": [
-          "showman"
+        "styleFamily": [
+          "show"
         ],
         "minWeek": 80,
         "stats": {
@@ -938,8 +938,8 @@
       "weight": 20,
       "once": true,
       "requires": {
-        "playStyles": [
-          "showman"
+        "styleFamily": [
+          "show"
         ],
         "minWeek": 90
       },
@@ -981,8 +981,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "showman"
+        "styleFamily": [
+          "show"
         ],
         "minWeek": 110
       },
@@ -1027,8 +1027,8 @@
       "weight": 20,
       "once": false,
       "requires": {
-        "playStyles": [
-          "showman"
+        "styleFamily": [
+          "show"
         ],
         "minWeek": 120
       },
@@ -1070,8 +1070,8 @@
       "weight": 18,
       "once": false,
       "requires": {
-        "playStyles": [
-          "showman"
+        "styleFamily": [
+          "show"
         ],
         "minWeek": 100
       },
@@ -1100,6 +1100,215 @@
             "micWork": 6
           },
           "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "free_no_signature_style",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "한 줄로 설명이 안 된다",
+      "body": "홍보팀이 소개 문구를 못 쓰고 있다. \"당신을 한 문장으로 뭐라고 써야 하죠? 뭐든 다 하시잖아요.\"",
+      "weight": 20,
+      "once": true,
+      "requires": {
+        "styleFamily": [
+          "free"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "pick_one_hook",
+          "label": "간판 기술 하나를 정한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "micWork": 4
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stay_unreadable",
+          "label": "읽히지 않는 채로 간다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -6,
+            "inRing": 11,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "free_fill_in_anywhere",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "빈 자리는 늘 내 몫",
+      "bodies": [
+        "오늘도 펑크 난 카드에 이름이 들어갔다. 상대는 처음 보는 스타일이다.",
+        "누가 빠질 때마다 부커가 부르는 이름이 나다. 편하긴 한데 내 경기는 언제 하나.",
+        "대타로만 세 주 연속 나갔다. 시청률은 지켰고 내 이야기는 없다."
+      ],
+      "weight": 22,
+      "once": false,
+      "requires": {
+        "styleFamily": [
+          "free"
+        ],
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "take_it_again",
+          "label": "이번에도 메운다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 8,
+            "backstage": 7,
+            "wear": 2
+          },
+          "injuryRisk": 0.04
+        },
+        {
+          "code": "ask_for_my_own",
+          "label": "내 이야기를 달라고 한다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 9,
+            "inRing": -2,
+            "backstage": -8
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "free_weapon_match_offer",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "의자를 링에 올릴까요",
+      "bodies": [
+        "제작진이 묻는다. \"이번 대립, 흉기 허용으로 갈까요? 반응은 확실합니다.\"",
+        "부커가 사다리를 가리킨다. \"이거 하나면 이번 주 하이라이트는 당신 겁니다.\"",
+        "각본 회의에서 테이블 스팟 얘기가 나왔다. 몸은 내가 쓴다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": {
+        "styleFamily": [
+          "free"
+        ],
+        "minWeek": 78
+      },
+      "choices": [
+        {
+          "code": "bring_the_weapons",
+          "label": "흉기를 쓴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 16,
+            "inRing": 5,
+            "wear": 6
+          },
+          "injuryRisk": 0.22
+        },
+        {
+          "code": "clean_match",
+          "label": "맨몸으로 한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 7,
+            "backstage": 5
+          },
+          "injuryRisk": 0.03
+        }
+      ]
+    },
+    {
+      "code": "free_crowd_adopts_underdog",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "질 것 같아서 더 커지는 함성",
+      "bodies": [
+        "두 체급 위 상대에게 밀리고 있는데 아레나가 점점 시끄러워진다.",
+        "세 번 넘어졌고 세 번 다 일어섰다. 관중이 박수로 박자를 맞추기 시작했다.",
+        "이길 확률은 낮다고 다들 말했다. 그래서인지 함성이 경기 내내 커졌다."
+      ],
+      "weight": 24,
+      "once": false,
+      "requires": {
+        "styleFamily": [
+          "free"
+        ],
+        "minWeek": 26
+      },
+      "choices": [
+        {
+          "code": "ride_the_comeback",
+          "label": "끝까지 버틴다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 13,
+            "inRing": 4,
+            "wear": 5
+          },
+          "injuryRisk": 0.12
+        },
+        {
+          "code": "cut_it_short",
+          "label": "일찍 접는다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 6,
+            "wear": 1
+          },
+          "injuryRisk": 0.01
+        }
+      ]
+    },
+    {
+      "code": "free_jack_of_all_trades_jab",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "잘하는 게 없다는 말",
+      "body": "해설자가 방송 중에 말한다. \"뭐든 무난하죠. 무난하다는 건 기억에 안 남는다는 뜻이기도 하고요.\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "styleFamily": [
+          "free"
+        ],
+        "minWeek": 100
+      },
+      "choices": [
+        {
+          "code": "answer_on_mic",
+          "label": "마이크로 되받는다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 11,
+            "inRing": -2,
+            "micWork": 8,
+            "alignment": -6
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "answer_in_ring",
+          "label": "다음 경기로 답한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 4,
+            "inRing": 12,
+            "wear": 3
+          },
+          "injuryRisk": 0.06
         }
       ]
     }

@@ -1,0 +1,339 @@
+"""커리어 시뮬레이터 라우터 (하네스 §7·T10).
+
+**예외 → 상태 코드 변환이 여기서만 일어난다**(§8). 도메인과 유스케이스는
+`HTTPException`을 만들지 않는다(§4-7) — 전용 `AppError` 계층도 두지 않는다는 저장소
+규약(fastapi/CLAUDE.md)과 맞물려, 변환표 하나를 이 파일에 둔다.
+
+`detail`에는 **내부 수치를 담지 않는다**(§8 원칙). 확률·주사위·임계값이 문구로 새면
+그것만으로 최적해가 드러난다.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from core.security.dependencies import get_current_user
+from core.security.token_verifier import TokenPayload
+from wwe_game.adapter.inbound.api.schemas.career_schema import (
+    AdvanceRequest,
+    AdvanceResponse,
+    ChoiceRequest,
+    GuestAdvanceRequest,
+    GuestAdvanceResponse,
+    GuestChoiceRequest,
+    GuestStartRequest,
+    LogPageSchema,
+    ModeSchema,
+    NewsPageSchema,
+    PresetSchema,
+    StartRunRequest,
+    to_advance,
+    to_guest,
+    to_log,
+    to_mode,
+    to_news,
+    to_preset,
+)
+from wwe_game.adapter.inbound.api.schemas.guest_schema import (
+    GuestRunState,
+    to_domain,
+)
+from wwe_game.app.dtos.career_dto import (
+    AdvanceCommand,
+    ChooseCommand,
+    GuestAdvanceCommand,
+    GuestChooseCommand,
+    GuestStartCommand,
+    StartRunCommand,
+)
+from wwe_game.app.ports.input.career_use_case import (
+    CareerUseCase,
+    ChoiceRequiredError,
+    GuestModeNotAllowedError,
+    NoPendingEventError,
+    RunAlreadyActiveError,
+)
+from wwe_game.app.ports.output.career_repository import RunNotFoundError
+from wwe_game.dependencies.career_provider import get_career_use_case
+from wwe_game.domain.exceptions import (
+    InvalidCareerRunError,
+    InvalidChoiceError,
+    InvalidRingNameError,
+    RunNotActiveError,
+    UnknownCountryError,
+    UnknownGameModeError,
+)
+from wwe_game.domain.value_objects.advance_outcome import StepMode
+from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+career_router = APIRouter(prefix="/career", tags=["career"])
+
+_STATUS: tuple[tuple[type[Exception], int, str], ...] = (
+    (RunNotFoundError, status.HTTP_404_NOT_FOUND, "커리어를 찾을 수 없습니다."),
+    (
+        RunAlreadyActiveError,
+        status.HTTP_409_CONFLICT,
+        "이미 진행 중인 커리어가 있습니다.",
+    ),
+    (ChoiceRequiredError, status.HTTP_409_CONFLICT, "먼저 선택을 마쳐야 합니다."),
+    (NoPendingEventError, status.HTTP_409_CONFLICT, "선택할 이벤트가 없습니다."),
+    (RunNotActiveError, status.HTTP_409_CONFLICT, "이미 끝난 커리어입니다."),
+    (InvalidChoiceError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
+    (
+        InvalidRingNameError,
+        status.HTTP_400_BAD_REQUEST,
+        "이름은 2~20자로 입력해 주세요.",
+    ),
+    (UnknownGameModeError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
+    (UnknownCountryError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
+    (
+        GuestModeNotAllowedError,
+        status.HTTP_400_BAD_REQUEST,
+        "이 모드는 로그인 후 플레이할 수 있습니다.",
+    ),
+    (
+        InvalidCareerRunError,
+        status.HTTP_400_BAD_REQUEST,
+        "저장된 진행 상황을 읽을 수 없습니다.",
+    ),
+    (ValueError, status.HTTP_400_BAD_REQUEST, "저장된 진행 상황을 읽을 수 없습니다."),
+)
+"""§8 매핑표. **위에서부터 먼저 걸리는 것이 이긴다** — 하위 클래스를 앞에 둔다.
+
+`RunNotFoundError`가 404인 것이 §11-12다: 남의 세이브에 접근해도 403이 아니라 404다.
+403은 "있지만 네 것이 아니다"를 알려 주므로 존재 여부가 새어 나간다.
+"""
+
+
+async def _guard[T](call: Callable[[], object]) -> T:
+    """유스케이스 호출 하나를 감싸 예외를 상태 코드로 옮긴다."""
+    try:
+        result = call()
+        return await result if hasattr(result, "__await__") else result  # type: ignore[return-value,misc]
+    except Exception as exc:  # noqa: BLE001 - 아래 표에 없으면 그대로 올린다
+        for kind, code, detail in _STATUS:
+            if isinstance(exc, kind):
+                raise HTTPException(status_code=code, detail=detail) from exc
+        raise
+
+
+def _sync[T](call: Callable[[], T]) -> T:
+    """동기 유스케이스용 `_guard`. 체험판은 읽고 쓸 저장소가 없어 `await`할 것이 없다."""
+    try:
+        return call()
+    except Exception as exc:  # noqa: BLE001 - 표에 없으면 그대로 올린다
+        for kind, code, detail in _STATUS:
+            if isinstance(exc, kind):
+                raise HTTPException(status_code=code, detail=detail) from exc
+        raise
+
+
+def _enum[T](kind: type[T], raw: str | None, field: str) -> T | None:
+    if raw is None:
+        return None
+    try:
+        return kind(raw)  # type: ignore[call-arg]
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="선택할 수 없는 항목입니다.",
+        ) from exc
+
+
+def _user_id(claims: TokenPayload) -> int:
+    return int(claims.sub)
+
+
+# ── 메타 (인증 불필요) ───────────────────────────────────────
+
+
+@career_router.get("/modes", response_model=list[ModeSchema])
+def read_modes(
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> list[ModeSchema]:
+    """모드 4종. **`guestAllowed`가 체험판 허용의 판정 근거다**(§3-D8)."""
+    return [to_mode(m) for m in use_case.modes()]
+
+
+@career_router.get("/presets", response_model=list[PresetSchema])
+def read_presets(
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> list[PresetSchema]:
+    """ "○○를 바탕으로" 목록 (§3-D10-1). **이름은 물려주지 않는다.**"""
+    return [to_preset(p) for p in use_case.presets()]
+
+
+# ── 로그인 플레이 ────────────────────────────────────────────
+
+
+@career_router.post(
+    "/runs", response_model=AdvanceResponse, status_code=status.HTTP_201_CREATED
+)
+async def start_run(
+    body: StartRunRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    command = StartRunCommand(
+        user_id=_user_id(claims),
+        name=body.name,
+        mode_code=body.mode,
+        based_on=body.based_on,
+        gender=_enum(Gender, body.gender, "gender"),
+        country_code=body.country,
+        play_style=_enum(PlayStyle, body.play_style, "playStyle"),
+    )
+    return to_advance(await _guard(lambda: use_case.start(command)))
+
+
+@career_router.get("/runs/current", response_model=AdvanceResponse | None)
+async def read_current(
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse | None:
+    """진행 중인 세이브. **없으면 null이지 404가 아니다** — 아직 안 만든 상태는 정상이다."""
+    result = await _guard(lambda: use_case.current(_user_id(claims)))
+    return to_advance(result) if result is not None else None
+
+
+@career_router.post("/runs/{run_id}/advance", response_model=AdvanceResponse)
+async def advance(
+    run_id: int,
+    body: AdvanceRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """'다음'. 대기 이벤트가 있으면 **409로 막힌다**(§11-2)."""
+    command = AdvanceCommand(
+        run_id=run_id,
+        user_id=_user_id(claims),
+        step=_enum(StepMode, body.step, "step") or StepMode.AUTO,
+    )
+    return to_advance(await _guard(lambda: use_case.advance(command)))
+
+
+@career_router.post("/runs/{run_id}/choices", response_model=AdvanceResponse)
+async def choose(
+    run_id: int,
+    body: ChoiceRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    command = ChooseCommand(
+        run_id=run_id, user_id=_user_id(claims), choice_code=body.choice
+    )
+    return to_advance(await _guard(lambda: use_case.choose(command)))
+
+
+@career_router.get("/runs/{run_id}/log", response_model=LogPageSchema)
+async def read_log(
+    run_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> LogPageSchema:
+    """커리어 로그. **30년이면 1560줄이라 전부 내려보내지 않는다.**"""
+    page = await _guard(
+        lambda: use_case.read_log(run_id, _user_id(claims), offset=offset, limit=limit)
+    )
+    return to_log(page)
+
+
+@career_router.get("/runs/{run_id}/news", response_model=NewsPageSchema)
+async def read_news(
+    run_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> NewsPageSchema:
+    """내 세계선의 뉴스 — 사건과 **군중 반응** (§3-D31).
+
+    로그와 다른 엔드포인트인 이유는 담는 것이 달라서다. 로그가 1560줄일 때 뉴스는
+    70줄 남짓이고, 팀 세계의 소식이 함께 들어온다(§3-D30).
+    """
+    page = await _guard(
+        lambda: use_case.read_news(run_id, _user_id(claims), offset=offset, limit=limit)
+    )
+    return to_news(page)
+
+
+@career_router.delete("/runs/{run_id}", response_model=AdvanceResponse)
+async def retire(
+    run_id: int,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """스스로 커리어를 닫는다 — 은퇴 조건 중 하나다(§3-D16)."""
+    return to_advance(await _guard(lambda: use_case.retire(run_id, _user_id(claims))))
+
+
+# ── 체험판 (§3-D8 · 인증 불필요) ─────────────────────────────
+
+
+def _restore(state: GuestRunState) -> object:
+    """받은 세이브를 도메인으로 되살린다. **어긴 값은 여기서 400이 된다**(§11-26).
+
+    라우터가 직접 감싸는 이유: `_guard`는 유스케이스 호출 하나를 감싸는데, 복원은 그
+    앞에서 일어난다. 조작된 상태는 유스케이스에 닿기 전에 걸러야 한다.
+    """
+    try:
+        return to_domain(state)
+    except Exception as exc:  # noqa: BLE001 - 값 객체가 던지는 것은 전부 400이다
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="저장된 진행 상황을 읽을 수 없습니다.",
+        ) from exc
+
+
+@career_router.post(
+    "/guest/runs",
+    response_model=GuestAdvanceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def start_guest(
+    body: GuestStartRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판 시작. **`monthly`·`weekly`는 400이다**(§11-24).
+
+    두 모드는 틱이 390·1560개라 상태가 브라우저에 안 들어간다.
+    """
+    command = GuestStartCommand(
+        name=body.name,
+        mode_code=body.mode,
+        based_on=body.based_on,
+        gender=_enum(Gender, body.gender, "gender"),
+        country_code=body.country,
+        play_style=_enum(PlayStyle, body.play_style, "playStyle"),
+        seed=body.seed,
+    )
+    return to_guest(_sync(lambda: use_case.start_guest(command)))
+
+
+@career_router.post("/guest/advance", response_model=GuestAdvanceResponse)
+def advance_guest(
+    body: GuestAdvanceRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """받은 세이브를 진행시켜 **다음 상태를 통째로** 돌려준다. 저장하지 않는다."""
+    command = GuestAdvanceCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        step=_enum(StepMode, body.step, "step") or StepMode.AUTO,
+    )
+    return to_guest(_sync(lambda: use_case.advance_guest(command)))
+
+
+@career_router.post("/guest/choices", response_model=GuestAdvanceResponse)
+def choose_guest(
+    body: GuestChoiceRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    command = GuestChooseCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        choice_code=body.choice,
+    )
+    return to_guest(_sync(lambda: use_case.choose_guest(command)))

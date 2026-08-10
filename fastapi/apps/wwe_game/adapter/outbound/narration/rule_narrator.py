@@ -242,6 +242,10 @@ def beat_of(report: WeekReport) -> Beat:
         return Beat.INJURY
     if report.draft_night:
         return Beat.DRAFT
+    # 저주로 진 경기는 평범한 패배와 다르게 읽혀야 한다. 벨트가 오간 주차에는 그쪽이
+    # 먼저다 — 저주는 다음에도 걸 수 있지만 벨트가 넘어가는 장면은 그 주에만 있다.
+    if report.cursed:
+        return Beat.CURSED_LOSS
     if report.kind is WeekKind.OFF:
         return Beat.OFF
     if report.kind is WeekKind.PROMO:

@@ -82,6 +82,8 @@ def is_eligible(run: CareerRun, card: EventCard) -> bool:
         return False
     if r.regions and run.identity.region not in r.regions:
         return False
+    if r.style_families and run.identity.style_family not in r.style_families:
+        return False
     if r.play_styles and run.identity.play_style not in r.play_styles:
         return False
     if r.condition_grades and run.condition.grade not in r.condition_grades:

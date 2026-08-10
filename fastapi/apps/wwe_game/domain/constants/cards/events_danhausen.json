@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 3,
+  "file": "events_danhausen.json",
+  "note": "댄하우젠 5장 — 개그·기믹 매치와 저주(2026-08-10 사용자 지시 4번). `danhausen_curse`는 다음 경기를 무조건 패배로 만든다(career_flags.CURSED).",
+  "cards": [
+    {
+      "code": "dan_curse_offer",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "\"당신은 저주받았습니다\"",
+      "body": "댄하우젠이 복도에서 손가락을 들어 올렸다. \"이 자리에서 저주를 걸어 드릴까요? 아주, 아주 사악하고, 아주, 아주 좋은 저주로요.\" 카메라가 이미 돌고 있다.",
+      "weight": 16,
+      "once": true,
+      "requires": {
+        "minWeek": 40
+      },
+      "choices": [
+        {
+          "code": "take_the_curse",
+          "label": "카메라 앞에서 저주를 받는다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 18,
+            "inRing": -2,
+            "micWork": 6
+          },
+          "injuryRisk": 0.0,
+          "flags": [
+            "danhausen_curse",
+            "was_cursed"
+          ]
+        },
+        {
+          "code": "laugh_it_off",
+          "label": "웃으며 지나간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -3,
+            "inRing": 5,
+            "backstage": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "dan_gimmick_match_pitch",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "이번 주 기믹 매치",
+      "bodies": [
+        "제작진이 댄하우젠표 기믹 매치를 들고 왔다. 규칙이 세 줄인데 두 줄이 농담이다.",
+        "이번 주 카드에 \"이빨 병 온 어 폴\" 매치가 잡혔다. 병은 실제로 링 위에 매달린다.",
+        "회의실에서 댄하우젠이 규칙을 설명하는 데 십 분이 걸렸다. 아무도 못 알아들었다."
+      ],
+      "weight": 14,
+      "once": false,
+      "requires": {
+        "minWeek": 30
+      },
+      "choices": [
+        {
+          "code": "go_all_in",
+          "label": "제대로 논다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 12,
+            "inRing": -4,
+            "micWork": 6,
+            "wear": 2
+          },
+          "injuryRisk": 0.05
+        },
+        {
+          "code": "play_it_straight",
+          "label": "진지하게 임한다",
+          "risk": "safe",
+          "effects": {
+            "popularity": -4,
+            "inRing": 8,
+            "backstage": 5
+          },
+          "injuryRisk": 0.02
+        }
+      ]
+    },
+    {
+      "code": "dan_claimed_measurements",
+      "kind": "sub",
+      "arena": "broadcast",
+      "title": "본인 주장 신장 200센티",
+      "body": "댄하우젠이 방송에서 자기 키가 2미터이고 체중이 136킬로라고 말했다. 옆에 선 내 어깨가 그의 정수리보다 높다. 진행자가 나를 본다.",
+      "weight": 14,
+      "once": true,
+      "requires": {
+        "minWeek": 46
+      },
+      "choices": [
+        {
+          "code": "back_him_up",
+          "label": "그렇다고 맞장구친다",
+          "risk": "bold",
+          "effects": {
+            "popularity": 10,
+            "inRing": -2,
+            "micWork": 7
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stand_back_to_back",
+          "label": "등을 맞대 본다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 6,
+            "inRing": -1,
+            "micWork": 3,
+            "alignment": 4
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "dan_jar_on_the_apron",
+      "kind": "sub",
+      "arena": "in_ring",
+      "title": "에이프런 위의 유리병",
+      "bodies": [
+        "경기 중에 링 밖 에이프런 위로 유리병 하나가 올라왔다. 안에 뭐가 들었는지는 아무도 모른다.",
+        "레프리가 병을 치우려다 멈췄다. 관중은 이미 그 병만 보고 있다.",
+        "코너 포스트 옆에 병이 놓였다. 이걸 쓰면 이번 주 하이라이트는 정해진다."
+      ],
+      "weight": 12,
+      "once": false,
+      "requires": {
+        "minWeek": 52
+      },
+      "choices": [
+        {
+          "code": "use_the_jar",
+          "label": "병을 쓴다",
+          "risk": "reckless",
+          "effects": {
+            "popularity": 13,
+            "inRing": -3,
+            "alignment": -9,
+            "wear": 2
+          },
+          "injuryRisk": 0.08
+        },
+        {
+          "code": "hand_it_back",
+          "label": "돌려준다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 3,
+            "inRing": 4,
+            "alignment": 6
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "dan_lift_the_curse",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "저주를 물러 달라는 부탁",
+      "body": "그날 이후로 진 경기를 세어 봤다. 댄하우젠은 커피를 마시며 말한다. \"물러 드릴 수는 있죠. 대신 아주, 아주 사악한 조건이 있습니다.\"",
+      "weight": 18,
+      "once": true,
+      "requires": {
+        "flags": [
+          "was_cursed"
+        ],
+        "minWeek": 60
+      },
+      "choices": [
+        {
+          "code": "pay_the_price",
+          "label": "조건을 받아들인다",
+          "risk": "bold",
+          "effects": {
+            "popularity": -6,
+            "inRing": 9,
+            "backstage": -5
+          },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "live_with_it",
+          "label": "그냥 안고 간다",
+          "risk": "safe",
+          "effects": {
+            "popularity": 7,
+            "inRing": -2,
+            "micWork": 5
+          },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

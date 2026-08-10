@@ -123,7 +123,8 @@ class TestStart:
                 user_id=USER, name="장상호", mode_code="weekly", based_on="로만 레인즈"
             )
         )
-        assert result.run.identity.play_style is PlayStyle.POWERHOUSE
+        # 로만 레인즈의 CSV 값은 "All Rounder | Heel Style"이고 프리셋은 첫 값을 준다.
+        assert result.run.identity.play_style is PlayStyle.ALL_ROUNDER
 
     @pytest.mark.asyncio
     async def test_a_second_career_is_refused(

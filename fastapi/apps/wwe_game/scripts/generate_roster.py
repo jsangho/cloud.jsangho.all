@@ -1,9 +1,7 @@
-"""kayfabe 로스터 CSV → `domain/constants/roster.py` 생성기 (하네스 §3-D13).
+"""로스터 CSV → `domain/constants/roster.py` · `character_presets.py` 생성기 (하네스 §3-D13).
 
 **런타임 import가 아니라 오프라인 생성이다.** `lint-imports` 계약이 막는 것은 스포크끼리의
 import이고(§2-D3), 빌드 시점에 CSV 파일을 읽어 소스를 찍어 내는 것은 그 계약과 무관하다.
-손으로 베끼는 것보다 이쪽이 맞다 — §3-D13이 감수하기로 한 "이중 관리" 비용이 재생성
-한 번으로 줄어든다.
 
 ```
 uv run python apps/wwe_game/scripts/generate_roster.py        # 미리보기
@@ -14,30 +12,28 @@ uv run python apps/wwe_game/scripts/generate_roster.py --write # 파일 갱신
 
 | 파일 | 주는 것 | 소유 |
 |---|---|---|
-| `kayfabe/_docs/wwe_active_roster_cleaned.csv` | 이름·신체·피니셔·출생지 | kayfabe |
+| `kayfabe/_docs/wwe_active_roster_cleaned.csv` | 섹션·출생지·소개지 | kayfabe |
 | `wwe_game/_docs/roster_game_data.csv` | **한글명·성별·등급·플레이스타일·생년월일** | 이 게임 |
 
 **kayfabe CSV에 컬럼을 더할 수 없다** — 그쪽 적재 스크립트가 헤더를 정확히 대조해서
 (`load_wrestlers_csv._read_rows`) 컬럼이 하나만 늘어도 멈춘다. 소유도 이쪽이 맞다:
 한글 표기와 등급은 kayfabe의 사실이 아니라 이 게임의 값이다.
 
-게임 데이터의 칸이 비면 아래 추정이 메운다. **파일을 채워 갈수록 추정이 줄어든다.**
+## 추정을 걷어 냈다 (2026-08-10 사용자가 데이터를 채워 옴)
 
-## 칸이 비었을 때의 추정
+한글 표기는 `KOREAN_NAMES` 표가, 성별은 섹션별 알파벳 되감김이, 플레이스타일은
+피니셔 이름과 체중이 메우고 있었다. 사용자가 178명 전원의 한글명과 경기 유형을 채운
+CSV를 가져오면서 **그 추정 경로가 전부 죽었다.**
 
-- **성별** — CSV는 섹션마다 남자를 알파벳순으로 늘어놓은 뒤 여자를 다시 알파벳순으로
-  잇는다. 그 경계를 `FIRST_WOMAN`에 **이름으로 박아 둔다.** 되감김을 자동 탐지하지 않는
-  이유: 남자 구간 안에도 순서가 어긋난 이름이 몇 개 있어("Austin Theory → Tyler Bate")
-  탐지가 조용히 틀린다. 사람이 읽고 고칠 수 있는 상수가 낫고, 섹션 인원수로 교차 검증된다.
-- **등급** — NXT는 육성 브랜드이므로 통째로 `PROSPECT`, 메인 로스터는 `MIDCARD`,
-  그중 `MAIN_EVENTERS`에 적힌 이름만 `MAIN_EVENT`로 올린다.
+죽은 추정을 남겨 두는 쪽이 더 위험하다 — 표에 있는 "토자와 아키라"와 CSV에 있는
+"아키라 토자와"가 서로 다른데, 둘 중 어느 쪽이 쓰이는지가 칸이 비었는지에 달리게 된다.
+그래서 **게임 데이터 CSV를 유일한 원본으로 삼고, 빠진 칸이 있으면 무엇이 빠졌는지
+짚어서 멈춘다**(§3-D10-1의 "임의의 기본값을 채워 주지 않는다"와 같은 이유).
 
 ## 넣지 않는 것
 
 - **권역** — 이 게임에서 아무 규칙도 읽지 않던 죽은 필드였다(2026-08-07 사용자 지적).
   선수는 어차피 다 미국 무대에 선다. 무대 권역은 서술이 따로 정한다(§3-D14-1).
-- **Evolve 브랜드** — kayfabe 카탈로그와 같은 기준으로 제외한다. 유망주 풀은 NXT 57명만으로
-  충분하고, 두 목록의 기준이 갈리면 어느 쪽이 맞는지 매번 확인해야 한다.
 """
 
 from __future__ import annotations
@@ -55,45 +51,52 @@ CSV_PATH = APP_DIR.parents[0] / "kayfabe" / "_docs" / "wwe_active_roster_cleaned
 OUT_PATH = APP_DIR / "domain" / "constants" / "roster.py"
 
 GAME_DATA_PATH = APP_DIR / "_docs" / "roster_game_data.csv"
-"""게임 전용 값 — **사용자가 직접 채우는 파일**이다 (2026-08-07).
+"""게임 전용 값 — **사용자가 직접 채우는 파일**이자 이제 유일한 원본이다.
 
-kayfabe의 CSV에 컬럼을 더할 수 없다: 그쪽 적재 스크립트가 헤더를 정확히 대조해
-(`load_wrestlers_csv._read_rows`) 컬럼이 하나만 늘어도 멈춘다. 소유도 이쪽이 맞다 —
-한글 표기·등급·플레이스타일은 kayfabe가 아니라 이 게임의 값이다.
+`name`으로 kayfabe CSV와 잇는다. 아래 다섯 칸은 **반드시 채워져 있어야 한다.**
 
-`name`으로 kayfabe CSV와 잇는다. 빈 칸은 **아래 상수들이 추정으로 메운다** — 파일을
-채워 갈수록 추정이 줄어든다.
-
-| 칸 | 비면 |
+| 칸 | 뜻 |
 |---|---|
-| `korean_name` | `KOREAN_NAMES` 표, 그것도 없으면 영문 그대로(경고) |
-| `gender` | 섹션별 알파벳 되감김(`FIRST_WOMAN`·`EXPLICIT_WOMEN`) |
-| `tier` | 브랜드 섹션 + `MAIN_EVENTERS` 명단 |
-| `play_style` | 피니셔 → 체중 → 쇼맨 (`STYLE_OVERRIDES` 우선) |
-| `birth_date` | kayfabe CSV, 그것도 없으면 `DEFAULT_AGE` |
+| `korean_name` | 화면·서술에 쓰는 한글 표기 |
+| `gender` | `male` · `female` |
+| `tier` | `main_event` · `midcard` · `prospect` |
+| `play_style` | 경기 유형 21종의 게임 키 (주 스타일) |
+| `birth_date` | 은퇴 주차를 정한다. 미공개면 비워 두고 중앙값으로 간다 |
+
+`sub_styles`·`claimed_styles`는 비어도 된다. 앞은 곁들이는 유형이고, 뒤는 **본인이
+주장할 뿐인 유형**이다 — 댄하우젠의 `Showman(Monster)` 같은 괄호 표기가 여기로 온다
+(2026-08-10 사용자 지시 4번).
 """
 
-TODAY = datetime.date(2026, 8, 7)
+TODAY = datetime.date(2026, 8, 10)
 WEEKS_PER_YEAR = 52
 CAREER_WEEKS = 30 * WEEKS_PER_YEAR
 
-NPC_RETIRE_AGE = 48
-"""실존 선수가 링을 떠나는 나이.
+NPC_RETIRE_AGE: dict[str, int] = {"male": 48, "female": 42}
+"""실존 선수가 링을 떠나는 나이. **여성부가 여섯 해 이르다** (2026-08-10 사용자 지시 8번).
 
-플레이어의 만기(50세, §3-D16)보다 두 살 이르다 — 플레이어는 인기도로 나이를 상쇄하는
-주인공이고, 배경 선수는 평범한 커브를 탄다. 45로 낮추면 시작 5년 만에 정상급이 반쯤
-비고, 55로 올리면 30년 뒤에도 오늘의 얼굴이 남아 사용자가 지적한 문제가 그대로다.
+플레이어의 만기(50세, §3-D16)보다 남성부가 두 살 이른 것은 그대로다 — 플레이어는
+인기도로 나이를 상쇄하는 주인공이고, 배경 선수는 평범한 커브를 탄다.
+
+여성부를 따로 두는 이유는 사용자가 말한 그대로다: 실제로 은퇴가 이르다. 그 대가로
+여성부 명부가 더 빨리 비므로 가상 여성 선수의 데뷔 수를 함께 올렸다
+(`DEBUTS_PER_YEAR`). 한쪽만 고치면 `MIN_POOL` 검증이 임포트에서 터진다.
+"""
+
+LATE_CAREER_AGE = 50
+LATE_CAREER_WINDOW = (1, 5)
+"""오늘 쉰 살을 넘긴 선수는 **1~5년 안에 은퇴한다** (2026-08-10 사용자 지시 5번).
+
+R-트루스(54) · 레이 미스테리오(51)처럼 나이만 넘긴 채 오늘 현역인 선수들이다. 0주차에
+증발시키면 오늘 뛰고 있다는 사실과 어긋나고, 전부 같은 주차에 은퇴시키면 그 주에
+명부가 한꺼번에 흔들린다. 이름 해시로 구간 안에 흩뿌린다.
 """
 
 MIN_ACTIVE_WEEKS = 3 * WEEKS_PER_YEAR
-"""이미 은퇴 나이를 넘긴 노장도 이만큼은 뛴다.
-
-R-트루스(54) · 레이 미스테리오(51)처럼 오늘 현역인데 나이만 넘긴 선수가 있다. 0주차에
-증발시키면 시작하자마자 명부가 흔들리고, 무엇보다 **오늘 뛰고 있다는 사실과 어긋난다.**
-"""
+"""은퇴 나이를 넘겼지만 아직 쉰은 안 된 선수의 최소 활동 기간."""
 
 DEFAULT_AGE = 32
-"""생년월일이 비어 있는 12명에 쓰는 나이. 명부 전체의 중앙값이다."""
+"""생년월일이 비어 있을 때 쓰는 나이. 명부 전체의 중앙값이다."""
 
 FICTIONAL_CAREER_YEARS = 24
 """가상 선수의 활동 기간. 22세 데뷔 → 46세 은퇴에 해당한다."""
@@ -105,264 +108,11 @@ Evolve는 NXT 아래 육성 단계다. 오늘 명부에 넣으면 유망주가 �
 **이들이 메인 무대에 오르는 건 몇 년 뒤**라는 사실과 어긋난다 (2026-08-07 사용자 요청).
 """
 
-FIRST_WOMAN: dict[str, str] = {
-    "RAW": "AJ Lee",
-    "SmackDown": "Alexa Bliss",
-    "Free Agent": "Paige",
-    "NXT": "Adriana Rizzo",
-}
-"""섹션마다 **여자 구간이 시작되는 이름**. 이 이름부터 끝까지가 여성부다."""
+REQUIRED_FIELDS = ("korean_name", "gender", "tier", "play_style")
+"""비어 있으면 생성기가 멈추는 칸. `birth_date`만 비워 둘 수 있다 (미공개 정보)."""
 
-EXPLICIT_WOMEN: dict[str, frozenset[str]] = {
-    "Evolve": frozenset(
-        {"Zena Sterling", "Kai Kavari", "Aria Bennett", "Chantel Monroe"}
-    ),
-}
-"""알파벳 되감김이 없는 섹션은 **여성부를 이름으로 적는다.**
-
-Evolve는 정렬돼 있지 않아 경계를 잡을 구조 신호가 없다. 억지로 위치로 자르면 조용히
-틀리므로, 짧은 섹션은 손으로 적는 쪽이 정직하다.
-"""
-
-PROSPECT_SECTIONS = frozenset({"NXT"})
-"""육성 브랜드. 통째로 유망주 등급이 된다."""
-
-MAIN_EVENTERS: frozenset[str] = frozenset(
-    {
-        # 남성부
-        "Roman Reigns",
-        "Cody Rhodes",
-        "CM Punk",
-        "Seth Rollins",
-        "Drew McIntyre",
-        "Gunther",
-        "Randy Orton",
-        "Bron Breakker",
-        "Jey Uso",
-        "LA Knight",
-        "Damian Priest",
-        "Kevin Owens",
-        "Solo Sikoa",
-        "Brock Lesnar",
-        "Jacob Fatu",
-        "Finn Bálor",
-        "Sami Zayn",
-        "Logan Paul",
-        "Rey Mysterio",
-        "Bronson Reed",
-        # 여성부
-        "Rhea Ripley",
-        "Bianca Belair",
-        "Becky Lynch",
-        "Charlotte Flair",
-        "Liv Morgan",
-        "Iyo Sky",
-        "Bayley",
-        "Tiffany Stratton",
-        "Jade Cargill",
-        "Asuka",
-        "Nia Jax",
-        "Naomi",
-        "Alexa Bliss",
-        "Giulia",
-        "Stepahnie Vaquer",
-    }
-)
-"""정상급으로 올릴 이름. **여기 없는 메인 로스터는 전부 미드카드다.**
-
-인기도 60 이상인 플레이어가 만나는 상대라 풀이 너무 얇으면 같은 얼굴만 나온다(§3-D13).
-"""
-
-KOREAN_NAMES: dict[str, str] = {
-    # ── 남성부 ────────────────────────────────────────────────
-    "Brock Lesnar": "브록 레스너",
-    "Bron Breakker": "브론 브레이커",
-    "Bronson Reed": "브론슨 리드",
-    "CM Punk": "CM 펑크",
-    "Cody Rhodes": "코디 로즈",
-    "Damian Priest": "데미언 프리스트",
-    "Drew McIntyre": "드류 매킨타이어",
-    "Finn Bálor": "핀 밸러",
-    "Gunther": "군터",
-    "Jacob Fatu": "제이콥 파투",
-    "Jey Uso": "제이 우소",
-    "Kevin Owens": "케빈 오웬스",
-    "LA Knight": "LA 나이트",
-    "Logan Paul": "로건 폴",
-    "Randy Orton": "랜디 오턴",
-    "Rey Mysterio": "레이 미스테리오",
-    "Roman Reigns": "로만 레인즈",
-    "Sami Zayn": "사미 제인",
-    "Seth Rollins": "세스 롤린스",
-    "Solo Sikoa": "솔로 시코아",
-    "Akira Tozawa": "토자와 아키라",
-    "Angel": "에인절",
-    "Angelo Dawkins": "안젤로 도킨스",
-    "Austin Theory": "오스틴 시어리",
-    "Axiom": "액시엄",
-    "Baron Corbin": "배런 코빈",
-    "Berto": "베르토",
-    "Big Cass": "빅 캐스",
-    "Brutus Creed": "브루터스 크리드",
-    "Carmelo Hayes": "카멜로 헤이스",
-    "Chad Gable": "채드 게이블",
-    "Cruz Del Toro": "크루즈 델 토로",
-    "Danhausen": "댄하우젠",
-    "Dominik Mysterio": "도미닉 미스테리오",
-    "Dragon Lee": "드래곤 리",
-    "Elton Prince": "엘튼 프린스",
-    "Erik": "에릭",
-    "Ethan Page": "이선 페이지",
-    "Grayson Waller": "그레이슨 월러",
-    "Ilja Dragunov": "일리야 드라구노프",
-    "Ivar": "아이바",
-    "JD McDonagh": "JD 맥도너",
-    "Je'Von Evans": "제본 에번스",
-    "Jimmy Uso": "지미 우소",
-    "Joaquin Wilde": "호아킨 와일드",
-    "Joe Hendry": "조 헨드리",
-    "Johnny Gargano": "조니 가르가노",
-    "Julius creed": "줄리어스 크리드",
-    "Kit Wilson": "키트 윌슨",
-    "Ludwig Kaiser": "루트비히 카이저",
-    "Matt Cardona": "맷 카도나",
-    "Montez Ford": "몬테즈 포드",
-    "Nathan Frazer": "네이선 프레이저",
-    "Oba Femi": "오바 페미",
-    "Omos": "오모스",
-    "Otis": "오티스",
-    "Penta": "펜타",
-    "Pete Dunne": "피트 던",
-    "R-Truth": "R-트루스",
-    "Rey Fénix": "레이 페닉스",
-    "Ricky Saints": "리키 세인츠",
-    "Royce Keys": "로이스 키스",
-    "Rusev": "루세프",
-    "Shinsuke Nakamura": "나카무라 신스케",
-    "Talla Tonga": "탈라 통가",
-    "Tama Tonga": "타마 통가",
-    "The Miz": "더 미즈",
-    "Trick Williams": "트릭 윌리엄스",
-    "Tyler Bate": "타일러 베이트",
-    "Brad Baylor": "브래드 베일러",
-    "Bronco Nima": "브롱코 니마",
-    "Brooks Jensen": "브룩스 젠슨",
-    'Channing "Stacks" Lorenzo': "채닝 로렌조",
-    "Charlie Dempsey": "찰리 뎀프시",
-    "Cutler James": "커틀러 제임스",
-    "Dion Lennox": "디온 레녹스",
-    "Dorian Van Dux": "도리안 반 덕스",
-    "EK Prosper": "EK 프로스퍼",
-    "Elio LeFleur": "엘리오 르플뢰르",
-    "Hank Walker": "행크 워커",
-    "Jackson Drake": "잭슨 드레이크",
-    "Jasper Troy": "재스퍼 트로이",
-    "Josh Briggs": "조시 브릭스",
-    "Kale Dixon": "케일 딕슨",
-    "Kam Hendrix": "캠 헨드릭스",
-    "Keanu Carver": "키아누 카버",
-    "Lexis King": "렉시스 킹",
-    "Lince Dorado": "린세 도라도",
-    "Lucien Price": "루시엔 프라이스",
-    "Mason Rook": "메이슨 룩",
-    "Myles Borne": "마일스 본",
-    "NARAKU": "나라쿠",
-    "Niko Vance": "니코 밴스",
-    "Noam Dar": "노엄 다르",
-    "Osiris Griffin": "오시리스 그리핀",
-    "Ricky Smokes": "리키 스모크스",
-    "Romeo Moreno": "로미오 모레노",
-    "Saquon Shugars": "세이콴 슈거스",
-    "Sean Legacy": "션 레거시",
-    "Shawn Spears": "숀 스피어스",
-    "Shiloh Hill": "샤일로 힐",
-    "Tank Ledger": "탱크 레저",
-    "Tavion Heights": "테이비언 하이츠",
-    "Tony D'Angelo": "토니 단젤로",
-    "Tristan Angels": "트리스탄 에인절스",
-    "Uriah Connors": "유라이어 코너스",
-    # ── 여성부 ────────────────────────────────────────────────
-    "Alexa Bliss": "알렉사 블리스",
-    "Asuka": "아스카",
-    "Bayley": "베일리",
-    "Becky Lynch": "베키 린치",
-    "Bianca Belair": "비앙카 벨레어",
-    "Charlotte Flair": "샬럿 플레어",
-    "Giulia": "줄리아",
-    "Iyo Sky": "이요 스카이",
-    "Jade Cargill": "제이드 카길",
-    "Liv Morgan": "리브 모건",
-    "Naomi": "나오미",
-    "Nia Jax": "니아 잭스",
-    "Rhea Ripley": "레아 리플리",
-    "Stepahnie Vaquer": "스테파니 바케르",
-    "Tiffany Stratton": "티파니 스트래튼",
-    "AJ Lee": "AJ 리",
-    "B-Fab": "B-팹",
-    "Blake Monroe": "블레이크 먼로",
-    "Brie Bella": "브리 벨라",
-    "Candice LeRae": "캔디스 르레이",
-    "Chelsea Green": "첼시 그린",
-    "Fallon Henley": "팰런 헨리",
-    "Ivy Nile": "아이비 나일",
-    "Jacy Jayne": "제이시 제인",
-    "Jordynne Grace": "조딘 그레이스",
-    "Kiana James": "키아나 제임스",
-    "Lainey Reid": "레이니 리드",
-    "Lash Legend": "래시 레전드",
-    "Lyra Valkyria": "라이라 발키리아",
-    "Maxxine Dupri": "맥신 듀프리",
-    "Michin": "미친",
-    "Nattie": "내티",
-    "Nikki Bella": "니키 벨라",
-    "Paige": "페이지",
-    "Piper Niven": "파이퍼 니븐",
-    "Raquel Rodriguez": "라켈 로드리게스",
-    "Roxanne Perez": "록산 페레즈",
-    "Sol Ruca": "솔 루카",
-    "Adriana Rizzo": "아드리아나 리조",
-    "Arianna Grace": "아리아나 그레이스",
-    "Izzi Dame": "이지 데임",
-    "Jaida Parker": "자이다 파커",
-    "Kali Armstrong": "칼리 암스트롱",
-    "Karmen Petrovic": "카르멘 페트로비치",
-    "Kelani Jordan": "켈라니 조던",
-    "Kendal Grey": "켄달 그레이",
-    "Layla Diggs": "레일라 딕스",
-    "Lizzy Rain": "리지 레인",
-    "Lola Vice": "롤라 바이스",
-    "Myka Lockwood": "마이카 록우드",
-    "Nikkita Lyons": "니키타 라이온스",
-    "Reina Volcán": "레이나 볼칸",
-    "Skylar Raye": "스카일라 레이",
-    "Tatum Paxley": "테이텀 팩슬리",
-    "Thea Hail": "시아 헤일",
-    "Wendy Choo": "웬디 추",
-    "Wren Sinclair": "렌 싱클레어",
-    "Zaria": "자리아",
-    # ── Evolve (나중 데뷔) ─────────────────────────────────────
-    "Aaron Rourke": "에런 루크",
-    "Cappuccino Jones": "카푸치노 존스",
-    "Starboy Charlie": "스타보이 찰리",
-    "Elijah Holyfield": "일라이자 홀리필드",
-    "It's GAL": "잇츠 갈",
-    "Braxton Cole": "브랙스턴 콜",
-    "Harlem Lewis": "할렘 루이스",
-    "PJ Vasa": "PJ 바사",
-    "Jax Preslay": "잭스 프레슬리",
-    "Zena Sterling": "지나 스털링",
-    "Kai Kavari": "카이 카바리",
-    "Aria Bennett": "아리아 베넷",
-    "Chantel Monroe": "샹텔 먼로",
-}
-"""영문 링네임 → 한국어 표기.
-
-**서술이 한국어라 이름도 한국어여야 한다.** 영문을 그대로 두면 "Brock Lesnar가 난입해"가
-되고, 조사 판정도 어긋난다 — `_ends_with_batchim`은 한글 종성을 보는데 영문은 마지막
-글자로 어림할 뿐이라 "레스너가"(맞음) 대신 "Lesnar이"(틀림)가 된다.
-
-표에 없는 이름은 **영문 그대로 두고 경고한다.** 조용히 섞이면 화면에서야 발견된다.
-"""
+GENDER_ALIAS = {"male": "_M", "female": "_F"}
+TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
 
 
 HEADER = '''"""라이벌·챔피언으로 쓸 선수 명부 — **시간에 따라 바뀐다** (하네스 §3-D13).
@@ -382,6 +132,10 @@ HEADER = '''"""라이벌·챔피언으로 쓸 선수 명부 — **시간에 따�
 | `debut_week` | 이 주차부터 등장한다. 실존 선수는 0, Evolve는 1~4년 뒤, 가상 신인은 흩뿌려진다 |
 | `retire_week` | 이 주차부터 사라진다. 실존 선수는 **생년월일에서 계산**하고, 가상 선수는 데뷔 + 경력 길이 |
 | `start_tier` | 등장 시점의 등급. 여기서 **경력 연차만큼 올라간다** (`tier_at`) |
+
+**은퇴 나이는 디비전마다 다르다** — 남성부 48세, 여성부 42세(2026-08-10 사용자 지시).
+오늘 쉰을 넘긴 선수는 1~5년 안에 떠난다. 여성부가 빨리 비는 만큼 가상 여성 선수를
+해마다 더 많이 데뷔시킨다.
 
 가상 선수가 필요한 이유가 여기 있다 — 실존 선수만으로는 커리어 후반의 대립 상대가
 바닥난다. 이름은 조합으로 만들되 실존 이름과 겹치지 않게 걸렀다.
@@ -521,13 +275,9 @@ for _g in Gender:  # pragma: no cover - 임포트 시 구조 검증
 
 
 def read_game_data() -> dict[str, dict[str, str]]:
-    """사용자가 채운 게임 데이터. 파일이 없으면 빈 표를 돌려주고 추정으로만 간다."""
+    """사용자가 채운 게임 데이터. **이 파일이 유일한 원본이라 없으면 멈춘다.**"""
     if not GAME_DATA_PATH.exists():
-        print(
-            f"알림: {GAME_DATA_PATH.name}이 없어 전부 추정으로 만듭니다",
-            file=sys.stderr,
-        )
-        return {}
+        raise SystemExit(f"{GAME_DATA_PATH}가 없습니다 — 게임 값의 원본입니다")
     rows = csv.DictReader(io.StringIO(GAME_DATA_PATH.read_text(encoding="utf-8-sig")))
     return {
         (row.get("name") or "").strip(): {
@@ -546,10 +296,21 @@ def given(name: str, field: str) -> str:
     return GAME_DATA.get(name, {}).get(field, "")
 
 
-def read_sections(path: Path) -> dict[str, list[tuple[str, int]]]:
-    """섹션 이름 → [(선수 이름, 나이)]. 등장 순서를 그대로 지킨다."""
+def require(name: str, field: str) -> str:
+    """빠진 칸은 **조용히 메우지 않고 무엇이 빠졌는지 짚어서 멈춘다** (§3-D10-1)."""
+    value = given(name, field)
+    if not value:
+        raise SystemExit(
+            f"{GAME_DATA_PATH.name}: {name!r}의 {field} 칸이 비었습니다 — "
+            "새 선수를 kayfabe CSV에 넣었다면 이 파일에도 같은 name으로 행을 더하세요"
+        )
+    return value
+
+
+def read_sections(path: Path) -> dict[str, list[str]]:
+    """섹션 이름 → 선수 이름. 등장 순서를 그대로 지킨다."""
     rows = csv.DictReader(io.StringIO(path.read_text(encoding="utf-8-sig")))
-    sections: dict[str, list[tuple[str, int]]] = {}
+    sections: dict[str, list[str]] = {}
     current: str | None = None
     for row in rows:
         cell = (row.get("name") or "").strip()
@@ -559,19 +320,24 @@ def read_sections(path: Path) -> dict[str, list[tuple[str, int]]]:
             current = cell[1:]
             sections[current] = []
         elif current is not None:
-            sections[current].append((cell, _age_of(row)))
+            sections[current].append(cell)
     return sections
 
 
-def _age_of(row: dict[str, str | None]) -> int:
-    """생년월일에서 오늘 나이. **사용자가 채운 값이 먼저다.**"""
-    name = (row.get("name") or "").strip()
-    raw = given(name, "birth_date") or (row.get("birth_date") or "").strip()
-    try:
-        born = datetime.date.fromisoformat(raw)
-    except ValueError:
-        return DEFAULT_AGE
-    return (TODAY - born).days // 365
+def age_of(name: str) -> int:
+    """생년월일에서 오늘 나이. 미공개면 중앙값을 쓴다.
+
+    **연도만 아는 값도 받는다** — 원본에 `1999-04-??`처럼 일자를 모르는 행이 있다.
+    아는 만큼의 정밀도로 세는 편이, 모른다고 중앙값으로 뭉개는 것보다 낫다.
+    """
+    raw = given(name, "birth_date")
+    for text, fmt in ((raw, "%Y-%m-%d"), (raw[:7], "%Y-%m"), (raw[:4], "%Y")):
+        try:
+            born = datetime.datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+        return (TODAY - born).days // 365
+    return DEFAULT_AGE
 
 
 DEBUT_AGE = 22
@@ -582,42 +348,28 @@ def experience_of(age: int) -> int:
     return max(0, age - DEBUT_AGE)
 
 
-def retire_week_for(age: int) -> int:
-    """그 나이의 선수가 링을 떠나는 주차. 노장에게도 최소 활동 기간을 준다."""
-    return max(MIN_ACTIVE_WEEKS, (NPC_RETIRE_AGE - age) * WEEKS_PER_YEAR)
+def _spread(name: str, low: int, high: int) -> int:
+    """이름 해시로 [low, high] 안에 흩뿌린다. blake2b라 실행마다 같은 값이 나온다."""
+    span = high - low + 1
+    digest = hashlib.blake2b(name.encode(), digest_size=8).digest()
+    return low + int.from_bytes(digest, "big") % span
 
 
-def split_by_gender(
-    section: str, entries: list[tuple[str, int]]
-) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
-    """(남성부, 여성부). 경계 이름이 목록에 없으면 CSV가 바뀐 것이므로 멈춘다."""
-    stated = {n for n, _ in entries if given(n, "gender")}
-    if stated == {n for n, _ in entries}:
-        # 전부 채워져 있으면 알파벳 되감김을 볼 필요가 없다.
-        return (
-            [e for e in entries if given(e[0], "gender") != "female"],
-            [e for e in entries if given(e[0], "gender") == "female"],
-        )
-    explicit = EXPLICIT_WOMEN.get(section)
-    if explicit is not None:
-        unknown = explicit - {n for n, _ in entries}
-        if unknown:
-            raise SystemExit(f"{section}: 명단에 없는 이름 {sorted(unknown)}")
-        return (
-            [e for e in entries if e[0] not in explicit],
-            [e for e in entries if e[0] in explicit],
-        )
-    marker = FIRST_WOMAN.get(section)
-    if marker is None:
-        raise SystemExit(f"{section}: 여성부 시작 이름이 정의돼 있지 않습니다")
-    names = [n for n, _ in entries]
-    if marker not in names:
-        raise SystemExit(
-            f"{section}: 경계 이름 {marker!r}이 CSV에 없습니다 — "
-            "로스터가 갱신됐다면 FIRST_WOMAN을 함께 고치세요"
-        )
-    cut = names.index(marker)
-    return entries[:cut], entries[cut:]
+def retire_week_for(name: str, age: int, gender: str) -> int:
+    """그 선수가 링을 떠나는 주차 (2026-08-10 사용자 지시 5·8번).
+
+    나이대마다 다른 규칙을 받는다.
+
+    | 나이 | 규칙 |
+    |---|---|
+    | 50세 이상 | 1~5년 안에 은퇴 — 이름으로 흩뿌려 한꺼번에 빠지지 않게 한다 |
+    | 은퇴 나이~49세 | 최소 3년은 더 뛴다 |
+    | 그 아래 | `(은퇴 나이 − 나이) × 52` |
+    """
+    if age >= LATE_CAREER_AGE:
+        return _spread(name, *LATE_CAREER_WINDOW) * WEEKS_PER_YEAR
+    remaining = (NPC_RETIRE_AGE[gender] - age) * WEEKS_PER_YEAR
+    return max(MIN_ACTIVE_WEEKS, remaining)
 
 
 FICTIONAL_MALE_FIRST = (
@@ -716,11 +468,16 @@ FICTIONAL_LAST = (
 직접 쓰면 뒤로 갈수록 성의가 떨어진다. 실존 이름과 겹치는 조합은 걸러 낸다.
 """
 
-DEBUTS_PER_YEAR = {"_M": 3, "_F": 2}
+DEBUTS_PER_YEAR = {"_M": 3, "_F": 4}
 """해마다 데뷔시킬 가상 선수 수.
 
 승급이 6년·15년이므로 한 기수는 유망주로 6년, 미드카드로 9년을 산다. 남자 3명이면
 유망주 18명·미드카드 27명이 늘 차 있다는 계산이고, 실측도 그 근처다.
+
+**여성부만 둘에서 넷으로 올렸다** (2026-08-10 사용자 지시 8번). 은퇴 나이를 42세로
+내리자 실존 여성 선수가 남성부보다 훨씬 빨리 빠져나간다 — 데뷔 수를 그대로 두면
+`MIN_POOL` 검증이 중반 구간에서 터진다. **가상 선수가 빨리 나오게 해 달라는 요청과
+같은 방향이다.**
 """
 
 FICTIONAL_MIDCARD_EVERY = 4
@@ -762,86 +519,35 @@ def fictional_members(
     return members
 
 
-def _is_korean(text: str) -> bool:
-    return any("\uac00" <= ch <= "\ud7a3" for ch in text)
-
-
-def build_presets() -> list[tuple[str, str, str, str]]:
-    """(한국어 이름, 성별, 플레이스타일, 국가코드). 실존 선수만 대상이다."""
-    presets: list[tuple[str, str, str, str]] = []
-    for section, entries in read_sections(CSV_PATH).items():
-        men, women = split_by_gender(section, entries)
-        raw = {
-            row["name"].strip(): row
-            for row in csv.DictReader(
-                io.StringIO(CSV_PATH.read_text(encoding="utf-8-sig"))
-            )
-            if (row.get("name") or "").strip()
-        }
-        for gender, group in (("MALE", men), ("FEMALE", women)):
-            for name, _ in group:
-                row = raw.get(name, {})
-                presets.append(
-                    (
-                        given(name, "korean_name") or KOREAN_NAMES.get(name, name),
-                        gender,
-                        preset_style(
-                            name,
-                            (row.get("finisher") or ""),
-                            (row.get("weight") or ""),
-                            gender,
-                        ),
-                        preset_country(
-                            (row.get("birth_place") or ""),
-                            (row.get("billed_from") or ""),
-                        ),
-                    )
-                )
-    return presets
-
-
 def build() -> list[tuple[str, str, str, int, int | None, int]]:
-    """(이름, 성별, 시작 등급, 데뷔 주차, 은퇴 주차). 디비전 → 등급 순으로 정렬한다."""
+    """(한글명, 성별, 시작 등급, 데뷔 주차, 은퇴 주차, 경력). 디비전 → 등급 순 정렬."""
     members: list[tuple[str, str, str, int, int | None, int]] = []
-    for section, entries in read_sections(CSV_PATH).items():
-        men, women = split_by_gender(section, entries)
+    for section, names in read_sections(CSV_PATH).items():
         window = LATE_DEBUT_SECTIONS.get(section)
-        for gender_alias, group in (("_M", men), ("_F", women)):
-            for index, (name, age) in enumerate(group):
-                tier = TIER_ALIAS.get(given(name, "tier"), "")
-                if not tier:
-                    if section in PROSPECT_SECTIONS or window is not None:
-                        tier = "_P"
-                    elif name in MAIN_EVENTERS:
-                        tier = "_ME"
-                    else:
-                        tier = "_MC"
-                if window is None:
-                    debut = 0
-                else:
-                    low, high = window
-                    span = high - low + 1
-                    debut = (low + index % span) * WEEKS_PER_YEAR
-                retire = debut + retire_week_for(age)
-                members.append(
-                    (name, gender_alias, tier, debut, retire, experience_of(age))
+        for index, name in enumerate(names):
+            gender = require(name, "gender")
+            if gender not in GENDER_ALIAS:
+                raise SystemExit(f"{name}: 모르는 성별 {gender!r}")
+            tier = TIER_ALIAS.get(require(name, "tier"))
+            if tier is None:
+                raise SystemExit(f"{name}: 모르는 등급 {given(name, 'tier')!r}")
+            if window is None:
+                debut = 0
+            else:
+                low, high = window
+                debut = (low + index % (high - low + 1)) * WEEKS_PER_YEAR
+            age = age_of(name)
+            members.append(
+                (
+                    require(name, "korean_name"),
+                    GENDER_ALIAS[gender],
+                    tier,
+                    debut,
+                    debut + retire_week_for(name, age, gender),
+                    experience_of(age),
                 )
+            )
 
-    members = [
-        (given(n, "korean_name") or n, g, t, d, r, e)
-        if given(n, "korean_name")
-        else (n, g, t, d, r, e)
-        for n, g, t, d, r, e in members
-    ]
-    missing = [
-        n for n, _, _, _, _, _ in members if n not in KOREAN_NAMES and not _is_korean(n)
-    ]
-    if missing:
-        print(
-            f"경고: 한국어 표기가 없는 이름 {len(missing)}개 — {missing}",
-            file=sys.stderr,
-        )
-    members = [(KOREAN_NAMES.get(n, n), g, t, d, r, e) for n, g, t, d, r, e in members]
     members += fictional_members({n for n, _, _, _, _, _ in members})
 
     order = {"_ME": 0, "_MC": 1, "_P": 2}
@@ -907,163 +613,6 @@ COUNTRY_BY_PLACE: dict[str, str] = {
 밀어 넣으면 데이터를 조작하는 셈이다.
 """
 
-STYLE_BY_FINISHER: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (
-        "TECHNICIAN",
-        (
-            "lock",
-            "hold",
-            "sleeper",
-            "clutch",
-            "stretch",
-            "crossface",
-            "armbar",
-            "submission",
-            "ankle",
-            "cloverleaf",
-            "crab",
-        ),
-    ),
-    (
-        "HIGH_FLYER",
-        (
-            "senton",
-            "moonsault",
-            "450",
-            "splash",
-            "dive",
-            "frog",
-            "shooting star",
-            "swanton",
-            "phoenix",
-            "corkscrew",
-            "diving",
-        ),
-    ),
-    (
-        "POWERHOUSE",
-        (
-            "bomb",
-            "slam",
-            "driver",
-            "spear",
-            "suplex",
-            "press",
-            "powerbomb",
-            "chokeslam",
-            "buster",
-        ),
-    ),
-    (
-        "BRAWLER",
-        (
-            "punch",
-            "kick",
-            "lariat",
-            "clothesline",
-            "knee",
-            "elbow",
-            "stunner",
-            "ddt",
-            "headbutt",
-            "cutter",
-            "fist",
-        ),
-    ),
-)
-"""피니셔 이름에서 플레이스타일을 읽는 순서. **먼저 걸린 것이 이긴다.**
-
-기술 이름은 그 선수가 무엇으로 먹고사는지를 가장 잘 드러내는 한 줄이다. 체중보다 앞에
-두는 이유: 120kg 테크니션과 70kg 브롤러가 실제로 있다.
-"""
-
-HEAVY_KG = 120
-LIGHT_KG_BY_GENDER = {"MALE": 75, "FEMALE": 55}
-"""피니셔로 못 가른 선수를 체중으로 가른다. 그 사이는 쇼맨으로 둔다.
-
-**가벼움의 기준은 디비전마다 다르다.** 75kg 하나로 재면 여성부는 대부분이 그 아래라
-32명이 통째로 하이플라이어가 됐다 — 체급 분포가 다른 두 집단에 같은 자를 댄 탓이다.
-"""
-
-STYLE_OVERRIDES: dict[str, str] = {
-    # 남성부
-    "Roman Reigns": "POWERHOUSE",
-    "Cody Rhodes": "SHOWMAN",
-    "CM Punk": "TECHNICIAN",
-    "Seth Rollins": "SHOWMAN",
-    "Drew McIntyre": "POWERHOUSE",
-    "Gunther": "BRAWLER",
-    "Randy Orton": "SHOWMAN",
-    "Bron Breakker": "POWERHOUSE",
-    "Jey Uso": "SHOWMAN",
-    "LA Knight": "SHOWMAN",
-    "Damian Priest": "BRAWLER",
-    "Kevin Owens": "BRAWLER",
-    "Solo Sikoa": "POWERHOUSE",
-    "Brock Lesnar": "POWERHOUSE",
-    "Jacob Fatu": "POWERHOUSE",
-    "Finn Bálor": "HIGH_FLYER",
-    "Sami Zayn": "TECHNICIAN",
-    "Logan Paul": "SHOWMAN",
-    "Rey Mysterio": "HIGH_FLYER",
-    "Bronson Reed": "POWERHOUSE",
-    "Shinsuke Nakamura": "BRAWLER",
-    "Ilja Dragunov": "BRAWLER",
-    "Pete Dunne": "TECHNICIAN",
-    "Chad Gable": "TECHNICIAN",
-    "The Miz": "SHOWMAN",
-    "R-Truth": "SHOWMAN",
-    # 여성부
-    "Rhea Ripley": "POWERHOUSE",
-    "Bianca Belair": "POWERHOUSE",
-    "Becky Lynch": "TECHNICIAN",
-    "Charlotte Flair": "TECHNICIAN",
-    "Liv Morgan": "SHOWMAN",
-    "Iyo Sky": "HIGH_FLYER",
-    "Bayley": "TECHNICIAN",
-    "Tiffany Stratton": "SHOWMAN",
-    "Jade Cargill": "POWERHOUSE",
-    "Asuka": "TECHNICIAN",
-    "Nia Jax": "POWERHOUSE",
-    "Naomi": "HIGH_FLYER",
-    "Alexa Bliss": "SHOWMAN",
-    "Giulia": "BRAWLER",
-    "Stepahnie Vaquer": "TECHNICIAN",
-}
-"""손으로 지정하는 플레이스타일. **피니셔 한 줄로는 못 읽는 선수들이다.**
-
-군터는 서브미션을 쓰지만 그를 정의하는 것은 하드히팅이고, 브록 레스너의 키무라는
-그래플러의 기술이지 그의 스타일 전부가 아니다. 알려진 선수일수록 어긋남이 눈에 띄므로
-정상급 명단을 중심으로 덮어쓴다.
-"""
-
-
-def _weight_kg(raw: str) -> int | None:
-    digits = "".join(c for c in raw if c.isdigit())
-    return int(digits) if digits else None
-
-
-TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
-"""게임 데이터의 등급 표기 → 생성 코드의 별칭."""
-
-
-def preset_style(name: str, finisher: str, weight: str, gender: str) -> str:
-    stated = given(name, "play_style").upper()
-    if stated:
-        return stated
-    if name in STYLE_OVERRIDES:
-        return STYLE_OVERRIDES[name]
-    low = finisher.lower()
-    for style, keywords in STYLE_BY_FINISHER:
-        if any(word in low for word in keywords):
-            return style
-    kg = _weight_kg(weight)
-    if kg is not None and kg >= HEAVY_KG:
-        return "POWERHOUSE"
-    if kg is not None and kg <= LIGHT_KG_BY_GENDER[gender]:
-        return "HIGH_FLYER"
-    return "SHOWMAN"
-
 
 def preset_country(birth_place: str, billed_from: str) -> str:
     """출생지·소개지에서 국가 코드. 목록 밖이면 **기타**로 뭉친다 (2026-08-07 사용자 결정)."""
@@ -1074,6 +623,31 @@ def preset_country(birth_place: str, billed_from: str) -> str:
     return "OTHER"
 
 
+def build_presets() -> list[tuple[str, str, str, str]]:
+    """(한국어 이름, 성별, 플레이스타일, 국가코드). 실존 선수만 대상이다."""
+    raw = {
+        row["name"].strip(): row
+        for row in csv.DictReader(io.StringIO(CSV_PATH.read_text(encoding="utf-8-sig")))
+        if (row.get("name") or "").strip()
+    }
+    presets: list[tuple[str, str, str, str]] = []
+    for names in read_sections(CSV_PATH).values():
+        for name in names:
+            row = raw.get(name, {})
+            presets.append(
+                (
+                    require(name, "korean_name"),
+                    require(name, "gender").upper(),
+                    require(name, "play_style").upper(),
+                    preset_country(
+                        (row.get("birth_place") or ""),
+                        (row.get("billed_from") or ""),
+                    ),
+                )
+            )
+    return presets
+
+
 PRESET_HEADER = '''"""캐릭터 생성 프리셋 — 실존 선수를 바탕으로 내 선수를 만든다 (하네스 §3-D10-1).
 
 **이 파일은 생성물이다.** `scripts/generate_roster.py`가 로스터와 함께 찍어 낸다.
@@ -1081,6 +655,10 @@ PRESET_HEADER = '''"""캐릭터 생성 프리셋 — 실존 선수를 바탕으�
 프리셋을 고르면 그 선수의 데이터가 **기본값으로** 들어오고, 원하는 값은 덮어쓸 수 있다
 (2026-08-07 사용자 요청). 이름은 언제나 사용자가 정한다 — 실존 인물의 이름을 그대로
 쓰는 캐릭터를 만들 수 있게 두면 §3-D13의 고지가 무의미해진다.
+
+플레이스타일은 로스터 CSV의 `style` 첫 값이다 — **추정이 아니라 사용자가 적은 값**
+(2026-08-10). 곁들이는 유형(`sub_styles`)은 프리셋이 물려주지 않는다: 캐릭터의
+플레이스타일은 하나이고, 나머지는 그 선수를 설명하는 말이지 게임의 값이 아니다.
 
 목록 밖 출신은 `Country.OTHER`(기타)로 뭉친다 — 게임의 권역이 다섯 개뿐이라(§3-D14)
 아프리카·중동을 담을 자리가 없기 때문이다. 그래도 국적은 언제든 덮어쓸 수 있다.
@@ -1137,12 +715,20 @@ def main() -> int:
 
     global GAME_DATA  # noqa: PLW0603 - 파일 하나를 읽어 모듈 전역에 둔다
     GAME_DATA = read_game_data()
-    if GAME_DATA:
-        filled = {
-            f: sum(1 for r in GAME_DATA.values() if r.get(f))
-            for f in ("korean_name", "gender", "tier", "play_style", "birth_date")
-        }
-        print(f"게임 데이터 {len(GAME_DATA)}행 — 채워진 칸: {filled}")
+    blank = [
+        (name, field)
+        for name, row in GAME_DATA.items()
+        for field in REQUIRED_FIELDS
+        if not row.get(field)
+    ]
+    if blank:
+        raise SystemExit(f"{GAME_DATA_PATH.name}: 비어 있는 칸 {blank}")
+    print(f"게임 데이터 {len(GAME_DATA)}행 — 필수 칸 전부 채워짐")
+    no_birth = [n for n, r in GAME_DATA.items() if not r.get("birth_date")]
+    if no_birth:
+        print(
+            f"  생년월일 미공개 {len(no_birth)}명 — {DEFAULT_AGE}세로 셉니다: {no_birth}"
+        )
 
     members = build()
     counts: dict[tuple[str, str], int] = {}

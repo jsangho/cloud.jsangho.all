@@ -807,6 +807,13 @@ WWE_ROSTER: list[RosterEntry] = [
         "birth_date": "1996-12-30",
     },
     {
+        "name": "Cruz Montana",
+        "real_name": "Mark Sanchez",
+        "height_cm": 178.0,
+        "weight_kg": 89.0,
+        "birth_date": "1991-02-04",
+    },
+    {
         "name": "Cutler James",
         "real_name": "Jonah C. Niesenbaum",
         "height_cm": 196.0,

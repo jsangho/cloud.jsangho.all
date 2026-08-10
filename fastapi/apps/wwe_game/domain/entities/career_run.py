@@ -17,6 +17,7 @@ from wwe_game.domain.constants.career_clock import CAREER_WEEKS, RETIREMENT_AGE
 from wwe_game.domain.exceptions import InvalidCareerRunError, RunNotActiveError
 from wwe_game.domain.value_objects.condition import HEALTHY, Condition
 from wwe_game.domain.value_objects.game_mode import GameMode
+from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title
 from wwe_game.domain.value_objects.wrestler_identity import WrestlerIdentity
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
@@ -142,6 +143,14 @@ class CareerRun:
     titles_won: tuple[Title, ...] = ()
     """획득 이력을 **순서대로** 쌓는다. 집합이 아니라 튜플인 이유는 **횟수를 세야** 하기
     때문이다 — 더블 그랜드슬램은 각 그룹을 두 번씩 채운 것으로 판정한다(스펙)."""
+
+    team: Team | None = None
+    """지금 속한 태그팀·스테이블 (§3-D30). 혼자면 None.
+
+    표식(`in_tag_team`·`in_stable`)이 "팀에 있다"를 말한다면 이 값은 **누구와, 무슨
+    이름으로**를 말한다. 둘을 나눠 두는 이유: 카드 조건은 표식만 보면 되고, 화면은
+    이름이 필요하다.
+    """
 
     def __post_init__(self) -> None:
         if not 0 <= self.week <= CAREER_WEEKS:

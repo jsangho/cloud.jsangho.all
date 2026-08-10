@@ -21,8 +21,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
+from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
+from wwe_game.domain.value_objects.ring_skills import breakdown
 from wwe_game.domain.value_objects.week_report import WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 
@@ -145,6 +148,42 @@ class AdvanceResult:
 
 
 @dataclass(frozen=True)
+class StatsView:
+    """화면이 그리는 스탯 한 벌 (2026-08-10 사용자 요청).
+
+    **경기력만 속이 열린다** — `skills`가 파워·스피드·운영과 스타일 전용 축을
+    (이름, 값)으로 들고 있고, 화면은 그걸 드롭다운으로 편다(§3-D29).
+
+    내부 확률이나 주사위 값은 여기 오지 않는다(§11-14).
+    """
+
+    popularity: int
+    in_ring: int
+    mic_work: int
+    backstage: int
+    alignment: int
+    wear: int
+    play_style: PlayStyle
+    play_style_label: str
+    skills: tuple[tuple[str, int], ...]
+
+    @classmethod
+    def of(cls, run: CareerRun) -> StatsView:
+        style = run.identity.play_style
+        return cls(
+            popularity=run.stats.popularity,
+            in_ring=run.stats.in_ring,
+            mic_work=run.stats.mic_work,
+            backstage=run.stats.backstage,
+            alignment=run.stats.alignment,
+            wear=run.condition.wear,
+            play_style=style,
+            play_style_label=KOREAN_STYLE_NAMES[style],
+            skills=breakdown(run.stats.in_ring, style).as_pairs,
+        )
+
+
+@dataclass(frozen=True)
 class PresetView:
     """생성 화면의 "○○를 바탕으로" 목록 한 줄 (§3-D10-1).
 
@@ -181,6 +220,34 @@ class CareerLogPage:
     @property
     def has_more(self) -> bool:
         return self.offset + len(self.entries) < self.total
+
+
+@dataclass(frozen=True)
+class NewsFeedPage:
+    """내 세계선의 뉴스 한 페이지 (2026-08-10 사용자 지시 10번 · §3-D31).
+
+    로그와 따로 두는 이유는 담는 것이 달라서다 — 로그는 **모든** 주차이고 뉴스는
+    남을 만한 사건만이다. `weekly` 한 판이 1560주라 로그를 그대로 펼치면 읽을 수 없다.
+
+    각 항목이 **군중 반응**을 함께 들고 온다(`mood` · `crowd_line`). 화면은 `mood`로
+    색을 고르고 `crowd_line`을 헤드라인 아래에 붙인다.
+    """
+
+    items: tuple[NewsItem, ...] = ()
+    total: int = 0
+    offset: int = 0
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+    @property
+    def by_year(self) -> tuple[tuple[int, tuple[NewsItem, ...]], ...]:
+        """연도별로 묶은 것. 서른 해치를 한 줄로 늘어놓으면 어디가 어디인지 모른다."""
+        years: dict[int, list[NewsItem]] = {}
+        for item in self.items:
+            years.setdefault(item.year, []).append(item)
+        return tuple((year, tuple(rows)) for year, rows in sorted(years.items()))
 
 
 @dataclass(frozen=True)

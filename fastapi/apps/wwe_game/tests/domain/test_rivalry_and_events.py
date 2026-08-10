@@ -137,7 +137,7 @@ class TestRivalPool:
 
     def test_the_development_brand_arrives_later(self) -> None:
         # Evolve는 NXT 아래 단계라 몇 해 뒤에 올라온다 (2026-08-07 사용자 요청).
-        evolve = {"에런 루크", "지나 스털링", "스타보이 찰리", "아리아 베넷"}
+        evolve = {"아론 루크", "제나 스털링", "스타보이 찰리", "아리아 베넷"}
         at_start = {m.name for m in roster.active_at(0)}
         assert not (evolve & at_start), "Evolve가 0주차 명부에 섞였다"
         by_five = {m.name for m in roster.active_at(5 * WEEKS_PER_YEAR)}
@@ -299,14 +299,12 @@ class TestRepetitionCeiling:
             WrestlerIdentity,
         )
 
+        # 스타일이 21종이라 권역 다섯을 돌려 쓴다. 조합을 전수로 훑는 게 목적이 아니라
+        # **한 판이 겪는 분포**를 재는 자리이므로(§3-D15-1) 짝은 고정이기만 하면 된다.
+        countries = [Country.KR, Country.US, Country.JP, Country.MX, Country.GB]
         worst = 0
-        for index, (style, country) in enumerate(
-            zip(
-                PlayStyle,
-                [Country.KR, Country.US, Country.JP, Country.MX, Country.GB],
-                strict=True,
-            )
-        ):
+        for index, style in enumerate(PlayStyle):
+            country = countries[index % len(countries)]
             identity = WrestlerIdentity(
                 name=RingName("장상호"),
                 gender=Gender.MALE,
@@ -427,3 +425,30 @@ class TestResolveChoice:
             )
         assert InjuryGrade.CAREER_ENDING in outcomes
         assert InjuryGrade.SERIOUS in outcomes
+
+
+class TestNobodyFightsThemselves:
+    def test_the_player_is_not_drawn_as_a_rival(self) -> None:
+        """실존 선수를 골라 **그 선수가 되는** 시스템이라(§3-D10-1 개정) 플레이어
+        이름이 명부에 그대로 있을 수 있다. 자기 자신과 대립하면 안 된다."""
+        from _helpers import make_run
+        from wwe_game.domain.constants import roster
+        from wwe_game.domain.services.rivalry_engine import pick_rival
+        from wwe_game.domain.services.seeded_roll import RIVALRY, SeededRoll
+        from wwe_game.domain.value_objects.wrestler_identity import RingName
+        from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
+
+        base = make_run(seed=1, stats=WrestlerStats(popularity=70))
+        mine = roster.pool_for(base.identity.gender, roster.RivalTier.MAIN_EVENT, 0)[0]
+        run = base.evolve(
+            identity=base.identity.__class__(
+                name=RingName(mine),
+                gender=base.identity.gender,
+                country=base.identity.country,
+                play_style=base.identity.play_style,
+            )
+        )
+        drawn = {
+            pick_rival(run, SeededRoll(seed, 1, RIVALRY)) for seed in range(200)
+        }
+        assert mine not in drawn, "플레이어가 자기 자신을 라이벌로 만났다"

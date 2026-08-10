@@ -28,6 +28,7 @@ from wwe_game.app.dtos.career_dto import (
     GuestChooseCommand,
     GuestStartCommand,
     ModeView,
+    NewsFeedPage,
     PendingEventView,
     PresetView,
     StartRunCommand,
@@ -42,12 +43,22 @@ from wwe_game.app.ports.input.career_use_case import (
 )
 from wwe_game.app.ports.output.career_repository import CareerRepository
 from wwe_game.app.ports.output.narration_port import NarrationPort
+from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.constants.character_presets import PRESETS
 from wwe_game.domain.constants.countries import country_of
 from wwe_game.domain.constants.event_deck import BY_CODE
 from wwe_game.domain.entities.career_run import CareerRun, EndReason, start_run
-from wwe_game.domain.services import career_advance, career_end, event_draw
+from wwe_game.domain.services import (
+    career_advance,
+    career_end,
+    event_draw,
+    news_feed,
+    seeded_roll,
+    team_engine,
+)
 from wwe_game.domain.services.character_creation import build_identity
+from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
@@ -121,6 +132,33 @@ class CareerInteractor(CareerUseCase):
             run_id, user_id, offset=offset, limit=limit
         )
         return CareerLogPage(entries=entries, total=total, offset=offset)
+
+    async def read_news(
+        self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
+    ) -> NewsFeedPage:
+        """로그 전체를 훑어 **남을 만한 사건만** 세운다 (§3-D31).
+
+        전체를 읽는 이유: 뉴스는 로그의 3% 남짓이라, 로그를 페이지 단위로 잘라 뉴스를
+        만들면 어떤 페이지는 통째로 비어 화면이 "사건 없음"으로 보인다. 30년치라도
+        1560행이고 진행마다 다시 읽지 않는다.
+        """
+        run = await self._repository.get(run_id, user_id)
+        entries, _ = await self._repository.read_log(
+            run_id, user_id, offset=0, limit=CAREER_WEEKS
+        )
+        pairs = tuple((view.report, run.stats) for view in entries)
+        team_news: list[TeamNews] = []
+        for week in range(1, run.week + 1):
+            team_news.extend(team_engine.scripted_at(week))
+            rolled = team_engine.roll_change(
+                week, SeededRoll(run.seed, week, seeded_roll.TEAM)
+            )
+            if rolled is not None:
+                team_news.append(rolled)
+        items = news_feed.compile_feed(pairs, tuple(team_news), str(run.identity.name))
+        return NewsFeedPage(
+            items=items[offset : offset + limit], total=len(items), offset=offset
+        )
 
     async def retire(self, run_id: int, user_id: int) -> AdvanceResult:
         run = await self._repository.get(run_id, user_id)

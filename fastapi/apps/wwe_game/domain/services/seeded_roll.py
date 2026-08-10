@@ -29,6 +29,7 @@ EVENT: Final = "event"
 BODY: Final = "body"
 RIVALRY: Final = "rivalry"
 NARRATION: Final = "narration"
+TEAM: Final = "team"
 
 
 def _derive(seed: int, week: int, channel: str) -> int:

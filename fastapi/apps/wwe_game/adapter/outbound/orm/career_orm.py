@@ -96,6 +96,12 @@ class CareerRunModel(Base):
     """**순서를 지킨다** — 더블 그랜드슬램은 그룹별 획득 횟수로 판정한다(§3-D20)."""
 
     # ── 누적·상태 ──
+    team: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    """지금 속한 팀 (§3-D30). `{"name", "members", "formed_week"}` 또는 None.
+
+    표로 빼지 않는 이유는 `titles_held`와 같다 — 진행 한 번이 세이브를 통째로 다시
+    쓰므로(§3-D6) 조회 단위가 아닌 값을 표로 빼면 저장마다 행을 지웠다 다시 넣게 된다.
+    """
     flags: Mapped[list[str]] = mapped_column(JSON, default=list)
     recent_events: Mapped[list[str]] = mapped_column(JSON, default=list)
     """쿨다운과 본문 변주 순환이 함께 읽는 최근 이력. 최대 512칸(§event_draw)."""

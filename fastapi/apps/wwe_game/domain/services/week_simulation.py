@@ -16,12 +16,15 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.career_flags import (
+    CURSED,
     GROUNDED,
     GRUDGE,
     MANAGER,
     PAINKILLER,
     PUSH_FROZEN,
+    TEAM_PENDING,
 )
+from wwe_game.domain.constants.play_styles import INJURY_STYLE_MULTIPLIER
 from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
@@ -29,6 +32,7 @@ from wwe_game.domain.services import (
     event_draw,
     rivalry_engine,
     seeded_roll,
+    team_engine,
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
@@ -133,7 +137,7 @@ def injury_chance(run: CareerRun, kind: WeekKind, *, major: bool = False) -> flo
         return 0.0
     chance = rules.INJURY_BASE_CHANCE
     chance *= 1.0 + (run.condition.wear / 100) * rules.INJURY_WEAR_FACTOR
-    chance *= rules.INJURY_STYLE_MULTIPLIER[run.identity.play_style]
+    chance *= INJURY_STYLE_MULTIPLIER[run.identity.play_style]
     if PAINKILLER in run.flags:
         chance *= rules.PAINKILLER_INJURY_MULTIPLIER
     if GROUNDED in run.flags:
@@ -197,7 +201,11 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
     # 대형 대회에서만 타이틀전이 잡힌다. 잡히면 그날의 경기가 곧 타이틀전이다.
     title = _draw_title_match(run, week, kind, show)
-    if title is not None:
+    # 저주는 **굴림보다 먼저다.** 확률로 옮기면 가끔 이기게 되고 그건 저주가 아니다.
+    cursed = CURSED in run.flags
+    if cursed:
+        result = OutcomeKind.LOSS
+    elif title is not None:
         if match_roll.chance(championship.title_win_chance(score, title)):
             result = OutcomeKind.WIN
         else:
@@ -250,6 +258,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
         title_defended=title is not None and title in run.titles_held,
         call_up=_call_up_of(run, stat_delta),
         draft_night=draft_night,
+        cursed=cursed,
     )
 
 
@@ -312,7 +321,9 @@ def popularity_decay_chance(
 
     벨트를 들고 있으면 느려진다 — 가장 높은 계층 하나만 적용한다(§career_rules).
     """
-    chance = rules.POPULARITY_DECAY_CHANCE * (popularity / 100)
+    chance = rules.POPULARITY_DECAY_CHANCE * (
+        (popularity / 100) ** rules.POPULARITY_DECAY_EXPONENT
+    )
     if off_week:
         chance *= rules.POPULARITY_DECAY_OFF_MULTIPLIER
     if held:
@@ -345,7 +356,7 @@ def _wear_gain(run: CareerRun, week: int, kind: WeekKind) -> int:
         WeekKind.PLE: rules.WEAR_GAIN_CHANCE_PLE,
         WeekKind.SPECIAL: rules.SPECIAL_WEAR_CHANCE,
     }.get(kind, rules.WEAR_GAIN_CHANCE_SHOW)
-    chance = base * rules.INJURY_STYLE_MULTIPLIER[run.identity.play_style]
+    chance = base * INJURY_STYLE_MULTIPLIER[run.identity.play_style]
     roll = SeededRoll(run.seed, week, seeded_roll.WEAR)
     return 1 if roll.chance(min(1.0, chance)) else 0
 
@@ -432,10 +443,28 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         WeekKind.PROMO: rivalry_engine.HEAT_PER_PROMO,
         WeekKind.OFF: -rivalry_engine.COOL_PER_QUIET_WEEK,
     }[report.kind]
+    # 저주는 경기 하나를 먹고 사라진다 — 경기 없는 주차는 그냥 지나간다.
+    flags = moved.flags - {CURSED} if report.cursed else moved.flags
+
+    # 팀 제안을 수락해 뒀으면 여기서 실제로 세운다 (§3-D30). 표식은 남는다 — 카드
+    # 조건이 "팀에 있는가"를 계속 읽어야 하고, 표식이 곧 그 상태다.
+    team = moved.team
+    if TEAM_PENDING in flags:
+        formed = team_engine.form_for_player(
+            str(moved.identity.name),
+            report.week,
+            SeededRoll(run.seed, report.week, seeded_roll.TEAM),
+        )
+        if formed is not None:
+            team = formed
+            flags = flags - {TEAM_PENDING}
+
     moved = moved.evolve(
         week=report.week,
         stats=moved.stats.apply(report.stat_delta),
         condition=condition,
+        flags=flags,
+        team=team,
         rivalries=rivalry_engine.advance_rivalries(
             moved,
             report.week,

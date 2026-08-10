@@ -291,10 +291,30 @@ class TestEventDiminishing:
         assert (low.popularity - 20) > (high.popularity - 90)
 
     def test_losses_are_not_diminished(self) -> None:
-        # 정상에 가까울수록 얻기 어렵고 잃기는 쉬워야 한다.
+        # 정상에 가까울수록 얻기 어렵고 잃기는 쉬워야 한다. **체감은 이득에만 붙는다** —
+        # 손실은 인기도가 얼마든 같은 크기다.
+        losses = {
+            start: start
+            - WrestlerStats(popularity=start)
+            .apply_event({"popularity": -10})
+            .popularity
+            for start in (20, 50, 95)
+        }
+        assert len(set(losses.values())) == 1, (
+            f"손실이 인기도에 따라 달라졌다: {losses}"
+        )
+
+    def test_other_stats_lose_their_full_amount(self) -> None:
+        # 인기도만 배율을 받는다(§13-Q13). 나머지는 주차 성장과 같은 단위라 그대로다.
         for start in (20, 50, 95):
-            after = WrestlerStats(popularity=start).apply_event({"popularity": -10})
-            assert after.popularity == start - 10
+            after = WrestlerStats(in_ring=start).apply_event({"in_ring": -10})
+            assert after.in_ring == start - 10
+
+    def test_a_loss_outweighs_the_same_sized_gain_at_the_top(self) -> None:
+        stats = WrestlerStats(popularity=90)
+        gained = stats.apply_event({"popularity": 10}).popularity - 90
+        lost = 90 - stats.apply_event({"popularity": -10}).popularity
+        assert lost >= gained
 
     def test_a_gain_never_rounds_away_to_nothing(self) -> None:
         after = WrestlerStats(popularity=99).apply_event({"popularity": 16})

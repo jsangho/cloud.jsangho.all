@@ -25,12 +25,113 @@ class Gender(StrEnum):
     FEMALE = "female"
 
 
+class StyleFamily(StrEnum):
+    """이벤트 조건이 보는 스타일 묶음 (§3-D27).
+
+    스타일이 21종이라 값마다 전용 카드 5장(§3-D11)을 주면 지역 카드처럼 덱이 터진다.
+    국가(20+)를 권역(5+1)으로 묶은 것과 같은 해법이다 — **고르는 것은 21종, 사건이
+    붙는 것은 6종.**
+    """
+
+    GRAPPLE = "grapple"
+    POWER = "power"
+    AERIAL = "aerial"
+    STRIKE = "strike"
+    SHOW = "show"
+    FREE = "free"
+
+
 class PlayStyle(StrEnum):
+    """경기 유형 21종 (2026-08-10 사용자 로스터 CSV의 `style` 값).
+
+    다섯에서 스물하나로 늘었다. 로스터 178명이 실제로 쓰는 값이 21종이었고, 다섯으로
+    뭉치면 군터(하드 히팅)와 브록 레스너(파워하우스)가 같은 칸에 들어간다.
+    """
+
+    # 그래플 계열
     TECHNICIAN = "technician"
+    SUBMISSIONS = "submissions"
+    SHOOTER = "shooter"
+    UWF = "uwf"
+    # 파워 계열
     POWERHOUSE = "powerhouse"
+    GIANT = "giant"
+    MONSTER = "monster"
+    # 공중 계열
     HIGH_FLYER = "high_flyer"
+    LUCHA_LIBRE = "lucha_libre"
+    STUNTMAN = "stuntman"
+    # 타격 계열
     BRAWLER = "brawler"
+    HARD_HITTING = "hard_hitting"
+    STRONG_STYLE = "strong_style"
+    KINGS_ROAD = "kings_road"
+    # 쇼 계열
     SHOWMAN = "showman"
+    HEEL_STYLE = "heel_style"
+    OLD_SCHOOL = "old_school"
+    SHOWGIRL = "showgirl"
+    # 자유 계열
+    HARDCORE = "hardcore"
+    ALL_ROUNDER = "all_rounder"
+    UNDERDOG = "underdog"
+
+
+_FAMILY_MEMBERS: tuple[tuple[StyleFamily, tuple[PlayStyle, ...]], ...] = (
+    (
+        StyleFamily.GRAPPLE,
+        (
+            PlayStyle.TECHNICIAN,
+            PlayStyle.SUBMISSIONS,
+            PlayStyle.SHOOTER,
+            PlayStyle.UWF,
+        ),
+    ),
+    (
+        StyleFamily.POWER,
+        (PlayStyle.POWERHOUSE, PlayStyle.GIANT, PlayStyle.MONSTER),
+    ),
+    (
+        StyleFamily.AERIAL,
+        (PlayStyle.HIGH_FLYER, PlayStyle.LUCHA_LIBRE, PlayStyle.STUNTMAN),
+    ),
+    (
+        StyleFamily.STRIKE,
+        (
+            PlayStyle.BRAWLER,
+            PlayStyle.HARD_HITTING,
+            PlayStyle.STRONG_STYLE,
+            PlayStyle.KINGS_ROAD,
+        ),
+    ),
+    (
+        StyleFamily.SHOW,
+        (
+            PlayStyle.SHOWMAN,
+            PlayStyle.HEEL_STYLE,
+            PlayStyle.OLD_SCHOOL,
+            PlayStyle.SHOWGIRL,
+        ),
+    ),
+    (
+        StyleFamily.FREE,
+        (PlayStyle.HARDCORE, PlayStyle.ALL_ROUNDER, PlayStyle.UNDERDOG),
+    ),
+)
+"""계열 → 소속 스타일. **21종이 빠짐없이 한 번씩** 들어간다 (아래에서 검증한다)."""
+
+FAMILY_OF: dict[PlayStyle, StyleFamily] = {
+    style: family for family, styles in _FAMILY_MEMBERS for style in styles
+}
+
+if set(FAMILY_OF) != set(PlayStyle):  # pragma: no cover - 임포트 시 구조 검증
+    missing = sorted(set(PlayStyle) - set(FAMILY_OF))
+    raise RuntimeError(f"계열이 없는 플레이스타일: {missing}")
+
+
+def family_of(style: PlayStyle) -> StyleFamily:
+    """스타일이 속한 계열. 국가 → 권역(`region_of`)과 같은 자리다."""
+    return FAMILY_OF[style]
 
 
 @dataclass(frozen=True)
@@ -73,6 +174,11 @@ class WrestlerIdentity:
     def region(self) -> Region:
         """이벤트 조건이 보는 값. 국가를 고르면 자동으로 정해진다 (§3-D14)."""
         return region_of(self.country)
+
+    @property
+    def style_family(self) -> StyleFamily:
+        """이벤트 조건이 보는 값. 스타일을 고르면 자동으로 정해진다 (§3-D27)."""
+        return family_of(self.play_style)
 
     def age_at(self, week: int) -> int:
         """20세에서 시작해 52주마다 한 살. 1560주에 정확히 50세가 된다 (§11-9)."""

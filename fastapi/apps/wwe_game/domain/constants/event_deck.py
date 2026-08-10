@@ -20,7 +20,7 @@ from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.entities.career_run import RivalryStage
 from wwe_game.domain.value_objects.condition import InjuryGrade
 from wwe_game.domain.value_objects.title import Brand
-from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
+from wwe_game.domain.value_objects.wrestler_identity import PlayStyle, StyleFamily
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 CARDS_DIR = Path(__file__).parent / "cards"
@@ -76,7 +76,14 @@ class EventRequirement:
     stats: tuple[tuple[str, int, int], ...] = ()
     alignment: tuple[int, int] | None = None
     regions: frozenset[Region] = frozenset()
+    style_families: frozenset[StyleFamily] = frozenset()
+    """계열 제한. **스타일 카드의 기본 조건이다** (§3-D27).
+
+    21종에 값마다 5장을 주면 스타일 카드만 105장이 되어 §3-D14가 국가에서 겪은 문제를
+    그대로 반복한다. 계열 6종에 붙이면 30장으로 같은 약속을 지킨다.
+    """
     play_styles: frozenset[PlayStyle] = frozenset()
+    """스타일 하나만 겪는 사건에 쓴다. 계열로 묶으면 뜻이 사라지는 카드만 여기 온다."""
     rivalry_stages: frozenset[RivalryStage] = frozenset()
     condition_grades: frozenset[InjuryGrade] = frozenset()
     flags: frozenset[str] = frozenset()
@@ -143,6 +150,10 @@ def _requirement(raw: dict[str, object]) -> EventRequirement:
         stats=stats,
         alignment=(alignment[0], alignment[1]) if alignment else None,  # type: ignore[index]
         regions=frozenset(Region(r) for r in raw.get("regions", ())),  # type: ignore[arg-type]
+        style_families=frozenset(
+            StyleFamily(f)
+            for f in raw.get("styleFamily", ())  # type: ignore[arg-type]
+        ),
         play_styles=frozenset(PlayStyle(p) for p in raw.get("playStyles", ())),  # type: ignore[arg-type]
         rivalry_stages=frozenset(
             RivalryStage(s)

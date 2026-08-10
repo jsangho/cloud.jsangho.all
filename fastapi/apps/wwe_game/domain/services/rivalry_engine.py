@@ -77,9 +77,14 @@ def top_rivalry(run: CareerRun) -> Rivalry | None:
 
 
 def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
-    """급이 맞는 상대를 고른다. 이미 대립 중인 사람은 제외한다."""
+    """급이 맞는 상대를 고른다. 이미 대립 중인 사람은 제외한다.
+
+    **자기 자신도 제외한다** (2026-08-10). 실존 선수를 골라 그 선수가 되는 시스템이라
+    (§3-D10-1) 플레이어 이름이 명부에 그대로 있을 수 있고, 그러면 "로만 레인즈가
+    로만 레인즈와 대립한다"가 나온다.
+    """
     tier = roster.tier_for_popularity(run.stats.popularity)
-    taken = {r.rival_name for r in run.rivalries}
+    taken = {r.rival_name for r in run.rivalries} | {str(run.identity.name)}
     pool = tuple(
         n
         for n in roster.pool_for(run.identity.gender, tier, run.week)
