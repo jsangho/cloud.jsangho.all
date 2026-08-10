@@ -4,8 +4,12 @@ version = "0.1.0"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "torch==2.12.0",
+    # **`torchvision`은 빼면 안 된다.** 코드가 직접 import하지는 않지만 `timm`이
+    # 요구하는 실제 의존성이고, 여기서 지우면 CPU 인덱스 밖(PyPI)에서 해석돼
+    # CUDA 휠이 딸려 와 이미지가 **더 커진다** (2026-08-10 실측).
     "torchvision==0.27.0",
-    "torchaudio==2.11.0",
+    # `torchaudio`는 뺐다 — import 0건이고 timm도 안 쓴다 (2026-08-10).
+    # EC2 디스크 30GB가 꽉 차 배포가 두 번 실패한 뒤 정리한 결과다.
     "fastapi==0.136.1",
     "uvicorn[standard]==0.47.0",
     "python-multipart==0.0.20",
