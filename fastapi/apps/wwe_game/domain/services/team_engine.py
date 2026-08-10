@@ -116,16 +116,50 @@ def ring_name_at(name: str, week: int) -> str:
     return current
 
 
-def roll_change(week: int, roll: SeededRoll) -> TeamNews | None:
-    """정해지지 않은 팀들의 결성·해체 굴림. 한 주에 최대 하나만 일어난다.
+def chronicle(seed: int, upto_week: int) -> tuple[TeamNews, ...]:
+    """0주부터 그 주차까지 팀 세계의 연대기 (2026-08-10 버그 수정).
 
-    **연 확률을 주 확률로 나눠 쓴다** — 주마다 굴리므로 그대로 쓰면 30년에 천 번이 된다.
+    **해체는 실제로 있던 팀만 한다.** 예전에는 해체 굴림이 그 자리에서 멤버를 뽑고
+    이름을 지어낸 뒤 "해체를 발표했다"고 썼다 — 인박스에 결성 기록이 없는 팀이
+    갑자기 깨졌고, 반대로 결성된 팀은 영원히 안 깨졌다. 둘이 이어져 있지 않았다.
+
+    그래서 **살아 있는 팀 목록을 들고 걷는다.** 0주차 명부는 로스터 CSV의 실제
+    팀들로 시작하므로(§3-D30 `KOREAN_TEAM_NAMES`), 초반 해체는 지어낸 이름이
+    아니라 저지먼트 데이·블러드라인 같은 진짜 팀에서 나온다.
+
+    순수 함수다 — 같은 시드는 언제 돌려도 같은 연대기를 만든다(§3-D4).
     """
+    active: dict[str, Team] = {
+        label: Team(label, (), 0)
+        for name in KOREAN_TEAM_NAMES
+        for label in (korean_name(name),)
+    }
+    news: list[TeamNews] = []
+    for week in range(1, upto_week + 1):
+        for item in scripted_at(week):
+            if item.change is TeamChange.DISBANDED:
+                active.pop(item.team.label, None)
+            elif item.change is TeamChange.FORMED:
+                active[item.team.label] = item.team
+            news.append(item)
+        rolled = _roll_change(week, SeededRoll(seed, week, "team"), active)
+        if rolled is not None:
+            news.append(rolled)
+    return tuple(news)
+
+
+def _roll_change(
+    week: int, roll: SeededRoll, active: dict[str, Team]
+) -> TeamNews | None:
+    """그 주차의 결성·해체 하나. **해체는 `active`에서만 고른다.**"""
     if roll.chance(team_rules.FORM_CHANCE_PER_YEAR / WEEKS_PER_YEAR):
         members = _pick_partners(week, roll)
         if members is None:
             return None
         team = Team(name_for(members, roll), members, week)
+        if team.label in active:
+            return None  # 같은 이름이 두 번 생기지 않는다
+        active[team.label] = team
         noun = "태그팀" if team.kind is TeamKind.TAG_TEAM else "스테이블"
         return TeamNews(
             week=week,
@@ -134,10 +168,16 @@ def roll_change(week: int, roll: SeededRoll) -> TeamNews | None:
             headline=f"새 {noun}이 나왔다 — {team.label}.",
         )
     if roll.chance(team_rules.DISBAND_CHANCE_PER_YEAR / WEEKS_PER_YEAR):
-        members = _pick_partners(week, roll)
-        if members is None:
+        alive = [t for t in active.values() if week - t.formed_week >= 0]
+        if not alive:
             return None
-        team = Team(name_for(members, roll), members, week)
+        team = roll.pick(tuple(sorted(alive, key=lambda t: t.label)))
+        if (
+            week - team.formed_week < team_rules.MIN_TEAM_LIFE_WEEKS
+            and team.formed_week
+        ):
+            return None  # 반년 만에 깨지는 팀은 팀이 아니라 사고다
+        active.pop(team.label, None)
         return TeamNews(
             week=week,
             change=TeamChange.DISBANDED,

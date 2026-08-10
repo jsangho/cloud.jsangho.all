@@ -6,7 +6,6 @@ from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없
 from wwe_game.domain.constants.event_deck import DECK
 from wwe_game.domain.constants.teams import KOREAN_TEAM_NAMES, SCRIPTED_ARCS
 from wwe_game.domain.services import news_feed, team_engine
-from wwe_game.domain.services.seeded_roll import TEAM, SeededRoll
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
@@ -20,13 +19,7 @@ WEEKS_PER_YEAR = 52
 
 
 def _chronicle(seed: int, weeks: int) -> list[team_engine.TeamNews]:
-    news: list[team_engine.TeamNews] = []
-    for week in range(1, weeks + 1):
-        news.extend(team_engine.scripted_at(week))
-        rolled = team_engine.roll_change(week, SeededRoll(seed, week, TEAM))
-        if rolled is not None:
-            news.append(rolled)
-    return news
+    return list(team_engine.chronicle(seed, weeks))
 
 
 class TestTeamNames:
@@ -268,3 +261,41 @@ class TestTeamsDoNotMixDivisions:
             partners = [m for m in team.members if m != "장상호"]
             assert partners
             assert all(by_name[p] is gender for p in partners)
+
+
+class TestDisbandingFollowsFormation:
+    """해체는 실제로 있던 팀만 한다 (2026-08-10 버그 수정).
+
+    예전에는 해체 굴림이 그 자리에서 멤버를 뽑고 이름을 지어낸 뒤 "해체를
+    발표했다"고 썼다 — 인박스에 결성 기록이 없는 팀이 갑자기 깨졌다.
+    """
+
+    def test_no_ghost_disbanding(self) -> None:
+        news = _chronicle(seed=99, weeks=30 * WEEKS_PER_YEAR)
+        formed = {
+            n.team.label for n in news if n.change is team_engine.TeamChange.FORMED
+        }
+        real = {team_engine.korean_name(k) for k in KOREAN_TEAM_NAMES}
+        for item in news:
+            if item.change is not team_engine.TeamChange.DISBANDED:
+                continue
+            assert item.team.label in formed or item.team.label in real, (
+                f"존재한 적 없는 팀이 해체됐다: {item.team.label}"
+            )
+
+    def test_a_team_disbands_only_once(self) -> None:
+        news = _chronicle(seed=5, weeks=30 * WEEKS_PER_YEAR)
+        gone = [
+            n.team.label for n in news if n.change is team_engine.TeamChange.DISBANDED
+        ]
+        assert len(gone) == len(set(gone)), f"같은 팀이 두 번 해체됐다: {gone}"
+
+    def test_real_teams_can_break_up(self) -> None:
+        # 0주차 명부의 진짜 팀들이 해체 후보에 들어야 한다 — 안 그러면 초반 30년이
+        # 지어낸 이름으로만 굴러간다.
+        news = _chronicle(seed=99, weeks=30 * WEEKS_PER_YEAR)
+        real = {team_engine.korean_name(k) for k in KOREAN_TEAM_NAMES}
+        gone = {
+            n.team.label for n in news if n.change is team_engine.TeamChange.DISBANDED
+        }
+        assert gone & real, "실존 팀이 서른 해 동안 하나도 안 깨졌다"
