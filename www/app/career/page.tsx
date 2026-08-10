@@ -88,6 +88,37 @@ const PLAY_STYLES = [
   ["underdog", "언더독"],
 ] as const;
 
+const RESULT_LABELS: Record<string, string> = {
+  win: "승",
+  loss: "패",
+  draw: "무",
+  none: "—",
+};
+
+/** 승패는 색으로 먼저 읽힌다. 레드는 LIVE 전용이라(§7) 패배에 쓰지 않는다. */
+const RESULT_TONE: Record<string, string> = {
+  win: "text-brand-link",
+  loss: "text-muted-foreground",
+  draw: "text-muted-foreground",
+  none: "text-muted-foreground/50",
+};
+
+const WEEK_KINDS: Record<string, string> = {
+  weekly_show: "주간 방송",
+  promo: "프로모",
+  ple: "대회",
+  special: "특별 방송",
+  off: "결장",
+};
+
+const RIVALRY_STAGES: Record<string, string> = {
+  taunt: "도발",
+  feud: "대립",
+  betrayal: "배신",
+  revenge: "복수",
+  blowoff: "결착",
+};
+
 /** 모드 코드 → 화면 이름. 백엔드는 코드를 그대로 label로 준다. */
 const MODE_LABELS: Record<CareerModeCode, string> = {
   yearly: "연 단위",
@@ -625,6 +656,25 @@ export default function CareerPage() {
         </p>
       )}
 
+      {view.rivalries.length > 0 && (
+        <section className="mt-6">
+          <p className="font-sport text-sm text-muted-foreground">대립</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {view.rivalries.map((r) => (
+              <span
+                key={r.rival}
+                className="inline-flex items-center gap-2 rounded-[4px] bg-card px-2.5 py-1.5 text-sm"
+              >
+                <span>{r.rival}</span>
+                <span className="text-xs text-brand-link">
+                  {RIVALRY_STAGES[r.stage] ?? r.stage}
+                </span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       {(view.titlesWon.length > 0 || view.titlesHeld.length > 0) && (
         <section className="mt-8">
           <p className="font-sport text-sm text-muted-foreground">벨트</p>
@@ -650,13 +700,36 @@ export default function CareerPage() {
             </div>
             <div className="mt-2 space-y-1.5">
               {chunk.weeks.map((week) => (
-                <p
+                <div
                   key={week.week}
-                  className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}
+                  className="grid grid-cols-[3rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[3.5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
                 >
-                  <span className="mr-2 text-xs text-muted-foreground">{week.week}주</span>
-                  {week.narration}
-                </p>
+                  <span className="text-xs text-muted-foreground">{week.week}주</span>
+                  <span className={cn("text-xs font-semibold", RESULT_TONE[week.result ?? "none"])}>
+                    {RESULT_LABELS[week.result ?? "none"]}
+                  </span>
+                  <span className="truncate text-sm">
+                    {week.opponent && week.result ? (
+                      <>
+                        <span className="text-muted-foreground">vs </span>
+                        {week.opponent}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>
+                    )}
+                  </span>
+                  <p
+                    className={cn(
+                      "col-span-3 text-sm leading-relaxed sm:col-span-1",
+                      week.cursed && "text-muted-foreground",
+                    )}
+                  >
+                    {week.titleAtStake && (
+                      <span className="mr-1.5 text-xs text-brand-link">타이틀전</span>
+                    )}
+                    {week.narration}
+                  </p>
+                </div>
               ))}
             </div>
           </div>

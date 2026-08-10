@@ -71,6 +71,8 @@ export type CareerWeek = {
   narration: string;
   show: string | null;
   titleAtStake: string | null;
+  /** 그 주차에 붙은 상대. 경기 없는 주차는 null. */
+  opponent: string | null;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
 };
@@ -89,8 +91,16 @@ export type CareerRunView = {
   titlesHeld: string[];
   titlesWon: string[];
   team: CareerTeam | null;
+  rivalries: CareerRivalry[];
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
+};
+
+export type CareerRivalry = {
+  rival: string;
+  stage: string;
+  heat: number;
+  startedWeek: number;
 };
 
 export type CareerChoice = { code: string; label: string };

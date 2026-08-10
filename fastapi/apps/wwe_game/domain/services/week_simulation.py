@@ -258,6 +258,9 @@ def simulate_week(run: CareerRun) -> WeekReport:
         title_defended=title is not None and title in run.titles_held,
         call_up=_call_up_of(run, stat_delta),
         draft_night=draft_night,
+        opponent=rivalry_engine.pick_opponent(
+            run, SeededRoll(run.seed, week, seeded_roll.OPPONENT)
+        ),
         cursed=cursed,
     )
 
