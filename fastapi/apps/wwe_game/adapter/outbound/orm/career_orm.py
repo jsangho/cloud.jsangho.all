@@ -32,6 +32,7 @@ from datetime import UTC, datetime
 from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -121,6 +122,21 @@ class CareerRunModel(Base):
     """MITB 가방을 딴 주차. 0이면 없다 — **기한이 있어 불리언이 아니다** (§3-D36)."""
     status: Mapped[str] = mapped_column(String(20), index=True)
     end_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # ── 계약·돈 (§3-D47) ──
+    money: Mapped[int] = mapped_column(BigInteger, default=0)
+    """잔액(달러). **`BigInteger`인 이유**: 30년 정상급이면 주 $9만 × 1560주라
+    `Integer`(21억)에 닿지는 않지만, 여유를 두지 않을 이유도 없다."""
+    contract_pay: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contract_signed_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contract_ends_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unsigned_weeks: Mapped[int] = mapped_column(Integer, default=0)
+    """계약 없이 보낸 연속 주차 (§3-D50). 여기가 차면 `EndReason.FADED`다."""
+    """계약 한 장을 세 칼럼으로 편다. **셋은 함께 있거나 함께 없다** — 무소속이 None이다.
+
+    JSON 한 칸으로 두지 않은 이유: 만료 주차는 "곧 만료되는 세이브"를 묻는 조회의
+    조건이 될 수 있는 값이라, 컬럼으로 두면 나중에 인덱스를 걸 수 있다.
+    """
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

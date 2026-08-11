@@ -94,8 +94,12 @@ def check_end(run: CareerRun) -> EndReason | None:
     순서가 곧 우선순위다 — 만기가 나머지보다 앞선다. 1560주에 도달한 커리어는
     무슨 상태였든 완주한 것으로 본다.
 
-    **부진은 따로 된 엔딩이 아니다.** 밀려나는 것도 계약이 끊기는 사건이라
-    `RELEASED`로 모은다 (§13-Q14). 판정은 `is_at_release_risk`가 함께 본다.
+    **방출은 더 이상 여기 없다** (§3-D50). 계약이 끊기는 것은 사건이지 엔딩이
+    아니게 됐다 — 잘린 선수는 무소속으로 인디를 뛰고, 판정은 `contract_office`가
+    한다. 끝나는 것은 그 뒤로도 **아무 오퍼가 오지 않았을 때**다.
+
+    **부진도 따로 된 엔딩이 아니다.** 밀려나는 것도 계약이 끊기는 사건이라 같은
+    자리로 모은다 (§13-Q14). 판정은 `is_at_release_risk`가 함께 본다.
     """
     if not run.is_active:
         return None
@@ -103,8 +107,8 @@ def check_end(run: CareerRun) -> EndReason | None:
         return EndReason.AGE_50
     if run.condition.is_career_ending:
         return EndReason.INJURY
-    if run.release_weeks >= release_grace_weeks(run):
-        return EndReason.RELEASED
+    if run.unsigned_weeks >= rules.FADE_GRACE_WEEKS:
+        return EndReason.FADED
     return None
 
 

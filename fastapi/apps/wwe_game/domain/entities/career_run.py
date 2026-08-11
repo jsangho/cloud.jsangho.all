@@ -16,6 +16,11 @@ from enum import StrEnum
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, RETIREMENT_AGE
 from wwe_game.domain.exceptions import InvalidCareerRunError, RunNotActiveError
 from wwe_game.domain.value_objects.condition import HEALTHY, Condition
+from wwe_game.domain.value_objects.contract import (
+    DEBUT_CONTRACT_WEEKS,
+    DEBUT_WEEKLY_PAY,
+    Contract,
+)
 from wwe_game.domain.value_objects.game_mode import GameMode
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title
@@ -59,6 +64,13 @@ class EndReason(StrEnum):
     계약이 끊기는 사건은 하나이므로 엔딩도 하나로 모은다.
     """
     INJURY = "injury"
+    FADED = "faded"
+    """무소속으로 너무 오래 있었다 — **아무도 부르지 않아서 끝났다** (§3-D50).
+
+    방출과 다르다. 방출은 이제 커리어를 닫지 않고 계약만 끊는다: 실제로 방출은
+    다른 곳에서 다시 시작하는 계기이지 끝이 아니다. 끝나는 것은 그 뒤로도
+    아무 오퍼가 오지 않았을 때다.
+    """
 
 
 class RivalryStage(StrEnum):
@@ -182,6 +194,24 @@ class CareerRun:
     반대로 **규칙이 주고 카드가 읽는다.** 표식으로 만들면 그 감사가 깨진다.
     """
 
+    money: int = 0
+    """지금까지 번 돈에서 쓴 돈을 뺀 잔액(달러) (§3-D47).
+
+    **쌓이기만 하는 값이 아니다** — 선택지가 비용을 물린다(§3-D48). 통산 수입을 따로
+    두지 않는 이유: 화면이 묻는 것은 "지금 쓸 수 있는가"이고, 통산은 로그가 답한다.
+    """
+    contract: Contract | None = None
+    """지금 맺고 있는 계약. **무소속이면 None이다** (§3-D50).
+
+    방출은 이 값을 지우는 사건이지 커리어를 닫는 사건이 아니다.
+    """
+    unsigned_weeks: int = 0
+    """계약 없이 보낸 연속 주차 (§3-D50). 계약을 맺으면 0으로 돌아간다.
+
+    `release_weeks`와 다른 값이다 — 저쪽은 **잘리기까지** 남은 인내를 세고, 이쪽은
+    **잊히기까지** 남은 시간을 센다. 하나로 합치면 방출 직후가 곧 종료 직전이 된다.
+    """
+
     team: Team | None = None
     """지금 속한 태그팀·스테이블 (§3-D30). 혼자면 None.
 
@@ -226,6 +256,22 @@ class CareerRun:
             raise InvalidCareerRunError(
                 f"소속·디비전이 아닌 벨트를 보유 중입니다: {sorted(misplaced)}"
             )
+        if self.money < 0:
+            raise InvalidCareerRunError(f"잔액은 음수일 수 없습니다: {self.money}")
+        if self.unsigned_weeks < 0:
+            raise InvalidCareerRunError(
+                f"무소속 주차는 음수일 수 없습니다: {self.unsigned_weeks}"
+            )
+        # 무소속이 벨트를 들고 있을 수는 없다. 계약 해지가 반납을 빠뜨리면 여기서 걸린다.
+        if self.contract is None and self.titles_held:
+            raise InvalidCareerRunError(
+                f"무소속인데 벨트를 들고 있습니다: {sorted(self.titles_held)}"
+            )
+        # 계약이 있는데 무소속 주차가 쌓여 있을 수 없다 — 한쪽만 갱신하는 버그를 막는다.
+        if self.contract is not None and self.unsigned_weeks:
+            raise InvalidCareerRunError(
+                f"계약이 있는데 무소속 주차가 남아 있습니다: {self.unsigned_weeks}"
+            )
 
     # ── 파생값 ────────────────────────────────────────────────
 
@@ -255,6 +301,11 @@ class CareerRun:
     def won_count(self, title: Title) -> int:
         """그 벨트를 몇 번 감았는지. 더블 그랜드슬램 판정의 재료다."""
         return self.titles_won.count(title)
+
+    @property
+    def is_signed(self) -> bool:
+        """단체와 계약이 있는가. 없으면 무소속이고 인디를 뛴다 (§3-D50)."""
+        return self.contract is not None
 
     @property
     def is_active(self) -> bool:
@@ -309,5 +360,15 @@ def start_run(
     seed: int,
     user_id: int | None = None,
 ) -> CareerRun:
-    """새 커리어. 20세 0주차에서 출발한다 (§3-D10)."""
-    return CareerRun(identity=identity, mode=mode, seed=seed, user_id=user_id)
+    """새 커리어. 20세 0주차에서 **육성 계약을 들고** 출발한다 (§3-D10 · §3-D47)."""
+    return CareerRun(
+        identity=identity,
+        mode=mode,
+        seed=seed,
+        user_id=user_id,
+        contract=Contract(
+            weekly_pay=DEBUT_WEEKLY_PAY,
+            signed_week=0,
+            ends_week=DEBUT_CONTRACT_WEEKS,
+        ),
+    )

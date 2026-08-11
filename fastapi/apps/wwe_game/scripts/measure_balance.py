@@ -33,7 +33,13 @@ from collections import Counter
 from wwe_game.domain.constants.countries import Country
 from wwe_game.domain.constants.event_deck import BY_CODE, EventCard
 from wwe_game.domain.entities.career_run import CareerRun, start_run
-from wwe_game.domain.services import career_end, championship, event_draw
+from wwe_game.domain.services import (
+    career_end,
+    championship,
+    contract_office,
+    event_draw,
+)
+from wwe_game.domain.services.career_advance import settle_week
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.wrestler_identity import (
@@ -94,12 +100,10 @@ def run_one(seed: int, policy: str) -> tuple[CareerRun, int]:
         report = simulate_week(run)
         if report.injury is not None:
             injuries += 1
-        run = apply_week(run, report)
-        # **누적기를 빼먹으면 안 된다.** `career_advance.advance()`가 하는 일을 그대로
-        # 따라 한다 — 이걸 건너뛰면 방출·부진이 영영 0건으로 나와 "은퇴 조건이
-        # 죽었다"는 잘못된 결론이 난다 (2026-08-10 실제로 그렇게 오진했다).
-        run = career_end.track_decline(career_end.track_release(run))
-        run = career_end.close_if_ended(run)
+        # **진행 루프와 같은 뒷정리를 쓴다.** 예전에는 이 순서를 여기 손으로 적었다가
+        # 누적기를 빼먹어 "방출이 0건"이라고 오진했다 (2026-08-10). 지금은
+        # `settle_week` 하나를 부른다 — 계약 정산(§3-D50)도 그 안에 있다.
+        run = settle_week(apply_week(run, report), report.week)
     return run, injuries
 
 
@@ -127,6 +131,10 @@ def main() -> int:
             f" · 부상 {statistics.mean(i for _, i in rows):4.1f}"
             f" · 커리어 {statistics.mean(r.week / 52 for r in runs):4.1f}년"
             f" · 완주 {finished / len(runs) * 100:3.0f}%"
+            # 계약·돈 (§3-D47). **주급을 함께 찍는다** — 잔액만 보면 오래 산
+            # 커리어가 무조건 부자라, 규칙이 아니라 수명을 재게 된다.
+            f" · 잔액 ${statistics.mean(r.money for r in runs) / 1e6:5.1f}M"
+            f" · 최종주급 ${statistics.mean(contract_office.appraise(r) for r in runs):7,.0f}"
         )
     print("종료 사유:", dict(ends))
     return 0
