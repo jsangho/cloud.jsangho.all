@@ -33,9 +33,11 @@ from wwe_game.domain.entities.career_run import (
 )
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.title import Brand, Title
-from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
+from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
+from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 USER = 1
 OTHER_USER = 2
@@ -190,6 +192,71 @@ class TestLog:
         await repo.save(stored, self.views(5))
         _, total = await repo.read_log(stored.id, USER)
         assert total == 5
+
+    @pytest.mark.asyncio
+    async def test_the_match_survives_a_round_trip(
+        self, repo: CareerPgRepository
+    ) -> None:
+        """다시 연 로그도 **진행 중인 화면과 같은 줄**을 그린다 (§3-D32·D34).
+
+        상대·형식이 안 남으면 그 밤이 럼블이었는지 싱글이었는지 알 수 없고, 요약이
+        안 남으면 30인 경기가 결과 한 글자로 줄어든다.
+        """
+        view = WeekReportView(
+            report=WeekReport(
+                week=1,
+                kind=WeekKind.PLE,
+                result=OutcomeKind.WIN,
+                opponent="세스 롤린스",
+                match_kind=MatchKind.BATTLE_ROYAL,
+            ),
+            narration="1주차",
+            match_summary="17번으로 입장 · 3명 탈락 · 우승(30인)",
+        )
+        stored = await repo.save(saved_run(), (view,))
+        page, _ = await repo.read_log(stored.id, USER)
+        assert page[0].report.match_kind is MatchKind.BATTLE_ROYAL
+        assert page[0].report.opponent == "세스 롤린스"
+        assert page[0].match_summary == "17번으로 입장 · 3명 탈락 · 우승(30인)"
+
+    @pytest.mark.asyncio
+    async def test_each_week_keeps_its_own_alignment(
+        self, repo: CareerPgRepository
+    ) -> None:
+        """뉴스가 **그 주차의** 성향을 봐야 한다 (§3-D39).
+
+        저장하지 않던 시절 호출자는 모든 주차에 최종 스탯을 넘겼고, 그래서 힐턴
+        이전의 대관에도 야유가 붙었다 — `compile_feed`의 설명이 경고하던 상황이다.
+        """
+        views = tuple(
+            WeekReportView(
+                report=WeekReport(week=w, kind=WeekKind.PROMO),
+                narration=f"{w}주차",
+                stats=WrestlerStats(popularity=w * 10, alignment=-40 + w * 20),
+            )
+            for w in (1, 2, 3)
+        )
+        stored = await repo.save(saved_run(), views)
+        page, _ = await repo.read_log(stored.id, USER)
+        assert [v.stats.alignment for v in page] == [-20, 0, 20]
+        assert [v.stats.popularity for v in page] == [10, 20, 30]
+
+    @pytest.mark.asyncio
+    async def test_old_rows_have_no_stats(self, repo: CareerPgRepository) -> None:
+        """이 마이그레이션 이전 행은 None이다 — 그때는 최종 스탯으로 되돌아간다."""
+        stored = await repo.save(saved_run(), self.views(2))
+        page, _ = await repo.read_log(stored.id, USER)
+        assert all(v.stats is None for v in page)
+
+    @pytest.mark.asyncio
+    async def test_beats_are_not_stored(self, repo: CareerPgRepository) -> None:
+        """**비트는 저장하지 않는다** — 럼블 하나가 59줄이다 (2026-08-11 결정).
+
+        요약만 남고 타임라인은 그 '다음'을 누른 화면에서 끝난다.
+        """
+        stored = await repo.save(saved_run(), self.views(3))
+        page, _ = await repo.read_log(stored.id, USER)
+        assert all(v.report.sequence is None for v in page)
 
     @pytest.mark.asyncio
     async def test_the_log_is_not_dragged_into_the_save(

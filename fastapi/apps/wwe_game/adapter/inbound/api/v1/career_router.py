@@ -26,6 +26,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     ModeSchema,
     NewsPageSchema,
     PresetSchema,
+    ShowReportSchema,
     StartRunRequest,
     to_advance,
     to_guest,
@@ -33,6 +34,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     to_mode,
     to_news,
     to_preset,
+    to_report,
 )
 from wwe_game.adapter.inbound.api.schemas.guest_schema import (
     GuestRunState,
@@ -51,6 +53,7 @@ from wwe_game.app.ports.input.career_use_case import (
     ChoiceRequiredError,
     GuestModeNotAllowedError,
     NoPendingEventError,
+    ReportNotFoundError,
     RunAlreadyActiveError,
 )
 from wwe_game.app.ports.output.career_repository import RunNotFoundError
@@ -72,6 +75,7 @@ career_router = APIRouter(prefix="/career", tags=["career"])
 
 _STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
     (RunNotFoundError, status.HTTP_404_NOT_FOUND, "커리어를 찾을 수 없습니다."),
+    (ReportNotFoundError, status.HTTP_404_NOT_FOUND, "그 주차의 리포트가 없습니다."),
     (
         RunAlreadyActiveError,
         status.HTTP_409_CONFLICT,
@@ -229,6 +233,18 @@ async def choose(
         run_id=run_id, user_id=_user_id(claims), choice_code=body.choice
     )
     return to_advance(await _guard(lambda: use_case.choose(command)))
+
+
+@career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)
+async def read_report(
+    run_id: int,
+    week: int = Query(..., ge=1),
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> ShowReportSchema:
+    """그 밤의 리포트 (§3-D45). **대회 주차만** — 주간 방송까지 열면 로그와 같아진다."""
+    report = await _guard(lambda: use_case.read_report(run_id, _user_id(claims), week))
+    return to_report(report)
 
 
 @career_router.get("/runs/{run_id}/log", response_model=LogPageSchema)

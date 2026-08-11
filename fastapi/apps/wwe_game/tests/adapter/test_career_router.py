@@ -225,6 +225,48 @@ class TestOwnership:
             assert call().status_code == 404
 
 
+class TestShowReport:
+    """그 밤의 리포트 (§3-D45). 뉴스와 달리 **한 주차**를 묻는다."""
+
+    @staticmethod
+    def _play(client: TestClient) -> tuple[int, list[dict]]:
+        run_id = _start(client, mode="weekly")["run"]["id"]
+        weeks: list[dict] = []
+        for _ in range(40):
+            body = client.post(
+                f"/api/career/runs/{run_id}/advance", json={"step": "auto"}
+            ).json()
+            if body.get("pendingEvent"):
+                code = body["pendingEvent"]["choices"][0]["code"]
+                body = client.post(
+                    f"/api/career/runs/{run_id}/choices", json={"choice": code}
+                ).json()
+            weeks.extend(body.get("weeks", []))
+        return run_id, weeks
+
+    def test_a_show_week_has_a_report(self, client: TestClient) -> None:
+        run_id, weeks = self._play(client)
+        show_week = next(w["week"] for w in weeks if w["kind"] == "ple")
+        body = client.get(f"/api/career/runs/{run_id}/report?week={show_week}").json()
+        assert body["week"] == show_week
+        assert body["show"]
+        # **벨트에는 늘 주인이 있다** (§3-D38). 리포트가 그걸 한자리에 모은다.
+        assert body["champions"]
+        assert all(c["holder"] for c in body["champions"])
+
+    def test_an_ordinary_week_has_none(self, client: TestClient) -> None:
+        """주간 방송까지 리포트를 열면 1560주 전부가 리포트가 되고, 그건 로그다."""
+        run_id, weeks = self._play(client)
+        plain = next(w["week"] for w in weeks if w["kind"] == "weekly_show")
+        assert (
+            client.get(f"/api/career/runs/{run_id}/report?week={plain}").status_code
+            == 404
+        )
+
+    def test_another_users_report_is_invisible(self, client: TestClient) -> None:
+        assert client.get("/api/career/runs/99/report?week=2").status_code == 404
+
+
 class TestLogAndNews:
     def test_the_log_paginates(self, client: TestClient) -> None:
         run_id = _start(client, mode="weekly")["run"]["id"]

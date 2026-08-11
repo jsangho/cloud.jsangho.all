@@ -24,10 +24,12 @@ from dataclasses import dataclass, field
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
 from wwe_game.domain.services.news_feed import NewsItem
+from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
 from wwe_game.domain.value_objects.ring_skills import breakdown
 from wwe_game.domain.value_objects.week_report import WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
+from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 # ── 명령 ─────────────────────────────────────────────────────
 
@@ -123,10 +125,29 @@ class WeekReportView:
 
     report: WeekReport
     narration: str
+    stats: WrestlerStats | None = None
+    """그 주차 끝의 스탯 (§3-D39). 뉴스가 **인기도와 성향만** 읽는다.
+
+    옛 로그 행에는 없다 — None이면 호출자가 최종 스탯으로 되돌아간다.
+    """
+    match_summary: str | None = None
+    """탈락 경기의 한 줄 요약 (§3-D34).
+
+    **리포트의 `sequence`와 나눠 둔다.** 진행 중인 주차는 비트 전체를 들고 있지만,
+    다시 읽은 로그에는 이 한 줄만 남아 있다 — 화면이 두 경로에서 같은 값을 읽으려면
+    비트가 없는 쪽에도 담길 자리가 필요하다.
+    """
 
     @property
     def week(self) -> int:
         return self.report.week
+
+
+@dataclass(frozen=True)
+class ShowReportView:
+    """그 밤의 리포트 (§3-D45). 도메인 값을 그대로 든다 — 조립은 도메인이 했다."""
+
+    report: ShowReport
 
 
 @dataclass(frozen=True)

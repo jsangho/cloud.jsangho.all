@@ -26,8 +26,10 @@ from wwe_game.domain.entities.career_run import (
     RunStatus,
     Trophy,
 )
+from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.game_mode import game_mode_of
+from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
@@ -90,6 +92,7 @@ class CareerMapper:
                 grade=InjuryGrade(row.condition_grade),
                 weeks_left=row.condition_weeks_left,
                 wear=row.wear,
+                part=BodyPart(row.condition_part) if row.condition_part else None,
             ),
             rivalries=tuple(
                 Rivalry(
@@ -108,6 +111,10 @@ class CareerMapper:
             events_fired=row.events_fired,
             release_weeks=row.release_weeks,
             decline_weeks=row.decline_weeks,
+            injured_parts=frozenset(row.injured_parts or ()),
+            tournament_round=row.tournament_round,
+            title_shot=row.title_shot,
+            briefcase_week=row.briefcase_week,
             status=RunStatus(row.status),
             end_reason=EndReason(row.end_reason) if row.end_reason else None,
             trophies=trophies,
@@ -134,6 +141,9 @@ class CareerMapper:
         row.backstage = run.stats.backstage
         row.alignment = run.stats.alignment
         row.condition_grade = run.condition.grade.value
+        row.condition_part = (
+            run.condition.part.value if run.condition.part is not None else None
+        )
         row.condition_weeks_left = run.condition.weeks_left
         row.wear = run.condition.wear
         pending = run.pending_event
@@ -149,6 +159,10 @@ class CareerMapper:
         row.events_fired = run.events_fired
         row.release_weeks = run.release_weeks
         row.decline_weeks = run.decline_weeks
+        row.injured_parts = sorted(run.injured_parts)
+        row.tournament_round = run.tournament_round
+        row.title_shot = run.title_shot
+        row.briefcase_week = run.briefcase_week
         row.status = run.status.value
         row.end_reason = run.end_reason.value if run.end_reason else None
 
@@ -163,6 +177,11 @@ class CareerMapper:
             show_name=report.show.name if report.show else None,
             title_code=(report.title_at_stake.value if report.title_at_stake else None),
             narration=view.narration,
+            opponent=report.opponent,
+            match_kind=report.match_kind.value if report.match_kind else None,
+            match_summary=view.match_summary,
+            popularity=view.stats.popularity if view.stats else None,
+            alignment=view.stats.alignment if view.stats else None,
         )
 
     @staticmethod
@@ -178,8 +197,17 @@ class CareerMapper:
                 kind=WeekKind(row.kind),
                 result=OutcomeKind(row.result) if row.result else None,
                 title_at_stake=Title(row.title_code) if row.title_code else None,
+                opponent=row.opponent,
+                match_kind=MatchKind(row.match_kind) if row.match_kind else None,
             ),
             narration=row.narration,
+            match_summary=row.match_summary,
+            # 뉴스가 읽는 것은 이 둘뿐이다 (§3-D39). 나머지 스탯은 저장하지 않는다.
+            stats=(
+                WrestlerStats(popularity=row.popularity, alignment=row.alignment)
+                if row.popularity is not None and row.alignment is not None
+                else None
+            ),
         )
 
 

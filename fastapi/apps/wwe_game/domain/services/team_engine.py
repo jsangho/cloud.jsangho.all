@@ -52,15 +52,24 @@ def short_name(csv_name: str) -> str:
     return korean_name(csv_name).split("|")[0].strip()
 
 
-def name_for(members: tuple[str, ...], roll: SeededRoll) -> str:
+def name_for(
+    members: tuple[str, ...],
+    roll: SeededRoll,
+    taken_heads: frozenset[str] = frozenset(),
+) -> str:
     """새 팀의 이름. **태그팀은 이름을 안 지을 수도 있다** (§7-2).
 
     빈 문자열을 돌려주면 `Team.label`이 "A & B"로 부른다. 셋 이상은 언제나 이름을
     짓는다 — 세 이름을 앰퍼샌드로 잇는 스테이블은 없다.
+
+    **이미 도는 팀의 앞말은 피한다** (§3-D44). 앞말이 열둘뿐이라 그냥 뽑으면
+    한 커리어에 "새비지 브리게이드 · 새비지 커넥션 · 새비지 다이너스티"가 함께 선다 —
+    조합은 144개인데 앞말이 겹치는 순간 다른 팀으로 안 읽힌다.
     """
     if len(members) <= 2 and roll.chance(team_rules.AMPERSAND_SHARE):
         return ""
-    head = roll.pick(team_rules.FICTIONAL_TEAM_HEADS)
+    free = tuple(h for h in team_rules.FICTIONAL_TEAM_HEADS if h not in taken_heads)
+    head = roll.pick(free or team_rules.FICTIONAL_TEAM_HEADS)
     tail = roll.pick(team_rules.FICTIONAL_TEAM_TAILS)
     return f"{head} {tail}"
 
@@ -156,7 +165,10 @@ def _roll_change(
         members = _pick_partners(week, roll)
         if members is None:
             return None
-        team = Team(name_for(members, roll), members, week)
+        taken = frozenset(
+            label.split()[0] for label in active if label and " " in label
+        )
+        team = Team(name_for(members, roll, taken), members, week)
         if team.label in active:
             return None  # 같은 이름이 두 번 생기지 않는다
         active[team.label] = team

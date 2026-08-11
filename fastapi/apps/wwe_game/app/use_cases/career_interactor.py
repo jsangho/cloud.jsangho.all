@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import secrets
 from collections.abc import Callable
+from dataclasses import replace
 
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
@@ -39,6 +40,7 @@ from wwe_game.app.ports.input.career_use_case import (
     ChoiceRequiredError,
     GuestModeNotAllowedError,
     NoPendingEventError,
+    ReportNotFoundError,
     RunAlreadyActiveError,
 )
 from wwe_game.app.ports.output.career_repository import CareerRepository
@@ -53,9 +55,12 @@ from wwe_game.domain.services import (
     career_end,
     event_draw,
     news_feed,
+    rivalry_scene,
+    show_report,
     team_engine,
 )
 from wwe_game.domain.services.character_creation import build_identity
+from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
@@ -130,6 +135,23 @@ class CareerInteractor(CareerUseCase):
         )
         return CareerLogPage(entries=entries, total=total, offset=offset)
 
+    async def read_report(self, run_id: int, user_id: int, week: int) -> ShowReport:
+        """그 주차의 리포트 (§3-D45).
+
+        **로그에서 그 한 줄만 읽는다.** 리포트는 새 규칙이 아니라 보는 방식이라
+        (§3-D45), 필요한 것은 그 주차 기록 하나와 시드뿐이다.
+        """
+        run = await self._repository.get(run_id, user_id)
+        if not show_report.is_reportable(run, week):
+            raise ReportNotFoundError(f"{week}주차는 대회 주차가 아닙니다.")
+        entries, _ = await self._repository.read_log(
+            run_id, user_id, offset=max(0, week - 1), limit=1
+        )
+        found = next((v for v in entries if v.week == week), None)
+        if found is None:
+            raise ReportNotFoundError(f"{week}주차 기록이 없습니다.")
+        return show_report.build(run, found.report, found.narration)
+
     async def read_news(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> NewsFeedPage:
@@ -143,11 +165,17 @@ class CareerInteractor(CareerUseCase):
         entries, _ = await self._repository.read_log(
             run_id, user_id, offset=0, limit=CAREER_WEEKS
         )
-        pairs = tuple((view.report, run.stats) for view in entries)
+        # 옛 로그 행에는 주차별 스탯이 없다 — 그때만 최종 스탯으로 되돌아간다 (§3-D39).
+        pairs = tuple((view.report, view.stats or run.stats) for view in entries)
         # 연대기는 살아 있는 팀 목록을 들고 걸어야 한다 — 주차마다 따로 굴리면
         # 존재한 적 없는 팀이 해체된다 (2026-08-10 감사).
         team_news = team_engine.chronicle(run.seed, run.week)
-        items = news_feed.compile_feed(pairs, team_news, str(run.identity.name))
+        scene_news = rivalry_scene.chronicle(
+            run.seed, run.week, run.identity.gender, exclude=str(run.identity.name)
+        )
+        items = news_feed.compile_feed(
+            pairs, team_news, str(run.identity.name), scene_news
+        )
         return NewsFeedPage(
             items=items[offset : offset + limit], total=len(items), offset=offset
         )
@@ -279,10 +307,17 @@ class CareerInteractor(CareerUseCase):
                 WeekReportView(
                     report=report,
                     narration=self._narrator.narrate(cursor, report),
+                    # 비트는 이 응답에만 살고 요약만 로그에 남는다 (§3-D34).
+                    match_summary=(
+                        report.sequence.summary if report.sequence else None
+                    ),
                 )
             )
             if cursor.is_active:
                 cursor = apply_week(cursor, report)
+            # **그 주차 끝의 스탯**을 붙인다 (§3-D39). 반영 전 값을 쓰면 그 주에 일어난
+            # 힐턴이 다음 주 것으로 밀린다.
+            views[-1] = replace(views[-1], stats=cursor.stats)
         return tuple(views)
 
     def _view(

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.exceptions import InvalidCareerRunError
+from wwe_game.domain.services import championship
 from wwe_game.domain.services.championship import (
     CALLUP_POPULARITY_RETENTION,
     DEFENSE_REWARD,
@@ -34,6 +37,7 @@ from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import (
     GRAND_SLAM_GROUPS,
     TITLES,
+    WORLD_POPULARITY_REQUIRED,
     Brand,
     Title,
     TitleTier,
@@ -121,6 +125,59 @@ class TestTierLadder:
             brand=Brand.RAW, stats=WrestlerStats(popularity=popularity)
         ).evolve(team=TEAM)
         assert target_title(run, NEVER_CHASE) is expected
+
+    def test_popularity_alone_rarely_reaches_the_summit(self) -> None:
+        """월드 벨트의 관문은 **실측 도달 최고치보다 위에** 있어야 한다 (§3-D36·D41).
+
+        럼블·챔버·가방이 정문이면(§3-D36) 인기도 쪽은 벽이어야 한다. 벽인지 아닌지는
+        관문의 값이 아니라 **관문과 실측치의 관계**가 정하므로, 둘을 함께 잠근다.
+
+        `PEAK_BEFORE_WORLD`는 **첫 월드 벨트를 따기 전까지의** 최고 인기도다(20판
+        실측). 벨트를 딴 뒤의 인기도는 관문과 무관하다 — 이미 통과한 뒤이기 때문이다.
+
+        **이 값은 오늘 하루에만 68 → 74로 움직였다** — 왕관(§3-D33) · 프로모(§3-D41) ·
+        늘어난 대관(§3-D36)이 함께 밀어 올렸다. 인기도를 주는 규칙을 더할 때마다 여기가
+        올라가고, 관문을 넘어서면 이 테스트가 깨진다. §3-D35의 사고를 한 층 위에서
+        다시 잡는 자리다.
+        """
+        PEAK_BEFORE_WORLD = 74
+        assert WORLD_POPULARITY_REQUIRED > PEAK_BEFORE_WORLD, (
+            "인기도만으로 정상에 닿는다 — 도전권이 정문이라는 §3-D36이 깨진다"
+        )
+        run = make_run(
+            brand=Brand.RAW, stats=WrestlerStats(popularity=PEAK_BEFORE_WORLD)
+        ).evolve(team=TEAM)
+        assert target_title(run, NEVER_CHASE) is Title.INTERCONTINENTAL_CHAMPIONSHIP
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_every_grand_slam_group_stays_reachable(self, gender: Gender) -> None:
+        """**네 그룹 어느 하나도 도달 불가능해지면 안 된다** (§13-Q16).
+
+        §3-D35가 정확히 이 사고였다: 인기도 경제를 다시 짜면서 월드 벨트의 관문만
+        옛 척도에 남아 **그랜드슬램이 0%로 죽었는데 아무 테스트도 안 깨졌다.**
+        그때 잡지 못한 이유는 검사가 전부 "이 인기도면 이 벨트"를 확인할 뿐,
+        **"그 인기도에 닿을 수 있는가"를 묻지 않아서**였다.
+
+        여기서는 두 축을 함께 본다 — 실측으로 도달 가능한 인기도(§3-D35의 68)와
+        도전권(§3-D36). 어느 그룹이든 그 둘로 못 닿으면 실패한다.
+
+        통계(그랜드슬램 몇 %)로 잠그지 않는 이유: 표본 잡음이 ±10pp라 밴드를 좁게
+        잡으면 시드 운에 테스트가 매이고, 넓게 잡으면 아무것도 못 잡는다. **구조가
+        막혔는가**는 잡음 없이 잴 수 있다.
+        """
+        PEAK_POPULARITY = 68
+        reachable: set[Title] = set()
+        for brand in (Brand.RAW, Brand.SMACKDOWN, Brand.NXT):
+            run = make_run(brand=brand, stats=WrestlerStats(popularity=PEAK_POPULARITY))
+            run = run.evolve(identity=replace(run.identity, gender=gender), team=TEAM)
+            reachable |= set(eligible_titles(run))
+            # 럼블·챔버·가방은 관문을 건너뛰고 월드 벨트를 연다 (§3-D36).
+            world = championship.world_title_of(run)
+            if world is not None:
+                reachable.add(world)
+
+        for name, group in GRAND_SLAM_GROUPS[gender]:
+            assert group & reachable, f"{gender.value} {name} 그룹에 닿을 길이 없다"
 
     def test_smackdown_offers_different_belts(self) -> None:
         run = make_run(brand=Brand.SMACKDOWN, stats=WrestlerStats(popularity=55))

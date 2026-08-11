@@ -85,10 +85,39 @@ export type CareerWeek = {
   matchField: number;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
+  /**
+   * 탈락 경기의 한 줄 요약 — "17번으로 입장 · 3명 탈락 · 우승(30인)".
+   * **다시 연 로그에도 이것만은 남는다** (§3-D34).
+   */
+  matchSummary: string | null;
+  /**
+   * 자격이 아니라 **권리로** 선 타이틀전 (§3-D36).
+   * `earned` = 럼블·챔버 우승 도전권 · `briefcase` = 가방을 썼다.
+   */
+  titleShotFrom: "earned" | "briefcase" | null;
+  /** 킹 앤 퀸 오브 더 링의 회전 (§3-D33). 0이면 토너먼트 경기가 아니다. */
+  tournamentRound: number;
+  /**
+   * 입장·탈락 전체. **진행 중인 응답에만 실린다** — 저장하지 않기 때문이다.
+   * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
+   */
+  beats: CareerBeat[] | null;
+};
+
+/** 경기 진행 한 마디 (§3-D34). */
+export type CareerBeat = {
+  kind: "enter" | "eliminate" | "win";
+  name: string;
+  /** 입장 순번. `enter`에만 채워진다. */
+  number: number;
+  /** 누가 탈락시켰는가. `eliminate`에만 채워진다. */
+  by: string | null;
 };
 
 export type CareerRunView = {
   id: number | null;
+  /** 내 링네임. 탈락 타임라인에서 내 줄을 짚는 데 쓴다 (§3-D34). */
+  name: string;
   week: number;
   year: number;
   age: number;
@@ -125,7 +154,8 @@ export type CareerPendingEvent = {
 export type CareerAdvance = {
   run: CareerRunView;
   weeks: CareerWeek[];
-  stopReason: "ready" | "event" | "ple" | "ended";
+  /** `recovered` = 부상에서 돌아왔다 (§3-D37) — 부상 구간은 통째로 흘러가고 여기서 끊긴다. */
+  stopReason: "ready" | "event" | "ple" | "ended" | "recovered" | "tick" | "max_weeks";
   pendingEvent: CareerPendingEvent | null;
 };
 
@@ -163,6 +193,33 @@ export type CareerLogPage = {
   offset: number;
   hasMore: boolean;
 };
+
+/**
+ * 그 밤의 리포트 (§3-D45). **뉴스와 다르다** — 뉴스는 커리어의 기억이고 이쪽은
+ * 한 밤의 카드다: 그날 벨트를 누가 들고 있었고 그 무렵 세계에 무슨 일이 있었는지.
+ */
+export type CareerShowReport = {
+  week: number;
+  show: string;
+  isMajor: boolean;
+  result: "win" | "loss" | "draw" | null;
+  opponent: string | null;
+  matchLabel: string | null;
+  titleAtStake: string | null;
+  narration: string;
+  champions: { title: string; holder: string; mine: boolean }[];
+  around: string[];
+};
+
+/** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */
+export async function readReport(runId: number, week: number): Promise<CareerShowReport | null> {
+  try {
+    return await request<CareerShowReport>(`/runs/${runId}/report?week=${week}`);
+  } catch (error) {
+    if (error instanceof CareerApiError && error.status === 404) return null;
+    throw error;
+  }
+}
 
 export type StartRunInput = {
   name: string;

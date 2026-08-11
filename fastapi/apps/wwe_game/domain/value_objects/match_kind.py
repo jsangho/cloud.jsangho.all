@@ -72,10 +72,18 @@ FORMATS: dict[MatchKind, MatchFormat] = {
     MatchKind.TRIPLE_THREAT: MatchFormat("트리플 스렛", 3, 0.72, 1.1, 1.1),
     MatchKind.FATAL_FOUR_WAY: MatchFormat("페이탈 포 웨이", 4, 0.58, 1.2, 1.2),
     MatchKind.TAG: MatchFormat("태그팀 매치", 4, 0.95),
-    # 럼블·챔버·래더는 큰 무대의 경기다 — 이기기 어렵고 몸이 더 상한다.
-    MatchKind.BATTLE_ROYAL: MatchFormat("로열럼블 매치", 30, 0.22, 1.4, 1.3),
-    MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.44, 1.5, 1.5),
-    MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.38, 1.6, 1.7),
+    # 상금이 걸린 세 경기 — **주인공 보정이 없다** (§3-D36).
+    #
+    # 우승이 그 밤에서 끝나지 않고 레슬매니아 도전권·가방으로 이어지므로, 이기는
+    # 일 자체가 드물어야 한다(2026-08-11 사용자 지침 "얻기 힘들어"). 챔버·래더는
+    # 공평한 몫(1/6 · 1/8)보다도 **낮다**: 그 링에 선 나머지가 전부 정상급이라
+    # 주인공이라고 유리할 이유가 없다. 럼블만 몫의 두 배인데, 1/30을 그대로 쓰면
+    # 30년에 한 번도 못 이긴다.
+    #
+    # 실측(커리어당 우승): 럼블 0.8 · 챔버 1.2 · MITB 1.2 — 대개 한 번, 없는 커리어도 있다.
+    MatchKind.BATTLE_ROYAL: MatchFormat("로열럼블 매치", 30, 0.06, 1.4, 1.3),
+    MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.11, 1.5, 1.5),
+    MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.09, 1.6, 1.7),
     MatchKind.WARGAMES: MatchFormat("워게임즈 매치", 10, 0.50, 1.5, 1.4),
     # 둘이 붙는 특수 경기 — 승률은 싱글과 같고 몸만 더 상한다.
     MatchKind.STREET_FIGHT: MatchFormat("스트리트 파이트", 2, 1.0, 1.5, 1.6),

@@ -32,6 +32,8 @@ from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.body_part import PARTS
+from wwe_game.domain.value_objects.josa import JOSA, josa_for
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
@@ -40,62 +42,13 @@ from wwe_game.domain.value_objects.week_report import (
     WeekReport,
 )
 
-# ── 조사 ─────────────────────────────────────────────────────
-
-_JOSA: Final[dict[str, tuple[str, str]]] = {
-    # 스펙: (받침 있음, 받침 없음)
-    "은": ("은", "는"),
-    "는": ("은", "는"),
-    "이": ("이", "가"),
-    "가": ("이", "가"),
-    "을": ("을", "를"),
-    "를": ("을", "를"),
-    "과": ("과", "와"),
-    "와": ("과", "와"),
-    "과의": ("과의", "와의"),
-    "으로": ("으로", "로"),
-    "이었다": ("이었다", "였다"),
-}
-
-_HANGUL_START, _HANGUL_END = 0xAC00, 0xD7A3
-_JONG_COUNT = 28
-_JONG_RIEUL = 8
-_ASCII_VOWELS = frozenset("aeiouyAEIOUY")
-
-
-def _ends_with_batchim(word: str) -> tuple[bool, bool]:
-    """(받침이 있는가, 그 받침이 ㄹ인가).
-
-    한글 음절이면 정확히 계산하고, 아니면 마지막 글자로 어림한다 — 링 네임은 사용자
-    자유 입력이라 영문이 들어올 수 있다(§3-D12). 어림이 틀려도 문장이 어색해질 뿐이다.
-    """
-    if not word:
-        return False, False
-    last = word[-1]
-    code = ord(last)
-    if _HANGUL_START <= code <= _HANGUL_END:
-        jong = (code - _HANGUL_START) % _JONG_COUNT
-        return jong != 0, jong == _JONG_RIEUL
-    if last.isascii() and last.isalpha():
-        return last not in _ASCII_VOWELS, last in "lLrR"
-    return True, False
-
-
-def josa_for(word: str, spec: str) -> str:
-    """받침에 맞는 조사. `으로`만 ㄹ 받침을 예외로 둔다 — '칼로', '서울로'."""
-    with_batchim, is_rieul = _ends_with_batchim(word)
-    if spec == "으로" and is_rieul:
-        return "로"
-    hard, soft = _JOSA[spec]
-    return hard if with_batchim else soft
-
 
 class _JosaFormatter(Formatter):
     """포맷 스펙을 조사로 해석한다. 모르는 스펙은 원래 `format`에 넘긴다."""
 
     def format_field(self, value: object, format_spec: str) -> str:
         text = str(value)
-        if format_spec in _JOSA:
+        if format_spec in JOSA:
             return text + josa_for(text, format_spec)
         return super().format_field(value, format_spec)
 
@@ -118,7 +71,7 @@ _REQUIRED: Final[dict[str, frozenset[str]]] = {
     for template in templates
 }
 
-OPTIONAL_SLOTS: Final = frozenset({"rival", "title", "show"})
+OPTIONAL_SLOTS: Final = frozenset({"rival", "title", "show", "part"})
 """주차에 따라 비어 있을 수 있는 슬롯. 비면 그 슬롯을 쓰는 템플릿이 후보에서 빠진다."""
 
 TITLE_BEATS: Final = frozenset({Beat.TITLE_WON, Beat.TITLE_DEFENDED, Beat.TITLE_LOST})
@@ -249,7 +202,7 @@ def beat_of(report: WeekReport) -> Beat:
     if report.kind is WeekKind.OFF:
         return Beat.OFF
     if report.kind is WeekKind.PROMO:
-        return Beat.PROMO
+        return Beat.PROMO_HIT if report.promo_hit else Beat.PROMO
     # 특별 방송(SNME)도 대회 문구를 쓴다 — 경기가 보장된 밤이고, `{show}`가 이름을
     # 채워 주므로 "주간 방송 중반 경기"가 아니라 그 방송의 이름으로 읽힌다 (§3-D21-2).
     return _MATCH_BEATS[(report.is_big_match_night, report.result)]
@@ -287,6 +240,12 @@ class RuleNarrator(NarrationPort):
             "show": report.show.name if report.show is not None else None,
             "rival": rival.rival_name if rival is not None else None,
             "title": TITLES[title].display_name if title is not None else None,
+            # 다친 곳 (§3-D43). 부상 주차에만 채워지고, 나머지 비트는 이 슬롯을 안 쓴다.
+            "part": (
+                PARTS[report.injury_part].label
+                if report.injury_part is not None
+                else None
+            ),
         }
 
     def _reactions(self, popularity: int) -> tuple[str, ...]:

@@ -28,6 +28,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.services.rivalry_scene import SceneNews
 from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
@@ -51,6 +53,12 @@ class NewsKind(StrEnum):
     CALL_UP = "call_up"
     BIG_WIN = "big_win"
     CURSED = "cursed"
+    SCENE = "scene"
+    """배경 세계의 대립 (§3-D44). **나와 무관해도 뉴스다.**"""
+    CROWN = "crown"
+    """킹 앤 퀸 오브 더 링 우승 — 세 번을 이어 이겼다 (§3-D33)."""
+    TURN = "turn"
+    """성향이 반대편으로 넘어갔다 — 힐턴·베이비페이스턴 (§3-D39)."""
     TEAM = "team"
 
 
@@ -173,12 +181,28 @@ def _headline_of(report: WeekReport, player: str) -> tuple[NewsKind | None, str]
         return NewsKind.CALL_UP, f"{player}, 대타로 메인 로스터에 올라섰다."
     if report.call_up is CallUpReason.EARNED:
         return NewsKind.CALL_UP, f"{player}, 마침내 메인 로스터로 콜업됐다."
+    # **누구에게서 빼앗았고 누구에게 내줬는지가 벨트의 이야기다** (§3-D38).
+    # 상대 이름이 없던 시절에는 대관 열 번이 전부 같은 한 줄이었다.
+    rival = report.opponent
+    if (
+        report.tournament_round >= rules.TOURNAMENT_ROUNDS
+        and report.result is OutcomeKind.WIN
+    ):
+        # 벨트보다 앞에 둔다 — 결승 밤에 벨트가 걸리는 일은 없고, 왕관이 그날의 사건이다.
+        return NewsKind.CROWN, f"{player}, 왕관을 썼다 — 세 밤을 이어 이겼다."
     if title is not None and report.result is OutcomeKind.WIN:
         if report.title_defended:
-            return NewsKind.TITLE_WON, f"{player}, {name} 방어에 성공했다."
-        return NewsKind.TITLE_WON, f"{player}, {name}을 차지했다."
+            against = f" — {rival}의 도전을 막았다" if rival else ""
+            return NewsKind.TITLE_WON, f"{player}, {name} 방어에 성공했다{against}."
+        took = f"{rival}에게서 " if rival else ""
+        return NewsKind.TITLE_WON, f"{player}, {took}{name}을 가져왔다."
     if report.title_defended:
-        return NewsKind.TITLE_LOST, f"{player}, {name}을 내줬다."
+        lost_to = f" {rival}에게" if rival else ""
+        return NewsKind.TITLE_LOST, f"{player},{lost_to} {name}을 내줬다."
+    if report.vacated:
+        # **부상보다 앞이다.** 벨트를 비운 밤의 머리기사는 부상이 아니라 빈 자리다.
+        names = " · ".join(TITLES[t].display_name for t in report.vacated)
+        return NewsKind.TITLE_LOST, f"{player}, 부상으로 {names}을 반납했다."
     if report.injury is not None:
         return NewsKind.INJURY, f"{player}, 경기 중 부상으로 이탈했다."
     if report.cursed:
@@ -204,10 +228,23 @@ def from_team_news(news: TeamNews, stats: WrestlerStats) -> NewsItem:
     )
 
 
+def from_scene_news(news: SceneNews, stats: WrestlerStats) -> NewsItem:
+    """배경 대립 한 줄 (§3-D44). 팀 소식과 같은 자리다 — 세계선이 흐른다는 신호."""
+    mood = mood_for(NewsKind.SCENE, stats)
+    return NewsItem(
+        week=news.week,
+        kind=NewsKind.SCENE,
+        headline=news.headline,
+        mood=mood,
+        crowd_line=_crowd_line(mood, news.week),
+    )
+
+
 def compile_feed(
     entries: tuple[tuple[WeekReport, WrestlerStats], ...],
     team_news: tuple[TeamNews, ...],
     player: str,
+    scene_news: tuple[SceneNews, ...] = (),
 ) -> tuple[NewsItem, ...]:
     """두 갈래를 하나의 시간순 피드로 합친다.
 
@@ -221,6 +258,48 @@ def compile_feed(
         for report, stats in entries
         if (item := from_report(report, stats, player)) is not None
     ]
+    items += _turns(entries, player)
     last = entries[-1][1] if entries else WrestlerStats()
     items += [from_team_news(n, last) for n in team_news]
-    return tuple(sorted(items, key=lambda i: (i.week, i.kind is NewsKind.TEAM)))
+    items += [from_scene_news(n, last) for n in scene_news]
+    # **같은 주차면 내 일이 먼저다.** 배경(팀·대립)은 그 뒤에 붙는다.
+    background = {NewsKind.TEAM, NewsKind.SCENE}
+    return tuple(sorted(items, key=lambda i: (i.week, i.kind in background)))
+
+
+def _turns(
+    entries: tuple[tuple[WeekReport, WrestlerStats], ...], player: str
+) -> list[NewsItem]:
+    """성향이 반대편으로 넘어간 주차 (§3-D39).
+
+    **턴은 숫자가 아니라 사건이다.** 성향은 카드 169개가 조금씩 움직여 왔지만, 그 값이
+    0을 넘어가는 순간에는 아무 일도 일어나지 않았다 — 어느 밤에 등을 돌렸는지가
+    화면 어디에도 없었다.
+
+    **한쪽에서 반대쪽으로 갈 때만 센다.** 중립 구간(-19~19)을 드나드는 것은 턴이 아니라
+    관중이 갈린 것이고, 그걸 세면 한 커리어에 턴이 수십 번 난다. 처음으로 한쪽에
+    서는 것도 턴이 아니다 — 뒤집을 앞면이 없었다.
+    """
+    items: list[NewsItem] = []
+    side = 0
+    for report, stats in entries:
+        now = 1 if stats.is_face else -1 if stats.is_heel else side
+        if side != 0 and now != side:
+            heel = now < 0
+            items.append(
+                NewsItem(
+                    week=report.week,
+                    kind=NewsKind.TURN,
+                    headline=(
+                        f"{player}, 등을 돌렸다."
+                        if heel
+                        else f"{player}, 관중 쪽으로 돌아왔다."
+                    ),
+                    mood=CrowdMood.JEER if heel else CrowdMood.ROAR,
+                    crowd_line=_crowd_line(
+                        CrowdMood.JEER if heel else CrowdMood.ROAR, report.week
+                    ),
+                )
+            )
+        side = now
+    return items

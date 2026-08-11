@@ -14,6 +14,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from wwe_game.domain.exceptions import InvalidConditionError
+from wwe_game.domain.value_objects.body_part import BodyPart
 
 WEAR_MIN = 0
 WEAR_MAX = 100
@@ -33,6 +34,12 @@ class Condition:
     grade: InjuryGrade = InjuryGrade.HEALTHY
     weeks_left: int = 0
     wear: int = 0
+    part: BodyPart | None = None
+    """다친 곳 (§3-D43). 건강하면 None이다.
+
+    **등급과 부위는 다른 축이다.** 등급이 얼마나 오래 빠지는지를 정하고, 부위는 그
+    기간에 배수를 곱하며 다음 부상이 어디로 갈지를 바꾼다.
+    """
 
     def __post_init__(self) -> None:
         if not WEAR_MIN <= self.wear <= WEAR_MAX:
@@ -48,6 +55,9 @@ class Condition:
             raise InvalidConditionError(
                 f"등급과 회복 주차가 어긋납니다: grade={self.grade}, weeks_left={self.weeks_left}"
             )
+        # 건강한데 다친 곳이 있을 수는 없다. 회복이 부위를 안 지우면 여기서 걸린다.
+        if (self.grade is InjuryGrade.HEALTHY) and self.part is not None:
+            raise InvalidConditionError(f"건강한데 부위가 남아 있습니다: {self.part}")
 
     @property
     def is_injured(self) -> bool:
@@ -68,14 +78,17 @@ class Condition:
             return self
         remaining = max(0, self.weeks_left - weeks)
         if remaining == 0:
-            return replace(self, grade=InjuryGrade.HEALTHY, weeks_left=0)
+            # 나으면 부위도 함께 지운다 — 몸이 기억하는 것은 `CareerRun`의 이력이다.
+            return replace(self, grade=InjuryGrade.HEALTHY, weeks_left=0, part=None)
         return replace(self, weeks_left=remaining)
 
     def with_wear(self, delta: int) -> Condition:
         """마모를 더한다. 범위를 벗어나면 자른다 — 회복 선택지는 음수 델타를 준다."""
         return replace(self, wear=min(WEAR_MAX, max(WEAR_MIN, self.wear + delta)))
 
-    def injured(self, grade: InjuryGrade, weeks: int) -> Condition:
+    def injured(
+        self, grade: InjuryGrade, weeks: int, part: BodyPart | None = None
+    ) -> Condition:
         """부상을 입힌다. 마모는 그대로 남는다."""
         if grade is InjuryGrade.HEALTHY:
             raise InvalidConditionError(
@@ -84,10 +97,12 @@ class Condition:
         if grade is InjuryGrade.CAREER_ENDING:
             # 복귀가 없으므로 남은 주차가 의미를 갖지 않는다. 0으로 두면 HEALTHY와
             # 구분이 안 되는 상태가 생기니, 커리어 종료는 status로 표현한다.
-            return replace(self, grade=grade, weeks_left=weeks if weeks > 0 else 1)
+            return replace(
+                self, grade=grade, weeks_left=weeks if weeks > 0 else 1, part=part
+            )
         if weeks <= 0:
             raise InvalidConditionError(f"부상에는 회복 주차가 있어야 합니다: {weeks}")
-        return replace(self, grade=grade, weeks_left=weeks)
+        return replace(self, grade=grade, weeks_left=weeks, part=part)
 
 
 HEALTHY = Condition()

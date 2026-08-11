@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 3,
+  "file": "events_rehab.json",
+  "note": "재활 — 부상 구간의 카드 (§3-D37). 부상 중에는 등급을 명시한 카드만 뜨는데(event_draw) 그게 셋뿐이라 한 카드가 커리어에 19번 나왔다. 반복 상한 5회(§11-19)를 지키려고 여섯을 더 썼다. 전부 링 밖이다 — 링에 못 서는 것이 이 상태의 정의다. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "rehab_watching_from_home",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "소파에서 보는 방송",
+      "bodies": [
+        "화요일 밤, 소파에서 방송을 본다. 내 자리에 다른 사람이 서 있고 관중은 그 이름을 부른다.",
+        "다리를 올려놓고 방송을 본다. 두 달 전만 해도 저 자리에서 마이크를 잡고 있었다.",
+        "생중계를 보다가 채널을 돌린다. 다시 돌아온다. 결국 끝까지 본다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": { "conditionGrades": ["minor", "serious"] },
+      "choices": [
+        {
+          "code": "study_it",
+          "label": "메모하며 본다. 돌아갈 때 쓸 것들이다",
+          "risk": "safe",
+          "effects": { "popularity": -3, "inRing": 7, "wear": -8 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "turn_it_off",
+          "label": "끈다. 지금은 볼 때가 아니다",
+          "risk": "safe",
+          "effects": { "popularity": -5, "inRing": 1, "wear": -14, "backstage": 4 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "rehab_rival_taunts",
+      "kind": "sub",
+      "arena": "public",
+      "title": "없는 사람 이야기",
+      "bodies": [
+        "라이벌이 방송에서 내 이름을 꺼냈다. \"그 사람 아직 안 돌아왔죠? 안 그리워요.\"",
+        "인터뷰에서 기자가 내 복귀를 묻자 상대가 웃었다. \"누구요?\"",
+        "그가 내 피니셔를 흉내 내고는 관중에게 손을 흔들었다. 카메라가 오래 잡았다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": { "conditionGrades": ["minor", "serious"] },
+      "choices": [
+        {
+          "code": "answer_online",
+          "label": "짧게 받아친다. 잊히는 것보다 낫다",
+          "risk": "bold",
+          "effects": { "popularity": 10, "inRing": 1, "micWork": 5, "wear": 2 },
+          "injuryRisk": 0.0,
+          "heat": 8
+        },
+        {
+          "code": "say_nothing",
+          "label": "아무 말도 안 한다. 돌아가서 하면 된다",
+          "risk": "safe",
+          "effects": { "popularity": -2, "inRing": 4, "wear": -10, "backstage": 6 },
+          "injuryRisk": 0.0,
+          "flags": ["locker_room_grudge"]
+        }
+      ]
+    },
+    {
+      "code": "rehab_young_gun",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "내 자리에 선 후배",
+      "bodies": [
+        "내가 빠진 자리에 들어간 후배가 잘하고 있다. 사람들이 그 이야기를 한다.",
+        "부커가 지나가며 말한다. \"그 친구, 생각보다 잘 버티네.\"",
+        "후배가 재활실로 찾아왔다. 고맙다는 말을 하러 왔는데 표정이 미안해 보인다."
+      ],
+      "weight": 20,
+      "once": false,
+      "requires": { "conditionGrades": ["minor", "serious"] },
+      "choices": [
+        {
+          "code": "teach_him",
+          "label": "가르쳐 준다. 어차피 돌아가면 붙을 사람이다",
+          "risk": "safe",
+          "effects": { "popularity": -2, "inRing": 5, "backstage": 12, "wear": -8 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "warn_him",
+          "label": "자리는 빌려준 것이라고 못박는다",
+          "risk": "bold",
+          "effects": { "popularity": 4, "inRing": 2, "backstage": -9, "wear": -4 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "rehab_therapist_pushes",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "물리치료사의 제안",
+      "bodies": [
+        "물리치료사가 차트를 넘기며 말한다. \"이 속도면 예정보다 빠릅니다. 다만 무리하면 처음으로 돌아가요.\"",
+        "세션이 끝나고 그가 조심스럽게 묻는다. \"단계를 하나 올려 볼까요?\"",
+        "검사 결과가 좋다. 담당의는 신중하고, 트레이너는 밀어붙이자고 한다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": { "conditionGrades": ["serious"] },
+      "choices": [
+        {
+          "code": "push_harder",
+          "label": "단계를 올린다",
+          "risk": "reckless",
+          "effects": { "popularity": 2, "inRing": 8, "wear": -6 },
+          "injuryRisk": 0.16
+        },
+        {
+          "code": "by_the_book",
+          "label": "차트대로 간다",
+          "risk": "safe",
+          "effects": { "popularity": -2, "inRing": 3, "wear": -20 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "rehab_camera_crew",
+      "kind": "sub",
+      "arena": "public",
+      "title": "재활 다큐",
+      "bodies": [
+        "회사가 재활 과정을 찍고 싶다고 한다. 복귀 서사를 미리 깔아 두겠다는 뜻이다.",
+        "카메라 팀이 재활실 앞에 서 있다. 오늘부터 찍자고 한다.",
+        "홍보팀에서 연락이 왔다. \"복귀 영상, 지금부터 쌓아 둬야 합니다.\""
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": { "conditionGrades": ["minor", "serious"] },
+      "choices": [
+        {
+          "code": "let_them_film",
+          "label": "찍게 둔다",
+          "risk": "bold",
+          "effects": { "popularity": 14, "inRing": 1, "micWork": 4, "wear": 4 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "keep_it_private",
+          "label": "거절한다. 이건 보여 줄 일이 아니다",
+          "risk": "safe",
+          "effects": { "popularity": -4, "inRing": 4, "backstage": 8, "wear": -12 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "rehab_contract_talk",
+      "kind": "sub",
+      "arena": "backstage",
+      "title": "빈자리 회의",
+      "bodies": [
+        "다친 사이에 다음 분기 계획이 짜였다. 그 안에 내 이름이 없다.",
+        "전화가 왔다. \"복귀가 언제쯤일지 대략이라도 알아야 카드를 짭니다.\"",
+        "회의록이 실수로 전달됐다. 내 자리는 \"미정\"으로 적혀 있다."
+      ],
+      "weight": 18,
+      "once": false,
+      "requires": { "conditionGrades": ["minor", "serious"] },
+      "choices": [
+        {
+          "code": "promise_a_date",
+          "label": "날짜를 못박는다",
+          "risk": "reckless",
+          "effects": { "popularity": 6, "inRing": 1, "backstage": 6, "wear": 6 },
+          "injuryRisk": 0.14
+        },
+        {
+          "code": "no_promises",
+          "label": "몸이 준비되면 말하겠다고 한다",
+          "risk": "safe",
+          "effects": { "popularity": -6, "inRing": 3, "backstage": -3, "wear": -14 },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

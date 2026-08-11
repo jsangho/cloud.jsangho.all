@@ -32,6 +32,7 @@ from wwe_game.domain.entities.career_run import (
     RunStatus,
     Trophy,
 )
+from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.team import Team
@@ -62,7 +63,8 @@ class GuestRunState(BaseModel):
     seed: int
     week: int = 0
     stats: dict[str, int] = Field(default_factory=dict)
-    condition: dict[str, int | str] = Field(default_factory=dict)
+    condition: dict[str, int | str | None] = Field(default_factory=dict)
+    """`part`가 None일 수 있어 값 타입에 None이 들어간다 (§3-D43)."""
     rivalries: list[dict[str, Any]] = Field(default_factory=list)
     pending_event: dict[str, Any] | None = None
     seen_events: list[str] = Field(default_factory=list)
@@ -71,6 +73,10 @@ class GuestRunState(BaseModel):
     events_fired: int = 0
     release_weeks: int = 0
     decline_weeks: int = 0
+    injured_parts: list[str] = Field(default_factory=list)
+    tournament_round: int = 0
+    title_shot: bool = False
+    briefcase_week: int = 0
     status: str = RunStatus.ACTIVE.value
     end_reason: str | None = None
     trophies: list[dict[str, Any]] = Field(default_factory=list)
@@ -92,6 +98,11 @@ def to_domain(state: GuestRunState) -> CareerRun:
         grade=InjuryGrade(str(state.condition.get("grade", InjuryGrade.HEALTHY.value))),
         weeks_left=int(state.condition.get("weeks_left", 0)),
         wear=int(state.condition.get("wear", 0)),
+        part=(
+            BodyPart(str(state.condition["part"]))
+            if state.condition.get("part")
+            else None
+        ),
     )
     return CareerRun(
         identity=identity,
@@ -126,6 +137,10 @@ def to_domain(state: GuestRunState) -> CareerRun:
         events_fired=state.events_fired,
         release_weeks=state.release_weeks,
         decline_weeks=state.decline_weeks,
+        injured_parts=frozenset(state.injured_parts),
+        tournament_round=state.tournament_round,
+        title_shot=state.title_shot,
+        briefcase_week=state.briefcase_week,
         status=RunStatus(state.status),
         end_reason=EndReason(state.end_reason) if state.end_reason else None,
         trophies=tuple(
@@ -167,6 +182,7 @@ def to_state(run: CareerRun) -> GuestRunState:
             "grade": run.condition.grade.value,
             "weeks_left": run.condition.weeks_left,
             "wear": run.condition.wear,
+            "part": run.condition.part.value if run.condition.part else None,
         },
         rivalries=[
             {
@@ -193,6 +209,10 @@ def to_state(run: CareerRun) -> GuestRunState:
         events_fired=run.events_fired,
         release_weeks=run.release_weeks,
         decline_weeks=run.decline_weeks,
+        injured_parts=sorted(run.injured_parts),
+        tournament_round=run.tournament_round,
+        title_shot=run.title_shot,
+        briefcase_week=run.briefcase_week,
         status=run.status.value,
         end_reason=run.end_reason.value if run.end_reason else None,
         trophies=[{"code": t.code, "week": t.week} for t in run.trophies],

@@ -103,6 +103,19 @@ def _s(
 _M, _F = Gender.MALE, Gender.FEMALE
 _W, _S, _T = TitleTier.WORLD, TitleTier.SECONDARY, TitleTier.TAG
 
+WORLD_POPULARITY_REQUIRED = 80
+"""메인 로스터 월드 벨트에 도전할 수 있는 인기도 (§3-D35).
+
+**이 값은 인기도 경제에 매여 있다.** 80이던 시절은 인기도가 100까지 차오르던 때고,
+§13-Q13이 경제를 다시 짠 뒤로는 커리어 최고 인기도가 **평균 68.2**다(16판 실측,
+80 도달은 1판). 관문만 옛 척도에 남아 **그랜드슬램이 0%로 죽어 있었다.**
+
+**난도(93)는 건드리지 않았다** — 스윕에서 난도를 85로 내려도 그랜드슬램이 그대로였다.
+병목은 "이길 수 있느냐"가 아니라 **"도전 자리에 설 수 있느냐"** 하나였다.
+
+인기도 상수를 다시 만지면 이 값도 함께 재야 한다.
+"""
+
 TITLES: dict[Title, TitleSpec] = {
     # ── 남성부 ──────────────────────────────────────────────
     Title.UNDISPUTED_WWE_CHAMPIONSHIP: _s(
@@ -110,7 +123,7 @@ TITLES: dict[Title, TitleSpec] = {
         _M,
         Brand.SMACKDOWN,
         _W,
-        80,
+        WORLD_POPULARITY_REQUIRED,
         93,
         16,
         7,
@@ -121,7 +134,7 @@ TITLES: dict[Title, TitleSpec] = {
         _M,
         Brand.RAW,
         _W,
-        80,
+        WORLD_POPULARITY_REQUIRED,
         93,
         16,
         7,
@@ -202,7 +215,7 @@ TITLES: dict[Title, TitleSpec] = {
         _F,
         Brand.SMACKDOWN,
         _W,
-        80,
+        WORLD_POPULARITY_REQUIRED,
         93,
         16,
         7,
@@ -213,7 +226,7 @@ TITLES: dict[Title, TitleSpec] = {
         _F,
         Brand.RAW,
         _W,
-        80,
+        WORLD_POPULARITY_REQUIRED,
         93,
         16,
         7,

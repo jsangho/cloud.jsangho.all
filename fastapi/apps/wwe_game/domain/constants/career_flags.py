@@ -52,6 +52,15 @@ CURSED: Final = "danhausen_curse"
 지나간다 — 저주를 받아 놓고 3주를 쉬면 복귀전이 그 대가를 치른다.
 """
 
+CASH_IN_PENDING: Final = "cash_in_pending"
+"""가방을 쓰기로 했다 — **다음 경기 주차에 규칙이 월드 타이틀전을 걸고 이 표식을
+지운다** (§3-D36).
+
+팀 제안(`TEAM_PENDING`)과 같은 모양이다: 카드가 신호를 남기고 규칙이 읽는다. 가방을
+들고 있다는 **상태**는 표식이 아니라 `CareerRun.briefcase`에 있다 — 상태와 신호를
+나누지 않으면 한 표식이 규칙과 카드에 동시에 읽혀 균형을 재기 어려워진다(§3-D30).
+"""
+
 TEAM_PENDING: Final = "team_pending"
 """팀 제안을 수락했다 — **다음 활동 주차에 규칙이 팀을 세우고 이 표식을 지운다** (§3-D30).
 
@@ -80,6 +89,7 @@ RULE_READ_FLAGS: Final = frozenset(
         EMERGENCY_CALLUP,
         CURSED,
         TEAM_PENDING,
+        CASH_IN_PENDING,
         *RELEASE_TRIGGER_FLAGS,
     }
 )
