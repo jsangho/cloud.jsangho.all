@@ -89,17 +89,49 @@ set -euo pipefail
 cd /home/ec2-user/cloud.jsangho.all
 git fetch origin
 git merge --ff-only origin/aws        # 서버 로컬 수정을 보존한다
-docker compose build backend
+docker compose exec -T backend sh -c 'cd /app/fastapi && alembic upgrade head'
 docker compose up -d backend auth
+docker compose restart backend auth   # ← 이게 실제 반영이다. 아래를 읽을 것
 EOF
 ssh aws-ec2 bash -s < /tmp/deploy.sh
 ```
+
+#### `up -d`만으로는 코드가 안 바뀐다 (2026-08-11 실측)
+
+`backend`는 **저장소 전체를 볼륨으로 마운트한다**(`.:/app`). 그래서 `git merge`만 하면
+디스크의 코드는 이미 새것이고, 이미지도 설정도 그대로다 — `docker compose up -d`는
+**바꿀 것이 없다고 판단해 컨테이너를 건드리지 않는다.** `docker compose ps`에 `Up 7
+hours`가 그대로 뜨는 것이 그 증거다.
+
+그런데 `command`가 `uvicorn main:app`이라 **`--reload`가 없다.** 즉 프로세스는 옛 코드를
+메모리에 들고 계속 돈다. 배포했다고 보고했는데 아무것도 안 바뀐 상태가 된다.
+
+**`restart`를 반드시 따로 부른다.** 재기동 뒤 `Up 12 seconds`가 보여야 한다.
+
+#### 마이그레이션은 재기동보다 **먼저**
+
+`alembic upgrade head`를 서버에서 직접 돌린다 — **자동 실행이 없다**(엔트리포인트가
+`uvicorn`뿐). 순서가 중요하다: 칼럼 추가는 옛 코드가 도는 중에 올려도 안전하지만,
+새 코드가 없는 칼럼을 읽으면 즉시 500이다.
+
+```bash
+ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && \
+  docker compose exec -T backend sh -c "cd /app/fastapi && alembic current"'
+```
+
+`(head)`가 붙어 나와야 완료다. **칼럼 삭제·타입 변경이 섞인 마이그레이션이라면 이
+순서가 성립하지 않는다** — 그때는 옛 코드를 먼저 내려야 한다.
+
+**재빌드는 의존성이 바뀐 경우에만.** `pyproject.toml`·`uv.lock`이 그대로면
+`docker compose build backend`는 시간만 쓴다 — 코드는 마운트로 들어간다.
 
 `--ff-only`가 거부되면 서버에 커밋되지 않은 변경이 더 있다는 뜻이다. 임의로 덮어쓰지 말고 사용자에게 보고한다.
 
 > WSL에서 실행할 때 `/tmp`는 WSL 파일시스템이어야 한다. Git Bash의 `/tmp`는 별개 경로라 `ssh ... < /tmp/deploy.sh`가 파일을 찾지 못한다.
 
 ### 4. 검증
+
+`Status`의 **가동 시간**을 본다 — 방금 배포했는데 `Up 7 hours`면 재기동이 안 된 것이다.
 
 ```bash
 ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose ps --format "{{.Service}} | {{.Status}}"'
@@ -114,6 +146,18 @@ curl -sS -o /dev/null -w 'api root: %{http_code}\n' https://api.jsangho.cloud/
 ```bash
 curl -sS -L -o /dev/null -w 'docs(리다이렉트 후): %{http_code}  %{url_effective}\n' https://api.jsangho.cloud/docs
 ```
+
+**새 코드가 실제로 떴는지는 라우트로 확인한다.** 200 응답은 옛 코드도 낸다.
+
+```bash
+ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose exec -T backend python -c "
+from main import app
+print(sorted({r.path for r in app.routes})[-5:])
+"'
+```
+
+`/openapi.json`·`/docs`로는 안 된다 — auth 게이트웨이 뒤라 JSON이 아니라 로그인
+리다이렉트가 돌아온다.
 
 컨테이너 내부에서 직접 확인하는 방법(터널·인증 우회):
 
