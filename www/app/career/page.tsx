@@ -17,6 +17,7 @@ import {
   readModes,
   readNews,
   readPresets,
+  resumeGuestRun,
   retireRun,
   startGuestRun,
   startRun,
@@ -300,7 +301,10 @@ export default function CareerPage() {
       setScreen({ phase: "create" });
       return;
     }
-    advanceGuestRun(saved, "tick")
+    // **진행시키지 않고 읽기만 한다.** 예전에는 `advance(tick)`으로 재개했는데,
+    // 그 한 번이 실제로 한 틱(분기 모드면 12주)을 태웠고 대기 이벤트가 있으면
+    // 409로 막혀 아래 catch가 세이브를 지웠다 — 이벤트 중 새로고침이 곧 커리어 소멸이었다.
+    resumeGuestRun(saved)
       .then((next) => {
         if (!alive) return;
         writeGuestSave(next.state);
@@ -399,7 +403,14 @@ export default function CareerPage() {
         const next = await work();
         const state = "state" in next ? next.state : null;
         if (state) writeGuestSave(state);
-        setScreen({ phase: "play", advance: next, state, busy: false });
+        setScreen((s) => {
+          // **응답의 `weeks`는 "이번 요청이 진행시킨 주차"다.** 이벤트에 답하는 것은
+          // 아무 주차도 진행시키지 않으므로 비어서 온다. 그대로 갈아끼우면 방금까지
+          // 보던 일정이 통째로 사라져 새 커리어처럼 보인다 — 화면에 남은 것을 지킨다.
+          const weeks =
+            next.weeks.length > 0 || s.phase !== "play" ? next.weeks : s.advance.weeks;
+          return { phase: "play", advance: { ...next, weeks }, state, busy: false };
+        });
       } catch {
         setScreen((s) => (s.phase === "play" ? { ...s, busy: false } : s));
       }

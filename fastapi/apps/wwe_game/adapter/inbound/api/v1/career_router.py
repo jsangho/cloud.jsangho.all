@@ -21,6 +21,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestChoiceRequest,
+    GuestResumeRequest,
     GuestStartRequest,
     LogPageSchema,
     ModeSchema,
@@ -45,6 +46,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestResumeCommand,
     GuestStartCommand,
     StartRunCommand,
 )
@@ -345,6 +347,21 @@ def advance_guest(
         step=_enum(StepMode, body.step, "step") or StepMode.AUTO,
     )
     return to_guest(_sync(lambda: use_case.advance_guest(command)))
+
+
+@career_router.post("/guest/resume", response_model=GuestAdvanceResponse)
+def resume_guest(
+    body: GuestResumeRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """다시 열었을 때의 화면 상태. **진행하지 않는다** — 로그인 쪽 `/runs/current`의 짝이다.
+
+    `POST`인 이유는 세이브가 본문에 실려서다. 조회이지만 URL에 담을 크기가 아니다.
+
+    대기 이벤트가 있어도 **409가 아니다.** 여기서 막으면 답할 화면 자체가 안 뜬다.
+    """
+    command = GuestResumeCommand(run=_restore(body.state))  # type: ignore[arg-type]
+    return to_guest(_sync(lambda: use_case.resume_guest(command)))
 
 
 @career_router.post("/guest/choices", response_model=GuestAdvanceResponse)
