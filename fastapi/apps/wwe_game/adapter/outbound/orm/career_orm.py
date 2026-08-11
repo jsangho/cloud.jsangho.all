@@ -32,6 +32,7 @@ from datetime import UTC, datetime
 from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -108,6 +109,10 @@ class CareerRunModel(Base):
     events_fired: Mapped[int] = mapped_column(Integer, default=0)
     release_weeks: Mapped[int] = mapped_column(Integer, default=0)
     decline_weeks: Mapped[int] = mapped_column(Integer, default=0)
+    title_shot: Mapped[bool] = mapped_column(Boolean, default=False)
+    """레슬매니아 1선 도전권 (§3-D36). 럼블·챔버 우승이 준다."""
+    briefcase_week: Mapped[int] = mapped_column(Integer, default=0)
+    """MITB 가방을 딴 주차. 0이면 없다 — **기한이 있어 불리언이 아니다** (§3-D36)."""
     status: Mapped[str] = mapped_column(String(20), index=True)
     end_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
@@ -162,6 +167,24 @@ class CareerLogEntryModel(Base):
     show_name: Mapped[str | None] = mapped_column(String(60), nullable=True)
     title_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
     narration: Mapped[str] = mapped_column(String(400))
+    opponent: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    match_kind: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    """경기 형식 (§3-D32). 이게 없으면 다시 연 로그에서 럼블이 싱글로 읽힌다."""
+    match_summary: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    """탈락 경기의 한 줄 요약 (§3-D34). **비트 전체는 저장하지 않는다** — 럼블 하나가
+    59줄이라 커리어당 2천 줄이 된다 (2026-08-11 사용자 결정).
+    """
+    popularity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    alignment: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """그 주차 **끝의** 인기도와 성향 (§3-D39).
+
+    뉴스의 군중 반응과 턴 판정이 이 둘만 읽는다. 저장하지 않던 시절에는 30년치 반응을
+    **마지막 스탯 하나로** 계산해서, 힐턴 이전의 대관에도 야유가 붙었다 —
+    `compile_feed`의 설명이 경고하던 바로 그 상황이 실제로 벌어지고 있었다.
+
+    **스탯 전체를 담지 않는다.** 읽는 것이 둘뿐인데 여섯을 저장하면 로그가 커진다.
+    옛 행은 None이고, 그때는 최종 스탯으로 되돌아간다.
+    """
 
 
 class CareerSeenEventModel(Base):

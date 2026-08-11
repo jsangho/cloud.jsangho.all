@@ -142,10 +142,12 @@ class TestDtosCarryNoInternals:
 
     def test_step_and_stop_are_closed_sets(self) -> None:
         assert {m.value for m in StepMode} == {"auto", "tick"}
+        # `recovered`는 부상 복귀 지점이다 (§3-D37).
         assert {r.value for r in StopReason} == {
             "event",
             "ple",
             "ended",
+            "recovered",
             "tick",
             "max_weeks",
             "ready",

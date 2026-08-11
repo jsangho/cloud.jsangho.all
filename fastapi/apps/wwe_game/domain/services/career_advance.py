@@ -33,7 +33,7 @@ from wwe_game.domain.value_objects.advance_outcome import (
     StepMode,
     StopReason,
 )
-from wwe_game.domain.value_objects.week_report import WeekReport
+from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
 
 MAX_WEEKS_PER_ADVANCE = 156
 """한 번의 '다음'이 갈 수 있는 최대 **주** 수 — 3년 (§3-D5).
@@ -107,6 +107,10 @@ def _stop_reason(
         return StopReason.EVENT
     if report.is_major_show and stops_at_ple(run):
         return StopReason.PLE
+    if report.kind is WeekKind.OFF and not run.condition.is_injured:
+        # 결장 주차는 부상 주차와 같은 말이다(`week_kind_of`). 그 주차를 끝으로
+        # 몸이 나았다면 **여기가 복귀 지점이다** (§3-D37).
+        return StopReason.RECOVERED
     if step is StepMode.TICK and advanced >= run.mode.weeks_per_tick:
         return StopReason.TICK
     if advanced >= limit:

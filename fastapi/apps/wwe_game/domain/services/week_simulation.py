@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.career_flags import (
+    CASH_IN_PENDING,
     CURSED,
     GROUNDED,
     GRUDGE,
@@ -25,14 +27,21 @@ from wwe_game.domain.constants.career_flags import (
     TEAM_PENDING,
 )
 from wwe_game.domain.constants.play_styles import INJURY_STYLE_MULTIPLIER
-from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
+from wwe_game.domain.constants.ple_calendar import (
+    MITB,
+    WRESTLEMANIA,
+    PleShow,
+    calendar_for,
+)
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
     championship,
+    elimination,
     event_draw,
     rivalry_engine,
     seeded_roll,
     team_engine,
+    title_scene,
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
@@ -44,10 +53,12 @@ from wwe_game.domain.value_objects.match_kind import (
     stipulation_odds,
 )
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
+from wwe_game.domain.value_objects.match_sequence import MatchSequence
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
+    TitleShotSource,
     WeekKind,
     WeekReport,
 )
@@ -208,21 +219,26 @@ def simulate_week(run: CareerRun) -> WeekReport:
     score = performance_score(run.stats, run.condition, run.age)
 
     # 대형 대회에서만 타이틀전이 잡힌다. 잡히면 그날의 경기가 곧 타이틀전이다.
-    title = _draw_title_match(run, week, kind, show)
-    match_kind = _match_kind_of(run, week, kind, show, title)
+    title, shot_from = _draw_title_match(run, week, kind, show)
+    match_kind = _match_kind_of(run, week, kind, show, title, shot_from)
     fmt = match_format_of(match_kind)
     # 저주는 **굴림보다 먼저다.** 확률로 옮기면 가끔 이기게 되고 그건 저주가 아니다.
     cursed = CURSED in run.flags
     if cursed:
         result = OutcomeKind.LOSS
     elif title is not None:
-        if match_roll.chance(
-            championship.title_win_chance(score, title) * fmt.win_factor
-        ):
+        chance = (
+            championship.cash_in_win_chance(score, title)
+            if shot_from is TitleShotSource.BRIEFCASE
+            else championship.title_win_chance(score, title)
+        )
+        if match_roll.chance(chance * fmt.win_factor):
             result = OutcomeKind.WIN
         else:
             result = OutcomeKind.LOSS
-    elif match_roll.chance(rules.DRAW_CHANCE):
+    elif match_kind not in elimination.STAGED and match_roll.chance(rules.DRAW_CHANCE):
+        # **단계가 있는 경기에는 무승부가 없다** (§3-D34). 서른이 붙어 아무도 못 이기는
+        # 럼블은 없고, 화면에 "무 · 17번째 탈락"이 함께 뜨면 둘 중 하나가 거짓말이 된다.
         result = OutcomeKind.DRAW
     elif match_roll.chance(win_chance(score) * fmt.win_factor):
         result = OutcomeKind.WIN
@@ -269,14 +285,103 @@ def simulate_week(run: CareerRun) -> WeekReport:
         show=show,
         title_at_stake=title,
         title_defended=title is not None and title in run.titles_held,
+        title_shot_from=shot_from,
         call_up=_call_up_of(run, stat_delta),
         draft_night=draft_night,
         match_kind=match_kind,
-        opponent=rivalry_engine.pick_opponent(
-            run, SeededRoll(run.seed, week, seeded_roll.OPPONENT)
-        ),
+        opponent=_opponent_for(run, week, title),
+        # **판정이 끝난 뒤에 짠다** — 순서는 결과를 만들지 않고 결과를 설명한다 (§3-D34).
+        sequence=_sequence_for(run, week, match_kind, result),
         cursed=cursed,
     )
+
+
+def _sequence_for(
+    run: CareerRun, week: int, match_kind: MatchKind, result: OutcomeKind
+) -> MatchSequence | None:
+    """럼블·챔버처럼 단계가 있는 경기의 진행 순서 (§3-D34).
+
+    **출전 후보는 등급을 가리지 않는다.** 대립 상대는 급이 맞아야 하지만(§3-D13),
+    럼블은 정상급과 유망주가 한 링에 서는 자리다 — 급으로 거르면 30명이 안 찬다.
+    """
+    if match_kind not in elimination.STAGED:
+        return None
+    pool = tuple(
+        m.name
+        for m in roster.active_at(week)
+        if m.gender is run.identity.gender and m.name != str(run.identity.name)
+    )
+    return elimination.sequence_for(
+        match_kind,
+        player=str(run.identity.name),
+        won=result is OutcomeKind.WIN,
+        pool=pool,
+        roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
+    )
+
+
+def _opponent_for(run: CareerRun, week: int, title: Title | None) -> str | None:
+    """그 주차에 붙는 상대.
+
+    **벨트에 도전하는 밤은 상대가 정해져 있다 — 챔피언이다** (§3-D38). 도전인데
+    상대가 대립 목록에서 뽑히면 "누구의 벨트인지"가 사라지고, 벨트가 허공에서 온다.
+
+    방어전은 반대다: 내가 챔피언이니 **도전자가 온다.** 그 자리는 대립 상대가 맞다 —
+    몇 주째 쌓아 온 이야기가 벨트를 걸 이유가 된다.
+    """
+    if title is not None and title not in run.titles_held:
+        champion = title_scene.champion_at(
+            run.seed, week, title, exclude=str(run.identity.name)
+        )
+        if champion is not None:
+            return champion
+    return rivalry_engine.pick_opponent(
+        run, SeededRoll(run.seed, week, seeded_roll.OPPONENT)
+    )
+
+
+def _is_show(brand: Brand, week: int, name: str) -> bool:
+    """그 주차가 이 브랜드의 `name` 대회 주차인지. NXT 달력에는 없는 이름이면 늘 거짓."""
+    calendar = calendar_for(brand)
+    return calendar.is_show_week(week) and calendar.show_for(week).name == name
+
+
+def _spoils(
+    run: CareerRun, report: WeekReport, flags: frozenset[str]
+) -> tuple[bool, int, frozenset[str]]:
+    """그 밤이 남긴 권리 — 도전권과 가방 (§3-D36).
+
+    **얻는 것과 쓰는 것을 한자리에서 본다.** 나눠 두면 "우승했는데 도전권이 안 생긴"
+    경우와 "썼는데 가방이 남은" 경우가 서로 다른 파일에서 생긴다.
+
+    도전권은 **레슬매니아가 지나가면 사라진다** — 이기든 지든, 심지어 그날 다쳐서
+    결장했더라도. 쓰지 못한 도전권을 다음 해로 넘기면 도전권이 아니라 적립금이 된다.
+    """
+    title_shot, briefcase_week = run.title_shot, run.briefcase_week
+    won = report.result is OutcomeKind.WIN
+
+    if won and report.match_kind in (MatchKind.BATTLE_ROYAL, MatchKind.CHAMBER):
+        title_shot = True
+    if (
+        won
+        and report.match_kind is MatchKind.LADDER
+        and report.show is not None
+        and report.show.name == MITB
+    ):
+        # 래더는 다른 밤에도 걸린다(§3-D32). **가방은 그 대회의 것이다.**
+        # 이미 들고 있었다면 시계가 새로 간다 — 새 계약이다.
+        briefcase_week = report.week
+
+    if _is_show(run.brand, report.week, WRESTLEMANIA):
+        # **달력으로 지운다, 리포트로 지우지 않는다.** 그 주에 부상으로 결장하면
+        # `report.show`가 비어 도전권이 이듬해로 넘어간다 — 그 해 레슬매니아에서
+        # 쓰는 것이 도전권이고(2026-08-11 사용자 확인), 못 쓴 것은 사라진다.
+        title_shot = False
+    if report.title_shot_from is not TitleShotSource.BRIEFCASE:
+        # **신호는 쓰일 때까지 남는다.** 매주 지우면 "지금 쓴다"를 고른 다음 주에
+        # 부상으로 결장했을 때 가방만 남고 결정이 사라진다.
+        return title_shot, briefcase_week, flags
+    return title_shot, 0, flags - {CASH_IN_PENDING}
 
 
 def _match_kind_of(
@@ -285,12 +390,18 @@ def _match_kind_of(
     kind: WeekKind,
     show: PleShow | None,
     title: Title | None,
+    shot_from: TitleShotSource | None = None,
 ) -> MatchKind:
     """그 주차 경기의 형식 (§3-D32).
 
-    **대회의 시그니처가 가장 앞이다** — 로열럼블 주차에는 럼블이 열린다. 그다음이
+    **가방을 쓴 밤은 무조건 싱글이다** (§3-D36). 현금화는 지친 챔피언과 둘이 붙는
+    3분짜리이지, 서른이 들어오는 럼블이 아니다 — 그날 럼블이 예정돼 있었더라도.
+
+    그다음은 **대회의 시그니처**다 — 로열럼블 주차에는 럼블이 열린다. 그다음이
     태그팀(팀이 있고 태그 벨트가 걸렸으면), 나머지는 싱글이다.
     """
+    if shot_from is TitleShotSource.BRIEFCASE:
+        return MatchKind.SINGLES
     if show is not None and show.name in SIGNATURE_MATCHES:
         return SIGNATURE_MATCHES[show.name]
     if title is not None and TITLES[title].tier is TitleTier.TAG:
@@ -337,13 +448,28 @@ def _call_up_of(run: CareerRun, stat_delta: dict[str, int]) -> CallUpReason | No
 
 def _draw_title_match(
     run: CareerRun, week: int, kind: WeekKind, show: PleShow | None
-) -> Title | None:
-    """타이틀전이 잡히는지.
+) -> tuple[Title | None, TitleShotSource | None]:
+    """타이틀전이 잡히는지, 그리고 **자격으로 잡혔는지 권리로 잡혔는지** (§3-D36).
 
     주무대는 PLE고, 주간 TV에서도 **가끔** 열린다(스펙). 대형 대회는 확률이 두 배다.
+
+    **권리가 굴림보다 먼저다.** 럼블을 이겨서 얻은 레슬매니아 도전권과 가방은 인기도
+    관문도 추첨도 건너뛴다 — 확률로 두면 "우승했는데 도전은 못 하는" 밤이 생기고,
+    그러면 럼블을 이길 이유가 사라진다.
     """
+    if run.briefcase and (
+        CASH_IN_PENDING in run.flags
+        or week - run.briefcase_week >= rules.BRIEFCASE_WEEKS
+    ):
+        cashed = championship.world_title_of(run)
+        if cashed is not None and cashed not in run.titles_held:
+            return cashed, TitleShotSource.BRIEFCASE
+    if run.title_shot and show is not None and show.name == WRESTLEMANIA:
+        earned = championship.world_title_of(run)
+        if earned is not None:
+            return earned, TitleShotSource.EARNED
     if kind not in (WeekKind.PLE, WeekKind.SPECIAL, WeekKind.WEEKLY_SHOW):
-        return None
+        return None, None
     roll = SeededRoll(run.seed, week, seeded_roll.TITLE)
     chance = championship.title_shot_chance(
         run.stats.popularity,
@@ -352,8 +478,8 @@ def _draw_title_match(
         special=kind is WeekKind.SPECIAL,
     )
     if not roll.chance(chance):
-        return None
-    return championship.target_title(run, roll)
+        return None, None
+    return championship.target_title(run, roll), None
 
 
 def _promo_gain(run: CareerRun, week: int) -> dict[str, int]:
@@ -520,12 +646,16 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             team = formed
             flags = flags - {TEAM_PENDING}
 
+    title_shot, briefcase_week, flags = _spoils(moved, report, flags)
+
     moved = moved.evolve(
         week=report.week,
         stats=moved.stats.apply(report.stat_delta),
         condition=condition,
         flags=flags,
         team=team,
+        title_shot=title_shot,
+        briefcase_week=briefcase_week,
         rivalries=rivalry_engine.advance_rivalries(
             moved,
             report.week,

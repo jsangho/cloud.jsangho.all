@@ -15,6 +15,7 @@ from enum import StrEnum
 from wwe_game.domain.constants.ple_calendar import PleShow
 from wwe_game.domain.value_objects.condition import InjuryGrade
 from wwe_game.domain.value_objects.match_kind import MatchKind
+from wwe_game.domain.value_objects.match_sequence import MatchSequence
 from wwe_game.domain.value_objects.title import Title
 
 
@@ -39,6 +40,15 @@ class OutcomeKind(StrEnum):
     WIN = "win"
     LOSS = "loss"
     DRAW = "draw"
+
+
+class TitleShotSource(StrEnum):
+    """자격을 건너뛰고 타이틀전에 서는 두 경로 (§3-D36)."""
+
+    EARNED = "earned"
+    """럼블·챔버 우승으로 얻은 레슬매니아 도전권."""
+    BRIEFCASE = "briefcase"
+    """머니 인 더 뱅크 가방을 썼다."""
 
 
 class CallUpReason(StrEnum):
@@ -101,6 +111,19 @@ class WeekReport:
 
     `result`만으로는 서술이 평범한 패배와 구분할 수 없다. 저주가 소진됐다는 신호이기도
     해서 `apply_week`이 이 값을 보고 표식을 지운다.
+    """
+    title_shot_from: TitleShotSource | None = None
+    """이 타이틀전이 **자격이 아니라 권리로** 잡혔다면 그 출처 (§3-D36).
+
+    평소의 타이틀전은 인기도가 자격을 주고 굴림이 정한다. 이 둘은 그 과정을 건너뛴다 —
+    화면도 그렇게 말해야 한다: 같은 "타이틀전"이라도 럼블을 이겨서 선 자리와 어쩌다
+    걸린 자리는 다른 사건이다.
+    """
+    sequence: MatchSequence | None = None
+    """탈락·순차 입장이 있는 경기의 진행 순서 (§3-D34). 그 밖의 경기는 None이다.
+
+    **판정을 담지 않는다** — 승패는 `result`가 이미 들고 있고, 이쪽은 그것과 어긋나지
+    않게 짜인 서술이다.
     """
     narration: str = ""
 

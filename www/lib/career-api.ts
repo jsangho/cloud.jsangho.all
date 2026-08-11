@@ -85,10 +85,37 @@ export type CareerWeek = {
   matchField: number;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
+  /**
+   * 탈락 경기의 한 줄 요약 — "17번으로 입장 · 3명 탈락 · 우승(30인)".
+   * **다시 연 로그에도 이것만은 남는다** (§3-D34).
+   */
+  matchSummary: string | null;
+  /**
+   * 자격이 아니라 **권리로** 선 타이틀전 (§3-D36).
+   * `earned` = 럼블·챔버 우승 도전권 · `briefcase` = 가방을 썼다.
+   */
+  titleShotFrom: "earned" | "briefcase" | null;
+  /**
+   * 입장·탈락 전체. **진행 중인 응답에만 실린다** — 저장하지 않기 때문이다.
+   * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
+   */
+  beats: CareerBeat[] | null;
+};
+
+/** 경기 진행 한 마디 (§3-D34). */
+export type CareerBeat = {
+  kind: "enter" | "eliminate" | "win";
+  name: string;
+  /** 입장 순번. `enter`에만 채워진다. */
+  number: number;
+  /** 누가 탈락시켰는가. `eliminate`에만 채워진다. */
+  by: string | null;
 };
 
 export type CareerRunView = {
   id: number | null;
+  /** 내 링네임. 탈락 타임라인에서 내 줄을 짚는 데 쓴다 (§3-D34). */
+  name: string;
   week: number;
   year: number;
   age: number;
@@ -125,7 +152,8 @@ export type CareerPendingEvent = {
 export type CareerAdvance = {
   run: CareerRunView;
   weeks: CareerWeek[];
-  stopReason: "ready" | "event" | "ple" | "ended";
+  /** `recovered` = 부상에서 돌아왔다 (§3-D37) — 부상 구간은 통째로 흘러가고 여기서 끊긴다. */
+  stopReason: "ready" | "event" | "ple" | "ended" | "recovered" | "tick" | "max_weeks";
   pendingEvent: CareerPendingEvent | null;
 };
 

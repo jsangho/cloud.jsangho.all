@@ -212,6 +212,31 @@ def title_win_chance(score: float, title: Title) -> float:
     return max(WIN_CHANCE_FLOOR, min(WIN_CHANCE_CEILING, 0.5 + edge))
 
 
+CASH_IN_WIN_BONUS = 0.45
+"""가방을 쓴 경기의 승률 가산 (§3-D36).
+
+**챔피언이 방금 경기를 끝냈다** — 가방의 값어치가 여기 전부 들어 있다. 배수가 아니라
+가산인 이유: 배수면 실력이 낮을수록 이득이 적어져, 정작 가방이 필요한 선수에게 덜 준다.
+
+`WIN_CHANCE_CEILING`(0.85)에서 잘린다. **확정이 아니다** — 실제로도 실패한 현금화가 있다.
+"""
+
+
+def cash_in_win_chance(score: float, title: Title) -> float:
+    return min(WIN_CHANCE_CEILING, title_win_chance(score, title) + CASH_IN_WIN_BONUS)
+
+
+def world_title_of(run: CareerRun) -> Title | None:
+    """소속 브랜드의 월드 벨트. **인기도 관문을 보지 않는다** (§3-D36).
+
+    보장된 도전권과 가방이 하는 일이 정확히 그것이다 — 자격을 건너뛰고 자리에 세운다.
+    """
+    for title in titles_of(run.brand, run.identity.gender):
+        if TITLES[title].tier is TitleTier.WORLD:
+            return title
+    return None
+
+
 # ── 보상 ─────────────────────────────────────────────────────
 
 

@@ -148,6 +148,24 @@ class CareerRun:
     """획득 이력을 **순서대로** 쌓는다. 집합이 아니라 튜플인 이유는 **횟수를 세야** 하기
     때문이다 — 더블 그랜드슬램은 각 그룹을 두 번씩 채운 것으로 판정한다(스펙)."""
 
+    title_shot: bool = False
+    """레슬매니아 1선 도전권 — **럼블·챔버 우승이 준다** (§3-D36).
+
+    레슬매니아 주차에 인기도 관문을 건너뛰고 월드 벨트를 건다. 그 밤이 지나면 이기든
+    지든 사라진다 — 도전권은 한 번 쓰는 것이다.
+    """
+    briefcase_week: int = 0
+    """머니 인 더 뱅크 가방을 딴 주차. 0이면 없다 (§3-D36).
+
+    **불리언이 아니라 주차인 이유는 기한이 있어서다.** 처음엔 "쓸 때까지 안 사라진다"로
+    뒀는데, 실측 20판 중 **17판이 가방을 든 채 은퇴했다** — 쓸지 말지 묻는 카드가 뜰
+    확률이 낮아서다. 기한이 없으면 "언제든지 쓸 수 있는 권리"가 "대개 못 쓰는 권리"가 된다.
+
+    `run.flags`가 아니라 여기 사는 이유: 표식은 **카드가 남기고 규칙이 읽는** 값이라는
+    약속이 있고(§3-D26 · `test_the_rule_flags_are_not_also_card_conditions`), 가방은
+    반대로 **규칙이 주고 카드가 읽는다.** 표식으로 만들면 그 감사가 깨진다.
+    """
+
     team: Team | None = None
     """지금 속한 태그팀·스테이블 (§3-D30). 혼자면 None.
 
@@ -198,6 +216,10 @@ class CareerRun:
     @property
     def age(self) -> int:
         return self.identity.age_at(self.week)
+
+    @property
+    def briefcase(self) -> bool:
+        return self.briefcase_week > 0
 
     @property
     def act(self) -> int:

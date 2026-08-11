@@ -75,6 +75,18 @@ class PendingEventSchema(_Camel):
     choices: list[ChoiceSchema]
 
 
+class BeatSchema(_Camel):
+    """경기 진행 한 마디 — 입장 하나, 탈락 하나 (§3-D34)."""
+
+    kind: str
+    """`enter` · `eliminate` · `win`."""
+    name: str
+    number: int = 0
+    """입장 순번. `enter`에만 채워진다."""
+    by: str | None = None
+    """누가 탈락시켰는가. `eliminate`에만 채워진다."""
+
+
 class WeekSchema(_Camel):
     week: int
     """커리어 통산 주차(1~1560). 정렬·키에 쓴다."""
@@ -95,6 +107,16 @@ class WeekSchema(_Camel):
     """참가 인원. 여럿이 붙는 경기는 화면이 상대 한 명을 말하면 안 된다."""
     cursed: bool = False
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
+    match_summary: str | None = None
+    """탈락 경기의 한 줄 요약 (§3-D34). **다시 연 로그에도 이것만은 남는다.**"""
+    title_shot_from: str | None = None
+    """`earned`(럼블·챔버 도전권) · `briefcase`(가방) — 자격이 아니라 **권리로** 선 자리 (§3-D36)."""
+    beats: list[BeatSchema] | None = None
+    """입장·탈락 전체 (§3-D34). 진행 중인 응답에만 실린다 — 저장하지 않기 때문이다.
+
+    **문장이 아니라 구조로 보낸다.** "3번으로 입장"을 여기서 만들면 화면이 플레이어
+    이름을 강조하거나 줄을 접는 것을 다시 파싱해야 한다.
+    """
 
 
 class SkillSchema(_Camel):
@@ -137,6 +159,10 @@ class RivalrySchema(_Camel):
 
 class RunSchema(_Camel):
     id: int | None
+    name: str
+    """내 링네임. **화면이 명단에서 나를 짚으려면 필요하다** — 탈락 타임라인에서
+    서른 줄 중 내 줄을 굵게 하는 데 쓴다 (§3-D34).
+    """
     week: int
     year: int
     age: int
@@ -270,6 +296,20 @@ def to_week(view: WeekReportView) -> WeekSchema:
             match_format_of(report.match_kind).field if report.match_kind else 2
         ),
         cursed=report.cursed,
+        title_shot_from=(
+            report.title_shot_from.value if report.title_shot_from else None
+        ),
+        match_summary=view.match_summary,
+        beats=(
+            [
+                BeatSchema(
+                    kind=beat.kind.value, name=beat.name, number=beat.number, by=beat.by
+                )
+                for beat in report.sequence.beats
+            ]
+            if report.sequence
+            else None
+        ),
     )
 
 
@@ -292,6 +332,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
     return AdvanceResponse(
         run=RunSchema(
             id=run.id,
+            name=str(run.identity.name),
             week=run.week,
             year=run.week // 52 + 1,
             age=run.age,

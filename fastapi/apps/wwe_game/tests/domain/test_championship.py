@@ -122,6 +122,22 @@ class TestTierLadder:
         ).evolve(team=TEAM)
         assert target_title(run, NEVER_CHASE) is expected
 
+    def test_popularity_alone_rarely_reaches_the_summit(self) -> None:
+        """월드 벨트의 인기도 관문은 **실측 최고치(68)보다 위에 있다** (§3-D36).
+
+        오늘 아침 이 관문을 80 → 65로 내렸다가 되돌렸다(§3-D35 → D-36). 내린 이유는
+        정상으로 가는 길이 인기도 하나뿐이었기 때문이고, 되돌린 이유는 럼블·챔버·가방이
+        **두 번째 길**이 되었기 때문이다 — 그쪽이 정문이면 인기도 쪽은 벽이어야 한다.
+
+        정상에 닿는지는 `test_prizes.py`가 도전권으로 확인한다. 여기서는 **관문이
+        헐거워지지 않았는지**만 본다.
+        """
+        PEAK_POPULARITY = 68
+        run = make_run(
+            brand=Brand.RAW, stats=WrestlerStats(popularity=PEAK_POPULARITY)
+        ).evolve(team=TEAM)
+        assert target_title(run, NEVER_CHASE) is Title.INTERCONTINENTAL_CHAMPIONSHIP
+
     def test_smackdown_offers_different_belts(self) -> None:
         run = make_run(brand=Brand.SMACKDOWN, stats=WrestlerStats(popularity=55))
         assert target_title(run, NEVER_CHASE) is Title.UNITED_STATES_CHAMPIONSHIP

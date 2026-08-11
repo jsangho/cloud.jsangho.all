@@ -12,6 +12,7 @@ import {
   chooseEvent,
   chooseGuestEvent,
   readCurrentRun,
+  readLog,
   readModes,
   readNews,
   readPresets,
@@ -21,6 +22,7 @@ import {
   type CareerAdvance,
   type CareerMode,
   type CareerModeCode,
+  type CareerBeat,
   type CareerPreset,
   type CareerNewsItem,
   type CareerNewsPage,
@@ -133,6 +135,7 @@ const NEWS_KINDS: Record<string, string> = {
   call_up: "콜업",
   big_win: "대회 승리",
   cursed: "저주",
+  turn: "턴",
   team: "팀",
 };
 
@@ -152,12 +155,16 @@ const END_REASONS: Record<string, string> = {
   released: "방출",
 };
 
+/**
+ * 대립 단계 → 화면 이름. **백엔드 `RivalryStage`와 같은 표여야 한다.**
+ *
+ * 예전 표는 `taunt/feud/betrayal/revenge/blowoff` 다섯이었는데 도메인은 셋이다 —
+ * 하나도 안 맞아서 화면에 `heated` 같은 영문 코드가 그대로 찍히고 있었다.
+ */
 const RIVALRY_STAGES: Record<string, string> = {
-  taunt: "도발",
-  feud: "대립",
-  betrayal: "배신",
-  revenge: "복수",
-  blowoff: "결착",
+  indifferent: "신경전",
+  heated: "과열",
+  nemesis: "숙적",
 };
 
 /** 모드 코드 → 화면 이름. 백엔드는 코드를 그대로 label로 준다. */
@@ -169,6 +176,21 @@ const MODE_LABELS: Record<CareerModeCode, string> = {
 };
 
 const DISCLAIMER_INTRO = "이 게임의 선수명은 실존하지만, 모든 전개·경기·대사는 허구입니다.";
+
+/**
+ * 타이틀전 배지 — **어떻게 그 자리에 섰는지** (§3-D36).
+ *
+ * 같은 "타이틀전"이라도 럼블을 이겨서 선 자리와 어쩌다 걸린 자리는 다른 사건이다.
+ * 골드는 이미 타이틀전의 색이므로 셋이 같은 색을 쓴다 — 늘리는 것은 뜻이지 색이 아니다.
+ */
+const SHOT_LABELS: Record<string, string> = {
+  gate: "타이틀전",
+  earned: "도전권 · 타이틀전",
+  briefcase: "가방 · 타이틀전",
+};
+
+/** 재개했을 때 되읽는 주차 수. 30년이면 1560줄이라 전부 받지 않는다. */
+const HISTORY_WEEKS = 60;
 
 /** 화면이 가질 수 있는 상태. 불가능한 조합을 타입에서 지운다. */
 type Screen =
@@ -216,6 +238,8 @@ export default function CareerPage() {
   const [metaFailed, setMetaFailed] = useState(false);
   const [tab, setTab] = useState<PanelKey>("schedule");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
+  const [history, setHistory] = useState<CareerWeek[]>([]);
+  const [openWeek, setOpenWeek] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>({
     origin: "custom",
     name: "",
@@ -294,6 +318,20 @@ export default function CareerPage() {
       alive = false;
     };
   }, [tab, runId, screen]);
+
+  // 재개하면 응답의 `weeks`가 비어 있다 — 진행한 적이 없어서가 아니라 서버가 로그를
+  // 세이브에 끌고 오지 않기 때문이다(§3-D6). 일정 탭을 열 때만 마지막 쪽을 받아 온다.
+  useEffect(() => {
+    if (tab !== "schedule" || runId === null) return;
+    let alive = true;
+    readLog(runId, 0, 1)
+      .then((head) => readLog(runId, Math.max(0, head.total - HISTORY_WEEKS), HISTORY_WEEKS))
+      .then((page) => alive && setHistory(page.entries))
+      .catch(() => alive && setHistory([]));
+    return () => {
+      alive = false;
+    };
+  }, [tab, runId]);
 
   const handleStart = useCallback(async () => {
     setScreen({ phase: draft.basedOn ? "create" : "detail" });
@@ -626,6 +664,9 @@ export default function CareerPage() {
 
   const { advance, busy } = screen;
   const { run: view, weeks, pendingEvent } = advance;
+  // 방금 진행한 주차가 먼저다 — 그쪽만 비트를 들고 있어 펼칠 수 있다. 재개 직후처럼
+  // 진행분이 없을 때만 되읽은 로그를 세운다.
+  const shownWeeks = weeks.length > 0 ? weeks : history;
   const ended = advance.stopReason === "ended";
   const blocked = pendingEvent !== null;
 
@@ -643,6 +684,11 @@ export default function CareerPage() {
             {view.team && ` · ${view.team.label}`}
             {view.condition !== "healthy" && " · 부상"}
           </span>
+          {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
+              방금 지나간 결장 열두 주가 로그 안에서만 조용히 흘러간다. */}
+          {advance.stopReason === "recovered" && (
+            <span className="text-xs text-brand-link">부상에서 복귀했습니다</span>
+          )}
           <div className="ml-auto flex items-center gap-2">
             {blocked ? (
               <span className="text-xs text-brand-link">선택을 기다리는 중</span>
@@ -736,12 +782,12 @@ export default function CareerPage() {
 
           {tab === "schedule" && (
             <section className="space-y-6">
-              {weeks.length === 0 ? (
+              {shownWeeks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   아직 진행한 주차가 없습니다. 위의 &lsquo;다음&rsquo;을 누르세요.
                 </p>
               ) : (
-                groupByTick(weeks, view.year).map((chunk) => (
+                groupByTick(shownWeeks, view.year).map((chunk) => (
                   <div key={chunk.from}>
                     <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
                       <span className="font-sport text-sm">{chunk.label}</span>
@@ -754,43 +800,13 @@ export default function CareerPage() {
                     </div>
                     <div className="mt-2">
                       {chunk.weeks.map((week) => (
-                        <div
+                        <WeekRow
                           key={week.week}
-                          className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 border-b border-stone-200/40 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr] dark:border-stone-800/60"
-                        >
-                          <span className="text-xs text-muted-foreground">
-                            {week.month}월 {week.weekOfMonth}주
-                          </span>
-                          <span
-                            className={cn(
-                              "text-xs font-semibold",
-                              RESULT_TONE[week.result ?? "none"],
-                            )}
-                          >
-                            {RESULT_LABELS[week.result ?? "none"]}
-                          </span>
-                          <span className="truncate text-sm">
-                            {week.opponent && week.result ? (
-                              <>
-                                <span className="text-muted-foreground">vs </span>
-                                {week.opponent}
-                              </>
-                            ) : (
-                              <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>
-                            )}
-                          </span>
-                          <p
-                            className={cn(
-                              "col-span-3 text-sm leading-relaxed sm:col-span-1",
-                              week.cursed && "text-muted-foreground",
-                            )}
-                          >
-                            {week.titleAtStake && (
-                              <span className="mr-1.5 text-xs text-brand-link">타이틀전</span>
-                            )}
-                            {week.narration}
-                          </p>
-                        </div>
+                          week={week}
+                          player={view.name}
+                          open={openWeek === week.week}
+                          onToggle={() => setOpenWeek((w) => (w === week.week ? null : week.week))}
+                        />
                       ))}
                     </div>
                   </div>
@@ -884,6 +900,155 @@ export default function CareerPage() {
       {/* 실존 이름이 실제로 박히는 곳이 로그다. 캡처·공유되므로 상시 노출한다 (§3-D13). */}
       <p className="mt-10 text-xs text-muted-foreground">이 게임의 전개는 가상입니다.</p>
     </main>
+  );
+}
+
+/**
+ * 주차 로그 한 줄.
+ *
+ * 럼블·챔버처럼 단계가 있는 밤은 **접힌 채로 요약 한 줄**을 보여주고, 누르면 입장과
+ * 탈락이 순서대로 펼쳐진다 — 30인 럼블이 59줄이라 늘 펼쳐 두면 일정 탭이 그 한 밤으로
+ * 가득 찬다 (2026-08-11 사용자 결정).
+ */
+function WeekRow({
+  week,
+  player,
+  open,
+  onToggle,
+}: {
+  week: CareerWeek;
+  player: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const stagedNight = week.matchSummary !== null;
+  return (
+    <div className="border-b border-stone-200/40 dark:border-stone-800/60">
+      <div className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr]">
+        <span className="text-xs text-muted-foreground">
+          {week.month}월 {week.weekOfMonth}주
+        </span>
+        <span className={cn("text-xs font-semibold", RESULT_TONE[week.result ?? "none"])}>
+          {RESULT_LABELS[week.result ?? "none"]}
+        </span>
+        <span className="truncate text-sm">
+          <WeekOpponent week={week} />
+        </span>
+        <div className="col-span-3 sm:col-span-1">
+          <p className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}>
+            {isStipulation(week) && (
+              <span className="mr-1.5 text-xs text-muted-foreground">{week.matchLabel}</span>
+            )}
+            {week.titleAtStake && (
+              <span className="mr-1.5 text-xs text-brand-link">
+                {SHOT_LABELS[week.titleShotFrom ?? "gate"]}
+              </span>
+            )}
+            {week.narration}
+          </p>
+          {stagedNight &&
+            (week.beats && week.beats.length > 0 ? (
+              <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={open}
+                className="mt-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {week.matchSummary}
+                <span className="ml-1">{open ? "▾" : "▸"}</span>
+              </button>
+            ) : (
+              // 다시 연 로그에는 요약만 남아 있다 — 펼칠 것이 없으니 여는 시늉도 안 한다.
+              <p className="mt-0.5 text-xs text-muted-foreground">{week.matchSummary}</p>
+            ))}
+          {open && week.beats && <BeatList beats={week.beats} player={player} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 입장과 탈락을 순서대로. **내 줄만 굵다** — 서른 줄에서 나를 찾는 것이 이 화면의 일이다. */
+function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
+  return (
+    <ol className="mt-1.5 space-y-0.5 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
+      {beats.map((beat, i) => {
+        const mine = beat.name === player || beat.by === player;
+        return (
+          <li
+            key={i}
+            className={cn(
+              "text-xs leading-relaxed",
+              mine ? "font-semibold text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {beatLine(beat)}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** 비트 한 마디를 문장으로. 백엔드는 구조만 보내고 말은 여기서 만든다 (§3-D34). */
+function beatLine(beat: CareerBeat): string {
+  if (beat.kind === "enter") {
+    return `${beat.number}번 — ${beat.name} 입장`;
+  }
+  if (beat.kind === "win") {
+    return `${beat.name} 우승`;
+  }
+  if (beat.by === null) {
+    return `${beat.name} 탈락`;
+  }
+  return `${beat.by}${josa(beat.by, "이", "가")} ${beat.name}${josa(beat.name, "을", "를")} 탈락시켰다`;
+}
+
+/**
+ * 받침이 있으면 앞엣것, 없으면 뒤엣것.
+ *
+ * 명부는 전부 한글 표기라(§3-D27) 마지막 글자의 종성만 보면 된다. "드류 맥킨타이어가"와
+ * "브론 브레이커를"이 뒤집히면 문장이 바로 어색해진다.
+ */
+function josa(word: string, withFinal: string, withoutFinal: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return withoutFinal;
+  return code % 28 === 0 ? withoutFinal : withFinal;
+}
+
+/**
+ * 서술 앞에 형식을 적어야 하는 경기인지 (§3-D32).
+ *
+ * **둘이 붙는 특수 경기만이다.** 여럿이 붙는 경기는 형식이 상대 칸에 이미 나가 있고
+ * (`WeekOpponent`), 한 줄에 두 번 적으면 그게 노이즈다. 싱글은 기본값이라 적지 않는다 —
+ * 매주 "싱글 매치"가 붙으면 헬 인 어 셀이 걸린 밤이 눈에 안 띈다.
+ */
+function isStipulation(week: CareerWeek): boolean {
+  return week.matchLabel !== null && week.matchField === 2 && week.matchKind !== "singles";
+}
+
+/**
+ * 그 주차에 누구와 붙었는가.
+ *
+ * **여럿이 붙는 경기는 상대 한 명을 말하지 않는다.** 백엔드는 30인 럼블에도 라이벌
+ * 하나를 실어 보내지만(서술문의 `{rival}` 자리다), 그걸 그대로 "vs 세스 롤린스"로
+ * 적으면 럼블이 싱글로 읽힌다. 그 자리는 형식이 대신한다.
+ */
+function WeekOpponent({ week }: { week: CareerWeek }) {
+  if (week.result === null) {
+    return <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>;
+  }
+  if (week.matchField > 2 && week.matchLabel !== null) {
+    return <span className="text-muted-foreground">{week.matchLabel}</span>;
+  }
+  if (week.opponent === null) {
+    return <span className="text-muted-foreground">{WEEK_KINDS[week.kind]}</span>;
+  }
+  return (
+    <>
+      <span className="text-muted-foreground">vs </span>
+      {week.opponent}
+    </>
   );
 }
 

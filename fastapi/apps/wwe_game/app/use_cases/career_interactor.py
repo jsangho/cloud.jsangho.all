@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import secrets
 from collections.abc import Callable
+from dataclasses import replace
 
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
@@ -143,7 +144,8 @@ class CareerInteractor(CareerUseCase):
         entries, _ = await self._repository.read_log(
             run_id, user_id, offset=0, limit=CAREER_WEEKS
         )
-        pairs = tuple((view.report, run.stats) for view in entries)
+        # 옛 로그 행에는 주차별 스탯이 없다 — 그때만 최종 스탯으로 되돌아간다 (§3-D39).
+        pairs = tuple((view.report, view.stats or run.stats) for view in entries)
         # 연대기는 살아 있는 팀 목록을 들고 걸어야 한다 — 주차마다 따로 굴리면
         # 존재한 적 없는 팀이 해체된다 (2026-08-10 감사).
         team_news = team_engine.chronicle(run.seed, run.week)
@@ -279,10 +281,17 @@ class CareerInteractor(CareerUseCase):
                 WeekReportView(
                     report=report,
                     narration=self._narrator.narrate(cursor, report),
+                    # 비트는 이 응답에만 살고 요약만 로그에 남는다 (§3-D34).
+                    match_summary=(
+                        report.sequence.summary if report.sequence else None
+                    ),
                 )
             )
             if cursor.is_active:
                 cursor = apply_week(cursor, report)
+            # **그 주차 끝의 스탯**을 붙인다 (§3-D39). 반영 전 값을 쓰면 그 주에 일어난
+            # 힐턴이 다음 주 것으로 밀린다.
+            views[-1] = replace(views[-1], stats=cursor.stats)
         return tuple(views)
 
     def _view(

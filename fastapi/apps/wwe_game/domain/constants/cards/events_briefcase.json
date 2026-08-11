@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 3,
+  "file": "events_briefcase.json",
+  "note": "머니 인 더 뱅크 가방 (§3-D36). holdsBriefcase로만 열린다 — 가방을 쓸 때까지 계속 돌아온다. once가 아닌 이유: 한 번 미루면 다시는 못 쓰게 되면 '언제든지'가 아니다. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "mitb_cash_in",
+      "kind": "sub",
+      "arena": "in_ring",
+      "bodies": [
+        "챔피언이 방금 경기를 끝냈다. 링 위에 누워 숨을 고르고 있고, 심판은 아직 벨트를 건네지 못했다. 가방은 대기실에 있다 — 지금 가지러 가면 3분이면 돌아온다.",
+        "가방을 든 채로 몇 달이 지났다. 오늘 밤 챔피언은 셀 안에서 스무 분을 버텼고, 지금 링 아래에서 일어나지 못하고 있다. 해설진이 내 이름을 입에 올리기 시작했다.",
+        "복도 모니터로 메인이벤트를 봤다. 챔피언이 이겼지만 왼쪽 무릎을 절고 있다. 가방을 든 사람에게는 이런 밤이 계약서다."
+      ],
+      "title": "가방",
+      "weight": 60,
+      "requires": { "holdsBriefcase": true },
+      "choices": [
+        {
+          "code": "cash_in_now",
+          "label": "지금 간다. 심판에게 가방을 건넨다",
+          "risk": "bold",
+          "effects": { "popularity": 3, "inRing": 1, "backstage": -4 },
+          "injuryRisk": 0.0,
+          "flags": ["cash_in_pending"]
+        },
+        {
+          "code": "hold_it",
+          "label": "아직이다. 더 좋은 밤이 온다",
+          "risk": "safe",
+          "effects": { "popularity": -1, "inRing": 1, "micWork": 2 },
+          "injuryRisk": 0.0
+        }
+      ]
+    }
+  ]
+}

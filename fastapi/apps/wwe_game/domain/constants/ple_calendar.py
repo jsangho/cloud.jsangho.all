@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.value_objects.title import Brand
@@ -170,6 +171,17 @@ class ShowCalendar:
 
 _MAJOR, _STD, _SPECIAL = ShowTier.MAJOR, ShowTier.STANDARD, ShowTier.SPECIAL
 
+WRESTLEMANIA: Final = "레슬매니아"
+"""**도전권이 현금화되는 밤** (§3-D36). 럼블·챔버 우승자가 여기서 벨트에 도전한다."""
+
+MITB: Final = "머니 인 더 뱅크"
+"""**가방이 걸리는 밤** (§3-D36). 래더 매치는 다른 밤에도 열리지만 가방은 여기서만 나온다.
+
+두 이름을 상수로 두는 이유는 규칙이 문자열로 이 밤들을 짚기 때문이다 — 오타는 조용히
+"도전권이 영영 안 쓰이는" 결과가 되고, 그건 아무 데서도 안 터진다. 아래 달력의 이름과
+어긋나면 임포트 시점에 걸리도록 검증도 함께 둔다.
+"""
+
 MAIN_CALENDAR = ShowCalendar(
     shows=(
         PleShow("로열럼블", 1, _MAJOR),
@@ -235,6 +247,15 @@ QUIET_MONTH = 12
 def calendar_for(brand: Brand) -> ShowCalendar:
     return CALENDARS[brand]
 
+
+# 규칙이 이름으로 짚는 밤들이 실제 달력에 있어야 한다 (§3-D36). 오타는 실패가 아니라
+# **아무 일도 안 일어남**으로 나타나므로 여기서 잡는다.
+_NAMED = {WRESTLEMANIA, MITB}
+_MAIN_NAMES = {show.name for show in MAIN_CALENDAR.shows}
+if not _NAMED <= _MAIN_NAMES:  # pragma: no cover - 임포트 시 구조 검증
+    raise RuntimeError(
+        f"달력에 없는 대회를 규칙이 가리킵니다: {sorted(_NAMED - _MAIN_NAMES)}"
+    )
 
 # 브랜드마다 달력이 있어야 한다. 빠뜨리면 그 브랜드는 대회가 영영 안 열린다.
 _missing = set(Brand) - set(CALENDARS)

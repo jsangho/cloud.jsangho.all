@@ -87,6 +87,13 @@ class EventRequirement:
     rivalry_stages: frozenset[RivalryStage] = frozenset()
     condition_grades: frozenset[InjuryGrade] = frozenset()
     flags: frozenset[str] = frozenset()
+    holds_briefcase: bool = False
+    """머니 인 더 뱅크 가방을 들고 있어야 뜨는 카드 (§3-D36).
+
+    **표식이 아니라 상태를 읽는 유일한 조건이다.** 가방은 규칙이 주는 것이라
+    `flags`로 표현할 수 없다 — 표식은 카드가 남기고 규칙이 읽는다는 약속(§3-D26)의
+    반대 방향이다.
+    """
 
 
 @dataclass(frozen=True)
@@ -164,6 +171,7 @@ def _requirement(raw: dict[str, object]) -> EventRequirement:
             for g in raw.get("conditionGrades", ())  # type: ignore[arg-type]
         ),
         flags=frozenset(raw.get("flags", ())),  # type: ignore[arg-type]
+        holds_briefcase=bool(raw.get("holdsBriefcase", False)),
     )
 
 

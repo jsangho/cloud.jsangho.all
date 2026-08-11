@@ -86,9 +86,21 @@ def is_eligible(run: CareerRun, card: EventCard) -> bool:
         return False
     if r.play_styles and run.identity.play_style not in r.play_styles:
         return False
-    if r.condition_grades and run.condition.grade not in r.condition_grades:
+    if run.condition.is_injured:
+        # **다친 동안에는 등급을 명시한 카드만 뜬다** (§3-D37).
+        #
+        # 다른 조건은 "생략 = 무관"이지만 여기만 반대다. 무관으로 두었더니 결장 중인
+        # 선수에게 `ring_kickout_at_one`(원 카운트에 킥아웃)·`ring_apron_spot`이
+        # 떴다 — 링에 못 서는 사람이 링에서 겪는 사건이다. 부상 주차의 21%가 그랬다.
+        #
+        # 남는 것은 `events_condition.json`의 재활·복귀 카드들이고, 전부 백스테이지다.
+        if run.condition.grade not in r.condition_grades:
+            return False
+    elif r.condition_grades and run.condition.grade not in r.condition_grades:
         return False
     if not r.flags <= run.flags:
+        return False
+    if r.holds_briefcase and not run.briefcase:
         return False
     if r.rivalry_stages:
         stages = {rv.stage for rv in run.rivalries}
@@ -108,7 +120,11 @@ def event_chance(run: CareerRun) -> float:
     """
     weeks_left = max(1, CAREER_WEEKS - run.week)
     budget_left = max(0, run.mode.event_budget - run.events_fired)
-    return min(1.0, budget_left / weeks_left)
+    chance = min(1.0, budget_left / weeks_left)
+    if run.condition.is_injured:
+        # 다친 동안에는 드물게 (§3-D37). 여기서 덜 쓴 예산은 복귀 뒤에 돌아온다.
+        chance *= rules.INJURY_EVENT_FACTOR
+    return chance
 
 
 def _cooldown(pool_size: int) -> int:
