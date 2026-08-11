@@ -174,6 +174,9 @@ _MAJOR, _STD, _SPECIAL = ShowTier.MAJOR, ShowTier.STANDARD, ShowTier.SPECIAL
 WRESTLEMANIA: Final = "레슬매니아"
 """**도전권이 현금화되는 밤** (§3-D36). 럼블·챔버 우승자가 여기서 벨트에 도전한다."""
 
+KING_AND_QUEEN: Final = "킹 앤 퀸 오브 더 링"
+"""**한 주에 안 끝나는 유일한 대회** (§3-D33). 결승만 이 밤에 서고 예선은 앞 두 주에 있다."""
+
 MITB: Final = "머니 인 더 뱅크"
 """**가방이 걸리는 밤** (§3-D36). 래더 매치는 다른 밤에도 열리지만 가방은 여기서만 나온다.
 
@@ -250,7 +253,7 @@ def calendar_for(brand: Brand) -> ShowCalendar:
 
 # 규칙이 이름으로 짚는 밤들이 실제 달력에 있어야 한다 (§3-D36). 오타는 실패가 아니라
 # **아무 일도 안 일어남**으로 나타나므로 여기서 잡는다.
-_NAMED = {WRESTLEMANIA, MITB}
+_NAMED = {WRESTLEMANIA, MITB, KING_AND_QUEEN}
 _MAIN_NAMES = {show.name for show in MAIN_CALENDAR.shows}
 if not _NAMED <= _MAIN_NAMES:  # pragma: no cover - 임포트 시 구조 검증
     raise RuntimeError(

@@ -135,6 +135,7 @@ const NEWS_KINDS: Record<string, string> = {
   call_up: "콜업",
   big_win: "대회 승리",
   cursed: "저주",
+  crown: "왕관",
   turn: "턴",
   team: "팀",
 };
@@ -187,6 +188,13 @@ const SHOT_LABELS: Record<string, string> = {
   gate: "타이틀전",
   earned: "도전권 · 타이틀전",
   briefcase: "가방 · 타이틀전",
+};
+
+/** 킹 앤 퀸 오브 더 링의 회전 이름 (§3-D33). 백엔드 `TOURNAMENT_ROUNDS`와 같은 수다. */
+const TOURNAMENT_ROUNDS: Record<number, string> = {
+  1: "토너먼트 1회전",
+  2: "토너먼트 준결승",
+  3: "토너먼트 결승",
 };
 
 /** 재개했을 때 되읽는 주차 수. 30년이면 1560줄이라 전부 받지 않는다. */
@@ -936,6 +944,12 @@ function WeekRow({
         </span>
         <div className="col-span-3 sm:col-span-1">
           <p className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}>
+            {/* 토너먼트는 한 주에 안 끝난다 — 몇 회전인지가 그 밤의 뜻이다 (§3-D33). */}
+            {week.tournamentRound > 0 && (
+              <span className="mr-1.5 text-xs text-muted-foreground">
+                {TOURNAMENT_ROUNDS[week.tournamentRound] ?? "토너먼트"}
+              </span>
+            )}
             {isStipulation(week) && (
               <span className="mr-1.5 text-xs text-muted-foreground">{week.matchLabel}</span>
             )}

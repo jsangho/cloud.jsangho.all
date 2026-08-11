@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants import roster
+from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.constants.career_flags import (
     CASH_IN_PENDING,
     CURSED,
@@ -28,12 +29,13 @@ from wwe_game.domain.constants.career_flags import (
 )
 from wwe_game.domain.constants.play_styles import INJURY_STYLE_MULTIPLIER
 from wwe_game.domain.constants.ple_calendar import (
+    KING_AND_QUEEN,
     MITB,
     WRESTLEMANIA,
     PleShow,
     calendar_for,
 )
-from wwe_game.domain.entities.career_run import CareerRun
+from wwe_game.domain.entities.career_run import CareerRun, Trophy
 from wwe_game.domain.services import (
     championship,
     elimination,
@@ -46,6 +48,7 @@ from wwe_game.domain.services import (
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.match_kind import (
+    QUALIFIER_KINDS,
     SIGNATURE_MATCHES,
     STIPULATION_CHANCE,
     STIPULATION_PLE_MULTIPLIER,
@@ -62,6 +65,7 @@ from wwe_game.domain.value_objects.week_report import (
     WeekKind,
     WeekReport,
 )
+from wwe_game.domain.value_objects.wrestler_identity import Gender
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 # ── 나이 곡선 — 인기도가 상쇄한다 ────────────────────────────
@@ -125,12 +129,37 @@ def week_kind_of(run: CareerRun) -> WeekKind:
         return (
             WeekKind.SPECIAL if calendar.show_for(upcoming).is_special else WeekKind.PLE
         )
+    if tournament_round_at(run, upcoming) > 0:
+        # **예선 주차에는 반드시 경기가 있다** (§3-D33). 프로모로 넘어가면 대진표가
+        # 그 주에 멈추고, 결승 주차가 와도 올라간 사람이 없다.
+        return WeekKind.WEEKLY_SHOW
     roll = SeededRoll(run.seed, upcoming, seeded_roll.CARD)
     return (
         WeekKind.WEEKLY_SHOW
         if roll.chance(rules.WEEKLY_MATCH_CHANCE)
         else WeekKind.PROMO
     )
+
+
+def tournament_round_at(run: CareerRun, week: int) -> int:
+    """그 주차가 킹 앤 퀸 오브 더 링의 몇 회전인지. 0이면 토너먼트 주차가 아니다.
+
+    **결승은 대회 밤이고 예선은 그 앞 두 주다** (§3-D33) — 한 주에 안 끝나는 유일한
+    형식이라, 어느 주차가 몇 회전인지를 달력에서 되짚는다. 상태(`tournament_round`)는
+    "이겨서 올라왔는가"만 들고 있고 일정은 여기가 안다.
+
+    **NXT에는 이 대회가 없다.** 육성 브랜드 달력에 없는 이름이라 자동으로 0이 된다.
+    """
+    calendar = calendar_for(run.brand)
+    final = next(
+        (s.week_of_year for s in calendar.shows if s.name == KING_AND_QUEEN), None
+    )
+    if final is None:
+        return 0
+    offset = final - (week - 1) % WEEKS_PER_YEAR - 1
+    if not 0 <= offset < rules.TOURNAMENT_ROUNDS:
+        return 0
+    return rules.TOURNAMENT_ROUNDS - offset
 
 
 def is_ple_stop_week(run: CareerRun) -> bool:
@@ -246,6 +275,17 @@ def simulate_week(run: CareerRun) -> WeekReport:
         result = OutcomeKind.LOSS
 
     stat_delta = _growth(run, week, result)
+    if (
+        _tournament_round_of(run, week) == rules.TOURNAMENT_ROUNDS
+        and result is OutcomeKind.WIN
+    ):
+        # 왕관의 값 (§3-D33). 벨트처럼 덮어쓰지 않고 더한다 — 그날의 승리분은 이미 위에서 났다.
+        stat_delta["popularity"] = (
+            stat_delta.get("popularity", 0) + rules.TOURNAMENT_WIN_POPULARITY
+        )
+        stat_delta["in_ring"] = (
+            stat_delta.get("in_ring", 0) + rules.TOURNAMENT_WIN_IN_RING
+        )
     if title is not None:
         # 벨트가 오가면 성장 굴림보다 훨씬 큰 폭으로 움직인다. 덮어쓰지 않고 더한다.
         held = title in run.titles_held
@@ -286,6 +326,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
         title_at_stake=title,
         title_defended=title is not None and title in run.titles_held,
         title_shot_from=shot_from,
+        tournament_round=_tournament_round_of(run, week),
         call_up=_call_up_of(run, stat_delta),
         draft_night=draft_night,
         match_kind=match_kind,
@@ -318,6 +359,46 @@ def _sequence_for(
         pool=pool,
         roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
     )
+
+
+def _tournament_after(run: CareerRun, report: WeekReport) -> tuple[int, Trophy | None]:
+    """토너먼트 라운드를 갱신하고, 왕관을 썼으면 트로피를 함께 돌려준다 (§3-D33).
+
+    **대회가 지나가면 0으로 돌아간다.** 이기든 지든, 심지어 그 주에 다쳐 결장했더라도 —
+    해마다 새 대진표가 열리고 작년의 진출은 남지 않는다.
+    """
+    scheduled = tournament_round_at(run, report.week)
+    if scheduled == rules.TOURNAMENT_ROUNDS:
+        won = report.tournament_round == scheduled and report.result is OutcomeKind.WIN
+        crown = Trophy(code=_crown_code(run), week=report.week) if won else None
+        return 0, crown
+    if report.tournament_round == 0:
+        return run.tournament_round if scheduled == 0 else 0, None
+    if report.result is OutcomeKind.WIN:
+        return report.tournament_round, None
+    return 0, None  # 졌다 — 대진표에서 빠진다
+
+
+def _crown_code(run: CareerRun) -> str:
+    """왕관은 디비전마다 이름이 다르다 — 킹과 퀸이다."""
+    return (
+        "king_of_the_ring"
+        if run.identity.gender is Gender.MALE
+        else "queen_of_the_ring"
+    )
+
+
+def _tournament_round_of(run: CareerRun, week: int) -> int:
+    """이 주차가 플레이어에게 몇 회전인지. **떨어졌으면 0이다.**
+
+    일정상 토너먼트 주차라도, 앞 라운드에서 진 선수에게는 그냥 평범한 밤이다.
+    """
+    scheduled = tournament_round_at(run, week)
+    if scheduled == 0 or run.brand is Brand.NXT:
+        return 0
+    if run.tournament_round != scheduled - 1:
+        return 0  # 앞 라운드를 못 이겼다 — 대진표에서 빠졌다
+    return scheduled
 
 
 def _opponent_for(run: CareerRun, week: int, title: Title | None) -> str | None:
@@ -402,6 +483,10 @@ def _match_kind_of(
     """
     if shot_from is TitleShotSource.BRIEFCASE:
         return MatchKind.SINGLES
+    if tournament_round_at(run, week) > 0:
+        # 예선에 쓸 수 있는 형식은 셋뿐이다 (§3-D33 · 2026-08-10 사용자 스펙) —
+        # 대진표가 도는 밤에 30인 럼블이 열릴 수는 없다.
+        return SeededRoll(run.seed, week, seeded_roll.STIPULATION).pick(QUALIFIER_KINDS)
     if show is not None and show.name in SIGNATURE_MATCHES:
         return SIGNATURE_MATCHES[show.name]
     if title is not None and TITLES[title].tier is TitleTier.TAG:
@@ -647,6 +732,9 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             flags = flags - {TEAM_PENDING}
 
     title_shot, briefcase_week, flags = _spoils(moved, report, flags)
+    tournament_round, crown = _tournament_after(moved, report)
+    if crown is not None:
+        moved = moved.evolve(trophies=(*moved.trophies, crown))
 
     moved = moved.evolve(
         week=report.week,
@@ -656,6 +744,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         team=team,
         title_shot=title_shot,
         briefcase_week=briefcase_week,
+        tournament_round=tournament_round,
         rivalries=rivalry_engine.advance_rivalries(
             moved,
             report.week,

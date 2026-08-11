@@ -109,6 +109,8 @@ class CareerRunModel(Base):
     events_fired: Mapped[int] = mapped_column(Integer, default=0)
     release_weeks: Mapped[int] = mapped_column(Integer, default=0)
     decline_weeks: Mapped[int] = mapped_column(Integer, default=0)
+    tournament_round: Mapped[int] = mapped_column(Integer, default=0)
+    """킹 앤 퀸 오브 더 링에서 이긴 라운드 수 (§3-D33). 한 주에 안 끝나는 유일한 형식이다."""
     title_shot: Mapped[bool] = mapped_column(Boolean, default=False)
     """레슬매니아 1선 도전권 (§3-D36). 럼블·챔버 우승이 준다."""
     briefcase_week: Mapped[int] = mapped_column(Integer, default=0)

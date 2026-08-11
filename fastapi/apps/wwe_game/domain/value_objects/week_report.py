@@ -112,6 +112,11 @@ class WeekReport:
     `result`만으로는 서술이 평범한 패배와 구분할 수 없다. 저주가 소진됐다는 신호이기도
     해서 `apply_week`이 이 값을 보고 표식을 지운다.
     """
+    tournament_round: int = 0
+    """킹 앤 퀸 오브 더 링의 몇 회전인지 (§3-D33). 0이면 토너먼트 경기가 아니다.
+
+    `TOURNAMENT_ROUNDS`가 곧 결승이다 — 그 회전을 이기면 왕관을 쓴다.
+    """
     title_shot_from: TitleShotSource | None = None
     """이 타이틀전이 **자격이 아니라 권리로** 잡혔다면 그 출처 (§3-D36).
 

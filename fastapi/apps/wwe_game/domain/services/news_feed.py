@@ -28,6 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
@@ -51,6 +52,8 @@ class NewsKind(StrEnum):
     CALL_UP = "call_up"
     BIG_WIN = "big_win"
     CURSED = "cursed"
+    CROWN = "crown"
+    """킹 앤 퀸 오브 더 링 우승 — 세 번을 이어 이겼다 (§3-D33)."""
     TURN = "turn"
     """성향이 반대편으로 넘어갔다 — 힐턴·베이비페이스턴 (§3-D39)."""
     TEAM = "team"
@@ -178,6 +181,12 @@ def _headline_of(report: WeekReport, player: str) -> tuple[NewsKind | None, str]
     # **누구에게서 빼앗았고 누구에게 내줬는지가 벨트의 이야기다** (§3-D38).
     # 상대 이름이 없던 시절에는 대관 열 번이 전부 같은 한 줄이었다.
     rival = report.opponent
+    if (
+        report.tournament_round >= rules.TOURNAMENT_ROUNDS
+        and report.result is OutcomeKind.WIN
+    ):
+        # 벨트보다 앞에 둔다 — 결승 밤에 벨트가 걸리는 일은 없고, 왕관이 그날의 사건이다.
+        return NewsKind.CROWN, f"{player}, 왕관을 썼다 — 세 밤을 이어 이겼다."
     if title is not None and report.result is OutcomeKind.WIN:
         if report.title_defended:
             against = f" — {rival}의 도전을 막았다" if rival else ""

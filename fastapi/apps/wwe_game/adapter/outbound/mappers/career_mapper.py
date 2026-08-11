@@ -109,6 +109,7 @@ class CareerMapper:
             events_fired=row.events_fired,
             release_weeks=row.release_weeks,
             decline_weeks=row.decline_weeks,
+            tournament_round=row.tournament_round,
             title_shot=row.title_shot,
             briefcase_week=row.briefcase_week,
             status=RunStatus(row.status),
@@ -152,6 +153,7 @@ class CareerMapper:
         row.events_fired = run.events_fired
         row.release_weeks = run.release_weeks
         row.decline_weeks = run.decline_weeks
+        row.tournament_round = run.tournament_round
         row.title_shot = run.title_shot
         row.briefcase_week = run.briefcase_week
         row.status = run.status.value

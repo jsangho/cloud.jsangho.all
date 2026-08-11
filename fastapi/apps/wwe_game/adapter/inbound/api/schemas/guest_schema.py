@@ -71,6 +71,7 @@ class GuestRunState(BaseModel):
     events_fired: int = 0
     release_weeks: int = 0
     decline_weeks: int = 0
+    tournament_round: int = 0
     title_shot: bool = False
     briefcase_week: int = 0
     status: str = RunStatus.ACTIVE.value
@@ -128,6 +129,7 @@ def to_domain(state: GuestRunState) -> CareerRun:
         events_fired=state.events_fired,
         release_weeks=state.release_weeks,
         decline_weeks=state.decline_weeks,
+        tournament_round=state.tournament_round,
         title_shot=state.title_shot,
         briefcase_week=state.briefcase_week,
         status=RunStatus(state.status),
@@ -197,6 +199,7 @@ def to_state(run: CareerRun) -> GuestRunState:
         events_fired=run.events_fired,
         release_weeks=run.release_weeks,
         decline_weeks=run.decline_weeks,
+        tournament_round=run.tournament_round,
         title_shot=run.title_shot,
         briefcase_week=run.briefcase_week,
         status=run.status.value,

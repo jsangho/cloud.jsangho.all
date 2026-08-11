@@ -109,6 +109,8 @@ class WeekSchema(_Camel):
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
     match_summary: str | None = None
     """탈락 경기의 한 줄 요약 (§3-D34). **다시 연 로그에도 이것만은 남는다.**"""
+    tournament_round: int = 0
+    """킹 앤 퀸 오브 더 링의 회전 (§3-D33). 0이면 토너먼트 경기가 아니다."""
     title_shot_from: str | None = None
     """`earned`(럼블·챔버 도전권) · `briefcase`(가방) — 자격이 아니라 **권리로** 선 자리 (§3-D36)."""
     beats: list[BeatSchema] | None = None
@@ -296,6 +298,7 @@ def to_week(view: WeekReportView) -> WeekSchema:
             match_format_of(report.match_kind).field if report.match_kind else 2
         ),
         cursed=report.cursed,
+        tournament_round=report.tournament_round,
         title_shot_from=(
             report.title_shot_from.value if report.title_shot_from else None
         ),

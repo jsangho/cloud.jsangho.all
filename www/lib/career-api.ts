@@ -95,6 +95,8 @@ export type CareerWeek = {
    * `earned` = 럼블·챔버 우승 도전권 · `briefcase` = 가방을 썼다.
    */
   titleShotFrom: "earned" | "briefcase" | null;
+  /** 킹 앤 퀸 오브 더 링의 회전 (§3-D33). 0이면 토너먼트 경기가 아니다. */
+  tournamentRound: number;
   /**
    * 입장·탈락 전체. **진행 중인 응답에만 실린다** — 저장하지 않기 때문이다.
    * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
