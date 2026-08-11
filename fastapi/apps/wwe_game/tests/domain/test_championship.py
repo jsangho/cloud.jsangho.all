@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.exceptions import InvalidCareerRunError
+from wwe_game.domain.services import championship
 from wwe_game.domain.services.championship import (
     CALLUP_POPULARITY_RETENTION,
     DEFENSE_REWARD,
@@ -137,6 +140,36 @@ class TestTierLadder:
             brand=Brand.RAW, stats=WrestlerStats(popularity=PEAK_POPULARITY)
         ).evolve(team=TEAM)
         assert target_title(run, NEVER_CHASE) is Title.INTERCONTINENTAL_CHAMPIONSHIP
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_every_grand_slam_group_stays_reachable(self, gender: Gender) -> None:
+        """**네 그룹 어느 하나도 도달 불가능해지면 안 된다** (§13-Q16).
+
+        §3-D35가 정확히 이 사고였다: 인기도 경제를 다시 짜면서 월드 벨트의 관문만
+        옛 척도에 남아 **그랜드슬램이 0%로 죽었는데 아무 테스트도 안 깨졌다.**
+        그때 잡지 못한 이유는 검사가 전부 "이 인기도면 이 벨트"를 확인할 뿐,
+        **"그 인기도에 닿을 수 있는가"를 묻지 않아서**였다.
+
+        여기서는 두 축을 함께 본다 — 실측으로 도달 가능한 인기도(§3-D35의 68)와
+        도전권(§3-D36). 어느 그룹이든 그 둘로 못 닿으면 실패한다.
+
+        통계(그랜드슬램 몇 %)로 잠그지 않는 이유: 표본 잡음이 ±10pp라 밴드를 좁게
+        잡으면 시드 운에 테스트가 매이고, 넓게 잡으면 아무것도 못 잡는다. **구조가
+        막혔는가**는 잡음 없이 잴 수 있다.
+        """
+        PEAK_POPULARITY = 68
+        reachable: set[Title] = set()
+        for brand in (Brand.RAW, Brand.SMACKDOWN, Brand.NXT):
+            run = make_run(brand=brand, stats=WrestlerStats(popularity=PEAK_POPULARITY))
+            run = run.evolve(identity=replace(run.identity, gender=gender), team=TEAM)
+            reachable |= set(eligible_titles(run))
+            # 럼블·챔버·가방은 관문을 건너뛰고 월드 벨트를 연다 (§3-D36).
+            world = championship.world_title_of(run)
+            if world is not None:
+                reachable.add(world)
+
+        for name, group in GRAND_SLAM_GROUPS[gender]:
+            assert group & reachable, f"{gender.value} {name} 그룹에 닿을 길이 없다"
 
     def test_smackdown_offers_different_belts(self) -> None:
         run = make_run(brand=Brand.SMACKDOWN, stats=WrestlerStats(popularity=55))
