@@ -40,6 +40,7 @@ from wwe_game.app.ports.input.career_use_case import (
     ChoiceRequiredError,
     GuestModeNotAllowedError,
     NoPendingEventError,
+    ReportNotFoundError,
     RunAlreadyActiveError,
 )
 from wwe_game.app.ports.output.career_repository import CareerRepository
@@ -55,9 +56,11 @@ from wwe_game.domain.services import (
     event_draw,
     news_feed,
     rivalry_scene,
+    show_report,
     team_engine,
 )
 from wwe_game.domain.services.character_creation import build_identity
+from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
@@ -131,6 +134,23 @@ class CareerInteractor(CareerUseCase):
             run_id, user_id, offset=offset, limit=limit
         )
         return CareerLogPage(entries=entries, total=total, offset=offset)
+
+    async def read_report(self, run_id: int, user_id: int, week: int) -> ShowReport:
+        """그 주차의 리포트 (§3-D45).
+
+        **로그에서 그 한 줄만 읽는다.** 리포트는 새 규칙이 아니라 보는 방식이라
+        (§3-D45), 필요한 것은 그 주차 기록 하나와 시드뿐이다.
+        """
+        run = await self._repository.get(run_id, user_id)
+        if not show_report.is_reportable(run, week):
+            raise ReportNotFoundError(f"{week}주차는 대회 주차가 아닙니다.")
+        entries, _ = await self._repository.read_log(
+            run_id, user_id, offset=max(0, week - 1), limit=1
+        )
+        found = next((v for v in entries if v.week == week), None)
+        if found is None:
+            raise ReportNotFoundError(f"{week}주차 기록이 없습니다.")
+        return show_report.build(run, found.report, found.narration)
 
     async def read_news(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50

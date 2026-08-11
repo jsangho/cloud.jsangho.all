@@ -13,6 +13,7 @@ import {
   chooseGuestEvent,
   readCurrentRun,
   readLog,
+  readReport,
   readModes,
   readNews,
   readPresets,
@@ -24,6 +25,7 @@ import {
   type CareerModeCode,
   type CareerBeat,
   type CareerPreset,
+  type CareerShowReport,
   type CareerNewsItem,
   type CareerNewsPage,
   type CareerStats,
@@ -249,6 +251,7 @@ export default function CareerPage() {
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [openWeek, setOpenWeek] = useState<number | null>(null);
+  const [report, setReport] = useState<CareerShowReport | null>(null);
   const [draft, setDraft] = useState<Draft>({
     origin: "custom",
     name: "",
@@ -327,6 +330,22 @@ export default function CareerPage() {
       alive = false;
     };
   }, [tab, runId, screen]);
+
+  // 대회 주차를 펼치면 그 밤의 리포트를 받아 온다 (§3-D45). **열 때만 받는다** —
+  // 인박스와 같은 방침이다: 30년치를 진행할 때마다 따라 받으면 낭비다.
+  useEffect(() => {
+    if (openWeek === null || runId === null) {
+      setReport(null);
+      return;
+    }
+    let alive = true;
+    readReport(runId, openWeek)
+      .then((found) => alive && setReport(found))
+      .catch(() => alive && setReport(null));
+    return () => {
+      alive = false;
+    };
+  }, [openWeek, runId]);
 
   // 재개하면 응답의 `weeks`가 비어 있다 — 진행한 적이 없어서가 아니라 서버가 로그를
   // 세이브에 끌고 오지 않기 때문이다(§3-D6). 일정 탭을 열 때만 마지막 쪽을 받아 온다.
@@ -814,6 +833,7 @@ export default function CareerPage() {
                           week={week}
                           player={view.name}
                           open={openWeek === week.week}
+                          report={openWeek === week.week ? report : null}
                           onToggle={() => setOpenWeek((w) => (w === week.week ? null : week.week))}
                         />
                       ))}
@@ -923,14 +943,18 @@ function WeekRow({
   week,
   player,
   open,
+  report,
   onToggle,
 }: {
   week: CareerWeek;
   player: string;
   open: boolean;
+  report: CareerShowReport | null;
   onToggle: () => void;
 }) {
   const stagedNight = week.matchSummary !== null;
+  // 대회 밤은 펼칠 것이 하나 더 있다 — 그날의 리포트다 (§3-D45).
+  const showNight = week.kind === "ple" || week.kind === "special";
   return (
     <div className="border-b border-stone-200/40 dark:border-stone-800/60">
       <div className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr]">
@@ -976,9 +1000,66 @@ function WeekRow({
               // 다시 연 로그에는 요약만 남아 있다 — 펼칠 것이 없으니 여는 시늉도 안 한다.
               <p className="mt-0.5 text-xs text-muted-foreground">{week.matchSummary}</p>
             ))}
+          {showNight && !stagedNight && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={open}
+              className="mt-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              그날의 리포트<span className="ml-1">{open ? "▾" : "▸"}</span>
+            </button>
+          )}
           {open && week.beats && <BeatList beats={week.beats} player={player} />}
+          {open && report && <ShowCard report={report} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 그날의 리포트 (§3-D45).
+ *
+ * **뉴스와 다른 것을 보여준다.** 뉴스가 "무슨 일이 있었더라"라면 이쪽은 "그날 카드가
+ * 어땠지"다 — 그 밤 벨트를 누가 들고 있었고, 그 무렵 세계에 무슨 일이 있었는지.
+ */
+function ShowCard({ report }: { report: CareerShowReport }) {
+  return (
+    <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
+      <p className="font-sport text-sm">
+        {report.show}
+        {report.isMajor && <span className="ml-1.5 text-xs text-brand-link">대형</span>}
+      </p>
+      <div>
+        <p className="text-xs text-muted-foreground">그날의 벨트</p>
+        <ul className="mt-0.5 space-y-0.5">
+          {report.champions.map((c) => (
+            <li
+              key={c.title}
+              className={cn(
+                "text-xs leading-relaxed",
+                c.mine ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {c.title} — {c.holder}
+              {c.mine && " (나)"}
+            </li>
+          ))}
+        </ul>
+      </div>
+      {report.around.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground">그 무렵</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {report.around.map((line, i) => (
+              <li key={i} className="text-xs leading-relaxed text-muted-foreground">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

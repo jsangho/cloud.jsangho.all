@@ -25,6 +25,7 @@ from wwe_game.app.dtos.career_dto import (
     PresetView,
     StartRunCommand,
 )
+from wwe_game.domain.services.show_report import ShowReport
 
 
 class RunAlreadyActiveError(Exception):
@@ -43,6 +44,14 @@ class NoPendingEventError(Exception):
     """대기 이벤트가 없는데 선택을 냈을 때 (하네스 §8 → 409).
 
     "없는 선택지 코드"(`InvalidChoiceError`, 400)와 다르다 — 이건 이벤트 자체가 없다.
+    """
+
+
+class ReportNotFoundError(Exception):
+    """대회 주차가 아니거나 아직 지나지 않은 주차 (§3-D45).
+
+    "없는 주차"와 "리포트를 만들지 않는 주차"를 나누지 않는다 — 화면 입장에서 둘 다
+    "그 밤은 없다"이고, 나누면 라우터가 상태 코드를 둘로 갈라야 한다.
     """
 
 
@@ -83,6 +92,11 @@ class CareerUseCase(ABC):
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
         """커리어 로그 한 페이지. 30년이면 1560줄이라 전부 내려보내지 않는다."""
+
+    @abstractmethod
+    async def read_report(self, run_id: int, user_id: int, week: int) -> ShowReport:
+        """그 주차의 리포트 (§3-D45). 대회 주차가 아니면 `ReportNotFoundError`."""
+        ...
 
     @abstractmethod
     async def read_news(

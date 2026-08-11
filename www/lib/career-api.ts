@@ -194,6 +194,33 @@ export type CareerLogPage = {
   hasMore: boolean;
 };
 
+/**
+ * 그 밤의 리포트 (§3-D45). **뉴스와 다르다** — 뉴스는 커리어의 기억이고 이쪽은
+ * 한 밤의 카드다: 그날 벨트를 누가 들고 있었고 그 무렵 세계에 무슨 일이 있었는지.
+ */
+export type CareerShowReport = {
+  week: number;
+  show: string;
+  isMajor: boolean;
+  result: "win" | "loss" | "draw" | null;
+  opponent: string | null;
+  matchLabel: string | null;
+  titleAtStake: string | null;
+  narration: string;
+  champions: { title: string; holder: string; mine: boolean }[];
+  around: string[];
+};
+
+/** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */
+export async function readReport(runId: number, week: number): Promise<CareerShowReport | null> {
+  try {
+    return await request<CareerShowReport>(`/runs/${runId}/report?week=${week}`);
+  } catch (error) {
+    if (error instanceof CareerApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export type StartRunInput = {
   name: string;
   mode: CareerModeCode;

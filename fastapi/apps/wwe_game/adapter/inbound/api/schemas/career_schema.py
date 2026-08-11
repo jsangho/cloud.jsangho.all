@@ -23,6 +23,8 @@ from wwe_game.app.dtos.career_dto import (
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.services.news_feed import NewsItem
+from wwe_game.domain.services.show_report import ShowReport
+from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 
 
@@ -266,6 +268,30 @@ class NewsSchema(_Camel):
     crowd_line: str
 
 
+class TitleHolderSchema(_Camel):
+    title: str
+    holder: str
+    mine: bool
+    """내가 감고 있는 벨트인지 — 화면이 내 줄을 짚는다 (§3-D45)."""
+
+
+class ShowReportSchema(_Camel):
+    """그 밤의 리포트 (§3-D45). **뉴스와 다르다** — 뉴스는 커리어의 기억이고
+    이쪽은 한 밤의 카드다."""
+
+    week: int
+    show: str
+    is_major: bool
+    result: str | None = None
+    opponent: str | None = None
+    match_label: str | None = None
+    title_at_stake: str | None = None
+    narration: str = ""
+    champions: list[TitleHolderSchema] = Field(default_factory=list)
+    around: list[str] = Field(default_factory=list)
+    """그 무렵 배경에서 일어난 일 (§3-D44)."""
+
+
 class NewsPageSchema(_Camel):
     items: list[NewsSchema]
     total: int
@@ -313,6 +339,28 @@ def to_week(view: WeekReportView) -> WeekSchema:
             if report.sequence
             else None
         ),
+    )
+
+
+def to_report(report: ShowReport) -> ShowReportSchema:
+    return ShowReportSchema(
+        week=report.week,
+        show=report.show,
+        is_major=report.is_major,
+        result=report.result,
+        opponent=report.opponent,
+        match_label=(
+            match_format_of(MatchKind(report.match_label)).label
+            if report.match_label
+            else None
+        ),
+        title_at_stake=report.title_at_stake,
+        narration=report.narration,
+        champions=[
+            TitleHolderSchema(title=c.title, holder=c.holder, mine=c.mine)
+            for c in report.champions
+        ],
+        around=list(report.around),
     )
 
 

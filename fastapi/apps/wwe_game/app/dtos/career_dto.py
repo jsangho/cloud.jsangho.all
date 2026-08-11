@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
 from wwe_game.domain.services.news_feed import NewsItem
+from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
 from wwe_game.domain.value_objects.ring_skills import breakdown
 from wwe_game.domain.value_objects.week_report import WeekReport
@@ -140,6 +141,13 @@ class WeekReportView:
     @property
     def week(self) -> int:
         return self.report.week
+
+
+@dataclass(frozen=True)
+class ShowReportView:
+    """그 밤의 리포트 (§3-D45). 도메인 값을 그대로 든다 — 조립은 도메인이 했다."""
+
+    report: ShowReport
 
 
 @dataclass(frozen=True)
