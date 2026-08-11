@@ -54,6 +54,7 @@ from wwe_game.domain.services import (
     career_end,
     event_draw,
     news_feed,
+    rivalry_scene,
     team_engine,
 )
 from wwe_game.domain.services.character_creation import build_identity
@@ -149,7 +150,12 @@ class CareerInteractor(CareerUseCase):
         # 연대기는 살아 있는 팀 목록을 들고 걸어야 한다 — 주차마다 따로 굴리면
         # 존재한 적 없는 팀이 해체된다 (2026-08-10 감사).
         team_news = team_engine.chronicle(run.seed, run.week)
-        items = news_feed.compile_feed(pairs, team_news, str(run.identity.name))
+        scene_news = rivalry_scene.chronicle(
+            run.seed, run.week, run.identity.gender, exclude=str(run.identity.name)
+        )
+        items = news_feed.compile_feed(
+            pairs, team_news, str(run.identity.name), scene_news
+        )
         return NewsFeedPage(
             items=items[offset : offset + limit], total=len(items), offset=offset
         )

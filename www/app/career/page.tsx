@@ -138,6 +138,7 @@ const NEWS_KINDS: Record<string, string> = {
   crown: "왕관",
   turn: "턴",
   team: "팀",
+  scene: "세계",
 };
 
 /** 군중 반응 → 색. 환호·구호만 띄우고 나머지는 죽인다 (DESIGN.md §7). */

@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.services.rivalry_scene import SceneNews
 from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
@@ -52,6 +53,8 @@ class NewsKind(StrEnum):
     CALL_UP = "call_up"
     BIG_WIN = "big_win"
     CURSED = "cursed"
+    SCENE = "scene"
+    """배경 세계의 대립 (§3-D44). **나와 무관해도 뉴스다.**"""
     CROWN = "crown"
     """킹 앤 퀸 오브 더 링 우승 — 세 번을 이어 이겼다 (§3-D33)."""
     TURN = "turn"
@@ -225,10 +228,23 @@ def from_team_news(news: TeamNews, stats: WrestlerStats) -> NewsItem:
     )
 
 
+def from_scene_news(news: SceneNews, stats: WrestlerStats) -> NewsItem:
+    """배경 대립 한 줄 (§3-D44). 팀 소식과 같은 자리다 — 세계선이 흐른다는 신호."""
+    mood = mood_for(NewsKind.SCENE, stats)
+    return NewsItem(
+        week=news.week,
+        kind=NewsKind.SCENE,
+        headline=news.headline,
+        mood=mood,
+        crowd_line=_crowd_line(mood, news.week),
+    )
+
+
 def compile_feed(
     entries: tuple[tuple[WeekReport, WrestlerStats], ...],
     team_news: tuple[TeamNews, ...],
     player: str,
+    scene_news: tuple[SceneNews, ...] = (),
 ) -> tuple[NewsItem, ...]:
     """두 갈래를 하나의 시간순 피드로 합친다.
 
@@ -245,7 +261,10 @@ def compile_feed(
     items += _turns(entries, player)
     last = entries[-1][1] if entries else WrestlerStats()
     items += [from_team_news(n, last) for n in team_news]
-    return tuple(sorted(items, key=lambda i: (i.week, i.kind is NewsKind.TEAM)))
+    items += [from_scene_news(n, last) for n in scene_news]
+    # **같은 주차면 내 일이 먼저다.** 배경(팀·대립)은 그 뒤에 붙는다.
+    background = {NewsKind.TEAM, NewsKind.SCENE}
+    return tuple(sorted(items, key=lambda i: (i.week, i.kind in background)))
 
 
 def _turns(
