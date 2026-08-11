@@ -134,11 +134,9 @@ def week_kind_of(run: CareerRun) -> WeekKind:
         # 그 주에 멈추고, 결승 주차가 와도 올라간 사람이 없다.
         return WeekKind.WEEKLY_SHOW
     roll = SeededRoll(run.seed, upcoming, seeded_roll.CARD)
-    return (
-        WeekKind.WEEKLY_SHOW
-        if roll.chance(rules.WEEKLY_MATCH_CHANCE)
-        else WeekKind.PROMO
-    )
+    # 카드에 자리를 받는 것도 부커의 결정이다 (§3-D42). 미움받으면 링에 덜 선다.
+    chance = rules.WEEKLY_MATCH_CHANCE * rules.push_factor(run.stats.backstage)
+    return WeekKind.WEEKLY_SHOW if roll.chance(chance) else WeekKind.PROMO
 
 
 def tournament_round_at(run: CareerRun, week: int) -> int:
@@ -573,6 +571,7 @@ def _draw_title_match(
         on_tv=kind is WeekKind.WEEKLY_SHOW,
         major=show is not None and show.is_major,
         special=kind is WeekKind.SPECIAL,
+        standing=run.stats.backstage,
     )
     if not roll.chance(chance):
         return None, None

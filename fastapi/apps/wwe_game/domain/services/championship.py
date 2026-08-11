@@ -79,6 +79,7 @@ def title_shot_chance(
     on_tv: bool = False,
     major: bool = False,
     special: bool = False,
+    standing: int = 100,
 ) -> float:
     """이번 무대에서 벨트가 걸릴 확률.
 
@@ -92,7 +93,8 @@ def title_shot_chance(
         chance *= rules.SPECIAL_SHOT_FACTOR
     if on_tv:
         chance *= TV_SHOT_CHANCE_FACTOR
-    return min(1.0, chance)
+    # 누가 벨트에 도전하는가는 부커의 결정이다 (§3-D42). 평판이 바닥이면 자리가 안 온다.
+    return min(1.0, chance * rules.push_factor(standing))
 
 
 # ── 대상 벨트 ────────────────────────────────────────────────
