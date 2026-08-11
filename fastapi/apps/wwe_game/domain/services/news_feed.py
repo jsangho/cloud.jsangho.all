@@ -196,6 +196,10 @@ def _headline_of(report: WeekReport, player: str) -> tuple[NewsKind | None, str]
     if report.title_defended:
         lost_to = f" {rival}에게" if rival else ""
         return NewsKind.TITLE_LOST, f"{player},{lost_to} {name}을 내줬다."
+    if report.vacated:
+        # **부상보다 앞이다.** 벨트를 비운 밤의 머리기사는 부상이 아니라 빈 자리다.
+        names = " · ".join(TITLES[t].display_name for t in report.vacated)
+        return NewsKind.TITLE_LOST, f"{player}, 부상으로 {names}을 반납했다."
     if report.injury is not None:
         return NewsKind.INJURY, f"{player}, 경기 중 부상으로 이탈했다."
     if report.cursed:

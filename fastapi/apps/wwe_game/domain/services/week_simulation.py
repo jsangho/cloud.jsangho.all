@@ -334,6 +334,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
         # **판정이 끝난 뒤에 짠다** — 순서는 결과를 만들지 않고 결과를 설명한다 (§3-D34).
         sequence=_sequence_for(run, week, match_kind, result),
         cursed=cursed,
+        vacated=_vacated_by(run, injury_weeks),
     )
 
 
@@ -359,6 +360,16 @@ def _sequence_for(
         pool=pool,
         roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
     )
+
+
+def _vacated_by(run: CareerRun, injury_weeks: int) -> tuple[Title, ...]:
+    """이번 부상으로 비우는 벨트 (§3-D40).
+
+    **판정은 여기서 하고 반영은 `apply_week`이 한다** — 다른 규칙과 같은 결이다.
+    """
+    if injury_weeks < rules.VACATE_AFTER_WEEKS:
+        return ()
+    return tuple(sorted(run.titles_held, key=lambda t: t.value))
 
 
 def _tournament_after(run: CareerRun, report: WeekReport) -> tuple[int, Trophy | None]:
@@ -701,6 +712,9 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         condition = condition.injured(report.injury, report.injury_weeks)
 
     moved = run
+    for vacated in report.vacated:
+        # 길게 빠지는 챔피언은 자리를 비운다 (§3-D40). 이력은 남는다.
+        moved = championship.strip(moved, vacated)
     if report.title_at_stake is not None:
         if report.result is OutcomeKind.WIN:
             moved = championship.award(run, report.title_at_stake)
