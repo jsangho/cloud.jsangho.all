@@ -125,6 +125,16 @@ def week_kind_of(run: CareerRun) -> WeekKind:
     if run.condition.is_injured:
         return WeekKind.OFF
     upcoming = run.week + 1
+    if not run.is_signed:
+        # **무소속에는 대회가 없다** (§3-D50). 인디 서킷은 체육관과 작은 홀이고,
+        # 브랜드 달력은 단체의 것이지 선수의 것이 아니다. 경기는 더 자주 있다 —
+        # 부킹을 가리지 않는 것이 무소속의 유일한 이점이다.
+        roll = SeededRoll(run.seed, upcoming, seeded_roll.CARD)
+        return (
+            WeekKind.WEEKLY_SHOW
+            if roll.chance(rules.INDIE_MATCH_CHANCE)
+            else WeekKind.PROMO
+        )
     calendar = calendar_for(run.brand)
     if calendar.is_show_week(upcoming):
         # 특별 방송은 대회가 아니다 — 경기는 보장되지만 위상이 한 단계 아래다 (§3-D21-2).
@@ -149,7 +159,10 @@ def tournament_round_at(run: CareerRun, week: int) -> int:
     "이겨서 올라왔는가"만 들고 있고 일정은 여기가 안다.
 
     **NXT에는 이 대회가 없다.** 육성 브랜드 달력에 없는 이름이라 자동으로 0이 된다.
+    **무소속에도 없다** — 단체의 대회다 (§3-D50).
     """
+    if not run.is_signed:
+        return 0
     calendar = calendar_for(run.brand)
     final = next(
         (s.week_of_year for s in calendar.shows if s.name == KING_AND_QUEEN), None
@@ -232,6 +245,9 @@ def simulate_week(run: CareerRun) -> WeekReport:
     """한 주차를 굴린다. 세이브는 건드리지 않는다."""
     week = run.week + 1
     kind = week_kind_of(run)
+    # 계약이 있으면 **결장 주차에도** 받는다 (§3-D47) — 계약직이란 것이 그 뜻이다.
+    # 무소속은 인디 흥행 몫만 받는다 (§3-D50).
+    pay = run.contract.weekly_pay if run.is_signed else rules.INDIE_WEEKLY_PAY
 
     draft_night = week % championship.DRAFT_INTERVAL_WEEKS == 0
     """**모든 경로에서 채운다.** 예전에는 매치 주차에서만 세웠는데, 드래프트 주기(52주)가
@@ -246,6 +262,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
             stat_delta=_decay_only(run, week),
             wear_delta=-rules.WEAR_RECOVERY_PER_OFF_WEEK,
             draft_night=draft_night,
+            pay=pay,
         )
 
     if kind is WeekKind.PROMO:
@@ -258,6 +275,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
             call_up=_call_up_of(run, promo_delta),
             draft_night=draft_night,
             promo_hit=promo_hit,
+            pay=pay,
         )
 
     show = calendar_for(run.brand).show_for(week) if kind is WeekKind.PLE else None
@@ -365,6 +383,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
         sequence=_sequence_for(run, week, match_kind, result),
         cursed=cursed,
         vacated=_vacated_by(run, injury_weeks),
+        pay=pay,
     )
 
 
@@ -582,7 +601,11 @@ def _draw_title_match(
     **권리가 굴림보다 먼저다.** 럼블을 이겨서 얻은 레슬매니아 도전권과 가방은 인기도
     관문도 추첨도 건너뛴다 — 확률로 두면 "우승했는데 도전은 못 하는" 밤이 생기고,
     그러면 럼블을 이길 이유가 사라진다.
+
+    **무소속에는 벨트가 없다** (§3-D50) — 단체의 벨트이고, 계약 해지가 이미 반납시켰다.
     """
+    if not run.is_signed:
+        return None, None
     if run.briefcase and (
         CASH_IN_PENDING in run.flags
         or week - run.briefcase_week >= rules.BRIEFCASE_WEEKS
@@ -813,6 +836,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
 
     moved = moved.evolve(
         week=report.week,
+        money=moved.money + report.pay,
         stats=moved.stats.apply(report.stat_delta),
         condition=condition,
         flags=flags,

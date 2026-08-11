@@ -19,6 +19,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestResumeCommand,
     GuestStartCommand,
     ModeView,
     NewsFeedPage,
@@ -128,6 +129,15 @@ class CareerUseCase(ABC):
         상태는 클라이언트가 들고 있으므로 조작될 수 있다. 값 객체가 입구에서 검증하고
         (범위 밖 스탯·1560 초과 주차는 `InvalidCareerRunError`), 규칙에 맞는 값이면
         그대로 받는다 — **신뢰하지 않되 막지도 않는다**(§3-D8, 순위표와 무관하므로).
+        """
+
+    @abstractmethod
+    def resume_guest(self, command: GuestResumeCommand) -> AdvanceResult:
+        """받은 세이브를 **진행 없이** 화면 상태로 되돌린다 — `current()`의 체험판 짝이다.
+
+        `advance_guest`로 대신할 수 없다. 저쪽은 한 틱을 실제로 태우고, 대기 이벤트가
+        있으면 `ChoiceRequiredError`로 막는다 — 다시 열었을 뿐인데 진행되거나 막히면
+        안 된다. 여기서는 **대기 이벤트가 있는 채로 돌아오는 것이 정상**이다.
         """
 
     @abstractmethod

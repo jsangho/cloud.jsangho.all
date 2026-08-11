@@ -213,6 +213,12 @@ class GuestAdvanceRequest(_Camel):
     step: str = "auto"
 
 
+class GuestResumeRequest(_Camel):
+    """재개 요청 — **세이브만 있고 `step`이 없다.** 진행하지 않기 때문이다."""
+
+    state: GuestRunState
+
+
 class GuestChoiceRequest(_Camel):
     state: GuestRunState
     choice: str

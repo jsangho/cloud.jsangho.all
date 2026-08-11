@@ -27,6 +27,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestResumeCommand,
     GuestStartCommand,
     ModeView,
     NewsFeedPage,
@@ -209,6 +210,15 @@ class CareerInteractor(CareerUseCase):
         outcome = career_advance.advance(command.run, step=command.step)
         weeks = self._narrate(command.run, outcome)
         return self._view(outcome.run, outcome.stop_reason, weeks)
+
+    def resume_guest(self, command: GuestResumeCommand) -> AdvanceResult:
+        """다시 열었을 뿐이다 — **진행하지 않는다**. `current()`와 같은 자리다.
+
+        대기 이벤트가 있으면 그대로 실어 보낸다. `_require_unblocked`를 부르지 않는
+        이유가 여기 있다 — 재개에서 막으면 답할 화면 자체가 안 뜬다.
+        """
+        self._require_guest_mode(command.run.mode.code)
+        return self._view(command.run, self._resting_reason(command.run))
 
     def choose_guest(self, command: GuestChooseCommand) -> AdvanceResult:
         self._require_guest_mode(command.run.mode.code)

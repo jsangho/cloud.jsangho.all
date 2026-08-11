@@ -34,6 +34,7 @@ from wwe_game.domain.entities.career_run import (
 )
 from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.contract import Contract
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import Brand, Title
@@ -84,6 +85,10 @@ class GuestRunState(BaseModel):
     titles_held: list[str] = Field(default_factory=list)
     titles_won: list[str] = Field(default_factory=list)
     team: dict[str, Any] | None = None
+    money: int = 0
+    contract: dict[str, int] | None = None
+    """계약 한 장 또는 무소속 (§3-D47). 옛 세이브에는 없어 None으로 읽힌다."""
+    unsigned_weeks: int = 0
 
 
 def to_domain(state: GuestRunState) -> CareerRun:
@@ -158,6 +163,17 @@ def to_domain(state: GuestRunState) -> CareerRun:
             if state.team
             else None
         ),
+        money=state.money,
+        unsigned_weeks=state.unsigned_weeks,
+        contract=(
+            Contract(
+                weekly_pay=int(state.contract["weekly_pay"]),
+                signed_week=int(state.contract["signed_week"]),
+                ends_week=int(state.contract["ends_week"]),
+            )
+            if state.contract
+            else None
+        ),
     )
 
 
@@ -226,6 +242,17 @@ def to_state(run: CareerRun) -> GuestRunState:
                 "formed_week": run.team.formed_week,
             }
             if run.team
+            else None
+        ),
+        money=run.money,
+        unsigned_weeks=run.unsigned_weeks,
+        contract=(
+            {
+                "weekly_pay": run.contract.weekly_pay,
+                "signed_week": run.contract.signed_week,
+                "ends_week": run.contract.ends_week,
+            }
+            if run.contract
             else None
         ),
     )

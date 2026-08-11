@@ -208,3 +208,92 @@ class TestSameRulesAsLogin:
                 assert set(body["pendingEvent"]["choices"][0]) == {"code", "label"}
                 return
         pytest.skip("30번 진행 동안 이벤트가 안 떴다")
+
+
+class TestResume:
+    """재개는 **진행이 아니다** (2026-08-11 버그).
+
+    이 경로가 없던 동안 화면은 `advance(step="tick")`으로 재개했고, 셋이 함께 깨져
+    있었다: 다시 열 때마다 한 틱(분기 모드면 12주)이 실제로 흘렀고, 대기 이벤트가
+    있으면 409라 화면이 세이브를 지웠으며, 그래서 **이벤트 중 새로고침이 곧 커리어
+    소멸**이었다.
+    """
+
+    def _play_to_event(self, client: TestClient) -> dict:
+        state = _start(client)["state"]
+        for _ in range(30):
+            body = client.post(
+                "/api/career/guest/advance", json={"state": state, "step": "auto"}
+            ).json()
+            state = body["state"]
+            if body.get("pendingEvent"):
+                return state
+        pytest.skip("30번 진행 동안 이벤트가 안 떴다")
+
+    def test_resuming_does_not_burn_a_week(self, client: TestClient) -> None:
+        state = _start(client)["state"]
+        body = client.post(
+            "/api/career/guest/advance", json={"state": state, "step": "auto"}
+        ).json()
+        before = body["run"]["week"]
+        state = body["state"]
+        if body.get("pendingEvent"):
+            state = client.post(
+                "/api/career/guest/choices",
+                json={
+                    "state": state,
+                    "choice": body["pendingEvent"]["choices"][0]["code"],
+                },
+            ).json()["state"]
+        for _ in range(3):  # 새로고침 세 번
+            resumed = client.post("/api/career/guest/resume", json={"state": state})
+            assert resumed.status_code == 200, resumed.text
+            body = resumed.json()
+            state = body["state"]
+        assert body["run"]["week"] == before, "다시 열었을 뿐인데 커리어가 진행됐다"
+        assert body["weeks"] == [], "진행하지 않은 응답에 주차가 실렸다"
+
+    def test_a_pending_event_comes_back_instead_of_a_409(
+        self, client: TestClient
+    ) -> None:
+        # 진행(`advance`)은 409로 막는 게 맞지만(§11-2), 재개까지 막으면 답할 화면이
+        # 안 뜬다 — 그 409를 화면이 "못 읽는 세이브"로 오해해 지우고 있었다.
+        state = self._play_to_event(client)
+        response = client.post("/api/career/guest/resume", json={"state": state})
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["pendingEvent"] is not None
+        assert body["stopReason"] == "event"
+
+    def test_the_save_survives_a_reload_during_an_event(
+        self, client: TestClient
+    ) -> None:
+        state = self._play_to_event(client)
+        resumed = client.post("/api/career/guest/resume", json={"state": state}).json()
+        answered = client.post(
+            "/api/career/guest/choices",
+            json={
+                "state": resumed["state"],
+                "choice": resumed["pendingEvent"]["choices"][0]["code"],
+            },
+        )
+        assert answered.status_code == 200, answered.text
+        assert answered.json()["pendingEvent"] is None
+
+    def test_a_locked_mode_is_refused_on_resume_too(self, client: TestClient) -> None:
+        state = _start(client)["state"]
+        state["mode"] = "weekly"
+        assert (
+            client.post("/api/career/guest/resume", json={"state": state}).status_code
+            == 400
+        )
+
+    def test_a_tampered_state_is_refused_on_resume_too(
+        self, client: TestClient
+    ) -> None:
+        state = _start(client)["state"]
+        state["stats"]["popularity"] = 500
+        assert (
+            client.post("/api/career/guest/resume", json={"state": state}).status_code
+            == 400
+        )

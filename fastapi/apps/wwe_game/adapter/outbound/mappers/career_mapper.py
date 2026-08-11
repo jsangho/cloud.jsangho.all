@@ -28,6 +28,7 @@ from wwe_game.domain.entities.career_run import (
 )
 from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.contract import Contract
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.team import Team
@@ -121,6 +122,9 @@ class CareerMapper:
             brand=Brand(row.brand),
             titles_held=frozenset(Title(t) for t in row.titles_held or ()),
             titles_won=tuple(Title(t) for t in row.titles_won or ()),
+            money=row.money or 0,
+            contract=_contract_from_row(row),
+            unsigned_weeks=row.unsigned_weeks or 0,
         )
 
     @staticmethod
@@ -165,6 +169,12 @@ class CareerMapper:
         row.briefcase_week = run.briefcase_week
         row.status = run.status.value
         row.end_reason = run.end_reason.value if run.end_reason else None
+        row.money = run.money
+        contract = run.contract
+        row.contract_pay = contract.weekly_pay if contract else None
+        row.contract_signed_week = contract.signed_week if contract else None
+        row.contract_ends_week = contract.ends_week if contract else None
+        row.unsigned_weeks = run.unsigned_weeks
 
     @staticmethod
     def log_row(run_id: int, view: WeekReportView) -> CareerLogEntryModel:
@@ -219,6 +229,23 @@ def _team_to_row(team: Team | None) -> dict[str, object] | None:
         "members": list(team.members),
         "formed_week": team.formed_week,
     }
+
+
+def _contract_from_row(row: CareerRunModel) -> Contract | None:
+    """세 칼럼을 계약 한 장으로 모은다. **하나라도 비면 무소속이다**.
+
+    옛 세이브에는 이 칸들이 없어 전부 None으로 읽힌다 — 그 세이브는 계약 없이
+    뛰던 것이 아니라 계약이라는 개념 이전의 것이지만, 결과는 같게 둔다:
+    다음 협상 주차에 새로 맺는다(§3-D49). 마이그레이션으로 소급해 채우면
+    "그때 몸값이 얼마였는가"를 지금 스탯으로 지어내야 한다.
+    """
+    if row.contract_pay is None or row.contract_ends_week is None:
+        return None
+    return Contract(
+        weekly_pay=row.contract_pay,
+        signed_week=row.contract_signed_week or 0,
+        ends_week=row.contract_ends_week,
+    )
 
 
 def _team_from_row(raw: dict[str, object] | None) -> Team | None:

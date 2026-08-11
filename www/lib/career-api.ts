@@ -321,6 +321,16 @@ export function startGuestRun(input: StartRunInput & { seed?: number }): Promise
   return post<GuestAdvance>("/guest/runs", input);
 }
 
+/**
+ * 다시 열었을 때의 화면 상태. **진행하지 않는다** — 로그인 쪽 `readCurrentRun()`의 짝이다.
+ *
+ * 이게 없던 동안 재개는 `advanceGuestRun(state, "tick")`를 대신 썼고, 새로고침 한 번이
+ * 한 틱(분기 모드면 12주)을 태웠다. 대기 이벤트가 있으면 409라 세이브까지 지워졌다.
+ */
+export function resumeGuestRun(state: GuestRunState): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/resume", { state });
+}
+
 export function advanceGuestRun(
   state: GuestRunState,
   step: StepMode = "auto",

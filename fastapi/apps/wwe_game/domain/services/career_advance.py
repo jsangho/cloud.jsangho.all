@@ -12,8 +12,11 @@
 
 1. `simulate_week` — 무슨 일이 일어났는지 계산
 2. `apply_week` — 세이브에 반영 (이벤트 추첨도 여기서 일어난다)
-3. `track_release` · `track_decline` — 방출·부진 누적 갱신
-4. `close_if_ended` — 은퇴 조건 판정
+3. `settle_week` — 누적 갱신 · 계약 정산 · 종료 판정
+
+3번은 `settle_week` 하나로 묶여 있다. **셋을 따로 부르게 두면 순서가 갈린다** —
+실제로 `measure_balance.py`가 누적기를 빼먹어 "방출이 0건"이라는 오진을 한 적이
+있다(2026-08-10). 부르는 곳이 둘 이상인 순서는 함수가 돼야 한다.
 
 대회가 연 4회에서 13회로 늘어(§3-D21-1) **멈춤은 대형 대회에서만** 일어난다. 전부
 끊으면 클릭이 세 배가 되고, 멈춤은 "보고 싶은 것"일 때만 의미가 있다.
@@ -26,7 +29,8 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import career_end
+from wwe_game.domain.services import career_end, contract_office, seeded_roll
+from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.advance_outcome import (
     AdvanceOutcome,
@@ -79,14 +83,28 @@ def advance(
     limit = min(max_weeks, run.weeks_remaining)
     while True:
         report = simulate_week(run)
-        run = apply_week(run, report)
-        run = career_end.track_decline(career_end.track_release(run))
-        run = career_end.close_if_ended(run)
+        run = settle_week(apply_week(run, report), report.week)
         reports.append(report)
 
         stop = _stop_reason(run, report, step, len(reports), limit)
         if stop is not None:
             return AdvanceOutcome(run=run, reports=tuple(reports), stop_reason=stop)
+
+
+def settle_week(run: CareerRun, week: int) -> CareerRun:
+    """한 주차가 반영된 뒤의 뒷정리 — 누적 · 계약 · 종료 판정. **순서가 규칙이다.**
+
+    1. 누적을 먼저 갱신한다. 계약 정산이 `release_weeks`를 읽으므로, 이 주차의
+       결장·패배가 반영되기 전에 정산하면 유예가 한 주씩 길어진다.
+    2. 계약을 정산한다. 방출·재계약·복귀가 전부 여기서 일어난다 (§3-D50).
+    3. 종료를 판정한다. 무소속 누적(`unsigned_weeks`)이 여기서 읽히므로 2번 뒤다.
+
+    **한 함수로 묶어 둔 이유**는 부르는 곳이 둘이라서다 — 진행 루프와
+    `scripts/measure_balance.py`. 밖에서 이 순서를 다시 적으면 언젠가 갈린다.
+    """
+    run = career_end.track_decline(career_end.track_release(run))
+    run = contract_office.settle(run, SeededRoll(run.seed, week, seeded_roll.CONTRACT))
+    return career_end.close_if_ended(run)
 
 
 def _stop_reason(

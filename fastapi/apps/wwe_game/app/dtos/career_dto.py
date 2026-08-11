@@ -89,6 +89,18 @@ class GuestAdvanceCommand:
 
 
 @dataclass(frozen=True)
+class GuestResumeCommand:
+    """다시 열었을 때 **진행하지 않고 상태만 읽는다** — 로그인 쪽 `current()`의 짝이다.
+
+    이게 없던 동안 화면은 재개에 `advance(tick)`를 대신 썼고, 그 대가가 셋이었다:
+    새로고침 한 번이 한 틱(분기 모드면 12주)을 태웠고, 대기 이벤트가 있으면 409라
+    화면이 세이브를 지웠으며, 진행하지 않아도 될 자리에서 규칙이 돌았다.
+    """
+
+    run: CareerRun
+
+
+@dataclass(frozen=True)
 class GuestChooseCommand:
     run: CareerRun
     choice_code: str

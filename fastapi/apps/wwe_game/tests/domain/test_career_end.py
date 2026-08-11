@@ -1,4 +1,10 @@
-"""T3 은퇴 — 4조건이 각각 실제로 발생한다 (하네스 §11-21)."""
+"""T3 은퇴 — 4조건이 각각 실제로 발생한다 (하네스 §11-21).
+
+**방출은 2026-08-11에 여기서 빠졌다** (§3-D50). 계약이 끊기는 것은 사건이지 엔딩이
+아니게 됐고, `check_end`가 답하는 넷은 만기 · 중대 부상 · 잊혀짐 · 플레이어 선택이다.
+방출 자체의 판정(`is_at_release_risk`·`release_grace_weeks`)은 그대로 남아 있으며,
+그것을 읽어 계약을 끊는 쪽은 `contract_office.settle`이다.
+"""
 
 from __future__ import annotations
 
@@ -86,13 +92,15 @@ class TestDecline:
         worn = make_run(stats=stats, condition=Condition(wear=80))
         assert standing_of(worn) < standing_of(fresh)
 
-    def test_decline_needs_the_full_grace_period(self) -> None:
+    def test_decline_fills_the_release_gauge_not_the_ending(self) -> None:
+        # 밀려나는 것도 계약이 끊기는 사건으로 모인다(§13-Q14). **다만 끝은 아니다**
+        # (§3-D50) — 유예가 다 차도 `check_end`는 여전히 None이고, 계약을 끊는 일은
+        # `contract_office.settle`이 한다.
         run = make_run(week=20 * 52, stats=WrestlerStats(popularity=5, in_ring=5))
-        for _ in range(rules.RELEASE_GRACE_WEEKS - 1):
+        for _ in range(rules.RELEASE_GRACE_WEEKS):
             run = track_release(run)
             assert check_end(run) is None
-        run = track_release(run)
-        assert check_end(run) is EndReason.RELEASED
+        assert run.release_weeks >= release_grace_weeks(run)
 
     def test_recovering_standing_resets_the_counter(self) -> None:
         run = make_run(week=20 * 52, stats=WrestlerStats(popularity=5, in_ring=5))
@@ -119,11 +127,10 @@ class TestEveryEndingHasAPath:
             EndReason.INJURY: check_end(
                 make_run(condition=Condition().injured(InjuryGrade.CAREER_ENDING, 1))
             ),
-            # 방출은 들어오는 길이 둘이다 — 여기선 입지가 무너진 쪽(§13-Q14).
-            EndReason.RELEASED: check_end(
-                make_run(
-                    week=20 * 52, stats=WrestlerStats(popularity=0, in_ring=0)
-                ).evolve(release_weeks=rules.RELEASE_GRACE_WEEKS)
+            # 방출은 여기 없다 — 무소속으로 이어지고, 끝나는 것은 아무도 안 부를
+            # 때다 (§3-D50).
+            EndReason.FADED: check_end(
+                make_run().evolve(contract=None, unsigned_weeks=rules.FADE_GRACE_WEEKS)
             ),
             EndReason.PLAYER: make_run().ended(EndReason.PLAYER).end_reason,
         }
@@ -166,8 +173,8 @@ class TestRelease:
         run = make_run(stats=WrestlerStats(backstage=5, popularity=10))
         for _ in range(rules.RELEASE_GRACE_WEEKS - 1):
             run = track_release(run)
-            assert check_end(run) is None
-        assert check_end(track_release(run)) is EndReason.RELEASED
+            assert run.release_weeks < release_grace_weeks(run)
+        assert track_release(run).release_weeks >= release_grace_weeks(run)
 
     def test_recovering_reputation_resets_the_counter(self) -> None:
         run = make_run(stats=WrestlerStats(backstage=5, popularity=10))
@@ -184,23 +191,14 @@ class TestRelease:
         marked = clean.evolve(flags=frozenset({"suspension_pending"}))
         assert release_grace_weeks(marked) < release_grace_weeks(clean)
 
-    def test_release_closes_the_run_as_retired(self) -> None:
+    def test_release_does_not_close_the_run(self) -> None:
+        # **2026-08-11에 뒤집힌 규칙이다** (§3-D50). 유예가 다 차도 커리어는 살아
+        # 있다 — 잘리는 것과 끝나는 것이 갈렸다.
         run = make_run(stats=WrestlerStats(backstage=5, popularity=10)).evolve(
             release_weeks=rules.RELEASE_GRACE_WEEKS
         )
-        closed = close_if_ended(run)
-        assert closed.status is RunStatus.RETIRED
-        assert closed.end_reason is EndReason.RELEASED
-
-    def test_release_outranks_decline(self) -> None:
-        # 잘린 선수는 밀려날 기회조차 없다.
-        run = make_run(
-            week=20 * 52, stats=WrestlerStats(backstage=5, popularity=5, in_ring=5)
-        ).evolve(
-            release_weeks=rules.RELEASE_GRACE_WEEKS,
-            decline_weeks=rules.DECLINE_GRACE_WEEKS,
-        )
-        assert check_end(run) is EndReason.RELEASED
+        assert check_end(run) is None
+        assert close_if_ended(run).status is RunStatus.ACTIVE
 
     def test_full_term_still_outranks_release(self) -> None:
         run = make_run(
@@ -209,33 +207,22 @@ class TestRelease:
         assert check_end(run) is EndReason.AGE_50
 
     def test_all_four_endings_are_reachable(self) -> None:
+        # **방출이 빠지고 잊혀짐이 들어왔다** (§3-D50).
         assert {
             check_end(make_run(week=CAREER_WEEKS)),
             check_end(
                 make_run(condition=Condition().injured(InjuryGrade.CAREER_ENDING, 1))
             ),
             check_end(
-                make_run(
-                    week=20 * 52, stats=WrestlerStats(popularity=0, in_ring=0)
-                ).evolve(release_weeks=rules.RELEASE_GRACE_WEEKS)
-            ),
-            check_end(
-                make_run(stats=WrestlerStats(backstage=0, popularity=0)).evolve(
-                    release_weeks=rules.RELEASE_GRACE_WEEKS
-                )
+                make_run().evolve(contract=None, unsigned_weeks=rules.FADE_GRACE_WEEKS)
             ),
             make_run().ended(EndReason.PLAYER).end_reason,
         } == {
             EndReason.AGE_50,
             EndReason.INJURY,
-            EndReason.RELEASED,
-            EndReason.RELEASED,
+            EndReason.FADED,
             EndReason.PLAYER,
         }
-
-
-class TestRookiesAreNotReleased:
-    """육성 브랜드에 있는 동안은 자르지 않는다 (2026-08-10 사용자 결정 · §3-D24)."""
 
     def test_nxt_is_immune(self) -> None:
         from _helpers import make_run
