@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from wwe_game.domain.constants.ple_calendar import PleShow
+from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import InjuryGrade
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_sequence import MatchSequence
@@ -75,6 +76,8 @@ class WeekReport:
     injury: InjuryGrade | None = None
     """이 주차에 새로 입은 부상. 회복은 여기 안 나온다."""
     injury_weeks: int = 0
+    injury_part: BodyPart | None = None
+    """어디를 다쳤는지 (§3-D43). 부상이 없으면 None."""
     show: PleShow | None = None
     """그 주차의 대형 대회. PLE 주차에만 채워진다 (§3-D21-1).
 

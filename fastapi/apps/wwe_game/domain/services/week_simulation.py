@@ -46,6 +46,8 @@ from wwe_game.domain.services import (
     title_scene,
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects import body_part
+from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.match_kind import (
     QUALIFIER_KINDS,
@@ -207,6 +209,22 @@ def _draw_injury_grade(roll: SeededRoll) -> tuple[InjuryGrade, int]:
     raise AssertionError("가중치 합이 어긋났습니다")  # pragma: no cover
 
 
+def _draw_body_part(run: CareerRun, roll: SeededRoll) -> BodyPart:
+    """어디를 다치는가 (§3-D43).
+
+    **이력이 스타일보다 앞선다.** 한 번 무너진 무릎은 다음에도 무릎이다 — 그래야
+    커리어 후반이 앞부분과 다른 모양이 된다. 이력이 없을 때만 스타일이 고른다.
+    """
+    history = tuple(
+        sorted(
+            BodyPart(p) for p in run.injured_parts if p in BodyPart.__members__.values()
+        )
+    )
+    if history and roll.chance(body_part.RECURRENCE_CHANCE):
+        return roll.pick(history)
+    return roll.pick(body_part.parts_for(run.identity.play_style))
+
+
 # ── 시뮬레이션 ───────────────────────────────────────────────
 
 
@@ -302,12 +320,24 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
     injury: InjuryGrade | None = None
     injury_weeks = 0
+    injury_part: BodyPart | None = None
     injury_roll = SeededRoll(run.seed, week, seeded_roll.INJURY)
     if injury_roll.chance(
         injury_chance(run, kind, major=show is not None and show.is_major)
         * fmt.injury_factor
     ):
         injury, injury_weeks = _draw_injury_grade(injury_roll)
+        injury_part = _draw_body_part(run, injury_roll)
+        # 부위가 기간에 배수를 곱한다 — 목은 오래 가고 갈비뼈는 짧다 (§3-D43).
+        injury_weeks = max(
+            1,
+            round(
+                injury_weeks
+                * body_part.recovery_factor(
+                    injury_part, again=injury_part.value in run.injured_parts
+                )
+            ),
+        )
         # 몸이 약하다는 평판은 실력과 별개로 쌓인다.
         stat_delta["backstage"] = (
             stat_delta.get("backstage", 0) + rules.BACKSTAGE_INJURY_PENALTY
@@ -321,6 +351,7 @@ def simulate_week(run: CareerRun) -> WeekReport:
         wear_delta=wear_delta,
         injury=injury,
         injury_weeks=injury_weeks,
+        injury_part=injury_part,
         show=show,
         title_at_stake=title,
         title_defended=title is not None and title in run.titles_held,
@@ -728,8 +759,14 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         raise ValueError(f"리포트 주차가 어긋납니다: {report.week} != {run.week + 1}")
 
     condition = run.condition.recover(1).with_wear(report.wear_delta)
+    injured_parts = run.injured_parts
     if report.injury is not None:
-        condition = condition.injured(report.injury, report.injury_weeks)
+        condition = condition.injured(
+            report.injury, report.injury_weeks, report.injury_part
+        )
+        if report.injury_part is not None:
+            # **몸이 기억한다** (§3-D43). 다음 부상이 여기로 돌아올 확률이 오른다.
+            injured_parts = injured_parts | {report.injury_part.value}
 
     moved = run
     for vacated in report.vacated:
@@ -782,6 +819,7 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         team=team,
         title_shot=title_shot,
         briefcase_week=briefcase_week,
+        injured_parts=injured_parts,
         tournament_round=tournament_round,
         rivalries=rivalry_engine.advance_rivalries(
             moved,

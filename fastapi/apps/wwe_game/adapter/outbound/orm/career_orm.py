@@ -82,6 +82,8 @@ class CareerRunModel(Base):
     # ── 컨디션 (§3-D16) ──
     condition_grade: Mapped[str] = mapped_column(String(20))
     condition_weeks_left: Mapped[int] = mapped_column(Integer, default=0)
+    condition_part: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    """다친 곳 (§3-D43). 건강하면 None."""
     wear: Mapped[int] = mapped_column(Integer, default=0)
 
     # ── 대기 이벤트 — 있으면 진행이 막힌다 (§3-D2) ──
@@ -106,6 +108,8 @@ class CareerRunModel(Base):
     flags: Mapped[list[str]] = mapped_column(JSON, default=list)
     recent_events: Mapped[list[str]] = mapped_column(JSON, default=list)
     """쿨다운과 본문 변주 순환이 함께 읽는 최근 이력. 최대 512칸(§event_draw)."""
+    injured_parts: Mapped[list[str]] = mapped_column(JSON, default=list)
+    """지금까지 다친 적 있는 부위 (§3-D43). **몸이 기억한다** — 재발이 여기서 나온다."""
     events_fired: Mapped[int] = mapped_column(Integer, default=0)
     release_weeks: Mapped[int] = mapped_column(Integer, default=0)
     decline_weeks: Mapped[int] = mapped_column(Integer, default=0)

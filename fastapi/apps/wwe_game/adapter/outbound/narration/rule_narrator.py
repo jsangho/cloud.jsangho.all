@@ -32,6 +32,7 @@ from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.body_part import PARTS
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
@@ -118,7 +119,7 @@ _REQUIRED: Final[dict[str, frozenset[str]]] = {
     for template in templates
 }
 
-OPTIONAL_SLOTS: Final = frozenset({"rival", "title", "show"})
+OPTIONAL_SLOTS: Final = frozenset({"rival", "title", "show", "part"})
 """주차에 따라 비어 있을 수 있는 슬롯. 비면 그 슬롯을 쓰는 템플릿이 후보에서 빠진다."""
 
 TITLE_BEATS: Final = frozenset({Beat.TITLE_WON, Beat.TITLE_DEFENDED, Beat.TITLE_LOST})
@@ -287,6 +288,12 @@ class RuleNarrator(NarrationPort):
             "show": report.show.name if report.show is not None else None,
             "rival": rival.rival_name if rival is not None else None,
             "title": TITLES[title].display_name if title is not None else None,
+            # 다친 곳 (§3-D43). 부상 주차에만 채워지고, 나머지 비트는 이 슬롯을 안 쓴다.
+            "part": (
+                PARTS[report.injury_part].label
+                if report.injury_part is not None
+                else None
+            ),
         }
 
     def _reactions(self, popularity: int) -> tuple[str, ...]:

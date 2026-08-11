@@ -26,6 +26,7 @@ from wwe_game.domain.entities.career_run import (
     RunStatus,
     Trophy,
 )
+from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.match_kind import MatchKind
@@ -91,6 +92,7 @@ class CareerMapper:
                 grade=InjuryGrade(row.condition_grade),
                 weeks_left=row.condition_weeks_left,
                 wear=row.wear,
+                part=BodyPart(row.condition_part) if row.condition_part else None,
             ),
             rivalries=tuple(
                 Rivalry(
@@ -109,6 +111,7 @@ class CareerMapper:
             events_fired=row.events_fired,
             release_weeks=row.release_weeks,
             decline_weeks=row.decline_weeks,
+            injured_parts=frozenset(row.injured_parts or ()),
             tournament_round=row.tournament_round,
             title_shot=row.title_shot,
             briefcase_week=row.briefcase_week,
@@ -138,6 +141,9 @@ class CareerMapper:
         row.backstage = run.stats.backstage
         row.alignment = run.stats.alignment
         row.condition_grade = run.condition.grade.value
+        row.condition_part = (
+            run.condition.part.value if run.condition.part is not None else None
+        )
         row.condition_weeks_left = run.condition.weeks_left
         row.wear = run.condition.wear
         pending = run.pending_event
@@ -153,6 +159,7 @@ class CareerMapper:
         row.events_fired = run.events_fired
         row.release_weeks = run.release_weeks
         row.decline_weeks = run.decline_weeks
+        row.injured_parts = sorted(run.injured_parts)
         row.tournament_round = run.tournament_round
         row.title_shot = run.title_shot
         row.briefcase_week = run.briefcase_week
