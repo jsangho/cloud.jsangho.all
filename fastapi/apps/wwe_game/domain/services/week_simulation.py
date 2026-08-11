@@ -234,13 +234,14 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
     if kind is WeekKind.PROMO:
         # 경기 없는 주차. 마이크로 벌고 몸은 쉰다 — 마모도 부상도 없다.
-        promo_delta = _promo_gain(run, week)
+        promo_delta, promo_hit = _promo_gain(run, week)
         return WeekReport(
             week=week,
             kind=kind,
             stat_delta=promo_delta,
             call_up=_call_up_of(run, promo_delta),
             draft_night=draft_night,
+            promo_hit=promo_hit,
         )
 
     show = calendar_for(run.brand).show_for(week) if kind is WeekKind.PLE else None
@@ -578,20 +579,40 @@ def _draw_title_match(
     return championship.target_title(run, roll), None
 
 
-def _promo_gain(run: CareerRun, week: int) -> dict[str, int]:
-    """빌드업 주차의 소득 — 마이크웍과 약간의 인기도. 망각도 함께 굴린다."""
+def promo_hit_chance(mic_work: int) -> float:
+    """프로모가 먹힐 확률 (§3-D41). **마이크웍이 유일한 입력이다.**"""
+    return min(1.0, rules.PROMO_HIT_BASE + rules.PROMO_HIT_SPAN * (mic_work / 100))
+
+
+def _promo_gain(run: CareerRun, week: int) -> tuple[dict[str, int], bool]:
+    """빌드업 주차의 소득과 **그날 프로모가 먹혔는지** (§3-D41).
+
+    먹힌 밤은 인기도를 벌고 대립을 크게 달군다. 빗나간 밤은 망각 굴림만 남는다 —
+    말이 안 먹히면 아무 일도 없었던 주가 된다.
+    """
     roll = SeededRoll(run.seed, week, seeded_roll.GROWTH)
     delta: dict[str, int] = {}
+    hit = roll.chance(promo_hit_chance(run.stats.mic_work))
     headroom = _headroom(run.stats.mic_work)
     if roll.chance(min(1.0, rules.PROMO_MIC_GAIN_CHANCE * headroom)):
         delta["mic_work"] = 1
-    if roll.chance(
+    if hit and roll.chance(
+        min(
+            1.0,
+            rules.PROMO_HIT_POPULARITY_CHANCE
+            * _headroom(run.stats.popularity)
+            * alignment_clarity(run.stats.alignment),
+        )
+    ):
+        # 경기 승리와 같은 경로다 — 확률 × 체감 × 성향 명료도 (§3-D41).
+        delta["popularity"] = 1
+    elif not hit and roll.chance(
         popularity_decay_chance(
             run.stats.popularity, off_week=False, held=run.titles_held
         )
     ):
         delta["popularity"] = -1
-    return delta
+    return delta, hit
 
 
 def popularity_decay_chance(
@@ -725,7 +746,11 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         WeekKind.PLE: rivalry_engine.HEAT_PER_PLE,
         WeekKind.SPECIAL: rivalry_engine.HEAT_PER_MATCH,
         WeekKind.WEEKLY_SHOW: rivalry_engine.HEAT_PER_MATCH,
-        WeekKind.PROMO: rivalry_engine.HEAT_PER_PROMO,
+        WeekKind.PROMO: (
+            rivalry_engine.HEAT_PER_PROMO
+            if report.promo_hit
+            else rivalry_engine.HEAT_PER_PROMO_MISS
+        ),
         WeekKind.OFF: -rivalry_engine.COOL_PER_QUIET_WEEK,
     }[report.kind]
     # 저주는 경기 하나를 먹고 사라진다 — 경기 없는 주차는 그냥 지나간다.

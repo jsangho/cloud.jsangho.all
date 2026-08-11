@@ -37,6 +37,7 @@ from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import (
     GRAND_SLAM_GROUPS,
     TITLES,
+    WORLD_POPULARITY_REQUIRED,
     Brand,
     Title,
     TitleTier,
@@ -126,18 +127,25 @@ class TestTierLadder:
         assert target_title(run, NEVER_CHASE) is expected
 
     def test_popularity_alone_rarely_reaches_the_summit(self) -> None:
-        """월드 벨트의 인기도 관문은 **실측 최고치(68)보다 위에 있다** (§3-D36).
+        """월드 벨트의 관문은 **실측 도달 최고치보다 위에** 있어야 한다 (§3-D36·D41).
 
-        오늘 아침 이 관문을 80 → 65로 내렸다가 되돌렸다(§3-D35 → D-36). 내린 이유는
-        정상으로 가는 길이 인기도 하나뿐이었기 때문이고, 되돌린 이유는 럼블·챔버·가방이
-        **두 번째 길**이 되었기 때문이다 — 그쪽이 정문이면 인기도 쪽은 벽이어야 한다.
+        럼블·챔버·가방이 정문이면(§3-D36) 인기도 쪽은 벽이어야 한다. 벽인지 아닌지는
+        관문의 값이 아니라 **관문과 실측치의 관계**가 정하므로, 둘을 함께 잠근다.
 
-        정상에 닿는지는 `test_prizes.py`가 도전권으로 확인한다. 여기서는 **관문이
-        헐거워지지 않았는지**만 본다.
+        `PEAK_BEFORE_WORLD`는 **첫 월드 벨트를 따기 전까지의** 최고 인기도다(20판
+        실측). 벨트를 딴 뒤의 인기도는 관문과 무관하다 — 이미 통과한 뒤이기 때문이다.
+
+        **이 값은 오늘 하루에만 68 → 74로 움직였다** — 왕관(§3-D33) · 프로모(§3-D41) ·
+        늘어난 대관(§3-D36)이 함께 밀어 올렸다. 인기도를 주는 규칙을 더할 때마다 여기가
+        올라가고, 관문을 넘어서면 이 테스트가 깨진다. §3-D35의 사고를 한 층 위에서
+        다시 잡는 자리다.
         """
-        PEAK_POPULARITY = 68
+        PEAK_BEFORE_WORLD = 74
+        assert WORLD_POPULARITY_REQUIRED > PEAK_BEFORE_WORLD, (
+            "인기도만으로 정상에 닿는다 — 도전권이 정문이라는 §3-D36이 깨진다"
+        )
         run = make_run(
-            brand=Brand.RAW, stats=WrestlerStats(popularity=PEAK_POPULARITY)
+            brand=Brand.RAW, stats=WrestlerStats(popularity=PEAK_BEFORE_WORLD)
         ).evolve(team=TEAM)
         assert target_title(run, NEVER_CHASE) is Title.INTERCONTINENTAL_CHAMPIONSHIP
 

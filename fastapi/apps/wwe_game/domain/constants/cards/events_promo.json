@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 3,
+  "file": "events_promo.json",
+  "note": "인생 프로모 (§3-D41). 실제로 있었던 마이크웍의 '성격'을 딴 카드들이다 — 워크드 슛(파이프밤) · 유행어의 탄생(오스틴 3:16) · 관중의 삶을 말하기(하드 타임즈) · 자기 자랑으로 뒤집기(투 비 더 맨) · 한 단어 구호(예스) · 대변인(어드보킷) · 케이페이브를 깨는 사과 · 소품 위협. 문구는 전부 새로 썼다 — 실제 대사를 옮기지 않는다. 전부 once이고 마이크웍이 높아야 열린다: 스탯을 올린 값이 여기서 나온다. 스키마는 _docs/event-deck-schema.md",
+  "cards": [
+    {
+      "code": "promo_worked_shoot",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "대본 밖으로",
+      "body": "무대 계단에 앉아 마이크를 잡았다. 프로듀서가 귀에 대고 말할 시간을 알려 주는데, 손에는 대본에 없는 이야기가 있다 — 이 회사가 나를 어떻게 다뤄 왔는지. 카메라는 아직 안 끊겼다.",
+      "weight": 24,
+      "once": true,
+      "requires": { "stats": { "micWork": [65, 100] }, "acts": [2, 3] },
+      "choices": [
+        {
+          "code": "say_it_all",
+          "label": "다 말한다. 끊기 전까지",
+          "risk": "reckless",
+          "effects": { "popularity": 26, "inRing": 1, "micWork": 6, "backstage": -22 },
+          "injuryRisk": 0.0,
+          "flags": ["push_frozen"]
+        },
+        {
+          "code": "stop_at_the_line",
+          "label": "선까지만 간다",
+          "risk": "bold",
+          "effects": { "popularity": 11, "inRing": 1, "micWork": 4, "backstage": -5 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "read_the_script",
+          "label": "대본을 읽는다",
+          "risk": "safe",
+          "effects": { "popularity": -2, "inRing": 2, "micWork": 2, "backstage": 8 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "promo_catchphrase_born",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "그 한 줄",
+      "body": "우승 직후의 인터뷰. 준비한 말은 평범한데, 입에서 준비 안 한 문장이 하나 튀어나왔다. 관중석 앞줄이 그 문장을 따라 하는 게 보인다. 다음 주에 티셔츠로 만들 수 있는 종류의 문장이다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "stats": { "micWork": [55, 100] } },
+      "choices": [
+        {
+          "code": "lean_in",
+          "label": "그 문장을 밀고 나간다",
+          "risk": "bold",
+          "effects": { "popularity": 20, "inRing": 1, "micWork": 5 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "let_it_pass",
+          "label": "한 번으로 두고 넘어간다",
+          "risk": "safe",
+          "effects": { "popularity": 4, "inRing": 2, "micWork": 3, "backstage": 5 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "promo_hard_times",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "여기 있는 사람들 이야기",
+      "body": "이 도시는 공장이 문을 닫은 지 2년째다. 대본에는 상대를 조롱하는 말이 적혀 있는데, 조명 밖으로 보이는 관중석에 작업복이 그대로 앉아 있다. 오늘 할 말을 바꿀 수 있다.",
+      "weight": 22,
+      "once": true,
+      "requires": { "stats": { "micWork": [50, 100] }, "alignment": [0, 100] },
+      "choices": [
+        {
+          "code": "speak_to_them",
+          "label": "그 사람들 이야기를 한다",
+          "risk": "bold",
+          "effects": { "popularity": 18, "inRing": 1, "micWork": 6, "alignment": 14 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "stick_to_the_feud",
+          "label": "대립 이야기로 돌아간다",
+          "risk": "safe",
+          "effects": { "popularity": 5, "inRing": 2, "micWork": 2 },
+          "injuryRisk": 0.0,
+          "heat": 8
+        }
+      ]
+    },
+    {
+      "code": "promo_to_be_the_man",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "나를 이겨야 한다",
+      "body": "챔피언 벨트를 어깨에 걸고 나가 30분을 자기 자랑만 하는 프로모가 있다. 잘하면 관중이 미워하면서도 다음 주에 또 본다. 못하면 그냥 지루한 30분이다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "stats": { "micWork": [60, 100] }, "alignment": [-100, 10] },
+      "choices": [
+        {
+          "code": "all_swagger",
+          "label": "끝까지 잘난 척한다",
+          "risk": "bold",
+          "effects": { "popularity": 16, "inRing": 1, "micWork": 5, "alignment": -16 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "share_the_spotlight",
+          "label": "상대를 띄워 주고 내려온다",
+          "risk": "safe",
+          "effects": { "popularity": 3, "inRing": 2, "micWork": 3, "backstage": 12 },
+          "injuryRisk": 0.0,
+          "heat": 10
+        }
+      ]
+    },
+    {
+      "code": "promo_one_word_chant",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "한 단어",
+      "body": "말을 길게 할 필요가 없는 밤이 있다. 한 단어를 팔을 들고 반복하면 관중이 따라 한다 — 되면 경기장 전체가 그 단어로 채워지고, 안 되면 혼자 팔을 들고 서 있게 된다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "stats": { "micWork": [45, 100], "popularity": [40, 100] } },
+      "choices": [
+        {
+          "code": "start_the_chant",
+          "label": "팔을 든다",
+          "risk": "bold",
+          "effects": { "popularity": 17, "inRing": 1, "micWork": 4 },
+          "injuryRisk": 0.0
+        },
+        {
+          "code": "talk_instead",
+          "label": "평소대로 말한다",
+          "risk": "safe",
+          "effects": { "popularity": 3, "inRing": 1, "micWork": 3 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "promo_the_advocate",
+      "kind": "main",
+      "arena": "backstage",
+      "title": "대신 말해 주는 사람",
+      "body": "말을 업으로 삼는 사람이 찾아왔다. 자기가 나를 소개하겠다고 한다 — 링에서는 내가 아무 말도 안 해도 되고, 그 편이 더 커 보일 거라고. 대신 내 목소리는 그 사람 것이 된다.",
+      "weight": 20,
+      "once": true,
+      "requires": { "stats": { "micWork": [0, 55] }, "acts": [2, 3] },
+      "choices": [
+        {
+          "code": "let_him_talk",
+          "label": "맡긴다",
+          "risk": "bold",
+          "effects": { "popularity": 14, "inRing": 2, "micWork": -3, "backstage": 6 },
+          "injuryRisk": 0.0,
+          "flags": ["has_manager"]
+        },
+        {
+          "code": "my_own_voice",
+          "label": "내 입으로 한다",
+          "risk": "safe",
+          "effects": { "popularity": 2, "inRing": 1, "micWork": 9 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "promo_breaking_character",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "역할 밖의 한마디",
+      "body": "오래 붙어 있던 상대가 오늘로 떠난다. 대본은 마지막까지 서로를 미워하라고 적혀 있고, 관중은 그게 대본인 걸 안다. 링 한가운데에서 마이크를 내려놓을지 말지 정해야 한다.",
+      "weight": 18,
+      "once": true,
+      "requires": { "stats": { "micWork": [55, 100] }, "acts": [3, 4] },
+      "choices": [
+        {
+          "code": "drop_the_act",
+          "label": "역할을 벗고 인사한다",
+          "risk": "bold",
+          "effects": { "popularity": 19, "inRing": 1, "micWork": 4, "backstage": -8 },
+          "injuryRisk": 0.0,
+          "flags": ["passed_the_torch"]
+        },
+        {
+          "code": "stay_in_character",
+          "label": "끝까지 역할로 남는다",
+          "risk": "safe",
+          "effects": { "popularity": 7, "inRing": 2, "micWork": 5, "backstage": 9 },
+          "injuryRisk": 0.0
+        }
+      ]
+    },
+    {
+      "code": "promo_the_prop",
+      "kind": "main",
+      "arena": "in_ring",
+      "title": "가져온 것",
+      "body": "상대의 등장 음악이 나오기 전에 링 위에 뭔가를 두고 나올 수 있다. 말보다 오래 남는 그림이 되지만, 선을 넘으면 방송사에서 전화가 온다.",
+      "weight": 18,
+      "once": true,
+      "requires": { "stats": { "micWork": [50, 100] }, "rivalryStage": ["heated", "nemesis"] },
+      "choices": [
+        {
+          "code": "bring_it_out",
+          "label": "가져온다",
+          "risk": "reckless",
+          "effects": { "popularity": 15, "inRing": 1, "micWork": 3, "backstage": -12 },
+          "injuryRisk": 0.0,
+          "heat": 16
+        },
+        {
+          "code": "just_words",
+          "label": "말로만 한다",
+          "risk": "safe",
+          "effects": { "popularity": 4, "inRing": 1, "micWork": 5 },
+          "injuryRisk": 0.0,
+          "heat": 7
+        }
+      ]
+    }
+  ]
+}
