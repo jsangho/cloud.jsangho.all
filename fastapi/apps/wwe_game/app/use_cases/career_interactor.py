@@ -66,6 +66,7 @@ from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
+from wwe_game.domain.value_objects.week_report import WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 
 SEED_BITS = 32
@@ -152,6 +153,12 @@ class CareerInteractor(CareerUseCase):
         found = next((v for v in entries if v.week == week), None)
         if found is None:
             raise ReportNotFoundError(f"{week}주차 기록이 없습니다.")
+        # **달력이 아니라 그날 실제로 있었던 일을 본다.** `is_reportable`은 그 주차가
+        # 달력상 대회 주차인지만 알아서, 부상으로 결장한 대회 주차(§3-D37)에도 리포트를
+        # 만들어 준다 — 링에 서지도 않은 밤의 카드다. 로그를 가진 이 경로는 물어볼 수
+        # 있으므로 여기서 막는다(체험판은 로그가 없어 그대로 둔다 · §3-D51).
+        if found.report.kind not in (WeekKind.PLE, WeekKind.SPECIAL):
+            raise ReportNotFoundError(f"{week}주차는 대회 밤이 아닙니다.")
         return show_report.build(run, found.report, found.narration)
 
     async def read_news(
@@ -241,7 +248,9 @@ class CareerInteractor(CareerUseCase):
             raise ReportNotFoundError(f"{command.week}주차는 아직 지나지 않았습니다.")
         if not show_report.is_reportable(command.run, command.week):
             raise ReportNotFoundError(f"{command.week}주차는 대회 주차가 아닙니다.")
-        return show_report.build_night(command.run, command.week)
+        return show_report.build_night(
+            command.run, command.week, busy=command.busy, stakes=command.stakes
+        )
 
     # ── 메타 ──────────────────────────────────────────────────
 

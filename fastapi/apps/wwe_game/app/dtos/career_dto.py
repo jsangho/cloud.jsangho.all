@@ -27,6 +27,7 @@ from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
 from wwe_game.domain.value_objects.ring_skills import breakdown
+from wwe_game.domain.value_objects.title import Title
 from wwe_game.domain.value_objects.week_report import WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
@@ -117,6 +118,10 @@ class GuestReportCommand:
 
     run: CareerRun
     week: int
+    busy: tuple[str, ...] = ()
+    """그날 이미 링에 오른 사람 — 내 상대다. 카드가 그를 두 번 세우지 않게 한다(§3-D52)."""
+    stakes: tuple[Title, ...] = ()
+    """그날 내가 도전한 벨트. 카드가 같은 벨트를 다시 걸지 않게 한다."""
 
 
 # ── 결과 ─────────────────────────────────────────────────────
