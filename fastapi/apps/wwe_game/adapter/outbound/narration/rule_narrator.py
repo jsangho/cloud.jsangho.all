@@ -21,14 +21,17 @@ from typing import Final
 
 from wwe_game.adapter.outbound.narration.templates import (
     CROWDS,
+    INDIE_VENUES,
     MOVES,
     REACTION_BANDS,
+    STADIUMS,
     TEMPLATES,
     VENUES,
     Beat,
 )
 from wwe_game.app.ports.output.narration_port import NarrationPort
 from wwe_game.domain.constants.countries import Region
+from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
@@ -151,6 +154,22 @@ HOMECOMING_SHARE = 0.40
 _AWAY_REGIONS: Final = tuple(r for r in Region if r is not HOME_REGION)
 
 
+def _bank_for(run: CareerRun, stage: Region, show: PleShow | None) -> tuple[str, ...]:
+    """그 밤에 어울리는 무대 뱅크 (§3-D70).
+
+    | 그 밤 | 자리 |
+    |---|---|
+    | 무소속 (§3-D50) | 인디 서킷 — 방출이 문장으로 읽혀야 돌아오는 밤이 값을 갖는다 |
+    | **대형 대회** | **스타디움** (2026-08-12 사용자 요청) — 레슬매니아가 주간 방송과 같은 곳에 서면 안 된다 |
+    | 그 밖 | 아레나 |
+    """
+    if run.contract is None:
+        return INDIE_VENUES
+    if show is not None and show.is_major:
+        return STADIUMS[stage]
+    return VENUES[stage]
+
+
 def stage_region(home: Region, roll: SeededRoll) -> Region:
     """이번 주 무대의 권역. 평소 북미, 가끔 해외, 그중 얼마간은 선수의 고향."""
     if not roll.chance(TOUR_CHANCE):
@@ -233,18 +252,31 @@ class RuleNarrator(NarrationPort):
         한쪽만 바뀌는 일이 없다.
         """
         roll = SeededRoll(run.seed, week, seeded_roll.NARRATION)
-        return self._stage(run, roll)[1]
+        calendar = calendar_for(run.brand)
+        show = calendar.show_for(week) if calendar.is_show_week(week) else None
+        return self._stage(run, roll, show)[1]
 
     @staticmethod
-    def _stage(run: CareerRun, roll: SeededRoll) -> tuple[Region, str]:
-        """이번 주 무대의 (권역, 경기장). **굴림 순서가 여기서 정해진다.**"""
+    def _stage(
+        run: CareerRun, roll: SeededRoll, show: PleShow | None = None
+    ) -> tuple[Region, str]:
+        """이번 주 무대의 (권역, 경기장). **굴림 순서가 여기서 정해진다.**
+
+        **무소속이면 인디 서킷이다** (§3-D70). 방출된 선수가 아레나에 서면 방출이 아무
+        일도 아닌 것이 된다 — 그 구간의 자리는 따로 있다(`INDIE_VENUES`).
+
+        권역은 무소속이어도 굴린다 — 굴림 수를 맞춰 두는 편이 읽기 쉽다. 다만 **그것만으로
+        뒤가 같아지지는 않는다**: `randrange`는 후보 수에 따라 소비하는 비트가 달라서,
+        18개 뱅크와 8개 뱅크에서 뽑으면 그 뒤 슬롯부터 수열이 갈린다(테스트가 잡았다).
+        무소속 구간의 문장이 통째로 달라지는 것은 그래서이고, 그 자체는 문제가 아니다.
+        """
         stage = stage_region(run.identity.region, roll)
-        return stage, roll.pick(VENUES[stage])
+        return stage, roll.pick(_bank_for(run, stage, show))
 
     def _slots(
         self, run: CareerRun, report: WeekReport, roll: SeededRoll
     ) -> dict[str, str | None]:
-        stage, venue = self._stage(run, roll)
+        stage, venue = self._stage(run, roll, report.show)
         rival = rivalry_engine.top_rivalry(run)
         title = report.title_at_stake
         return {
