@@ -133,10 +133,16 @@ class CareerInteractor(CareerUseCase):
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
+        """로그 한 페이지. **세이브를 함께 읽는다** — 별점이 시드를 필요로 한다(§3-D56).
+
+        쿼리가 하나 늘지만 로그는 탭을 열 때만 읽고(§3-D45의 방침), 별점을 저장하지
+        않기로 한 대가가 이 한 번이다.
+        """
+        run = await self._repository.get(run_id, user_id)
         entries, total = await self._repository.read_log(
             run_id, user_id, offset=offset, limit=limit
         )
-        return CareerLogPage(entries=entries, total=total, offset=offset)
+        return CareerLogPage(entries=entries, total=total, offset=offset, seed=run.seed)
 
     async def read_report(self, run_id: int, user_id: int, week: int) -> ShowReport:
         """그 주차의 리포트 (§3-D45).

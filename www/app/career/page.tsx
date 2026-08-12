@@ -1102,6 +1102,11 @@ function WeekRow({
             )}
             {week.narration}
           </p>
+          {week.stars > 0 && (
+            <p className="mt-0.5 text-xs">
+              <Stars value={week.stars} />
+            </p>
+          )}
           {stagedNight &&
             (week.beats && week.beats.length > 0 ? (
               <button
@@ -1144,9 +1149,14 @@ function WeekRow({
 function ShowCard({ report }: { report: CareerShowReport }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
-      <p className="font-sport text-sm">
+      <p className="flex items-baseline gap-1.5 font-sport text-sm">
         {report.show}
-        {report.isMajor && <span className="ml-1.5 text-xs text-brand-link">대형</span>}
+        {report.isMajor && <span className="text-xs text-brand-link">대형</span>}
+        {report.stars > 0 && (
+          <span className="ml-auto text-xs font-normal">
+            <Stars value={report.stars} />
+          </span>
+        )}
       </p>
       {report.card.length > 0 && (
         <div>
@@ -1194,6 +1204,26 @@ function ShowCard({ report }: { report: CareerShowReport }) {
 }
 
 /**
+ * 별점 (§3-D56) — **채운 별과 빈 별을 함께 그린다.**
+ *
+ * 숫자만 쓰면 "3.75"가 좋은 건지 나쁜 건지 한눈에 안 읽힌다. 다섯 칸을 늘 그려 두면
+ * 그 밤이 어디쯤인지가 형태로 먼저 온다. 골드는 액션의 색이라(DESIGN.md §7) 별에는
+ * 쓰지 않는다 — 별은 상태이지 누를 것이 아니다.
+ */
+function Stars({ value }: { value: number }) {
+  if (value <= 0) return null;
+  const full = Math.floor(value);
+  const half = value - full >= 0.25;
+  return (
+    <span className="tabular-nums text-muted-foreground" title={`${value.toFixed(2)}점`}>
+      {"★".repeat(full)}
+      {half && "☆"}
+      <span className="ml-1 text-[0.6875rem]">{value.toFixed(2)}</span>
+    </span>
+  );
+}
+
+/**
  * 카드 한 줄 — **이긴 쪽만 굵다** (§3-D52).
  *
  * "A def. B"를 쓰지 않는다. 승패는 굵기로 이미 읽히고, 여덟 줄이 같은 약어로 시작하면
@@ -1206,6 +1236,9 @@ function CardLine({ match }: { match: CareerCardMatch }) {
       <Side name={match.left} won={match.winner === match.left} />
       <span className="mx-1 text-muted-foreground/70">vs</span>
       <Side name={match.right} won={match.winner === match.right} />
+      {match.matchLabel && (
+        <span className="ml-1.5 text-xs text-muted-foreground">{match.matchLabel}</span>
+      )}
       {match.title && (
         <span className="ml-1.5 text-brand-link">
           {match.title}
@@ -1216,6 +1249,9 @@ function CardLine({ match }: { match: CareerCardMatch }) {
           )}
         </span>
       )}
+      <span className="ml-1.5">
+        <Stars value={match.stars} />
+      </span>
     </>
   );
 }

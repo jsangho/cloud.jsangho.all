@@ -27,16 +27,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.constants.ple_calendar import calendar_for
 from wwe_game.domain.constants.roster import RivalTier
-from wwe_game.domain.services import rivalry_scene, title_scene
+from wwe_game.domain.services import match_rating, rivalry_scene, title_scene
 from wwe_game.domain.services.rivalry_scene import RivalryBeat
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.match_kind import (
+    STIPULATION_ODDS,
+    MatchKind,
+    format_of,
+)
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, titles_of
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
@@ -44,11 +49,33 @@ CHANNEL: Final = "show_card"
 """**새 채널이다.** 기존 채널을 나눠 쓰면 카드를 한 줄 더 뽑는 순간 그 뒤의 재위·대립이
 통째로 밀려 저장된 세이브가 전부 다른 커리어가 된다(`seeded_roll` 모듈 설명)."""
 
-FILLER_MATCHES: Final[dict[bool, int]] = {True: 3, False: 2}
-"""타이틀전 말고 더 채울 경기 수 — 대형 대회면 셋, 아니면 둘.
+CARD_SIZE: Final[dict[bool, int]] = {True: 8, False: 6}
+"""그 밤에 서는 경기 수 — **대형 대회 여덟, 그 밖엔 여섯** (§3-D55).
 
-레슬매니아를 여덟 경기로 채우고 싶은 유혹이 있지만, 리포트는 로그 한 줄을 펼친
-자리라 열 줄이 넘어가면 일정 탭이 그 한 밤으로 덮인다(§3-D34가 럼블 59줄에서 겪은 것).
+처음엔 타이틀전 + 채움 두셋으로 잡아 실측 평균이 4.2경기였는데, 실제 PLE는 일곱에서
+아홉이고 무엇보다 **레슬매니아가 평범한 밤과 같은 크기로 섰다.** 목표 총량으로 바꿔
+대형 대회가 실제로 커지게 했다.
+
+열을 넘기지는 않는다 — 리포트는 로그 한 줄을 펼친 자리라 그보다 길면 일정 탭이 그 한
+밤으로 덮인다(§3-D34가 럼블 59줄에서 겪은 것).
+"""
+
+ONE_ON_ONE_STIPULATIONS: Final[tuple[tuple[MatchKind, int], ...]] = tuple(
+    (kind, weight) for kind, weight in STIPULATION_ODDS if format_of(kind).field == 2
+)
+"""배경 경기가 걸 수 있는 형식 — **둘이 붙는 것만** (§3-D55).
+
+카드의 배경 경기는 1대1이라 트리플 스렛·페이탈 포 웨이·래더를 붙이면 이름 둘만 적힌
+4인 경기가 된다. 실제로 그렇게 나왔다("브론슨 리드 vs 크루즈 델 토로 [페이탈 포 웨이]").
+인원이 맞는 형식만 남긴다 — 여럿이 붙는 밤은 참가자를 그만큼 세울 수 있을 때의 일이다.
+"""
+
+STIPULATION_CHANCE: Final[dict[bool, float]] = {True: 0.28, False: 0.12}
+"""배경 경기가 **특수 경기**일 확률 — 타이틀전이면 높다 (§3-D55).
+
+내 경기는 21종 형식을 갖는데(§3-D32) 배경은 전부 싱글로 읽혔다. 같은 세계에서 나만
+철창에 들어가는 셈이다. 다만 흔해지면 안 된다: 매 경기가 스티플레이션이면 그건 그냥
+규칙이 없는 세계다.
 """
 
 DEFENSE_CHANCE: Final = 0.55
@@ -70,6 +97,11 @@ class CardMatch:
     이야기가 아니라 공백이라, 화면에 한 줄을 쓸 값어치가 없다."""
     title: str | None = None
     """걸린 벨트의 표시 이름. 타이틀전이 아니면 None."""
+    stars: float = 0.0
+    """그 경기의 별점 (§3-D56). 0.25 단위, 0~5."""
+    match_label: str | None = None
+    """경기 형식 (§3-D55). **싱글이면 None이다** — 화면이 "싱글 매치"를 줄마다 쓰지
+    않게 한다. 내 로그 줄이 특수 경기에만 형식을 붙이는 것과 같은 규약이다."""
     changed_hands: bool = False
     """그날 밤 벨트에 새 주인이 생겼는지. `title`이 있을 때만 뜻이 있다."""
     vacant: bool = False
@@ -93,6 +125,9 @@ def card_for(
 ) -> tuple[CardMatch, ...]:
     """그 밤의 배경 카드. 오프너부터 순서대로.
 
+    `gender`는 **내 디비전**이다 — 카드는 두 디비전을 다 세우되(§3-D55) 나와 내 상대,
+    내가 건드린 벨트를 빼는 일은 내 쪽에만 해당한다.
+
     `busy`는 그날 이미 링에 올랐지만 화면이 따로 그리는 사람들이다 — 내 상대. `player`는
     나이고, 계보에 물을 때도 빼야 해서 따로 받는다(`title_scene.champion_at`의 규약).
 
@@ -105,34 +140,104 @@ def card_for(
     roll = SeededRoll(seed, week, CHANNEL)
     taken = [name for name in (player, *busy) if name]
     matches: list[CardMatch] = []
+    # **내 디비전이 먼저다.** 카드가 목표 수에서 잘릴 때 남의 디비전이 먼저 밀린다 —
+    # 내 밤의 리포트라 그쪽이 맞다.
+    divisions = (gender, _other(gender))
 
-    for title in titles_of(brand, gender):
-        if title in skip_titles:
-            continue
-        bout = _title_bout(seed, week, title, brand, roll, player, tuple(taken))
-        if bout is None:
-            continue
-        # **타이틀전의 양쪽은 계보에서 온다** — 명단에서 뽑는 것이 아니라 `taken`을
-        # 거치지 않는다. 계보는 벨트마다 따로 걸으므로 한 사람이 두 벨트를 감을 수 있고,
-        # 그러면 그가 같은 밤에 두 번 링에 선다. 그 벨트는 이 밤을 쉬어 간다.
-        if bout.left in taken or bout.right in taken:
-            continue
-        matches.append(bout)
-        taken.extend((bout.left, bout.right))
+    for division in divisions:
+        for title in titles_of(brand, division):
+            if division is gender and title in skip_titles:
+                continue
+            bout = _title_bout(
+                seed, week, title, brand, division, roll, player, tuple(taken)
+            )
+            if bout is None:
+                continue
+            # **타이틀전의 양쪽은 계보에서 온다** — 명단에서 뽑는 것이 아니라 `taken`을
+            # 거치지 않는다. 계보는 벨트마다 따로 걸으므로 한 사람이 두 벨트를 감을 수
+            # 있고, 그러면 그가 같은 밤에 두 번 링에 선다. 그 벨트는 이 밤을 쉬어 간다.
+            if bout.left in taken or bout.right in taken:
+                continue
+            matches.append(bout)
+            taken.extend((bout.left, bout.right))
 
-    for pair in _feud_pairs(seed, week, gender, brand, player, tuple(taken)):
-        matches.append(_settle(pair, roll))
-        taken.extend(pair)
+    for division in divisions:
+        for pair in _feud_pairs(seed, week, division, brand, player, tuple(taken)):
+            matches.append(_settle(pair, brand, roll))
+            taken.extend(pair)
 
-    for _ in range(FILLER_MATCHES[is_major]):
-        pair = _pick_pair(seed, week, gender, brand, tuple(taken), roll)
+    # 목표 수까지 채운다. 디비전을 번갈아 집어 한쪽만 늘어나지 않게 한다.
+    target = CARD_SIZE[is_major]
+    dry: set[Gender] = set()
+    while len(matches) < target and len(dry) < len(divisions):
+        division = divisions[len(matches) % len(divisions)]
+        if division in dry:
+            division = _other(division)
+        pair = _pick_pair(seed, week, division, brand, tuple(taken), roll)
         if pair is None:
-            break
-        matches.append(_settle(pair, roll))
+            dry.add(division)
+            continue
+        matches.append(_settle(pair, brand, roll))
         taken.extend(pair)
 
     # 오프너가 앞, 타이틀전이 뒤다. 카드는 위로 갈수록 커진다.
-    return tuple(reversed(matches))
+    return tuple(_rate(seed, week, m, is_major=is_major) for m in reversed(matches))
+
+
+TIER_RING: Final[dict[RivalTier, int]] = {
+    RivalTier.PROSPECT: 55,
+    RivalTier.MIDCARD: 70,
+    RivalTier.MAIN_EVENT: 85,
+}
+"""배경 선수의 경기력 대역 (§3-D56). 명부는 스탯을 들지 않으므로 **등급이 곧 실력**이다 —
+별점에만 쓰이는 값이고 승패 판정에는 닿지 않는다."""
+
+
+def _rate(
+    seed: int,
+    week: int,
+    match: CardMatch,
+    *,
+    is_major: bool,
+) -> CardMatch:
+    """그 경기에 별점을 붙인다 (§3-D56). **판정이 끝난 뒤에 매긴다.**"""
+    tiers = [
+        roster.tier_at(member, week)
+        for member in (roster.member_of(match.left), roster.member_of(match.right))
+        if member is not None
+    ] or [RivalTier.MIDCARD]
+    stars = match_rating.rate(
+        seed,
+        week,
+        in_ring=sum(TIER_RING[t] for t in tiers) // len(tiers),
+        rival_tier=max(tiers),
+        stage="major" if is_major else "ple",
+        has_title=match.title is not None,
+        has_stipulation=match.match_label is not None,
+        salt=f"{match.left}:{match.right}",
+    )
+    return replace(match, stars=stars)
+
+
+def _other(gender: Gender) -> Gender:
+    return Gender.FEMALE if gender is Gender.MALE else Gender.MALE
+
+
+def _stipulation(roll: SeededRoll, *, for_title: bool) -> str | None:
+    """그 경기의 형식. **싱글이면 None** (§3-D55).
+
+    가중치는 내 경기가 쓰는 표(`STIPULATION_ODDS`)에서 **둘이 붙는 것만** 걸러 쓴다 —
+    배경이 다른 표를 쓰면 같은 세계에서 두 종류의 프로레슬링이 열린다.
+    """
+    if not roll.chance(STIPULATION_CHANCE[for_title]):
+        return None
+    total = sum(weight for _, weight in ONE_ON_ONE_STIPULATIONS)
+    cut = roll.between(1, total)
+    for kind, weight in ONE_ON_ONE_STIPULATIONS:
+        cut -= weight
+        if cut <= 0:
+            return format_of(kind).label
+    return None
 
 
 def _title_bout(
@@ -140,6 +245,7 @@ def _title_bout(
     week: int,
     title: Title,
     brand: Brand,
+    division: Gender,
     roll: SeededRoll,
     player: str,
     taken: tuple[str, ...],
@@ -151,6 +257,12 @@ def _title_bout(
     """
     holder = title_scene.champion_at(seed, week, title, exclude=player)
     if holder is None:
+        return None
+    # **브랜드 통합 벨트는 챔피언이 선 밤에만 걸린다** (§3-D55). 여성부 태그팀은 두
+    # 브랜드에 걸쳐 있어(§3-D38) 계보가 브랜드를 안 가린다 — 그대로 두면 RAW 챔피언이
+    # 스맥다운 카드에 선다.
+    champion = roster.member_of(holder)
+    if champion is not None and roster.brand_at(champion, week, seed) is not brand:
         return None
     before = title_scene.champion_at(
         seed, _last_show(brand, week), title, exclude=player
@@ -175,7 +287,7 @@ def _title_bout(
         rival = _pick_one(
             seed,
             week,
-            TITLES[title].gender,
+            division,
             brand,
             (*taken, holder),
             roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
@@ -190,13 +302,14 @@ def _title_bout(
             title=display,
             changed_hands=True,
             vacant=True,
+            match_label=_stipulation(roll, for_title=True),
         )
     if not roll.chance(DEFENSE_CHANCE):
         return None
     challenger = _pick_one(
         seed,
         week,
-        TITLES[title].gender,
+        division,
         brand,
         (*taken, holder),
         roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
@@ -204,7 +317,13 @@ def _title_bout(
     )
     if challenger is None:
         return None
-    return CardMatch(left=holder, right=challenger, winner=holder, title=display)
+    return CardMatch(
+        left=holder,
+        right=challenger,
+        winner=holder,
+        title=display,
+        match_label=_stipulation(roll, for_title=True),
+    )
 
 
 def _feud_pairs(
@@ -254,9 +373,14 @@ def _still_there(name: str, week: int) -> bool:
     return member is not None and member.is_active_at(week)
 
 
-def _settle(pair: tuple[str, str], roll: SeededRoll) -> CardMatch:
+def _settle(pair: tuple[str, str], brand: Brand, roll: SeededRoll) -> CardMatch:
     left, right = pair
-    return CardMatch(left=left, right=right, winner=roll.pick((left, right)))
+    return CardMatch(
+        left=left,
+        right=right,
+        winner=roll.pick((left, right)),
+        match_label=_stipulation(roll, for_title=False),
+    )
 
 
 def _pick_pair(

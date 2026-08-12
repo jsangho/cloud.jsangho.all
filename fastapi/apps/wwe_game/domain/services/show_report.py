@@ -56,11 +56,24 @@ class ShowReport:
     """그 무렵 배경에서 일어난 일. **내 일이 아니어서 뉴스에는 안 뜬 것들도 포함한다.**"""
     card: tuple[show_card.CardMatch, ...] = ()
     """그날 밤의 다른 경기들 (§3-D52). **내 경기는 없다** — 화면이 따로 그린다."""
+    stars: float = 0.0
+    """그 밤의 평점 — 카드에 선 경기들의 평균 (§3-D56). 카드가 비면 0이다.
+
+    **내 경기는 안 들어간다.** 서버가 그 주차의 내 경기력을 모르는 경로가 있고(체험판),
+    한쪽에서만 섞이면 같은 밤이 두 값을 갖는다.
+    """
 
 
 def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
     """그 주차의 리포트. 경기가 없는 주차도 만든다 — 빈 카드가 곧 그 밤의 기록이다."""
     player = str(run.identity.name)
+    card = _card(
+        run,
+        report.week,
+        report.is_major_show,
+        busy=(report.opponent,) if report.opponent else (),
+        stakes=(report.title_at_stake,) if report.title_at_stake else (),
+    )
     show = report.show.name if report.show is not None else run.brand.value.upper()
     return ShowReport(
         week=report.week,
@@ -77,13 +90,8 @@ def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
         narration=narration,
         champions=_champions(run, report.week, player),
         around=_around(run, report.week, player),
-        card=_card(
-            run,
-            report.week,
-            report.is_major_show,
-            busy=(report.opponent,) if report.opponent else (),
-            stakes=(report.title_at_stake,) if report.title_at_stake else (),
-        ),
+        card=card,
+        stars=_night_stars(card),
     )
 
 
@@ -111,6 +119,7 @@ def build_night(
     """
     show = calendar_for(run.brand).show_for(week)
     player = str(run.identity.name)
+    card = _card(run, week, show.is_major, busy=busy, stakes=stakes)
     return ShowReport(
         week=week,
         show=show.name,
@@ -122,8 +131,16 @@ def build_night(
         narration="",
         champions=_champions(run, week, player),
         around=_around(run, week, player),
-        card=_card(run, week, show.is_major, busy=busy, stakes=stakes),
+        card=card,
+        stars=_night_stars(card),
     )
+
+
+def _night_stars(card: tuple[show_card.CardMatch, ...]) -> float:
+    """그 밤의 평점 — 카드의 평균을 0.25 눈금으로 접는다 (§3-D56)."""
+    if not card:
+        return 0.0
+    return round(sum(m.stars for m in card) / len(card) / 0.25) * 0.25
 
 
 def _card(
