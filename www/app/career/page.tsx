@@ -1209,7 +1209,11 @@ function CardLine({ match }: { match: CareerCardMatch }) {
       {match.title && (
         <span className="ml-1.5 text-brand-link">
           {match.title}
-          {match.changedHands && <span className="ml-1">타이틀 이동</span>}
+          {match.vacant ? (
+            <span className="ml-1">공석 결정전</span>
+          ) : (
+            match.changedHands && <span className="ml-1">타이틀 이동</span>
+          )}
         </span>
       )}
     </>

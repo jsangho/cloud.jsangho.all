@@ -174,9 +174,17 @@ def _champions(run: CareerRun, week: int, player: str) -> tuple[TitleHolder, ...
 
 
 def _around(run: CareerRun, week: int, player: str) -> tuple[str, ...]:
-    """그 무렵의 배경 사건. 앞뒤 `AROUND_WEEKS` 주를 본다."""
+    """그 무렵의 배경 사건. 앞뒤 `AROUND_WEEKS` 주를 본다.
+
+    **내 브랜드 안에서만 본다** (§3-D53). 그날 그 자리에 있던 사람들의 이야기라야
+    "그 무렵"이 뜻을 갖는다 — 다른 브랜드 소식은 그 밤과 아무 상관이 없다.
+    """
     scene = rivalry_scene.chronicle(
-        run.seed, week + AROUND_WEEKS, run.identity.gender, exclude=player
+        run.seed,
+        week + AROUND_WEEKS,
+        run.identity.gender,
+        exclude=player,
+        brand=run.brand,
     )
     return tuple(
         item.headline for item in scene if abs(item.week - week) <= AROUND_WEEKS

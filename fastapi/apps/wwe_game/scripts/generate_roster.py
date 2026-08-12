@@ -114,6 +114,21 @@ REQUIRED_FIELDS = ("korean_name", "gender", "tier", "play_style")
 GENDER_ALIAS = {"male": "_M", "female": "_F"}
 TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
 
+SECTION_HOME: dict[str, str | None] = {
+    "RAW": "_RAW",
+    "SmackDown": "_SD",
+    "NXT": None,
+    "Evolve": None,
+    "Free Agent": None,
+}
+"""섹션 → **콜업되면 갈 메인 브랜드** (§3-D53).
+
+원본 CSV가 섹션으로 브랜드를 이미 들고 있다 — 추정할 것이 없다. None은 "아직 정해지지
+않았다"는 뜻이고, 그때만 두 메인 브랜드에 번갈아 넣는다. 육성 브랜드(NXT·Evolve)와
+프리에이전트가 거기 해당한다: **그들의 미래는 어차피 이 게임이 지어내는 것**이라,
+지어내되 규칙으로 지어내고 그 규칙을 여기 적어 둔다.
+"""
+
 
 HEADER = '''"""라이벌·챔피언으로 쓸 선수 명부 — **시간에 따라 바뀐다** (하네스 §3-D13).
 
@@ -153,6 +168,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
+from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 
@@ -178,6 +194,10 @@ class RosterMember:
     오늘의 미드카더는 대개 10년 차다. 게임 안에서 흐른 시간만 세면 그가 정상급이 되는 데
     15년이 더 걸리고 그때는 은퇴 나이다 — 실측에서 10년차 정상급 풀이 5명까지 말랐다.
     """
+    home_brand: Brand = Brand.RAW
+    """콜업된 뒤 설 메인 브랜드 (§3-D53). **지금 있는 브랜드가 아니다** — 그건
+    `brand_at()`이 등급에서 읽는다.
+    """
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -200,6 +220,7 @@ MIN_PROMOTION_WEEKS = 4 * WEEKS_PER_YEAR
 
 _M, _F = Gender.MALE, Gender.FEMALE
 _P, _MC, _ME = RivalTier.PROSPECT, RivalTier.MIDCARD, RivalTier.MAIN_EVENT
+_RAW, _SD = Brand.RAW, Brand.SMACKDOWN
 
 ROSTER: tuple[RosterMember, ...] = (
 '''
@@ -210,6 +231,14 @@ FOOTER = ''')
 def active_at(week: int) -> tuple[RosterMember, ...]:
     """그 주차에 현역인 선수들."""
     return tuple(m for m in ROSTER if m.is_active_at(week))
+
+
+_BY_NAME: dict[str, RosterMember] = {m.name: m for m in ROSTER}
+
+
+def member_of(name: str) -> RosterMember | None:
+    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**"""
+    return _BY_NAME.get(name)
 
 
 def tier_at(member: RosterMember, week: int) -> RivalTier:
@@ -234,12 +263,60 @@ def _wait_for(member: RosterMember, step: int) -> int:
     return max(MIN_PROMOTION_WEEKS, PROMOTION_WEEKS[step] - earned)
 
 
-def pool_for(gender: Gender, tier: RivalTier, week: int = 0) -> tuple[str, ...]:
-    """그 주차에 현역이면서 디비전·등급이 맞는 이름들 (§3-D11)."""
+def brand_at(member: RosterMember, week: int) -> Brand:
+    """그 주차에 이 사람이 선 브랜드 (§3-D53). **승급이 곧 콜업이다.**
+
+    명부의 등급이 이미 브랜드를 말하고 있다 — 원본에서 NXT·Evolve 70명은 **전원
+    유망주**이고 RAW·SmackDown은 전원 미드카드 이상이다. 그래서 축을 새로 만들지 않고
+    있는 축을 읽는다: 유망주면 육성 브랜드, 올라갔으면 자기 메인 브랜드다.
+    """
+    if tier_at(member, week) is RivalTier.PROSPECT:
+        return Brand.NXT
+    return member.home_brand
+
+
+def call_up_week(member: RosterMember) -> int | None:
+    """육성 브랜드를 떠나는 주차 (§3-D53). **처음부터 메인 로스터면 None이다.**
+
+    승급이 곧 콜업이므로(`brand_at`) 유망주가 미드카드로 올라서는 주차가 그대로
+    NXT를 떠나는 주차다. 벨트 계보가 이걸 읽는다 — 콜업된 사람은 NXT 벨트를 들고
+    갈 수 없다(§3-D38).
+    """
+    if member.start_tier is not RivalTier.PROSPECT:
+        return None
+    return member.debut_week + _wait_for(member, 0)
+
+
+def tier_in(brand: Brand, tier: RivalTier) -> RivalTier:
+    """그 브랜드에 **실제로 있는** 등급으로 접는다.
+
+    육성 브랜드에는 유망주만 살고 메인 로스터에는 유망주가 없다(`brand_at`). 접지 않고
+    물으면 빈 명단이 돌아오고, 그러면 벨트에 주인이 사라지거나(§3-D38) 대립 상대가
+    없어진다 — **없는 칸을 묻지 않게 하는 것이 이 함수의 일이다.**
+    """
+    if brand is Brand.NXT:
+        return RivalTier.PROSPECT
+    return max(tier, RivalTier.MIDCARD)
+
+
+def pool_for(
+    gender: Gender,
+    tier: RivalTier,
+    week: int = 0,
+    brand: Brand | None = None,
+) -> tuple[str, ...]:
+    """그 주차에 현역이면서 디비전·등급이 맞는 이름들 (§3-D11).
+
+    `brand`를 주면 그 브랜드에 선 사람만 남는다 (§3-D53). **등급은 접어서 넣어야 한다** —
+    `tier_in(brand, tier)`을 거치지 않고 부르면 빈 명단이 나올 수 있다.
+    """
     return tuple(
         m.name
         for m in ROSTER
-        if m.gender is gender and m.is_active_at(week) and tier_at(m, week) is tier
+        if m.gender is gender
+        and m.is_active_at(week)
+        and tier_at(m, week) is tier
+        and (brand is None or brand_at(m, week) is brand)
     )
 
 
@@ -263,6 +340,13 @@ MIN_POOL = 6
 지금은 20년 차에 정상급이 비는 일이 생길 수 있어 전 구간을 훑는다.
 """
 
+MIN_BRAND_POOL = 3
+"""브랜드까지 나눈 칸의 바닥 (§3-D53). 전체 바닥(`MIN_POOL`)보다 낮게 잡는다.
+
+세 브랜드로 나누면 칸이 3분의 1이 된다. 실측 최저는 여성부 정상급 RAW의 4명이고,
+그 밑을 허용하면 챔피언을 뽑을 때 현 챔피언과 플레이어를 빼고 나서 아무도 안 남는다.
+"""
+
 for _g in Gender:  # pragma: no cover - 임포트 시 구조 검증
     for _t in RivalTier:
         for _w in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
@@ -270,6 +354,16 @@ for _g in Gender:  # pragma: no cover - 임포트 시 구조 검증
                 raise RuntimeError(
                     f"{_g}/{_t} 라이벌 풀이 {_w // WEEKS_PER_YEAR}년차에 "
                     f"너무 얇습니다: {pool_for(_g, _t, _w)}"
+                )
+
+for _g in Gender:  # pragma: no cover - 브랜드 칸 검증 (§3-D53)
+    for _b in Brand:
+        _t = tier_in(_b, RivalTier.MAIN_EVENT)
+        for _w in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
+            if len(pool_for(_g, _t, _w, _b)) < MIN_BRAND_POOL:
+                raise RuntimeError(
+                    f"{_g}/{_b} 정상급이 {_w // WEEKS_PER_YEAR}년차에 "
+                    f"너무 얇습니다: {pool_for(_g, _t, _w, _b)}"
                 )
 '''
 
@@ -489,9 +583,14 @@ FICTIONAL_MIDCARD_EVERY = 4
 
 def fictional_members(
     taken: set[str],
-) -> list[tuple[str, str, str, int, int | None, int]]:
-    """가상 선수 명부. 해마다 정해진 수를 데뷔시킨다."""
-    members: list[tuple[str, str, str, int, int | None, int]] = []
+) -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+    """가상 선수 명부. 해마다 정해진 수를 데뷔시킨다.
+
+    **유망주는 육성에서 데뷔하고, 이적생은 메인에서 데뷔한다** (2026-08-12 사용자 결정).
+    `FICTIONAL_MIDCARD_EVERY`마다 한 명씩 나오는 미드카드가 곧 "다른 단체에서 온 즉시
+    전력"이라, 그들만 처음부터 메인 로스터에 선다. 나머지는 NXT를 거쳐 올라온다.
+    """
+    members: list[tuple[str, str, str, int, int | None, int, str | None]] = []
     for gender, firsts in (
         ("_M", FICTIONAL_MALE_FIRST),
         ("_F", FICTIONAL_FEMALE_FIRST),
@@ -514,15 +613,20 @@ def fictional_members(
             tier = "_MC" if made % FICTIONAL_MIDCARD_EVERY == 0 else "_P"
             retire = debut + FICTIONAL_CAREER_YEARS * WEEKS_PER_YEAR
             experience = 6 if tier == "_MC" else 0
-            members.append((name, gender, tier, debut, retire, experience))
+            members.append((name, gender, tier, debut, retire, experience, None))
             made += 1
     return members
 
 
-def build() -> list[tuple[str, str, str, int, int | None, int]]:
-    """(한글명, 성별, 시작 등급, 데뷔 주차, 은퇴 주차, 경력). 디비전 → 등급 순 정렬."""
-    members: list[tuple[str, str, str, int, int | None, int]] = []
+def build() -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+    """(한글명, 성별, 시작 등급, 데뷔 주차, 은퇴 주차, 경력, 메인 브랜드).
+
+    디비전 → 등급 순 정렬. 마지막 칸은 **콜업되면 설 메인 브랜드**다 (§3-D53).
+    """
+    members: list[tuple[str, str, str, int, int | None, int, str | None]] = []
     for section, names in read_sections(CSV_PATH).items():
+        if section not in SECTION_HOME:
+            raise SystemExit(f"모르는 섹션 {section!r} — SECTION_HOME에 넣으세요")
         window = LATE_DEBUT_SECTIONS.get(section)
         for index, name in enumerate(names):
             gender = require(name, "gender")
@@ -545,20 +649,42 @@ def build() -> list[tuple[str, str, str, int, int | None, int]]:
                     debut,
                     debut + retire_week_for(name, age, gender),
                     experience_of(age),
+                    SECTION_HOME[section],
                 )
             )
 
-    members += fictional_members({n for n, _, _, _, _, _ in members})
+    members += fictional_members({m[0] for m in members})
 
     order = {"_ME": 0, "_MC": 1, "_P": 2}
     members.sort(key=lambda m: (m[1] != "_M", m[3], order[m[2]], m[0]))
-    return members
+    return _assign_homes(members)
 
 
-def render(members: list[tuple[str, str, str, int, int | None, int]]) -> str:
+def _assign_homes(
+    members: list[tuple[str, str, str, int, int | None, int, str | None]],
+) -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+    """아직 갈 곳이 없는 사람에게 메인 브랜드를 준다 — **두 브랜드에 번갈아**.
+
+    디비전마다 따로 돌린다. 한 줄로 돌리면 남성부가 홀수로 끝나는 해에 여성부가
+    통째로 한쪽으로 쏠린다.
+    """
+    turn: dict[str, int] = {}
+    filled: list[tuple[str, str, str, int, int | None, int, str | None]] = []
+    for name, gender, tier, debut, retire, experience, home in members:
+        if home is None:
+            index = turn.get(gender, 0)
+            turn[gender] = index + 1
+            home = "_RAW" if index % 2 == 0 else "_SD"
+        filled.append((name, gender, tier, debut, retire, experience, home))
+    return filled
+
+
+def render(
+    members: list[tuple[str, str, str, int, int | None, int, str | None]],
+) -> str:
     lines: list[str] = []
     seen: tuple[str, int] | None = None
-    for name, gender, tier, debut, retire, experience in members:
+    for name, gender, tier, debut, retire, experience, home in members:
         mark = (gender, debut)
         if mark != seen:
             seen = mark
@@ -570,7 +696,7 @@ def render(members: list[tuple[str, str, str, int, int | None, int]]) -> str:
         retire_arg = "None" if retire is None else str(retire)
         lines.append(
             f'    RosterMember("{escaped}", {gender}, {tier}, '
-            f"{debut}, {retire_arg}, {experience}),"
+            f"{debut}, {retire_arg}, {experience}, {home}),"
         )
     return HEADER + "\n".join(lines) + "\n" + FOOTER
 
@@ -732,9 +858,11 @@ def main() -> int:
 
     members = build()
     counts: dict[tuple[str, str], int] = {}
-    for _, gender, tier, _, _, _ in members:
+    homes: dict[str, int] = {}
+    for _, gender, tier, _, _, _, home in members:
         counts[(gender, tier)] = counts.get((gender, tier), 0) + 1
-    real = sum(1 for _, _, _, d, _, _ in members if d == 0)
+        homes[home or "?"] = homes.get(home or "?", 0) + 1
+    real = sum(1 for m in members if m[3] == 0)
 
     print(f"원본: {CSV_PATH.name}")
     print(f"총 {len(members)}명 — 0주차 명부 {real} · 나중 데뷔 {len(members) - real}")
@@ -744,6 +872,10 @@ def main() -> int:
             for tier in ("_ME", "_MC", "_P")
         )
         print(f"  {'남성부' if gender == '_M' else '여성부'} 시작 등급: {row}")
+    print(
+        "  콜업되면 갈 메인 브랜드:",
+        " · ".join(f"{k} {v}" for k, v in sorted(homes.items())),
+    )
 
     presets = build_presets()
     styles: dict[str, int] = {}

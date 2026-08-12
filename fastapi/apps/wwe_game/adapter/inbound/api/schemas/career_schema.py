@@ -310,6 +310,8 @@ class CardMatchSchema(_Camel):
     winner: str
     title: str | None = None
     changed_hands: bool = False
+    vacant: bool = False
+    """빈 벨트를 두고 붙은 경기 — 앞 챔피언이 링을 떠났다 (§3-D52)."""
 
 
 class ShowReportSchema(_Camel):
@@ -407,6 +409,7 @@ def to_report(report: ShowReport) -> ShowReportSchema:
                 winner=m.winner,
                 title=m.title,
                 changed_hands=m.changed_hands,
+                vacant=m.vacant,
             )
             for m in report.card
         ],

@@ -206,8 +206,10 @@ export type CareerCardMatch = {
   winner: string;
   /** 걸린 벨트의 표시 이름. 타이틀전이 아니면 null. */
   title: string | null;
-  /** 그날 밤 벨트가 넘어갔는지. `title`이 있을 때만 뜻이 있다. */
+  /** 그날 밤 벨트에 새 주인이 생겼는지. `title`이 있을 때만 뜻이 있다. */
   changedHands: boolean;
+  /** 빈 벨트를 두고 붙은 경기 — 앞 챔피언이 링을 떠났다. */
+  vacant: boolean;
 };
 
 export type CareerShowReport = {

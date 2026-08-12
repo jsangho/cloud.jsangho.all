@@ -95,11 +95,14 @@ def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
     (§3-D10-1) 플레이어 이름이 명부에 그대로 있을 수 있고, 그러면 "로만 레인즈가
     로만 레인즈와 대립한다"가 나온다.
     """
-    tier = roster.tier_for_popularity(run.stats.popularity)
+    # **같은 브랜드에서 고른다** (§3-D53). 내가 NXT에 있는데 메인 로스터와 대립하면
+    # 브랜드가 있다는 사실 자체가 화면에서 사라진다. 등급은 그 브랜드에 있는 것으로
+    # 접는다 — 육성에는 유망주만 산다.
+    tier = roster.tier_in(run.brand, roster.tier_for_popularity(run.stats.popularity))
     taken = {r.rival_name for r in run.rivalries} | {str(run.identity.name)}
     pool = tuple(
         n
-        for n in roster.pool_for(run.identity.gender, tier, run.week)
+        for n in roster.pool_for(run.identity.gender, tier, run.week, run.brand)
         if n not in taken
     )
     return roll.pick(pool) if pool else None
