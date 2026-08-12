@@ -49,8 +49,8 @@ CHANNEL: Final = "show_card"
 """**새 채널이다.** 기존 채널을 나눠 쓰면 카드를 한 줄 더 뽑는 순간 그 뒤의 재위·대립이
 통째로 밀려 저장된 세이브가 전부 다른 커리어가 된다(`seeded_roll` 모듈 설명)."""
 
-CARD_SIZE: Final[dict[bool, int]] = {True: 8, False: 6}
-"""그 밤에 서는 경기 수 — **대형 대회 여덟, 그 밖엔 여섯** (§3-D55).
+CARD_SIZE: Final[dict[str, int]] = {"major": 8, "ple": 6, "special": 5, "weekly": 4}
+"""그 밤에 서는 경기 수 — **밤의 크기가 곧 카드의 크기다** (§3-D55·D60).
 
 처음엔 타이틀전 + 채움 두셋으로 잡아 실측 평균이 4.2경기였는데, 실제 PLE는 일곱에서
 아홉이고 무엇보다 **레슬매니아가 평범한 밤과 같은 크기로 섰다.** 목표 총량으로 바꿔
@@ -58,6 +58,9 @@ CARD_SIZE: Final[dict[bool, int]] = {True: 8, False: 6}
 
 열을 넘기지는 않는다 — 리포트는 로그 한 줄을 펼친 자리라 그보다 길면 일정 탭이 그 한
 밤으로 덮인다(§3-D34가 럼블 59줄에서 겪은 것).
+
+주간 방송이 넷인 이유는 그것이 **매주 서는 밤**이기 때문이다 — 대회와 같은 크기로 두면
+1560주가 전부 대회가 되고, §3-D45가 "그건 로그다"라고 한 그 자리로 돌아간다.
 """
 
 ONE_ON_ONE_STIPULATIONS: Final[tuple[tuple[MatchKind, int], ...]] = tuple(
@@ -78,11 +81,19 @@ STIPULATION_CHANCE: Final[dict[bool, float]] = {True: 0.28, False: 0.12}
 규칙이 없는 세계다.
 """
 
-DEFENSE_CHANCE: Final = 0.55
+DEFENSE_CHANCE: Final[dict[str, float]] = {
+    "major": 0.55,
+    "ple": 0.55,
+    "special": 0.35,
+    "weekly": 0.08,
+}
 """벨트가 안 넘어간 밤에 그래도 방어전이 열릴 확률.
 
 1.0으로 두면 모든 대회에서 모든 벨트가 방어돼 카드가 늘 똑같아진다. 실제로도 벨트는
 매 대회 걸리지 않는다 — 안 걸린 밤은 그 벨트 이야기가 쉬어 가는 밤이다.
+
+**주간 방송은 훨씬 낮다** (§3-D60). TV에서 벨트가 걸리는 밤은 드물고, 잦으면 대회가
+무엇 때문에 있는지가 사라진다.
 """
 
 
@@ -118,12 +129,14 @@ def card_for(
     gender: Gender,
     brand: Brand,
     *,
-    is_major: bool,
+    stage: str = "ple",
     player: str = "",
     busy: tuple[str, ...] = (),
     skip_titles: frozenset[Title] = frozenset(),
 ) -> tuple[CardMatch, ...]:
     """그 밤의 배경 카드. 오프너부터 순서대로.
+
+    `stage`는 그 밤의 크기다 — `major` · `ple` · `special` · `weekly` (§3-D60).
 
     `gender`는 **내 디비전**이다 — 카드는 두 디비전을 다 세우되(§3-D55) 나와 내 상대,
     내가 건드린 벨트를 빼는 일은 내 쪽에만 해당한다.
@@ -149,7 +162,7 @@ def card_for(
             if division is gender and title in skip_titles:
                 continue
             bout = _title_bout(
-                seed, week, title, brand, division, roll, player, tuple(taken)
+                seed, week, title, brand, division, stage, roll, player, tuple(taken)
             )
             if bout is None:
                 continue
@@ -171,7 +184,7 @@ def card_for(
             taken.extend(pair)
 
     # 목표 수까지 채운다. 디비전을 번갈아 집어 한쪽만 늘어나지 않게 한다.
-    target = CARD_SIZE[is_major]
+    target = CARD_SIZE[stage]
     dry: set[Gender] = set()
     while len(matches) < target and len(dry) < len(divisions):
         division = divisions[len(matches) % len(divisions)]
@@ -185,7 +198,7 @@ def card_for(
         taken.extend(pair)
 
     # 오프너가 앞, 타이틀전이 뒤다. 카드는 위로 갈수록 커진다.
-    return tuple(_rate(seed, week, m, is_major=is_major) for m in reversed(matches))
+    return tuple(_rate(seed, week, m, stage=stage) for m in reversed(matches))
 
 
 TIER_RING: Final[dict[RivalTier, int]] = {
@@ -202,7 +215,7 @@ def _rate(
     week: int,
     match: CardMatch,
     *,
-    is_major: bool,
+    stage: str,
 ) -> CardMatch:
     """그 경기에 별점을 붙인다 (§3-D56). **판정이 끝난 뒤에 매긴다.**"""
     tiers = [
@@ -216,7 +229,7 @@ def _rate(
         week,
         in_ring=sum(TIER_RING[t] for t in tiers) // len(tiers),
         rival_tier=max(tiers),
-        stage="major" if is_major else "ple",
+        stage=None if stage == "weekly" else stage,
         has_title=match.title is not None,
         has_stipulation=match.match_label is not None,
         salt=f"{match.left}:{match.right}",
@@ -251,6 +264,7 @@ def _title_bout(
     title: Title,
     brand: Brand,
     division: Gender,
+    stage: str,
     roll: SeededRoll,
     player: str,
     taken: tuple[str, ...],
@@ -314,7 +328,7 @@ def _title_bout(
             vacant=True,
             match_label=_stipulation(roll, for_title=True),
         )
-    if not roll.chance(DEFENSE_CHANCE):
+    if not roll.chance(DEFENSE_CHANCE[stage]):
         return None
     challenger = _pick_side(
         seed,

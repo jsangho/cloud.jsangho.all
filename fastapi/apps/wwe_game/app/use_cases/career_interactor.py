@@ -58,6 +58,7 @@ from wwe_game.domain.services import (
     event_draw,
     news_feed,
     rivalry_scene,
+    roster_scene,
     show_report,
     team_engine,
 )
@@ -159,12 +160,16 @@ class CareerInteractor(CareerUseCase):
         found = next((v for v in entries if v.week == week), None)
         if found is None:
             raise ReportNotFoundError(f"{week}주차 기록이 없습니다.")
-        # **달력이 아니라 그날 실제로 있었던 일을 본다.** `is_reportable`은 그 주차가
-        # 달력상 대회 주차인지만 알아서, 부상으로 결장한 대회 주차(§3-D37)에도 리포트를
-        # 만들어 준다 — 링에 서지도 않은 밤의 카드다. 로그를 가진 이 경로는 물어볼 수
-        # 있으므로 여기서 막는다(체험판은 로그가 없어 그대로 둔다 · §3-D51).
-        if found.report.kind not in (WeekKind.PLE, WeekKind.SPECIAL):
-            raise ReportNotFoundError(f"{week}주차는 대회 밤이 아닙니다.")
+        # **달력이 아니라 그날 실제로 있었던 일을 본다.** 부상으로 결장했거나(§3-D37)
+        # 프로모만 한 주차에는 리포트를 열지 않는다 — 링에 서지도 않은 밤의 카드다.
+        # 로그를 가진 이 경로는 물어볼 수 있으므로 여기서 막는다(체험판은 로그가 없어
+        # 그대로 둔다 · §3-D51). 주간 방송은 §3-D60에서 열렸다.
+        if found.report.kind not in (
+            WeekKind.PLE,
+            WeekKind.SPECIAL,
+            WeekKind.WEEKLY_SHOW,
+        ):
+            raise ReportNotFoundError(f"{week}주차는 경기가 선 밤이 아닙니다.")
         return show_report.build(run, found.report, found.narration)
 
     async def read_news(
@@ -188,8 +193,11 @@ class CareerInteractor(CareerUseCase):
         scene_news = rivalry_scene.chronicle(
             run.seed, run.week, run.identity.gender, exclude=str(run.identity.name)
         )
+        roster_news = roster_scene.chronicle(
+            run.week, run.identity.gender, run.brand, run.seed
+        )
         items = news_feed.compile_feed(
-            pairs, team_news, str(run.identity.name), scene_news
+            pairs, team_news, str(run.identity.name), scene_news, roster_news
         )
         return NewsFeedPage(
             items=items[offset : offset + limit], total=len(items), offset=offset

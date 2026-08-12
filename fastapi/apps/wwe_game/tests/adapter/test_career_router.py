@@ -254,12 +254,22 @@ class TestShowReport:
         assert body["champions"]
         assert all(c["holder"] for c in body["champions"])
 
-    def test_an_ordinary_week_has_none(self, client: TestClient) -> None:
-        """주간 방송까지 리포트를 열면 1560주 전부가 리포트가 되고, 그건 로그다."""
+    def test_an_ordinary_week_is_a_smaller_night(self, client: TestClient) -> None:
+        """주간 방송도 리포트가 있다 (§3-D60) — **밤이 작을 뿐이다.**"""
         run_id, weeks = self._play(client)
         plain = next(w["week"] for w in weeks if w["kind"] == "weekly_show")
+        body = client.get(f"/api/career/runs/{run_id}/report?week={plain}")
+        assert body.status_code == 200, body.text
+        assert body.json()["isMajor"] is False
+
+    def test_a_week_without_a_match_has_none(self, client: TestClient) -> None:
+        """프로모·결장 주차는 열지 않는다 — 링에 서지도 않은 밤의 카드가 된다."""
+        run_id, weeks = self._play(client)
+        quiet = next((w["week"] for w in weeks if w["kind"] in ("promo", "off")), None)
+        if quiet is None:
+            pytest.skip("프로모·결장 주차가 없는 판이다")
         assert (
-            client.get(f"/api/career/runs/{run_id}/report?week={plain}").status_code
+            client.get(f"/api/career/runs/{run_id}/report?week={quiet}").status_code
             == 404
         )
 

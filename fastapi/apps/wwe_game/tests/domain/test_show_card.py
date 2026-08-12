@@ -29,7 +29,7 @@ def _card(**kwargs: object) -> tuple[show_card.CardMatch, ...]:
         SHOW_WEEK,
         Gender.MALE,
         Brand.RAW,
-        is_major=False,
+        stage="ple",
         **kwargs,  # type: ignore[arg-type]
     )
 
@@ -43,7 +43,7 @@ class TestItIsAlwaysTheSameNight:
     def test_another_week_is_another_night(self) -> None:
         first = _card()
         later = show_card.card_for(
-            SEED, SHOW_WEEK + 52, Gender.MALE, Brand.RAW, is_major=False
+            SEED, SHOW_WEEK + 52, Gender.MALE, Brand.RAW, stage="ple"
         )
         assert first != later
 
@@ -78,9 +78,7 @@ class TestTheCardAgreesWithTheBeltLineage:
             now = title_scene.champion_at(SEED, week, WORLD)
             if before == now or not calendar_for(Brand.RAW).is_show_week(week):
                 continue
-            card = show_card.card_for(
-                SEED, week, Gender.MALE, Brand.RAW, is_major=False
-            )
+            card = show_card.card_for(SEED, week, Gender.MALE, Brand.RAW, stage="ple")
             bout = next(
                 (m for m in card if m.left == before or m.right == before), None
             )
@@ -116,7 +114,7 @@ class TestTheCardAgreesWithTheBeltLineage:
             if not cal.is_show_week(week):
                 continue
             for match in show_card.card_for(
-                SEED, week, Gender.MALE, Brand.RAW, is_major=False
+                SEED, week, Gender.MALE, Brand.RAW, stage="ple"
             ):
                 if not match.vacant:
                     continue
@@ -136,7 +134,7 @@ class TestTheCardAgreesWithTheBeltLineage:
             if not cal.is_show_week(week):
                 continue
             for match in show_card.card_for(
-                SEED, week, Gender.MALE, Brand.RAW, is_major=False
+                SEED, week, Gender.MALE, Brand.RAW, stage="ple"
             ):
                 if match.title is None:
                     continue
