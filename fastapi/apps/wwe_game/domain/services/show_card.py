@@ -115,6 +115,8 @@ class CardMatch:
     않게 한다. 내 로그 줄이 특수 경기에만 형식을 붙이는 것과 같은 규약이다."""
     changed_hands: bool = False
     """그날 밤 벨트에 새 주인이 생겼는지. `title`이 있을 때만 뜻이 있다."""
+    feud: bool = False
+    """쌓인 대립의 결착인지 (§3-D66). 별점만 읽는다 — 화면에는 안 쓴다."""
     vacant: bool = False
     """**빈 벨트를 두고 붙은 경기인지** (2026-08-12 사용자 결정).
 
@@ -180,7 +182,7 @@ def card_for(
 
     for division in divisions:
         for pair in _feud_pairs(seed, week, division, brand, player, tuple(taken)):
-            matches.append(_settle(pair, brand, roll))
+            matches.append(_settle(pair, brand, roll, feud=True))
             taken.extend(pair)
 
     # 목표 수까지 채운다. 디비전을 번갈아 집어 한쪽만 늘어나지 않게 한다.
@@ -246,6 +248,7 @@ def _rate(
         stage=None if stage == "weekly" else stage,
         has_title=match.title is not None,
         has_stipulation=match.match_label is not None,
+        has_feud=match.feud,
         salt=f"{match.left}:{match.right}",
     )
     return replace(match, stars=stars)
@@ -453,12 +456,15 @@ def _still_there(label: str, week: int, brand: Brand, seed: int = 0) -> bool:
     return bool(people) and all(_stands_on(name, week, brand, seed) for name in people)
 
 
-def _settle(pair: tuple[str, str], brand: Brand, roll: SeededRoll) -> CardMatch:
+def _settle(
+    pair: tuple[str, str], brand: Brand, roll: SeededRoll, *, feud: bool = False
+) -> CardMatch:
     left, right = pair
     return CardMatch(
         left=left,
         right=right,
         winner=roll.pick((left, right)),
+        feud=feud,
         match_label=_stipulation(roll, for_title=False),
     )
 

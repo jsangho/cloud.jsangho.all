@@ -379,6 +379,19 @@ def choose_guest(
     return to_guest(_sync(lambda: use_case.choose_guest(command)))
 
 
+@career_router.post("/guest/news", response_model=NewsPageSchema)
+def read_guest_news(
+    body: GuestResumeRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> NewsPageSchema:
+    """체험판 인박스 (§3-D67). **배경 소식만 실린다** — 내 로그는 서버에 없다(§3-D8).
+
+    `POST`인 이유는 `/guest/resume`과 같다 — 조회이지만 세이브가 본문에 실린다.
+    """
+    command = GuestResumeCommand(run=_restore(body.state))  # type: ignore[arg-type]
+    return to_news(_sync(lambda: use_case.read_guest_news(command)))
+
+
 @career_router.post("/guest/report", response_model=ShowReportSchema)
 def read_guest_report(
     body: GuestReportRequest,

@@ -2568,6 +2568,20 @@ def _flips_upto(seed: int, year: int) -> frozenset[str]:
     return frozenset(flipped)
 
 
+def moves_upto(seed: int, week: int) -> tuple[tuple[int, str], ...]:
+    """그 주차까지 브랜드를 옮긴 (주차, 이름) 전부 (§3-D65).
+
+    **인박스가 읽는다.** 드래프트와 트레이드로 해마다 서넛이 자리를 옮기는데(§3-D54·D63)
+    그 사실이 화면 어디에도 없었다 — 명부는 이미 알고 있었다.
+    """
+    found: list[tuple[int, str]] = []
+    for year in range(week // WEEKS_PER_YEAR + 1):
+        for at, name in (*_trades(seed, year), *_draft(seed, year)):
+            if at <= week:
+                found.append((at, name))
+    return tuple(sorted(found))
+
+
 @lru_cache(maxsize=8192)
 def _flips_at(seed: int, week: int) -> frozenset[str]:
     """그 주차까지 뒤집힌 사람들. **주 단위로 본다** — 트레이드는 연중에 선다(§3-D63)."""
@@ -2713,12 +2727,12 @@ for _g in Gender:  # pragma: no cover - 임포트 시 구조 검증
                     f"너무 얇습니다: {pool_for(_g, _t, _w)}"
                 )
 
-for _g in Gender:  # pragma: no cover - 브랜드 칸 검증 (§3-D53)
-    for _b in Brand:
-        _t = tier_in(_b, RivalTier.MAIN_EVENT)
-        for _w in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
-            if len(pool_for(_g, _t, _w, _b)) < MIN_BRAND_POOL:
-                raise RuntimeError(
-                    f"{_g}/{_b} 정상급이 {_w // WEEKS_PER_YEAR}년차에 "
-                    f"너무 얇습니다: {pool_for(_g, _t, _w, _b)}"
-                )
+# **브랜드 칸 검증은 여기서 하지 않는다** (§3-D65).
+#
+# 브랜드를 물으면 드래프트를 물어야 하고(§3-D54), 드래프트는 그 시점 챔피언을 물어야
+# 하고(사용자 규칙), 챔피언은 계보 — 즉 `title_scene` — 를 물어야 한다. 그런데
+# `title_scene`은 이 파일을 임포트한다. **임포트 시점에 그 고리를 돌리면 순서에 따라
+# 터진다**: 계보를 먼저 임포트한 프로세스에서는 아직 정의되지 않은 함수를 부르게 된다.
+#
+# 지금까지는 진입점이 명부를 먼저 임포트해서 가려져 있었다. 브랜드 칸의 바닥은
+# `MIN_BRAND_POOL`과 함께 **테스트가 시드 넷으로 검사한다**(`test_draft_and_names.py`).

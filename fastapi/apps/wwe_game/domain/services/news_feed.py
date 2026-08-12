@@ -29,13 +29,18 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from wwe_game.domain.constants import career_rules as rules
+from wwe_game.domain.constants import roster
+from wwe_game.domain.services import match_rating
 from wwe_game.domain.services.rivalry_scene import SceneNews
 from wwe_game.domain.services.roster_scene import RosterBeat, RosterNews
 from wwe_game.domain.services.team_engine import TeamNews
+from wwe_game.domain.services.title_news import TitleNews
+from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
+    WeekKind,
     WeekReport,
 )
 from wwe_game.domain.value_objects.wrestler_stats import (
@@ -68,6 +73,14 @@ class NewsKind(StrEnum):
     화면이 "내 일"과 "남의 일"을 다른 색으로 읽는다."""
     RETIRE = "retire"
     """배경 선수가 링을 떠났다 (§3-D61)."""
+    MOVED = "moved"
+    """배경 선수가 브랜드를 옮겼다 — 드래프트·트레이드 (§3-D54·D63)."""
+    RENAMED = "renamed"
+    """배경 선수가 활동명을 바꿨다 (§3-D54)."""
+    CLASSIC = "classic"
+    """별 넷 반을 넘긴 내 경기 (§3-D66). **커리어 하이라이트가 여기서 생긴다.**"""
+    TITLE_SCENE = "title_scene"
+    """배경 벨트의 주인이 바뀌었다 (§3-D65). 내 대관(`TITLE_WON`)과 나눠 둔다."""
 
 
 class CrowdMood(StrEnum):
@@ -252,7 +265,21 @@ _ROSTER_KINDS: dict[RosterBeat, NewsKind] = {
     RosterBeat.DEBUT: NewsKind.DEBUT,
     RosterBeat.CALL_UP: NewsKind.CALL_UP_SCENE,
     RosterBeat.RETIRE: NewsKind.RETIRE,
+    RosterBeat.MOVED: NewsKind.MOVED,
+    RosterBeat.RENAMED: NewsKind.RENAMED,
 }
+
+
+def from_title_news(news: TitleNews, stats: WrestlerStats) -> NewsItem:
+    """배경 벨트 한 줄 (§3-D65). 내 대관과 나란히 서되 색이 다르다."""
+    mood = mood_for(NewsKind.TITLE_SCENE, stats)
+    return NewsItem(
+        week=news.week,
+        kind=NewsKind.TITLE_SCENE,
+        headline=news.headline,
+        mood=mood,
+        crowd_line=_crowd_line(mood, news.week),
+    )
 
 
 def from_roster_news(news: RosterNews, stats: WrestlerStats) -> NewsItem:
@@ -272,8 +299,10 @@ def compile_feed(
     entries: tuple[tuple[WeekReport, WrestlerStats], ...],
     team_news: tuple[TeamNews, ...],
     player: str,
+    seed: int = 0,
     scene_news: tuple[SceneNews, ...] = (),
     roster_news: tuple[RosterNews, ...] = (),
+    title_news: tuple[TitleNews, ...] = (),
 ) -> tuple[NewsItem, ...]:
     """두 갈래를 하나의 시간순 피드로 합친다.
 
@@ -288,10 +317,12 @@ def compile_feed(
         if (item := from_report(report, stats, player)) is not None
     ]
     items += _turns(entries, player)
+    items += _classics(entries, seed)
     last = entries[-1][1] if entries else WrestlerStats()
     items += [from_team_news(n, last) for n in team_news]
     items += [from_scene_news(n, last) for n in scene_news]
     items += [from_roster_news(n, last) for n in roster_news]
+    items += [from_title_news(n, last) for n in title_news]
     # **같은 주차면 내 일이 먼저다.** 배경(팀·대립·명부)은 그 뒤에 붙는다.
     background = {
         NewsKind.TEAM,
@@ -299,8 +330,72 @@ def compile_feed(
         NewsKind.DEBUT,
         NewsKind.CALL_UP_SCENE,
         NewsKind.RETIRE,
+        NewsKind.MOVED,
+        NewsKind.RENAMED,
+        NewsKind.TITLE_SCENE,
     }
+    # **명경기는 내 일이다** — 배경으로 밀지 않는다.
     return tuple(sorted(items, key=lambda i: (i.week, i.kind in background)))
+
+
+CLASSIC_STARS = 4.5
+"""명경기로 남는 별점 (§3-D66).
+
+별점을 넣은 이유가 **"5년차 레슬매니아 그 경기"를 짚는 것**이었는데(§3-D56), 정작 그 값은
+로그 줄에만 있어 30년을 눈으로 훑어야 찾을 수 있었다. 인박스는 이미 로그 전체를 훑으므로
+(§3-D31) 그 자리에서 한 줄로 남긴다.
+
+넷 반으로 잡은 이유: 실측 분포에서 4점 이상이 6.3%다. 넷으로 두면 한 커리어에 수십 번
+"명경기"가 나고, 그러면 §3-D56이 별점을 조율하며 피한 그 실패로 돌아간다.
+"""
+
+
+def _classics(
+    entries: tuple[tuple[WeekReport, WrestlerStats], ...], seed: int
+) -> list[NewsItem]:
+    """오래 회자된 밤 (§3-D66). **별점을 되짚어 세운다** — 저장된 값이 아니다."""
+    items: list[NewsItem] = []
+    for report, stats in entries:
+        if report.result is None:
+            continue
+        stars = _stars_of(report, stats, seed)
+        if stars < CLASSIC_STARS:
+            continue
+        where = report.show.name if report.show is not None else "그 밤"
+        items.append(
+            NewsItem(
+                week=report.week,
+                kind=NewsKind.CLASSIC,
+                headline=f"{where}의 그 경기는 오래 회자됐다. (★{stars:.2f})",
+                mood=CrowdMood.CHANT,
+                crowd_line=_crowd_line(CrowdMood.CHANT, report.week),
+            )
+        )
+    return items
+
+
+def _stars_of(report: WeekReport, stats: WrestlerStats, seed: int) -> float:
+    """그 주차 내 경기의 별점. **화면이 로그 줄에 쓰는 것과 같은 계산이다** (§3-D56)."""
+    stage = None
+    if report.show is not None:
+        stage = "major" if report.show.is_major else "ple"
+    elif report.kind is WeekKind.SPECIAL:
+        stage = "special"
+    rival = roster.member_of(report.opponent or "", seed)
+    return match_rating.rate(
+        seed,
+        report.week,
+        in_ring=stats.in_ring,
+        rival_tier=(
+            roster.tier_at(rival, report.week)
+            if rival is not None
+            else roster.tier_for_popularity(stats.popularity)
+        ),
+        stage=stage,
+        has_title=report.title_at_stake is not None,
+        has_stipulation=report.match_kind is not MatchKind.SINGLES,
+        salt="player",
+    )
 
 
 def _turns(

@@ -44,6 +44,10 @@ class RosterBeat(StrEnum):
     DEBUT = "debut"
     CALL_UP = "call_up"
     RETIRE = "retire"
+    MOVED = "moved"
+    """드래프트·트레이드로 브랜드를 옮겼다 (§3-D54·D63)."""
+    RENAMED = "renamed"
+    """활동명을 바꿨다 (§3-D54)."""
 
 
 @dataclass(frozen=True)
@@ -91,6 +95,19 @@ def chronicle(
                     headline=f"{name}{josa_for(name, '가')} 메인 로스터로 올라왔다.",
                 )
             )
+        renamed = _renames(member, upto_week, brand, seed)
+        if renamed is not None:
+            news.append(
+                RosterNews(
+                    week=member.rename_week,
+                    beat=RosterBeat.RENAMED,
+                    name=renamed,
+                    headline=(
+                        f"{member.name}{josa_for(member.name, '가')} "
+                        f"{renamed}{josa_for(renamed, '으로')} 이름을 바꿨다."
+                    ),
+                )
+            )
         if _retires(member, upto_week, brand, seed):
             week = member.retire_week or 0
             name = roster.name_at(member, week - 1, seed)
@@ -102,7 +119,54 @@ def chronicle(
                     headline=f"{name}{josa_for(name, '가')} 링을 떠났다.",
                 )
             )
+    news += _moves(upto_week, gender, brand, seed)
     return tuple(sorted(news, key=lambda item: item.week))
+
+
+def _moves(upto: int, gender: Gender, brand: Brand, seed: int) -> list[RosterNews]:
+    """드래프트·트레이드로 **이 브랜드에 온** 사람들 (§3-D54·D63).
+
+    도착한 쪽에서만 흘린다 — 떠난 쪽에도 흘리면 한 사람의 이동이 두 줄이 된다
+    (§3-D61의 콜업과 같은 규약).
+    """
+    found: list[RosterNews] = []
+    for week, name in roster.moves_upto(seed, upto):
+        member = roster.member_of(name, seed)
+        if member is None or member.gender is not gender:
+            continue
+        if roster.brand_at(member, week, seed) is not brand:
+            continue
+        shown = roster.name_at(member, week, seed)
+        found.append(
+            RosterNews(
+                week=week,
+                beat=RosterBeat.MOVED,
+                name=shown,
+                headline=(
+                    f"{shown}{josa_for(shown, '가')} "
+                    f"{_BRAND_NAMES.get(brand, brand.value)}로 자리를 옮겼다."
+                ),
+            )
+        )
+    return found
+
+
+_BRAND_NAMES: dict[Brand, str] = {
+    Brand.RAW: "RAW",
+    Brand.SMACKDOWN: "스맥다운",
+    Brand.NXT: "NXT",
+}
+
+
+def _renames(member: RosterMember, upto: int, brand: Brand, seed: int) -> str | None:
+    """활동명을 바꾼 주차의 새 이름 (§3-D54). 안 바꿨으면 None."""
+    if member.renamed_to is None or not 0 < member.rename_week <= upto:
+        return None
+    if not member.is_active_at(member.rename_week):
+        return None
+    if roster.brand_at(member, member.rename_week, seed) is not brand:
+        return None
+    return member.renamed_to
 
 
 def _debuts(member: RosterMember, upto: int, brand: Brand, seed: int) -> bool:

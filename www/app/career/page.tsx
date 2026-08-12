@@ -17,6 +17,7 @@ import {
   readReport,
   readModes,
   readNews,
+  readGuestNews,
   readPresets,
   resumeGuestRun,
   retireRun,
@@ -150,6 +151,9 @@ const NEWS_KINDS: Record<string, string> = {
   debut: "데뷔",
   call_up_scene: "콜업",
   retire: "은퇴",
+  moved: "이적",
+  renamed: "개명",
+  title_scene: "세계 벨트",
 };
 
 /**
@@ -158,7 +162,16 @@ const NEWS_KINDS: Record<string, string> = {
  * 명부의 들고 남까지 흘리면 30년에 백 줄이 넘는다. **규칙으로 숨기지 않고 사용자가
  * 접게 한다** — 세계가 도는 것을 보고 싶은 사람과 내 커리어만 보고 싶은 사람이 다르다.
  */
-const BACKGROUND_KINDS = ["scene", "team", "debut", "call_up_scene", "retire"] as const;
+const BACKGROUND_KINDS = [
+  "title_scene",
+  "scene",
+  "team",
+  "debut",
+  "call_up_scene",
+  "moved",
+  "renamed",
+  "retire",
+] as const;
 
 type BackgroundKind = (typeof BACKGROUND_KINDS)[number];
 
@@ -411,18 +424,27 @@ export default function CareerPage() {
 
   const allowedModes = user ? modes : modes.filter((m) => m.guestAllowed);
 
+  // 체험판이 서버에 되돌려 보내는 세이브 — 리포트·인박스가 이걸 싣고 묻는다 (§3-D8).
+  const guestState = screen.phase === "play" ? screen.state : null;
+
   // 인박스를 열 때만 읽는다. 30년치를 진행할 때마다 따라 받으면 낭비다.
   const runId = screen.phase === "play" ? screen.advance.run.id : null;
   useEffect(() => {
-    if (tab !== "inbox" || runId === null) return;
+    if (tab !== "inbox") return;
+    // 체험판은 배경 소식만 받는다 (§3-D67) — 내 로그가 서버에 없다.
+    const asked =
+      runId !== null
+        ? readNews(runId, 0, 200)
+        : guestState !== null
+          ? readGuestNews(guestState)
+          : null;
+    if (asked === null) return;
     let alive = true;
-    readNews(runId, 0, 200)
-      .then((page) => alive && setInbox(page))
-      .catch(() => alive && setInbox(null));
+    asked.then((page) => alive && setInbox(page)).catch(() => alive && setInbox(null));
     return () => {
       alive = false;
     };
-  }, [tab, runId, screen]);
+  }, [tab, runId, guestState]);
 
   // 일정은 **누적된 타임라인**이 세운다 (§3-D51) — 방금 진행한 주차는 이미 그 안에
   // 얹혀 있다. 아직 한 번도 쌓이지 않은 첫 화면에서만 응답의 진행분을 그대로 쓴다.
@@ -435,7 +457,6 @@ export default function CareerPage() {
   //
   // **두 갈래가 묻는 곳이 다르다** (§3-D51). 로그인은 `runId`로 서버 로그를 짚고,
   // 체험판은 세이브를 실어 보낸다 — 서버가 아는 커리어가 없기 때문이다.
-  const guestState = screen.phase === "play" ? screen.state : null;
   useEffect(() => {
     if (openWeek === null) {
       setReport(null);
@@ -1002,14 +1023,16 @@ export default function CareerPage() {
 
           {tab === "inbox" && (
             <section>
-              {runId === null ? (
-                <p className="text-sm text-muted-foreground">
-                  체험판은 인박스를 남기지 않습니다. 로그인하면 세계선의 사건이 쌓입니다.
-                </p>
-              ) : inbox === null || inbox.items.length === 0 ? (
+              {inbox === null || inbox.items.length === 0 ? (
                 <p className="text-sm text-muted-foreground">아직 남을 만한 사건이 없습니다.</p>
               ) : (
                 <div className="space-y-5">
+                  {runId === null && (
+                    <p className="text-xs text-muted-foreground">
+                      체험판은 <b>세계의 소식만</b> 받습니다 — 내 대관·부상 기록은 로그인 플레이에서
+                      쌓입니다.
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-1.5">
                     {BACKGROUND_KINDS.map((kind) => {
                       const off = hidden.includes(kind);
@@ -1176,7 +1199,22 @@ function WeekRow({
             </button>
           )}
           {open && week.beats && <BeatList beats={week.beats} player={player} />}
-          {open && report && <ShowCard report={report} />}
+          {open && report && (
+            <ShowCard
+              report={report}
+              mine={
+                week.result === null
+                  ? null
+                  : {
+                      player,
+                      opponent: week.opponent,
+                      matchLabel: isStipulation(week) ? week.matchLabel : null,
+                      titleAtStake: week.titleAtStake,
+                      stars: week.stars,
+                    }
+              }
+            />
+          )}
         </div>
       </div>
     </div>
@@ -1189,7 +1227,15 @@ function WeekRow({
  * **뉴스와 다른 것을 보여준다.** 뉴스가 "무슨 일이 있었더라"라면 이쪽은 "그날 카드가
  * 어땠지"다 — 그 밤 벨트를 누가 들고 있었고, 그 무렵 세계에 무슨 일이 있었는지.
  */
-function ShowCard({ report }: { report: CareerShowReport }) {
+type MyMatch = {
+  player: string;
+  opponent: string | null;
+  matchLabel: string | null;
+  titleAtStake: string | null;
+  stars: number;
+};
+
+function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
       <p className="flex items-baseline gap-1.5 font-sport text-sm">
@@ -1210,6 +1256,30 @@ function ShowCard({ report }: { report: CareerShowReport }) {
                 <CardLine match={match} />
               </li>
             ))}
+            {/* **내 경기가 카드의 마지막에 선다** (§3-D68). 서버는 배경만 만들고
+                (§3-D52) 내 기록은 이 줄이 이미 들고 있다 — 화면에서 이으면 그 밤이
+                비로소 한 장이 된다. 체험판·로그인이 같은 자리에서 같은 모양이다. */}
+            {mine && (
+              <li className="text-xs leading-relaxed">
+                <span className="font-semibold text-foreground">{mine.player}</span>
+                {mine.opponent && (
+                  <>
+                    <span className="mx-1 text-muted-foreground/70">vs</span>
+                    <span className="text-muted-foreground">{mine.opponent}</span>
+                  </>
+                )}
+                {mine.matchLabel && (
+                  <span className="ml-1.5 text-muted-foreground">{mine.matchLabel}</span>
+                )}
+                {mine.titleAtStake && (
+                  <span className="ml-1.5 text-brand-link">{mine.titleAtStake}</span>
+                )}
+                <span className="ml-1.5 text-brand-link">내 경기</span>
+                <span className="ml-1.5">
+                  <Stars value={mine.stars} />
+                </span>
+              </li>
+            )}
           </ul>
         </div>
       )}

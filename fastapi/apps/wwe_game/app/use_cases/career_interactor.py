@@ -61,9 +61,13 @@ from wwe_game.domain.services import (
     roster_scene,
     show_report,
     team_engine,
+    title_news,
 )
 from wwe_game.domain.services.character_creation import build_identity
+from wwe_game.domain.services.rivalry_scene import SceneNews
+from wwe_game.domain.services.roster_scene import RosterNews
 from wwe_game.domain.services.show_report import ShowReport
+from wwe_game.domain.services.title_news import TitleNews
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
@@ -190,17 +194,47 @@ class CareerInteractor(CareerUseCase):
         # 연대기는 살아 있는 팀 목록을 들고 걸어야 한다 — 주차마다 따로 굴리면
         # 존재한 적 없는 팀이 해체된다 (2026-08-10 감사).
         team_news = team_engine.chronicle(run.seed, run.week)
-        scene_news = rivalry_scene.chronicle(
-            run.seed, run.week, run.identity.gender, exclude=str(run.identity.name)
-        )
-        roster_news = roster_scene.chronicle(
-            run.week, run.identity.gender, run.brand, run.seed
-        )
+        scene_news = self._scene_news(run)
+        roster_news = self._roster_news(run)
+        belt_news = self._belt_news(run)
         items = news_feed.compile_feed(
-            pairs, team_news, str(run.identity.name), scene_news, roster_news
+            pairs,
+            team_news,
+            str(run.identity.name),
+            run.seed,
+            scene_news,
+            roster_news,
+            belt_news,
         )
         return NewsFeedPage(
             items=items[offset : offset + limit], total=len(items), offset=offset
+        )
+
+    @staticmethod
+    def _scene_news(run: CareerRun) -> tuple[SceneNews, ...]:
+        return rivalry_scene.chronicle(
+            run.seed,
+            run.week,
+            run.identity.gender,
+            exclude=str(run.identity.name),
+            brand=run.brand,
+        )
+
+    @staticmethod
+    def _roster_news(run: CareerRun) -> tuple[RosterNews, ...]:
+        return roster_scene.chronicle(
+            run.week, run.identity.gender, run.brand, run.seed
+        )
+
+    @staticmethod
+    def _belt_news(run: CareerRun) -> tuple[TitleNews, ...]:
+        return title_news.chronicle(
+            run.seed,
+            run.week,
+            run.identity.gender,
+            run.brand,
+            exclude=str(run.identity.name),
+            skip=frozenset(run.titles_held),
         )
 
     async def retire(self, run_id: int, user_id: int) -> AdvanceResult:
@@ -246,6 +280,20 @@ class CareerInteractor(CareerUseCase):
         self._require_guest_mode(command.run.mode.code)
         resolved = self._resolve(command.run, command.choice_code)
         return self._view(resolved, self._resting_reason(resolved))
+
+    def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
+        """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""
+        self._require_guest_mode(command.run.mode.code)
+        items = news_feed.compile_feed(
+            (),
+            team_engine.chronicle(command.run.seed, command.run.week),
+            str(command.run.identity.name),
+            command.run.seed,
+            self._scene_news(command.run),
+            self._roster_news(command.run),
+            self._belt_news(command.run),
+        )
+        return NewsFeedPage(items=items, total=len(items), offset=0)
 
     def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
         """그 밤의 리포트, 체험판 (§3-D51).

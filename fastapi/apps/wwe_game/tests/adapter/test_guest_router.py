@@ -398,3 +398,57 @@ class TestGuestReport:
             ).status_code
             == 400
         )
+
+
+class TestGuestNews:
+    """체험판 인박스 — **배경 소식만** (§3-D67).
+
+    내 뉴스(대관·부상·턴)는 주차 로그에서 나오는데 체험판 로그는 서버에 없다(§3-D8).
+    낼 수 있는 것을 안 내지도, 없는 것을 지어내지도 않는다.
+    """
+
+    @staticmethod
+    def _played(client: TestClient) -> dict:
+        state = _start(client)["state"]
+        for _ in range(6):
+            body = client.post(
+                "/api/career/guest/advance", json={"state": state, "step": "auto"}
+            ).json()
+            state = body["state"]
+            if body.get("pendingEvent"):
+                state = client.post(
+                    "/api/career/guest/choices",
+                    json={
+                        "state": state,
+                        "choice": body["pendingEvent"]["choices"][0]["code"],
+                    },
+                ).json()["state"]
+        return state
+
+    def test_the_world_has_news(self, client: TestClient) -> None:
+        state = self._played(client)
+        response = client.post("/api/career/guest/news", json={"state": state})
+        assert response.status_code == 200, response.text
+        assert response.json()["items"], "배경 소식이 한 줄도 없다"
+
+    def test_it_is_only_the_background(self, client: TestClient) -> None:
+        mine = {"title_won", "title_lost", "injury", "big_win", "turn", "classic"}
+        body = client.post(
+            "/api/career/guest/news", json={"state": self._played(client)}
+        ).json()
+        assert not (mine & {item["kind"] for item in body["items"]})
+
+    def test_it_runs_in_order(self, client: TestClient) -> None:
+        body = client.post(
+            "/api/career/guest/news", json={"state": self._played(client)}
+        ).json()
+        weeks = [item["week"] for item in body["items"]]
+        assert weeks == sorted(weeks)
+
+    def test_a_tampered_state_is_refused(self, client: TestClient) -> None:
+        state = _start(client)["state"]
+        state["stats"]["popularity"] = 500
+        assert (
+            client.post("/api/career/guest/news", json={"state": state}).status_code
+            == 400
+        )

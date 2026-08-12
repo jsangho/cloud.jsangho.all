@@ -146,6 +146,15 @@ class CareerUseCase(ABC):
         """체험판의 이벤트 선택 판정. 대기 이벤트가 없으면 `NoPendingEventError`."""
 
     @abstractmethod
+    def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
+        """체험판 인박스 — **배경 소식만** (§3-D67).
+
+        내 뉴스(대관·부상·턴)는 주차 로그에서 나오는데 체험판 로그는 서버에 없다
+        (§3-D8). 배경(벨트·대립·팀·명부)은 시드와 주차만으로 되짚으므로 그쪽은 낼 수
+        있다 — **없는 것을 지어내지 않고, 낼 수 있는 것을 안 내지도 않는다.**
+        """
+
+    @abstractmethod
     def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
         """그 밤의 리포트, 체험판 (§3-D51). 대회 주차가 아니면 `ReportNotFoundError`.
 

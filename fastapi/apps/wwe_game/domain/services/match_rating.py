@@ -60,6 +60,10 @@ TIER_BONUS: Final[dict[RivalTier, float]] = {
 }
 """상대의 급. 좋은 상대가 좋은 경기를 만든다 — 혼자 하는 경기는 없다."""
 
+FEUD_BONUS: Final = 0.3
+"""쌓인 대립의 결착 (§3-D66). **이야기가 있는 경기가 더 좋은 경기다** — 이 게임의
+전제인데(§3-D44) 별점은 그걸 안 보고 있었다."""
+
 STIPULATION_BONUS: Final = 0.2
 """특수 경기. 철창과 사다리는 그 자체로 이야기를 만든다."""
 
@@ -93,6 +97,7 @@ def rate(
     stage: str | None = None,
     has_title: bool = False,
     has_stipulation: bool = False,
+    has_feud: bool = False,
     salt: str = "",
 ) -> float:
     """0.0~5.0 별점, 0.25 단위. 같은 밤은 언제 물어도 같은 별점이다 (§3-D4).
@@ -108,6 +113,7 @@ def rate(
     score += TITLE_BONUS if has_title else 0.0
     score += TIER_BONUS[rival_tier]
     score += STIPULATION_BONUS if has_stipulation else 0.0
+    score += FEUD_BONUS if has_feud else 0.0
     score += roll.uniform(-NOISE, NOISE)
     if score >= CLASSIC_GATE and roll.chance(CLASSIC_CHANCE):
         # 그 밤이 전설이 됐다. **좋은 경기에서만 열리는 문**이다.
