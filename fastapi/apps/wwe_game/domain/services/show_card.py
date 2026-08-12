@@ -31,6 +31,8 @@ from dataclasses import dataclass
 from typing import Final
 
 from wwe_game.domain.constants import roster
+from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
+from wwe_game.domain.constants.ple_calendar import calendar_for
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.services import rivalry_scene, title_scene
 from wwe_game.domain.services.rivalry_scene import RivalryBeat
@@ -69,7 +71,13 @@ class CardMatch:
     title: str | None = None
     """걸린 벨트의 표시 이름. 타이틀전이 아니면 None."""
     changed_hands: bool = False
-    """그날 밤 벨트가 넘어갔는지. `title`이 있을 때만 뜻이 있다."""
+    """그날 밤 벨트에 새 주인이 생겼는지. `title`이 있을 때만 뜻이 있다."""
+    vacant: bool = False
+    """**빈 벨트를 두고 붙은 경기인지** (2026-08-12 사용자 결정).
+
+    앞 챔피언이 링을 떠나면 벨트는 그와 함께 사라지는 것이 아니라 공석이 된다. 그 자리는
+    누가 그냥 물려받는 것이 아니라 **경기로 채워진다** — 떠난 사람을 링에 세울 수는 없다.
+    """
 
 
 def card_for(
@@ -101,18 +109,23 @@ def card_for(
     for title in titles_of(brand, gender):
         if title in skip_titles:
             continue
-        bout = _title_bout(seed, week, title, roll, player, tuple(taken))
+        bout = _title_bout(seed, week, title, brand, roll, player, tuple(taken))
         if bout is None:
+            continue
+        # **타이틀전의 양쪽은 계보에서 온다** — 명단에서 뽑는 것이 아니라 `taken`을
+        # 거치지 않는다. 계보는 벨트마다 따로 걸으므로 한 사람이 두 벨트를 감을 수 있고,
+        # 그러면 그가 같은 밤에 두 번 링에 선다. 그 벨트는 이 밤을 쉬어 간다.
+        if bout.left in taken or bout.right in taken:
             continue
         matches.append(bout)
         taken.extend((bout.left, bout.right))
 
-    for pair in _feud_pairs(seed, week, gender, player, tuple(taken)):
+    for pair in _feud_pairs(seed, week, gender, brand, player, tuple(taken)):
         matches.append(_settle(pair, roll))
         taken.extend(pair)
 
     for _ in range(FILLER_MATCHES[is_major]):
-        pair = _pick_pair(week, gender, tuple(taken), roll)
+        pair = _pick_pair(week, gender, brand, tuple(taken), roll)
         if pair is None:
             break
         matches.append(_settle(pair, roll))
@@ -126,6 +139,7 @@ def _title_bout(
     seed: int,
     week: int,
     title: Title,
+    brand: Brand,
     roll: SeededRoll,
     player: str,
     taken: tuple[str, ...],
@@ -138,24 +152,52 @@ def _title_bout(
     holder = title_scene.champion_at(seed, week, title, exclude=player)
     if holder is None:
         return None
-    before = title_scene.champion_at(seed, week - 1, title, exclude=player)
+    before = title_scene.champion_at(
+        seed, _last_show(brand, week), title, exclude=player
+    )
     display = TITLES[title].display_name
 
     if before is not None and before != holder:
+        vacated = title_scene.vacated_between(
+            seed, _last_show(brand, week), week, title, exclude=player
+        )
+        if not vacated and _still_there(before, week):
+            return CardMatch(
+                left=before,
+                right=holder,
+                winner=holder,
+                title=display,
+                changed_hands=True,
+            )
+        # **앞 챔피언이 링을 떠났거나 다쳐서 반납했다.** 벨트는 그와 함께 사라지지 않고
+        # 비어 있을 뿐이라, 남은 사람들이 그 자리를 두고 붙는다 — 링에 못 서는 사람을
+        # 다시 세울 수는 없다 (2026-08-12 사용자 결정).
+        rival = _pick_one(
+            week,
+            TITLES[title].gender,
+            brand,
+            (*taken, holder),
+            roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
+            roll,
+        )
+        if rival is None:
+            return None
         return CardMatch(
-            left=before,
-            right=holder,
+            left=holder,
+            right=rival,
             winner=holder,
             title=display,
             changed_hands=True,
+            vacant=True,
         )
     if not roll.chance(DEFENSE_CHANCE):
         return None
     challenger = _pick_one(
         week,
         TITLES[title].gender,
+        brand,
         (*taken, holder),
-        title_scene.TIER_OF[TITLES[title].tier],
+        roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
         roll,
     )
     if challenger is None:
@@ -164,7 +206,12 @@ def _title_bout(
 
 
 def _feud_pairs(
-    seed: int, week: int, gender: Gender, player: str, taken: tuple[str, ...]
+    seed: int,
+    week: int,
+    gender: Gender,
+    brand: Brand,
+    player: str,
+    taken: tuple[str, ...],
 ) -> tuple[tuple[str, str], ...]:
     """그 주차에 살아 있는 배경 대립 (§3-D44).
 
@@ -172,7 +219,9 @@ def _feud_pairs(
     곧 살아 있는 대립이다 — 대립이 도는 중이면 그 둘은 그날 카드에서 붙는다.
     """
     started: list[tuple[str, str]] = []
-    for item in rivalry_scene.chronicle(seed, week, gender, exclude=player):
+    for item in rivalry_scene.chronicle(
+        seed, week, gender, exclude=player, brand=brand
+    ):
         if item.beat is RivalryBeat.STARTED:
             started.append(item.names)
         elif item.names in started:
@@ -182,19 +231,45 @@ def _feud_pairs(
     )
 
 
+def _last_show(brand: Brand, week: int) -> int:
+    """그 브랜드의 **직전 대회 주차**. 없으면 0(커리어 시작 전)이다.
+
+    앞 주차(`week - 1`)와 견주면 안 된다 — 계보는 아무 주차에나 바뀔 수 있고(§3-D38),
+    그러면 벨트가 화요일에 넘어가고 대회 카드에는 "방어전"만 남는다. **벨트는 대회에서
+    바뀐다**가 이 게임이 보여줘야 하는 그림이라, 지난 대회 이후의 변화를 그 밤에 몰아
+    보여준다.
+    """
+    calendar = calendar_for(brand)
+    for back in range(week - 1, max(-1, week - WEEKS_PER_YEAR - 1), -1):
+        if back > 0 and calendar.is_show_week(back):
+            return back
+    return 0
+
+
+def _still_there(name: str, week: int) -> bool:
+    """그 주차에 아직 링에 있는 사람인지. 명부 밖 이름(플레이어)은 없는 것으로 본다."""
+    member = roster.member_of(name)
+    return member is not None and member.is_active_at(week)
+
+
 def _settle(pair: tuple[str, str], roll: SeededRoll) -> CardMatch:
     left, right = pair
     return CardMatch(left=left, right=right, winner=roll.pick((left, right)))
 
 
 def _pick_pair(
-    week: int, gender: Gender, taken: tuple[str, ...], roll: SeededRoll
+    week: int,
+    gender: Gender,
+    brand: Brand,
+    taken: tuple[str, ...],
+    roll: SeededRoll,
 ) -> tuple[str, str] | None:
-    """카드를 채우는 한 경기. **등급을 섞는다** — 대회는 정상급만 나오지 않는다."""
-    first = _pick_one(week, gender, taken, RivalTier.MIDCARD, roll)
+    """카드를 채우는 한 경기. 그 브랜드의 아랫단에서 뽑는다 (§3-D53)."""
+    tier = roster.tier_in(brand, RivalTier.MIDCARD)
+    first = _pick_one(week, gender, brand, taken, tier, roll)
     if first is None:
         return None
-    second = _pick_one(week, gender, (*taken, first), RivalTier.MIDCARD, roll)
+    second = _pick_one(week, gender, brand, (*taken, first), tier, roll)
     if second is None:
         return None
     return first, second
@@ -203,9 +278,12 @@ def _pick_pair(
 def _pick_one(
     week: int,
     gender: Gender,
+    brand: Brand,
     taken: tuple[str, ...],
     tier: RivalTier,
     roll: SeededRoll,
 ) -> str | None:
-    pool = tuple(n for n in roster.pool_for(gender, tier, week) if n not in taken)
+    pool = tuple(
+        n for n in roster.pool_for(gender, tier, week, brand) if n not in taken
+    )
     return roll.pick(pool) if pool else None

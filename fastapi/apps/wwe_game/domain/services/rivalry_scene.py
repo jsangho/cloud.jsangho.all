@@ -27,6 +27,7 @@ from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.josa import josa_for
+from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 CHANNEL: Final = "rivalry_scene"
@@ -77,12 +78,20 @@ class _Feud:
 
 
 def chronicle(
-    seed: int, upto_week: int, gender: Gender, *, exclude: str = ""
+    seed: int,
+    upto_week: int,
+    gender: Gender,
+    *,
+    exclude: str = "",
+    brand: Brand | None = None,
 ) -> tuple[SceneNews, ...]:
     """0주부터 그 주차까지 배경 대립의 연대기.
 
     `exclude`는 플레이어의 링네임이다 — 실존 선수를 바탕으로 만든 커리어는 자기
     이름이 명부에 있어(§3-D10-1), 빼지 않으면 **내가 배경에서 나와 싸운다.**
+
+    `brand`를 주면 **그 브랜드 안에서만** 대립이 선다 (§3-D53). 내 세계선의 뉴스인데
+    다른 브랜드 이야기가 흐르면 브랜드가 있다는 사실 자체가 무의미해진다.
 
     순수 함수다 — 같은 시드는 언제 돌려도 같은 연대기를 만든다(§3-D4).
     """
@@ -96,7 +105,7 @@ def chronicle(
             active.remove(feud)
             news.append(_ending(week, feud, roll))
         if len(active) < MAX_ACTIVE and roll.chance(START_CHANCE):
-            pair = _pick_pair(week, gender, exclude, roll)
+            pair = _pick_pair(week, gender, exclude, roll, brand)
             if pair is not None:
                 fresh = _Feud(pair, week, week + roll.between(MIN_WEEKS, MAX_WEEKS))
                 active.append(fresh)
@@ -132,16 +141,23 @@ def _ending(week: int, feud: _Feud, roll: SeededRoll) -> SceneNews:
 
 
 def _pick_pair(
-    week: int, gender: Gender, exclude: str, roll: SeededRoll
+    week: int,
+    gender: Gender,
+    exclude: str,
+    roll: SeededRoll,
+    brand: Brand | None = None,
 ) -> tuple[str, str] | None:
     """정상급 둘. **중견들의 대립은 헤드라인이 아니다.**
 
     등급을 섞어 뽑았더니 인박스에 육성 브랜드 이름들이 올라왔다 — 세계가 도는 신호로는
     맞지만 뉴스로는 아니다. 실제로도 남의 대립이 기사가 되는 것은 그 자리가 정상일 때다.
     """
-    pool = tuple(
-        n for n in roster.pool_for(gender, RivalTier.MAIN_EVENT, week) if n != exclude
+    tier = (
+        RivalTier.MAIN_EVENT
+        if brand is None
+        else roster.tier_in(brand, RivalTier.MAIN_EVENT)
     )
+    pool = tuple(n for n in roster.pool_for(gender, tier, week, brand) if n != exclude)
     if len(pool) < 2:
         return None
     first = roll.pick(pool)

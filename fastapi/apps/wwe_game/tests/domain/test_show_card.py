@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import pytest
 from _helpers import make_run  # noqa: I001
+from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.ple_calendar import calendar_for
 from wwe_game.domain.services import show_card, show_report, title_scene
-from wwe_game.domain.value_objects.title import Brand, Title, titles_of
+from wwe_game.domain.value_objects.title import TITLES, Brand, Title, titles_of
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 SEED = 7777
@@ -97,6 +98,47 @@ class TestTheCardAgreesWithTheBeltLineage:
                 continue
             assert match.left in holders, "타이틀전의 한쪽은 그 주차 챔피언이어야 한다"
             assert match.winner == match.left
+
+    def test_a_vacant_belt_is_won_in_a_match(self) -> None:
+        """떠난 챔피언의 벨트는 물려주는 것이 아니라 **경기로 채운다** (2026-08-12 사용자).
+
+        30년을 훑어 공석 결정전을 모은다 — 링을 떠난 사람이 그 경기에 서 있으면 안 된다.
+        """
+        cal = calendar_for(Brand.RAW)
+        found = 0
+        for week in range(1, 1561):
+            if not cal.is_show_week(week):
+                continue
+            for match in show_card.card_for(
+                SEED, week, Gender.MALE, Brand.RAW, is_major=False
+            ):
+                if not match.vacant:
+                    continue
+                found += 1
+                assert match.changed_hands is True
+                assert match.title is not None
+                for name in (match.left, match.right):
+                    member = roster.member_of(name)
+                    assert member is not None
+                    assert member.is_active_at(week), f"{name}은 이미 링을 떠났다"
+        assert found > 0, "30년에 공석이 한 번도 안 생겼다 — 은퇴가 계보에 안 닿는다"
+
+    def test_the_new_champion_wins_the_vacant_match(self) -> None:
+        cal = calendar_for(Brand.RAW)
+        for week in range(1, 1561):
+            if not cal.is_show_week(week):
+                continue
+            for match in show_card.card_for(
+                SEED, week, Gender.MALE, Brand.RAW, is_major=False
+            ):
+                if match.title is None:
+                    continue
+                holder = next(
+                    title_scene.champion_at(SEED, week, t)
+                    for t in titles_of(Brand.RAW, Gender.MALE)
+                    if TITLES[t].display_name == match.title
+                )
+                assert match.winner == holder
 
     def test_my_own_belt_is_not_defended_by_someone_else(self) -> None:
         # 내가 감고 있는 벨트를 카드가 다시 걸면 "그날의 벨트: 나"와 어긋난다.
