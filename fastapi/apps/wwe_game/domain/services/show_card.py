@@ -49,7 +49,7 @@ CHANNEL: Final = "show_card"
 """**새 채널이다.** 기존 채널을 나눠 쓰면 카드를 한 줄 더 뽑는 순간 그 뒤의 재위·대립이
 통째로 밀려 저장된 세이브가 전부 다른 커리어가 된다(`seeded_roll` 모듈 설명)."""
 
-CARD_SIZE: Final[dict[str, int]] = {"major": 8, "ple": 6, "special": 5, "weekly": 4}
+CARD_SIZE: Final[dict[str, int]] = {"major": 6, "ple": 5, "special": 4, "weekly": 4}
 """그 밤에 서는 경기 수 — **밤의 크기가 곧 카드의 크기다** (§3-D55·D60).
 
 처음엔 타이틀전 + 채움 두셋으로 잡아 실측 평균이 4.2경기였는데, 실제 PLE는 일곱에서
@@ -61,6 +61,16 @@ CARD_SIZE: Final[dict[str, int]] = {"major": 8, "ple": 6, "special": 5, "weekly"
 
 주간 방송이 넷인 이유는 그것이 **매주 서는 밤**이기 때문이다 — 대회와 같은 크기로 두면
 1560주가 전부 대회가 되고, §3-D45가 "그건 로그다"라고 한 그 자리로 돌아간다.
+
+**실제 크기에 맞췄다** (2026-08-12 사용자: "보통 PLE는 5~6경기"). 처음엔 대형 여덟으로
+잡았는데 그러면 이틀 대회가 열여섯 줄이 됐다.
+"""
+
+TWO_NIGHT_CARD: Final[tuple[int, int]] = (12, 14)
+"""이틀에 걸쳐 여는 밤의 경기 수 (2026-08-12 사용자: "2일차 경기는 12~14경기").
+
+하루치의 곱절이 아니라 따로 잡는다 — 이틀이어도 같은 카드를 두 번 세우는 것이 아니라
+한 카드를 이틀에 나눠 세우는 것이라, 곱절보다 조금 적다.
 """
 
 ONE_ON_ONE_STIPULATIONS: Final[tuple[tuple[MatchKind, int], ...]] = tuple(
@@ -187,9 +197,9 @@ def card_for(
             taken.extend(pair)
 
     # 목표 수까지 채운다. 디비전을 번갈아 집어 한쪽만 늘어나지 않게 한다.
-    # **이틀이면 두 배로 선다** (§3-D71). 레슬매니아가 하루짜리와 같은 크기면
-    # 이틀이라는 사실이 화면 어디에도 안 남는다.
-    target = CARD_SIZE[stage] * max(1, nights)
+    # **이틀이면 따로 잡는다** (§3-D71). 레슬매니아가 하루짜리와 같은 크기면 이틀이라는
+    # 사실이 화면 어디에도 안 남는다.
+    target = roll.between(*TWO_NIGHT_CARD) if nights > 1 else CARD_SIZE[stage]
     dry: set[Gender] = set()
     while len(matches) < target and len(dry) < len(divisions):
         division = divisions[len(matches) % len(divisions)]
