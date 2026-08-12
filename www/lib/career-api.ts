@@ -233,6 +233,8 @@ export type CareerShowReport = {
   card: CareerCardMatch[];
   /** 그 밤의 평점 — 카드의 평균. */
   stars: number;
+  /** 그 밤의 경기장 (§3-D69). 서술이 쓴 것과 같은 값이다. */
+  venue: string;
 };
 
 /** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */

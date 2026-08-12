@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from dataclasses import replace
 
 import pytest
 from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없다)
@@ -25,6 +26,7 @@ from wwe_game.adapter.outbound.narration.templates import (
 from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.entities.career_run import Rivalry, RivalryStage
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.services.week_simulation import simulate_week
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.title import Title
 from wwe_game.domain.value_objects.week_report import (
@@ -334,3 +336,43 @@ class TestBeatPriority:
         for week in range(1, 40):
             line = NARRATOR.narrate(run, report(week, kind, result))
             assert _from_bank(line, beat), line
+
+
+class TestTheVenueIsOneNight:
+    """리포트 머리와 서술이 **같은 경기장**을 말한다 (§3-D69).
+
+    무대는 서술의 슬롯이라(§3-D14-1) 그쪽이 이미 뽑고 있었다 — 리포트가 따로 뽑으면
+    같은 밤이 두 곳에서 열린다.
+    """
+
+    def test_the_same_week_gives_the_same_venue(self) -> None:
+        narrator = RuleNarrator()
+        run = make_run(seed=7777)
+        assert narrator.venue_of(run, 40) == narrator.venue_of(run, 40)
+
+    def test_another_week_is_another_venue(self) -> None:
+        narrator = RuleNarrator()
+        run = make_run(seed=7777)
+        found = {narrator.venue_of(run, week) for week in range(1, 60)}
+        assert len(found) > 1
+
+    def test_it_is_the_venue_the_sentence_used(self) -> None:
+        narrator = RuleNarrator()
+        run = make_run(seed=7777, week=0)
+        checked = 0
+        for week in range(1, 80):
+            current = replace(run, week=week - 1)
+            report = simulate_week(current)
+            text = narrator.narrate(current, report)
+            venue = narrator.venue_of(current, report.week)
+            if venue not in text:
+                continue  # 그 템플릿이 무대를 안 쓴 주차다
+            checked += 1
+        assert checked > 0, "무대를 쓴 문장이 한 번도 없었다"
+
+    def test_the_home_crowd_still_comes_around(self) -> None:
+        """국적이 무대에 드러나는 자리는 그대로다 (§3-D14-1)."""
+        narrator = RuleNarrator()
+        run = make_run(seed=7777)
+        venues = {narrator.venue_of(run, week) for week in range(1, 1560)}
+        assert len(venues) > 10

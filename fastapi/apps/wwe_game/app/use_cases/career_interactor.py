@@ -174,7 +174,9 @@ class CareerInteractor(CareerUseCase):
             WeekKind.WEEKLY_SHOW,
         ):
             raise ReportNotFoundError(f"{week}주차는 경기가 선 밤이 아닙니다.")
-        return show_report.build(run, found.report, found.narration)
+        return show_report.build(
+            run, found.report, found.narration, self._narrator.venue_of(run, week)
+        )
 
     async def read_news(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
@@ -311,7 +313,11 @@ class CareerInteractor(CareerUseCase):
         if not show_report.is_reportable(command.run, command.week):
             raise ReportNotFoundError(f"{command.week}주차는 대회 주차가 아닙니다.")
         return show_report.build_night(
-            command.run, command.week, busy=command.busy, stakes=command.stakes
+            command.run,
+            command.week,
+            busy=command.busy,
+            stakes=command.stakes,
+            venue=self._narrator.venue_of(command.run, command.week),
         )
 
     # ── 메타 ──────────────────────────────────────────────────

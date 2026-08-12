@@ -225,15 +225,31 @@ class RuleNarrator(NarrationPort):
         pool = tuple(t for t in TEMPLATES[beat_of(report)] if _REQUIRED[t] <= available)
         return _FORMATTER.vformat(roll.pick(pool), (), slots)
 
+    def venue_of(self, run: CareerRun, week: int) -> str:
+        """그 주차의 무대 (§3-D69). **서술이 쓴 것과 같은 값이다.**
+
+        같은 굴림을 같은 순서로 되짚는다 — 리포트 머리와 문장이 다른 경기장을 말하면
+        그 밤이 두 곳에서 열린 것이 된다. 뽑는 순서가 한 함수(`_stage`)에 모여 있어
+        한쪽만 바뀌는 일이 없다.
+        """
+        roll = SeededRoll(run.seed, week, seeded_roll.NARRATION)
+        return self._stage(run, roll)[1]
+
+    @staticmethod
+    def _stage(run: CareerRun, roll: SeededRoll) -> tuple[Region, str]:
+        """이번 주 무대의 (권역, 경기장). **굴림 순서가 여기서 정해진다.**"""
+        stage = stage_region(run.identity.region, roll)
+        return stage, roll.pick(VENUES[stage])
+
     def _slots(
         self, run: CareerRun, report: WeekReport, roll: SeededRoll
     ) -> dict[str, str | None]:
-        stage = stage_region(run.identity.region, roll)
+        stage, venue = self._stage(run, roll)
         rival = rivalry_engine.top_rivalry(run)
         title = report.title_at_stake
         return {
             "player": run.identity.name.value,
-            "venue": roll.pick(VENUES[stage]),
+            "venue": venue,
             "crowd": roll.pick(CROWDS[stage]),
             "move": roll.pick(MOVES[run.identity.play_style]),
             "reaction": roll.pick(self._reactions(run.stats.popularity)),
