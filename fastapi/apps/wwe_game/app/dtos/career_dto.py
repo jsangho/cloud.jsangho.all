@@ -267,6 +267,9 @@ class CareerLogPage:
     entries: tuple[WeekReportView, ...] = ()
     total: int = 0
     offset: int = 0
+    seed: int = 0
+    """그 커리어의 시드 (§3-D56). **별점을 되짚는 데 쓴다** — 별점은 저장하지 않고
+    그 밤의 재료로 매번 계산하므로, 로그를 다시 열 때도 시드가 필요하다."""
 
     @property
     def has_more(self) -> bool:

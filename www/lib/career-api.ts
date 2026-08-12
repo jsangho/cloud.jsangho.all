@@ -85,6 +85,8 @@ export type CareerWeek = {
   matchField: number;
   /** 댄하우젠의 저주로 진 경기. 평범한 패배와 다르게 그린다. */
   cursed: boolean;
+  /** 그 경기의 별점 (§3-D56). 경기가 없는 주차는 0이다. */
+  stars: number;
   /**
    * 탈락 경기의 한 줄 요약 — "17번으로 입장 · 3명 탈락 · 우승(30인)".
    * **다시 연 로그에도 이것만은 남는다** (§3-D34).
@@ -210,6 +212,10 @@ export type CareerCardMatch = {
   changedHands: boolean;
   /** 빈 벨트를 두고 붙은 경기 — 앞 챔피언이 링을 떠났다. */
   vacant: boolean;
+  /** 그 경기의 별점 (0~5, 0.25 눈금). */
+  stars: number;
+  /** 경기 형식. 싱글이면 null. */
+  matchLabel: string | null;
 };
 
 export type CareerShowReport = {
@@ -225,6 +231,8 @@ export type CareerShowReport = {
   around: string[];
   /** 그날 밤의 다른 경기들, 오프너부터 (§3-D52). */
   card: CareerCardMatch[];
+  /** 그 밤의 평점 — 카드의 평균. */
+  stars: number;
 };
 
 /** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */

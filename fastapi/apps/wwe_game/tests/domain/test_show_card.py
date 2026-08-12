@@ -91,7 +91,8 @@ class TestTheCardAgreesWithTheBeltLineage:
         """벨트가 안 넘어간 밤의 타이틀전은 챔피언이 이긴다 — 계보가 그대로이므로."""
         holders = {
             title_scene.champion_at(SEED, SHOW_WEEK, title)
-            for title in titles_of(Brand.RAW, Gender.MALE)
+            for gender in Gender
+            for title in titles_of(Brand.RAW, gender)
         }
         for match in _card():
             if match.title is None or match.changed_hands:
@@ -133,9 +134,11 @@ class TestTheCardAgreesWithTheBeltLineage:
             ):
                 if match.title is None:
                     continue
+                # 카드는 두 디비전을 다 세운다 (§3-D55) — 벨트도 양쪽에서 찾는다.
                 holder = next(
                     title_scene.champion_at(SEED, week, t)
-                    for t in titles_of(Brand.RAW, Gender.MALE)
+                    for gender in Gender
+                    for t in titles_of(Brand.RAW, gender)
                     if TITLES[t].display_name == match.title
                 )
                 assert match.winner == holder

@@ -22,13 +22,16 @@ from wwe_game.app.dtos.career_dto import (
     StatsView,
     WeekReportView,
 )
+from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
+from wwe_game.domain.services import match_rating
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.title import TITLES, Title
+from wwe_game.domain.value_objects.week_report import WeekKind
 
 
 class _Camel(BaseModel):
@@ -112,6 +115,8 @@ class WeekSchema(_Camel):
     """참가 인원. 여럿이 붙는 경기는 화면이 상대 한 명을 말하면 안 된다."""
     cursed: bool = False
     """댄하우젠의 저주로 진 경기인지 (§3-D28). 화면이 평범한 패배와 다르게 그린다."""
+    stars: float = 0.0
+    """그 경기의 별점 (§3-D56). 경기가 없는 주차는 0이다."""
     match_summary: str | None = None
     """탈락 경기의 한 줄 요약 (§3-D34). **다시 연 로그에도 이것만은 남는다.**"""
     tournament_round: int = 0
@@ -311,6 +316,10 @@ class CardMatchSchema(_Camel):
     title: str | None = None
     changed_hands: bool = False
     vacant: bool = False
+    stars: float = 0.0
+    """그 경기의 별점 (§3-D56). 0.25 눈금."""
+    match_label: str | None = None
+    """경기 형식 (§3-D55). 싱글이면 null이다."""
     """빈 벨트를 두고 붙은 경기 — 앞 챔피언이 링을 떠났다 (§3-D52)."""
 
 
@@ -331,6 +340,8 @@ class ShowReportSchema(_Camel):
     """그 무렵 배경에서 일어난 일 (§3-D44)."""
     card: list[CardMatchSchema] = Field(default_factory=list)
     """그날 밤의 다른 경기들, 오프너부터 (§3-D52). **내 경기는 없다.**"""
+    stars: float = 0.0
+    """그 밤의 평점 — 카드의 평균 (§3-D56)."""
 
 
 class NewsPageSchema(_Camel):
@@ -343,7 +354,33 @@ class NewsPageSchema(_Camel):
 # ── 도메인 → 스키마 ──────────────────────────────────────────
 
 
-def to_week(view: WeekReportView) -> WeekSchema:
+def _stars_of(view: WeekReportView, seed: int) -> float:
+    """내 경기의 별점 (§3-D56). **경기가 없는 주차는 0이다.**
+
+    저장하지 않고 그 주차의 재료로 되짚는다 — 경기력은 로그 행이 들고 있는 그 주차
+    스탯(§3-D39)이고, 없는 옛 행은 0으로 남는다(그때는 별점을 매길 근거가 없다).
+    """
+    report = view.report
+    if report.result is None or view.stats is None:
+        return 0.0
+    stage = None
+    if report.show is not None:
+        stage = "major" if report.show.is_major else "ple"
+    elif report.kind is WeekKind.SPECIAL:
+        stage = "special"
+    return match_rating.rate(
+        seed,
+        report.week,
+        in_ring=view.stats.in_ring,
+        rival_tier=roster.tier_for_popularity(view.stats.popularity),
+        stage=stage,
+        has_title=report.title_at_stake is not None,
+        has_stipulation=report.match_kind is not MatchKind.SINGLES,
+        salt="player",
+    )
+
+
+def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
     report = view.report
     year, month, week_of_month = date_of(report.week)
     return WeekSchema(
@@ -365,6 +402,7 @@ def to_week(view: WeekReportView) -> WeekSchema:
             match_format_of(report.match_kind).field if report.match_kind else 2
         ),
         cursed=report.cursed,
+        stars=_stars_of(view, seed),
         tournament_round=report.tournament_round,
         title_shot_from=(
             report.title_shot_from.value if report.title_shot_from else None
@@ -410,9 +448,12 @@ def to_report(report: ShowReport) -> ShowReportSchema:
                 title=m.title,
                 changed_hands=m.changed_hands,
                 vacant=m.vacant,
+                stars=m.stars,
+                match_label=m.match_label,
             )
             for m in report.card
         ],
+        stars=report.stars,
     )
 
 
@@ -483,7 +524,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 else None
             ),
         ),
-        weeks=[to_week(w) for w in result.weeks],
+        weeks=[to_week(w, run.seed) for w in result.weeks],
         stop_reason=result.stop_reason.value,
         pending_event=(
             PendingEventSchema(
@@ -536,7 +577,7 @@ def to_preset(view: PresetView) -> PresetSchema:
 
 def to_log(page: CareerLogPage) -> LogPageSchema:
     return LogPageSchema(
-        entries=[to_week(e) for e in page.entries],
+        entries=[to_week(e, page.seed) for e in page.entries],
         total=page.total,
         offset=page.offset,
         has_more=page.has_more,

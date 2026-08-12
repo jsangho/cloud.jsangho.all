@@ -35,6 +35,8 @@ STIPULATION: Final = "stipulation"
 ELIMINATION: Final = "elimination"
 CONTRACT: Final = "contract"
 """복귀 오퍼 굴림 (§3-D50). 무소속 주차마다 한 번."""
+RATING: Final = "rating"
+"""경기 별점 (§3-D56). **판정과 나눠 둔다** — 별점을 굴려도 승패가 밀리면 안 된다."""
 DRAFT: Final = "draft"
 """연말 드래프트 (§3-D54). **명부가 쓰는 유일한 채널이다** — 해마다 한 번, 그 해에
 자리를 맞바꿀 칸과 사람을 고른다."""
