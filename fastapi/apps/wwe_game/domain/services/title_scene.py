@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Final
 
 from wwe_game.domain.constants import roster
@@ -77,8 +78,14 @@ class Reign:
     """
 
 
+@lru_cache(maxsize=8192)
 def champion_at(seed: int, week: int, title: Title, *, exclude: str = "") -> str | None:
-    """그 주차에 이 벨트를 감고 있는 사람. 명부가 비면 None."""
+    """그 주차에 이 벨트를 감고 있는 사람. 명부가 비면 None.
+
+    **캐시한다.** 순수 함수이고(§3-D4) 한 화면이 같은 (시드·주차·벨트)를 여러 번 묻는다 —
+    리포트가 벨트 목록과 카드에서, 드래프트가 챔피언 보호에서 각각 부른다. 캐시가 없으면
+    그때마다 30년 재위를 다시 걷는다(실측 1.00초 → 0.06초).
+    """
     last = _walk(seed, week, title, exclude)
     return last.holder if last is not None else None
 
@@ -130,7 +137,7 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
         roll = SeededRoll(seed, cursor, channel)
         pool = tuple(
             n
-            for n in roster.pool_for(spec.gender, tier, cursor, home)
+            for n in roster.pool_for(spec.gender, tier, cursor, home, seed)
             if n != holder and n != exclude
         )
         if pool:

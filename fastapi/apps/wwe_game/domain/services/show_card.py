@@ -125,7 +125,7 @@ def card_for(
         taken.extend(pair)
 
     for _ in range(FILLER_MATCHES[is_major]):
-        pair = _pick_pair(week, gender, brand, tuple(taken), roll)
+        pair = _pick_pair(seed, week, gender, brand, tuple(taken), roll)
         if pair is None:
             break
         matches.append(_settle(pair, roll))
@@ -173,6 +173,7 @@ def _title_bout(
         # 비어 있을 뿐이라, 남은 사람들이 그 자리를 두고 붙는다 — 링에 못 서는 사람을
         # 다시 세울 수는 없다 (2026-08-12 사용자 결정).
         rival = _pick_one(
+            seed,
             week,
             TITLES[title].gender,
             brand,
@@ -193,6 +194,7 @@ def _title_bout(
     if not roll.chance(DEFENSE_CHANCE):
         return None
     challenger = _pick_one(
+        seed,
         week,
         TITLES[title].gender,
         brand,
@@ -258,6 +260,7 @@ def _settle(pair: tuple[str, str], roll: SeededRoll) -> CardMatch:
 
 
 def _pick_pair(
+    seed: int,
     week: int,
     gender: Gender,
     brand: Brand,
@@ -266,16 +269,17 @@ def _pick_pair(
 ) -> tuple[str, str] | None:
     """카드를 채우는 한 경기. 그 브랜드의 아랫단에서 뽑는다 (§3-D53)."""
     tier = roster.tier_in(brand, RivalTier.MIDCARD)
-    first = _pick_one(week, gender, brand, taken, tier, roll)
+    first = _pick_one(seed, week, gender, brand, taken, tier, roll)
     if first is None:
         return None
-    second = _pick_one(week, gender, brand, (*taken, first), tier, roll)
+    second = _pick_one(seed, week, gender, brand, (*taken, first), tier, roll)
     if second is None:
         return None
     return first, second
 
 
 def _pick_one(
+    seed: int,
     week: int,
     gender: Gender,
     brand: Brand,
@@ -284,6 +288,6 @@ def _pick_one(
     roll: SeededRoll,
 ) -> str | None:
     pool = tuple(
-        n for n in roster.pool_for(gender, tier, week, brand) if n not in taken
+        n for n in roster.pool_for(gender, tier, week, brand, seed) if n not in taken
     )
     return roll.pick(pool) if pool else None

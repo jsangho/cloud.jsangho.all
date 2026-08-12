@@ -28,13 +28,15 @@ class TestTheRosterKnowsItsBrand:
         """명부가 그렇게 분류돼 있다 — 원본에서 NXT·Evolve 70명이 전원 유망주다."""
         for member in roster.active_at(week):
             if roster.tier_at(member, week) is RivalTier.PROSPECT:
-                assert roster.brand_at(member, week) is Brand.NXT
+                assert roster.brand_at(member, week, SEED) is Brand.NXT
 
     @pytest.mark.parametrize("week", WEEKS)
     def test_the_main_roster_has_no_prospects(self, week: int) -> None:
         for brand in (Brand.RAW, Brand.SMACKDOWN):
             for gender in Gender:
-                assert roster.pool_for(gender, RivalTier.PROSPECT, week, brand) == ()
+                assert (
+                    roster.pool_for(gender, RivalTier.PROSPECT, week, brand, SEED) == ()
+                )
 
     def test_asking_for_a_missing_tier_is_folded(self) -> None:
         # 접지 않고 물으면 빈 명단이 오고, 그러면 벨트 주인이 사라진다.
@@ -46,7 +48,7 @@ class TestTheRosterKnowsItsBrand:
             for brand in Brand:
                 tier = roster.tier_in(brand, RivalTier.MAIN_EVENT)
                 for week in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
-                    pool = roster.pool_for(gender, tier, week, brand)
+                    pool = roster.pool_for(gender, tier, week, brand, SEED)
                     assert len(pool) >= roster.MIN_BRAND_POOL, (
                         f"{gender}/{brand} {week // WEEKS_PER_YEAR}년차: {pool}"
                     )
@@ -62,10 +64,10 @@ class TestTheBeltStaysHome:
         member = roster.member_of(holder)
         assert member is not None
         if len(spec.brands) == 1:
-            assert roster.brand_at(member, week) is next(iter(spec.brands))
+            assert roster.brand_at(member, week, SEED) is next(iter(spec.brands))
         else:
             # 브랜드 통합 벨트(여성부 태그팀)는 메인 로스터 어느 쪽이어도 된다.
-            assert roster.brand_at(member, week) in spec.brands
+            assert roster.brand_at(member, week, SEED) in spec.brands
 
     @pytest.mark.parametrize("title", sorted(TITLES, key=lambda t: t.value))
     @pytest.mark.parametrize("week", WEEKS)
@@ -91,7 +93,7 @@ class TestTheNightIsOneBrand:
             for name in (match.left, match.right):
                 member = roster.member_of(name)
                 assert member is not None
-                assert roster.brand_at(member, week) is brand
+                assert roster.brand_at(member, week, SEED) is brand
 
     @pytest.mark.parametrize("brand", list(Brand))
     def test_my_rival_is_on_my_brand(self, brand: Brand) -> None:
@@ -105,7 +107,7 @@ class TestTheNightIsOneBrand:
         assert rival is not None
         member = roster.member_of(rival)
         assert member is not None
-        assert roster.brand_at(member, 300) is brand
+        assert roster.brand_at(member, 300, SEED) is brand
 
     def test_the_titles_of_a_brand_are_that_brands(self) -> None:
         # 카드가 거는 벨트는 `titles_of(brand, gender)`가 정한다 — 여기가 어긋나면

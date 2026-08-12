@@ -102,7 +102,9 @@ def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
     taken = {r.rival_name for r in run.rivalries} | {str(run.identity.name)}
     pool = tuple(
         n
-        for n in roster.pool_for(run.identity.gender, tier, run.week, run.brand)
+        for n in roster.pool_for(
+            run.identity.gender, tier, run.week, run.brand, run.seed
+        )
         if n not in taken
     )
     return roll.pick(pool) if pool else None

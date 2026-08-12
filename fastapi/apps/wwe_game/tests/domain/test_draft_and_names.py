@@ -16,10 +16,10 @@ from wwe_game.domain.value_objects.wrestler_identity import Gender
 YEARS = range(1, 30)
 
 
-def _placed(week: int) -> dict[str, Brand]:
+def _placed(week: int, seed: int = 0) -> dict[str, Brand]:
     """그 주차에 메인 로스터에 선 사람 → 브랜드."""
     return {
-        m.name: roster.brand_at(m, week)
+        m.name: roster.brand_at(m, week, seed)
         for m in roster.active_at(week)
         if roster.tier_at(m, week) is not RivalTier.PROSPECT
     }
@@ -29,8 +29,8 @@ class TestTheYearEndDraft:
     def test_a_few_move_each_year(self) -> None:
         """사용자가 정한 크기는 **연 3~4명**이다 — 그 이상이면 명부 재편이 된다."""
         for year in YEARS:
-            before = _placed(year * WEEKS_PER_YEAR + roster.DRAFT_WEEK - 1)
-            after = _placed(year * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1)
+            before = _placed(year * WEEKS_PER_YEAR + roster.DRAFT_WEEK - 1, 7777)
+            after = _placed(year * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1, 7777)
             moved = [n for n, b in after.items() if n in before and before[n] is not b]
             assert 2 <= len(moved) <= 4, f"{year}년차에 {len(moved)}명이 옮겼다"
 
@@ -45,7 +45,7 @@ class TestTheYearEndDraft:
             later = start + step
             if (later - roster.DRAFT_WEEK) % WEEKS_PER_YEAR == 0:
                 continue  # 드래프트가 서는 주차
-            before, after = _placed(later - 1), _placed(later)
+            before, after = _placed(later - 1, 7777), _placed(later, 7777)
             moved = [n for n, b in after.items() if n in before and before[n] is not b]
             assert moved == [], f"{later}주차에 {moved}가 브랜드를 옮겼다"
 
@@ -57,19 +57,77 @@ class TestTheYearEndDraft:
             for gender in Gender:
                 for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT):
                     for brand in (Brand.RAW, Brand.SMACKDOWN):
-                        before = len(roster.pool_for(gender, tier, before_week, brand))
-                        after = len(roster.pool_for(gender, tier, after_week, brand))
+                        before = len(
+                            roster.pool_for(gender, tier, before_week, brand, 7777)
+                        )
+                        after = len(
+                            roster.pool_for(gender, tier, after_week, brand, 7777)
+                        )
                         assert abs(before - after) <= 1, (
                             f"{year}년차 {gender}/{tier}/{brand}: {before} → {after}"
                         )
 
-    def test_the_brand_pools_survive_thirty_years(self) -> None:
+    def test_another_seed_is_another_draft(self) -> None:
+        """커리어마다 다른 드래프트가 돈다 (2026-08-12 사용자 요청)."""
+        week = 8 * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1
+        assert _placed(week, seed=7777) != _placed(week, seed=1234)
+
+    def test_the_same_seed_is_the_same_draft(self) -> None:
+        # 되짚는 세계라(§3-D4) 두 번 물으면 같아야 한다.
+        week = 8 * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1
+        assert _placed(week, seed=7777) == _placed(week, seed=7777)
+
+    def test_the_seed_barely_tilts_the_pool_sizes(self) -> None:
+        """시드가 달라도 칸의 인원수는 **거의** 같다.
+
+        드래프트 순간에는 정확히 맞바꾼다. 다만 그 표식은 사람에게 붙어서, 나중에 그가
+        승급하면 다른 등급 칸으로 따라간다 — 그 칸에서는 짝이 맞지 않는다. 실측 치우침은
+        한 명이다. `MIN_BRAND_POOL`(3)에 견주면 안전한 폭이라 그대로 둔다.
+        """
+        week = 10 * WEEKS_PER_YEAR
+        for gender in Gender:
+            for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT):
+                for brand in (Brand.RAW, Brand.SMACKDOWN):
+                    sizes = [
+                        len(roster.pool_for(gender, tier, week, brand, seed))
+                        for seed in (0, 7777, 1234, 99)
+                    ]
+                    assert max(sizes) - min(sizes) <= 2, (
+                        f"{gender}/{tier}/{brand}: {sizes}"
+                    )
+
+    @pytest.mark.parametrize("seed", [0, 7777, 1234])
+    def test_a_champion_is_never_drafted(self, seed: int) -> None:
+        """드래프트 당시 챔피언은 자리를 옮기지 않는다 (2026-08-12 사용자 결정).
+
+        옮기면 벨트가 남의 브랜드에서 걸린다 — §3-D53이 잡아 놓은 것을 도로 깬다.
+        """
+        from wwe_game.domain.services import title_scene
+        from wwe_game.domain.value_objects.title import TITLES
+
+        for year in range(1, 20):
+            week = year * WEEKS_PER_YEAR + roster.DRAFT_WEEK
+            champions = {
+                roster.member_of(title_scene.champion_at(seed, week - 1, title) or "")
+                for title in TITLES
+            }
+            before, after = _placed(week - 1, seed), _placed(week, seed)
+            moved = {n for n, b in after.items() if n in before and before[n] is not b}
+            held = {m.name for m in champions if m is not None}
+            assert not (moved & held), f"{year}년차: 챔피언 {moved & held}가 옮겨졌다"
+
+    @pytest.mark.parametrize("seed", [0, 7777, 1234, 99])
+    def test_the_brand_pools_survive_thirty_years(self, seed: int) -> None:
+        """**시드마다 확인한다.** 임포트 검증은 시드 0만 보는데, 드래프트가 칸을 한 명씩
+        기울일 수 있어(위 테스트) 다른 세계에서도 바닥을 지키는지는 여기서 잰다."""
         for gender in Gender:
             for brand in Brand:
                 tier = roster.tier_in(brand, RivalTier.MAIN_EVENT)
                 for week in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
-                    pool = roster.pool_for(gender, tier, week, brand)
-                    assert len(pool) >= roster.MIN_BRAND_POOL
+                    pool = roster.pool_for(gender, tier, week, brand, seed)
+                    assert len(pool) >= roster.MIN_BRAND_POOL, (
+                        f"시드 {seed} · {gender}/{brand} {week // WEEKS_PER_YEAR}년차: {pool}"
+                    )
 
 
 class TestTheRingNameChanges:

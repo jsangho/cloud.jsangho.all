@@ -105,7 +105,7 @@ def chronicle(
             active.remove(feud)
             news.append(_ending(week, feud, roll))
         if len(active) < MAX_ACTIVE and roll.chance(START_CHANCE):
-            pair = _pick_pair(week, gender, exclude, roll, brand)
+            pair = _pick_pair(seed, week, gender, exclude, roll, brand)
             if pair is not None:
                 fresh = _Feud(pair, week, week + roll.between(MIN_WEEKS, MAX_WEEKS))
                 active.append(fresh)
@@ -141,6 +141,7 @@ def _ending(week: int, feud: _Feud, roll: SeededRoll) -> SceneNews:
 
 
 def _pick_pair(
+    seed: int,
     week: int,
     gender: Gender,
     exclude: str,

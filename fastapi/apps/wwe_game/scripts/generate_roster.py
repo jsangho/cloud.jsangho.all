@@ -183,6 +183,8 @@ from enum import IntEnum
 from functools import lru_cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
+from wwe_game.domain.services import seeded_roll
+from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
@@ -299,53 +301,78 @@ DRAFT_PAIRS = 2
 """
 
 
-@lru_cache(maxsize=None)
-def _draft_flips(year: int) -> frozenset[str]:
+_DRAFT_CELLS: tuple[tuple[Gender, RivalTier], ...] = tuple(
+    (gender, tier)
+    for gender in Gender
+    for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
+)
+"""드래프트가 집을 수 있는 칸. **유망주는 없다** — 그들은 육성 브랜드에 있다(§3-D53)."""
+
+
+def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
+    """그 주차에 벨트를 들고 있던 사람들 — **드래프트가 건드리지 않는다**
+    (2026-08-12 사용자 결정).
+
+    챔피언이 옮겨 가면 벨트가 남의 브랜드에서 걸린다. §3-D53이 "벨트는 자기 브랜드에
+    있다"로 잡아 놓은 것을 드래프트가 도로 깨는 셈이다.
+
+    **드래프트 직전 주차로 묻는다.** 그 주차로 물으면 계보가 그 해의 드래프트 결과를
+    알아야 하고, 드래프트는 계보를 알아야 해서 둘이 서로를 부르며 돈다. 한 주 앞은
+    이미 정해진 세계라 그 고리가 끊긴다 — 뜻도 그쪽이 맞다: *드래프트 당시* 챔피언이다.
+
+    `title_scene`을 함수 안에서 부르는 이유도 같다. 모듈 맨 위에서 부르면 그쪽이 이
+    파일을 임포트하는 순간 순환이 된다.
+    """
+    from wwe_game.domain.services import title_scene
+    from wwe_game.domain.value_objects.title import TITLES
+
+    held: set[str] = set()
+    for title, spec in TITLES.items():
+        if spec.gender is not gender:
+            continue
+        member = member_of(title_scene.champion_at(seed, week, title) or "")
+        if member is not None:
+            held.add(member.name)
+    return frozenset(held)
+
+
+@lru_cache(maxsize=4096)
+def _draft_flips(seed: int, year: int) -> frozenset[str]:
     """그 해 연말까지 브랜드가 뒤집힌 사람들 (§3-D54).
 
-    **시드를 받지 않는다.** 명부는 모든 커리어가 공유하는 상수라(이 파일 전체가 그렇다)
-    드래프트도 명부의 성질로 둔다 — 커리어마다 다른 세계를 원한다면 시드를 타고 내려가야
-    하는데, 그러면 `pool_for`부터 네 호출부까지 시드를 들고 다녀야 한다. 얻는 것에 비해
-    번지는 곳이 너무 넓다.
+    **커리어마다 다른 드래프트가 돈다** (2026-08-12 사용자 요청). 명부 자체는 모든
+    커리어가 공유하는 상수이지만, *누가 어느 브랜드에 서 있는가*는 시드를 탄다 —
+    배경 세계를 시드에서 되짚는 다른 층들과 같은 규약이다(§3-D38·D44·D52).
 
-    **해마다 누적으로 센다.** 캐시가 없으면 `pool_for` 한 번이 30년을 다시 걷는다 —
-    순수 함수라 캐시가 안전하고, 서른한 칸이면 메모리도 문제가 아니다.
+    **앞 해를 다시 걷지 않는다.** 재귀 + 캐시라 한 해치 일만 새로 한다. 그냥 1년부터
+    다시 세면 `pool_for` 한 번이 30년을 걷고, 그게 주차마다 반복된다.
     """
-    flipped: set[str] = set()
-    cells = [
-        (gender, tier)
-        for gender in Gender
-        for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
-    ]
-    for step in range(1, year + 1):
-        week = step * WEEKS_PER_YEAR + DRAFT_WEEK
-        for index in range(DRAFT_PAIRS):
-            gender, tier = cells[(step * 3 + index) % len(cells)]
-            pools = {
-                brand: [
-                    m
-                    for m in ROSTER
-                    if m.gender is gender
-                    and m.is_active_at(week)
-                    and tier_at(m, week) is tier
-                    and _home_at(m, flipped) is brand
-                ]
-                for brand in (Brand.RAW, Brand.SMACKDOWN)
-            }
-            if not all(pools.values()):
-                continue
-            for brand in (Brand.RAW, Brand.SMACKDOWN):
-                chosen = _draft_pick(pools[brand], step, index)
-                if chosen in flipped:
-                    flipped.discard(chosen)
-                else:
-                    flipped.add(chosen)
+    if year <= 0:
+        return frozenset()
+    flipped = set(_draft_flips(seed, year - 1))
+    week = year * WEEKS_PER_YEAR + DRAFT_WEEK
+    roll = SeededRoll(seed, year, seeded_roll.DRAFT)
+    for _ in range(DRAFT_PAIRS):
+        gender, tier = roll.pick(_DRAFT_CELLS)
+        guarded = _champions_at(seed, week - 1, gender)
+        pools = {
+            brand: [
+                m
+                for m in ROSTER
+                if m.gender is gender
+                and m.is_active_at(week)
+                and tier_at(m, week) is tier
+                and _home_at(m, flipped) is brand
+                and m.name not in guarded
+            ]
+            for brand in (Brand.RAW, Brand.SMACKDOWN)
+        }
+        if not all(pools.values()):
+            continue
+        for brand in (Brand.RAW, Brand.SMACKDOWN):
+            chosen = roll.pick(pools[brand]).name
+            flipped.symmetric_difference_update({chosen})
     return frozenset(flipped)
-
-
-def _draft_pick(pool: list[RosterMember], step: int, index: int) -> str:
-    """그 해 이 칸에서 옮길 사람. 해마다 다른 자리를 집는다."""
-    return pool[(step * 7 + index * 13) % len(pool)].name
 
 
 def _home_at(member: RosterMember, flipped: frozenset[str] | set[str]) -> Brand:
@@ -376,7 +403,7 @@ def _wait_for(member: RosterMember, step: int) -> int:
     return max(MIN_PROMOTION_WEEKS, PROMOTION_WEEKS[step] - earned)
 
 
-def brand_at(member: RosterMember, week: int) -> Brand:
+def brand_at(member: RosterMember, week: int, seed: int = 0) -> Brand:
     """그 주차에 이 사람이 선 브랜드 (§3-D53). **승급이 곧 콜업이다.**
 
     명부의 등급이 이미 브랜드를 말하고 있다 — 원본에서 NXT·Evolve 70명은 **전원
@@ -386,7 +413,7 @@ def brand_at(member: RosterMember, week: int) -> Brand:
     if tier_at(member, week) is RivalTier.PROSPECT:
         return Brand.NXT
     year = (week - DRAFT_WEEK) // WEEKS_PER_YEAR
-    return _home_at(member, _draft_flips(max(0, year)))
+    return _home_at(member, _draft_flips(seed, max(0, year)))
 
 
 def call_up_week(member: RosterMember) -> int | None:
@@ -413,16 +440,26 @@ def tier_in(brand: Brand, tier: RivalTier) -> RivalTier:
     return max(tier, RivalTier.MIDCARD)
 
 
+@lru_cache(maxsize=8192)
 def pool_for(
     gender: Gender,
     tier: RivalTier,
     week: int = 0,
     brand: Brand | None = None,
+    seed: int = 0,
 ) -> tuple[str, ...]:
     """그 주차에 현역이면서 디비전·등급이 맞는 이름들 (§3-D11).
 
     `brand`를 주면 그 브랜드에 선 사람만 남는다 (§3-D53). **등급은 접어서 넣어야 한다** —
     `tier_in(brand, tier)`을 거치지 않고 부르면 빈 명단이 나올 수 있다.
+
+    `seed`는 드래프트를 태운다 (§3-D54). 드래프트는 같은 디비전·같은 등급끼리 맞바꾸므로
+    **그 순간에는** 칸의 인원수가 변하지 않는다 — 다만 표식이 사람을 따라다녀, 그가 나중에
+    승급하면 다른 칸으로 넘어가 한 명쯤 기운다. 아래 임포트 검증은 시드 0만 보고, 다른
+    세계의 바닥은 테스트가 시드 넷으로 잰다.
+
+    **캐시한다.** 명부는 상수이고 이 함수는 순수하다. 벨트 계보가 30년을 걸을 때마다
+    재위 경계에서 이걸 부르고, 벨트가 열둘이라 같은 칸을 수십 번 다시 센다.
     """
     return tuple(
         name_at(m, week)
@@ -430,7 +467,7 @@ def pool_for(
         if m.gender is gender
         and m.is_active_at(week)
         and tier_at(m, week) is tier
-        and (brand is None or brand_at(m, week) is brand)
+        and (brand is None or brand_at(m, week, seed) is brand)
     )
 
 
