@@ -9,6 +9,8 @@ JSON은 camelCase, 도메인은 snake_case다. 변환은 **이 경계에서만**
 
 from __future__ import annotations
 
+from typing import Final
+
 from pydantic import BaseModel, ConfigDict, Field
 from wwe_game.adapter.inbound.api.schemas.guest_schema import GuestRunState, to_state
 from wwe_game.app.dtos.career_dto import (
@@ -26,6 +28,7 @@ from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
+from wwe_game.domain.value_objects.title import TITLES, Title
 
 
 class _Camel(BaseModel):
@@ -233,6 +236,13 @@ class GuestReportRequest(_Camel):
 
     state: GuestRunState
     week: int = Field(..., ge=1)
+    opponent: str | None = None
+    """그날 내 상대 (§3-D52). 카드가 그를 같은 밤에 두 번 세우지 않게 한다."""
+    title_at_stake: str | None = None
+    """그날 내가 도전한 벨트의 **표시 이름**. 카드가 같은 벨트를 다시 걸지 않게 한다.
+
+    화면이 알려 주는 이유는 서버에 로그가 없어서다 — 모르는 이름은 조용히 무시된다.
+    """
 
 
 class GuestAdvanceResponse(_Camel):
@@ -292,6 +302,16 @@ class TitleHolderSchema(_Camel):
     """내가 감고 있는 벨트인지 — 화면이 내 줄을 짚는다 (§3-D45)."""
 
 
+class CardMatchSchema(_Camel):
+    """그날 밤의 다른 경기 한 줄 (§3-D52). **문장이 아니라 구조다** — 문구는 화면이 만든다."""
+
+    left: str
+    right: str
+    winner: str
+    title: str | None = None
+    changed_hands: bool = False
+
+
 class ShowReportSchema(_Camel):
     """그 밤의 리포트 (§3-D45). **뉴스와 다르다** — 뉴스는 커리어의 기억이고
     이쪽은 한 밤의 카드다."""
@@ -307,6 +327,8 @@ class ShowReportSchema(_Camel):
     champions: list[TitleHolderSchema] = Field(default_factory=list)
     around: list[str] = Field(default_factory=list)
     """그 무렵 배경에서 일어난 일 (§3-D44)."""
+    card: list[CardMatchSchema] = Field(default_factory=list)
+    """그날 밤의 다른 경기들, 오프너부터 (§3-D52). **내 경기는 없다.**"""
 
 
 class NewsPageSchema(_Camel):
@@ -378,7 +400,32 @@ def to_report(report: ShowReport) -> ShowReportSchema:
             for c in report.champions
         ],
         around=list(report.around),
+        card=[
+            CardMatchSchema(
+                left=m.left,
+                right=m.right,
+                winner=m.winner,
+                title=m.title,
+                changed_hands=m.changed_hands,
+            )
+            for m in report.card
+        ],
     )
+
+
+def title_of_display(name: str) -> Title | None:
+    """벨트의 표시 이름 → 도메인 값. 모르는 이름은 None이다.
+
+    **문자열이 도메인에 닿기 전에 여기서 멈춘다** — 체험판은 로그가 서버에 없어서
+    "그날 내가 도전한 벨트"를 화면이 알려 줘야 하는데(§3-D52), 화면이 들고 있는 것은
+    표시 이름뿐이다. 그 변환은 어댑터의 일이고, 도메인은 `Title`만 받는다.
+    """
+    return _TITLE_BY_DISPLAY.get(name)
+
+
+_TITLE_BY_DISPLAY: Final[dict[str, Title]] = {
+    spec.display_name: title for title, spec in TITLES.items()
+}
 
 
 def to_stats(stats: StatsView) -> StatsSchema:

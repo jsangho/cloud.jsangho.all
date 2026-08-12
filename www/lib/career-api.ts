@@ -198,6 +198,18 @@ export type CareerLogPage = {
  * 그 밤의 리포트 (§3-D45). **뉴스와 다르다** — 뉴스는 커리어의 기억이고 이쪽은
  * 한 밤의 카드다: 그날 벨트를 누가 들고 있었고 그 무렵 세계에 무슨 일이 있었는지.
  */
+/** 그날 밤의 다른 경기 한 줄 (§3-D52). **내 경기는 여기 없다** — 로그 줄이 그 자리다. */
+export type CareerCardMatch = {
+  left: string;
+  right: string;
+  /** `left` · `right` 중 하나. 배경 경기에 무승부는 없다. */
+  winner: string;
+  /** 걸린 벨트의 표시 이름. 타이틀전이 아니면 null. */
+  title: string | null;
+  /** 그날 밤 벨트가 넘어갔는지. `title`이 있을 때만 뜻이 있다. */
+  changedHands: boolean;
+};
+
 export type CareerShowReport = {
   week: number;
   show: string;
@@ -209,6 +221,8 @@ export type CareerShowReport = {
   narration: string;
   champions: { title: string; holder: string; mine: boolean }[];
   around: string[];
+  /** 그날 밤의 다른 경기들, 오프너부터 (§3-D52). */
+  card: CareerCardMatch[];
 };
 
 /** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */
@@ -348,9 +362,17 @@ export function advanceGuestRun(
 export async function readGuestReport(
   state: GuestRunState,
   week: number,
+  night: { opponent: string | null; titleAtStake: string | null },
 ): Promise<CareerShowReport | null> {
   try {
-    return await post<CareerShowReport>("/guest/report", { state, week });
+    return await post<CareerShowReport>("/guest/report", {
+      state,
+      week,
+      // 서버에 로그가 없어 그 줄의 사실을 화면이 알려 준다 (§3-D52) — 카드가 내 상대를
+      // 같은 밤에 두 번 세우거나, 내가 도전한 벨트를 다시 걸지 않게 하는 데만 쓰인다.
+      opponent: night.opponent,
+      titleAtStake: night.titleAtStake,
+    });
   } catch (error) {
     if (error instanceof CareerApiError && error.status === 404) return null;
     throw error;

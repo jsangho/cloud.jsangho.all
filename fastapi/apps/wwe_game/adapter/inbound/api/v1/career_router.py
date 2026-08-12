@@ -30,6 +30,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     PresetSchema,
     ShowReportSchema,
     StartRunRequest,
+    title_of_display,
     to_advance,
     to_guest,
     to_log,
@@ -391,8 +392,11 @@ def read_guest_report(
 
     `POST`인 이유는 `/guest/resume`과 같다 — 조회이지만 세이브가 본문에 실린다.
     """
+    stake = title_of_display(body.title_at_stake) if body.title_at_stake else None
     command = GuestReportCommand(
         run=_restore(body.state),  # type: ignore[arg-type]
         week=body.week,
+        busy=(body.opponent,) if body.opponent else (),
+        stakes=(stake,) if stake is not None else (),
     )
     return to_report(_sync(lambda: use_case.read_guest_report(command)))

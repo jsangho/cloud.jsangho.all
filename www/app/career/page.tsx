@@ -26,6 +26,7 @@ import {
   type CareerMode,
   type CareerModeCode,
   type CareerBeat,
+  type CareerCardMatch,
   type CareerPreset,
   type CareerShowReport,
   type CareerNewsItem,
@@ -215,6 +216,9 @@ const HISTORY_WEEKS = 60;
  * 브라우저가 먼저 무너진다. 오래된 쪽부터 버린다.
  */
 const TIMELINE_WEEKS = 520;
+
+/** 빈 일정의 고정 참조. 렌더마다 `[]`를 새로 만들면 effect가 끝없이 다시 돈다. */
+const NO_WEEKS: CareerWeek[] = [];
 
 /** 화면이 가질 수 있는 상태. 불가능한 조합을 타입에서 지운다. */
 type Screen =
@@ -406,6 +410,12 @@ export default function CareerPage() {
     };
   }, [tab, runId, screen]);
 
+  // 일정은 **누적된 타임라인**이 세운다 (§3-D51) — 방금 진행한 주차는 이미 그 안에
+  // 얹혀 있다. 아직 한 번도 쌓이지 않은 첫 화면에서만 응답의 진행분을 그대로 쓴다.
+  // 빈 배열을 여기서 만들면 렌더마다 새 참조가 되어 아래 effect가 계속 다시 돈다.
+  const advanced = screen.phase === "play" ? screen.advance.weeks : NO_WEEKS;
+  const timeline = history.length > 0 ? history : advanced;
+
   // 대회 주차를 펼치면 그 밤의 리포트를 받아 온다 (§3-D45). **열 때만 받는다** —
   // 인박스와 같은 방침이다: 30년치를 진행할 때마다 따라 받으면 낭비다.
   //
@@ -417,8 +427,14 @@ export default function CareerPage() {
       setReport(null);
       return;
     }
+    // 체험판은 그 줄의 사실을 함께 보낸다 (§3-D52) — 서버에 로그가 없어, 안 보내면
+    // 카드가 내 상대를 같은 밤에 두 번 세운다. 로그인 쪽은 서버가 로그에서 읽는다.
+    const row = timeline.find((week) => week.week === openWeek) ?? null;
     const asked = guestState
-      ? readGuestReport(guestState, openWeek)
+      ? readGuestReport(guestState, openWeek, {
+          opponent: row?.opponent ?? null,
+          titleAtStake: row?.titleAtStake ?? null,
+        })
       : runId !== null
         ? readReport(runId, openWeek)
         : null;
@@ -431,7 +447,7 @@ export default function CareerPage() {
     return () => {
       alive = false;
     };
-  }, [openWeek, runId, guestState]);
+  }, [openWeek, runId, guestState, timeline]);
 
   // 재개하면 응답의 `weeks`가 비어 있다 — 진행한 적이 없어서가 아니라 서버가 로그를
   // 세이브에 끌고 오지 않기 때문이다(§3-D6). 일정 탭을 열 때만 마지막 쪽을 받아 온다.
@@ -794,10 +810,8 @@ export default function CareerPage() {
   }
 
   const { advance, busy } = screen;
-  const { run: view, weeks, pendingEvent } = advance;
-  // 일정은 **누적된 타임라인**이 세운다 — 방금 진행한 주차는 이미 그 안에 얹혀 있다.
-  // 아직 한 번도 쌓이지 않은 첫 화면에서만 응답의 진행분을 그대로 쓴다.
-  const shownWeeks = history.length > 0 ? history : weeks;
+  const { run: view, pendingEvent } = advance;
+  const shownWeeks = timeline;
   const ended = advance.stopReason === "ended";
   const blocked = pendingEvent !== null;
 
@@ -1134,6 +1148,18 @@ function ShowCard({ report }: { report: CareerShowReport }) {
         {report.show}
         {report.isMajor && <span className="ml-1.5 text-xs text-brand-link">대형</span>}
       </p>
+      {report.card.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground">그날의 카드</p>
+          <ul className="mt-0.5 space-y-0.5">
+            {report.card.map((match, i) => (
+              <li key={i} className="text-xs leading-relaxed">
+                <CardLine match={match} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div>
         <p className="text-xs text-muted-foreground">그날의 벨트</p>
         <ul className="mt-0.5 space-y-0.5">
@@ -1164,6 +1190,35 @@ function ShowCard({ report }: { report: CareerShowReport }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * 카드 한 줄 — **이긴 쪽만 굵다** (§3-D52).
+ *
+ * "A def. B"를 쓰지 않는다. 승패는 굵기로 이미 읽히고, 여덟 줄이 같은 약어로 시작하면
+ * 카드가 표가 된다. 벨트는 골드로 짚되 배지를 만들지 않는다 — 골드는 액션의 색이라
+ * 배경 경기에까지 pill을 두르면 신호가 희석된다 (DESIGN.md §7).
+ */
+function CardLine({ match }: { match: CareerCardMatch }) {
+  return (
+    <>
+      <Side name={match.left} won={match.winner === match.left} />
+      <span className="mx-1 text-muted-foreground/70">vs</span>
+      <Side name={match.right} won={match.winner === match.right} />
+      {match.title && (
+        <span className="ml-1.5 text-brand-link">
+          {match.title}
+          {match.changedHands && <span className="ml-1">타이틀 이동</span>}
+        </span>
+      )}
+    </>
+  );
+}
+
+function Side({ name, won }: { name: string; won: boolean }) {
+  return (
+    <span className={won ? "font-semibold text-foreground" : "text-muted-foreground"}>{name}</span>
   );
 }
 

@@ -19,8 +19,8 @@ from dataclasses import dataclass
 
 from wwe_game.domain.constants.ple_calendar import calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import rivalry_scene, title_scene
-from wwe_game.domain.value_objects.title import TITLES, titles_of
+from wwe_game.domain.services import rivalry_scene, show_card, title_scene
+from wwe_game.domain.value_objects.title import TITLES, Title, titles_of
 from wwe_game.domain.value_objects.week_report import WeekReport
 
 AROUND_WEEKS = 4
@@ -54,6 +54,8 @@ class ShowReport:
     champions: tuple[TitleHolder, ...]
     around: tuple[str, ...]
     """그 무렵 배경에서 일어난 일. **내 일이 아니어서 뉴스에는 안 뜬 것들도 포함한다.**"""
+    card: tuple[show_card.CardMatch, ...] = ()
+    """그날 밤의 다른 경기들 (§3-D52). **내 경기는 없다** — 화면이 따로 그린다."""
 
 
 def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
@@ -75,20 +77,37 @@ def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
         narration=narration,
         champions=_champions(run, report.week, player),
         around=_around(run, report.week, player),
+        card=_card(
+            run,
+            report.week,
+            report.is_major_show,
+            busy=(report.opponent,) if report.opponent else (),
+            stakes=(report.title_at_stake,) if report.title_at_stake else (),
+        ),
     )
 
 
-def build_night(run: CareerRun, week: int) -> ShowReport:
+def build_night(
+    run: CareerRun,
+    week: int,
+    *,
+    busy: tuple[str, ...] = (),
+    stakes: tuple[Title, ...] = (),
+) -> ShowReport:
     """**로그 없이** 세우는 리포트 — 체험판의 것이다 (§3-D8 · §3-D51).
 
     체험판 세이브에는 주차 로그가 없다. 그런데 화면이 리포트에서 실제로 그리는 것은
-    그 밤의 **배경**뿐이다 — 대회 이름, 그날의 벨트, 그 무렵의 사건. 내 경기 기록
-    (승패·상대·경기 형식)은 이미 로그 화면의 그 줄에 있고, 리포트는 그것을 되풀이하지
-    않는다.
+    그 밤의 **배경**뿐이다 — 대회 이름, 그날의 벨트, 그 무렵의 사건, 그날의 카드.
+    내 경기 기록(승패·상대·경기 형식)은 이미 로그 화면의 그 줄에 있고, 리포트는 그것을
+    되풀이하지 않는다.
 
     그래서 여기서는 배경만 세우고 내 경기 자리는 비운다. **비운 것은 모른다는 뜻이 아니라
     이 자리에서 말할 것이 아니라는 뜻이다.** 로그를 가진 로그인 플레이는 `build()`가
     그 줄까지 채워 준다.
+
+    `busy`·`stakes`는 로그 대신 **화면이 알려 주는 그 줄의 사실**이다 — 그날 내 상대와
+    내가 도전한 벨트. 카드가 그 둘을 다시 쓰지 않게 하려고 받는다(§3-D52). 없으면 카드가
+    조금 어긋날 뿐 리포트는 선다.
     """
     show = calendar_for(run.brand).show_for(week)
     player = str(run.identity.name)
@@ -103,6 +122,32 @@ def build_night(run: CareerRun, week: int) -> ShowReport:
         narration="",
         champions=_champions(run, week, player),
         around=_around(run, week, player),
+        card=_card(run, week, show.is_major, busy=busy, stakes=stakes),
+    )
+
+
+def _card(
+    run: CareerRun,
+    week: int,
+    is_major: bool,
+    *,
+    busy: tuple[str, ...],
+    stakes: tuple[Title, ...],
+) -> tuple[show_card.CardMatch, ...]:
+    """그날 밤의 다른 경기들 (§3-D52).
+
+    **내가 감고 있는 벨트와 그날 내가 도전한 벨트는 빼고 짠다.** 그 둘을 빼지 않으면
+    같은 리포트 안에서 "그날의 벨트: 나"와 "카드: 챔피언 X 방어"가 서로를 부정한다.
+    """
+    return show_card.card_for(
+        run.seed,
+        week,
+        run.identity.gender,
+        run.brand,
+        is_major=is_major,
+        player=str(run.identity.name),
+        busy=busy,
+        skip_titles=frozenset(run.titles_held) | frozenset(stakes),
     )
 
 
