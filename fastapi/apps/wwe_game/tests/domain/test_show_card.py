@@ -50,7 +50,12 @@ class TestItIsAlwaysTheSameNight:
 
 class TestNobodyWrestlesTwice:
     def test_a_name_appears_once_a_night(self) -> None:
-        names = [name for m in _card() for name in (m.left, m.right)]
+        names = [
+            name
+            for m in _card()
+            for label in (m.left, m.right)
+            for name in title_scene.members_of(label)
+        ]
         assert len(names) == len(set(names))
 
     def test_my_opponent_is_not_on_the_card(self) -> None:
@@ -118,10 +123,11 @@ class TestTheCardAgreesWithTheBeltLineage:
                 found += 1
                 assert match.changed_hands is True
                 assert match.title is not None
-                for name in (match.left, match.right):
-                    member = roster.member_of(name)
-                    assert member is not None
-                    assert member.is_active_at(week), f"{name}은 이미 링을 떠났다"
+                for label in (match.left, match.right):
+                    for name in title_scene.members_of(label):
+                        member = roster.member_of(name)
+                        assert member is not None
+                        assert member.is_active_at(week), f"{name}은 이미 링을 떠났다"
         assert found > 0, "30년에 공석이 한 번도 안 생겼다 — 은퇴가 계보에 안 닿는다"
 
     def test_the_new_champion_wins_the_vacant_match(self) -> None:

@@ -77,12 +77,14 @@ class TestTheYearEndDraft:
         week = 8 * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1
         assert _placed(week, seed=7777) == _placed(week, seed=7777)
 
-    def test_the_seed_barely_tilts_the_pool_sizes(self) -> None:
-        """시드가 달라도 칸의 인원수는 **거의** 같다.
+    def test_the_seed_only_tilts_the_pool_a_little(self) -> None:
+        """시드가 칸을 기울이되 **한쪽으로 쏠리지는 않는다.**
 
         드래프트 순간에는 정확히 맞바꾼다. 다만 그 표식은 사람에게 붙어서, 나중에 그가
-        승급하면 다른 등급 칸으로 따라간다 — 그 칸에서는 짝이 맞지 않는다. 실측 치우침은
-        한 명이다. `MIN_BRAND_POOL`(3)에 견주면 안전한 폭이라 그대로 둔다.
+        승급하면 다른 등급 칸으로 따라간다 — 그 칸에서는 짝이 맞지 않는다.
+
+        절대 수가 아니라 **비율**로 잰다: 칸이 클수록 치우침도 커지는 것이 자연스럽고,
+        지켜야 하는 것은 바닥(`MIN_BRAND_POOL`)이라 그건 아래에서 따로 잰다.
         """
         week = 10 * WEEKS_PER_YEAR
         for gender in Gender:
@@ -92,9 +94,8 @@ class TestTheYearEndDraft:
                         len(roster.pool_for(gender, tier, week, brand, seed))
                         for seed in (0, 7777, 1234, 99)
                     ]
-                    assert max(sizes) - min(sizes) <= 2, (
-                        f"{gender}/{tier}/{brand}: {sizes}"
-                    )
+                    tilt = (max(sizes) - min(sizes)) / max(sizes)
+                    assert tilt <= 0.3, f"{gender}/{tier}/{brand}: {sizes}"
 
     @pytest.mark.parametrize("seed", [0, 7777, 1234])
     def test_a_champion_is_never_drafted(self, seed: int) -> None:
@@ -108,8 +109,11 @@ class TestTheYearEndDraft:
         for year in range(1, 20):
             week = year * WEEKS_PER_YEAR + roster.DRAFT_WEEK
             champions = {
-                roster.member_of(title_scene.champion_at(seed, week - 1, title) or "")
+                roster.member_of(name)
                 for title in TITLES
+                for name in title_scene.members_of(
+                    title_scene.champion_at(seed, week - 1, title) or ""
+                )
             }
             before, after = _placed(week - 1, seed), _placed(week, seed)
             moved = {n for n, b in after.items() if n in before and before[n] is not b}
