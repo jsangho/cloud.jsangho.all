@@ -198,7 +198,21 @@ def card_for(
         taken.extend(pair)
 
     # 오프너가 앞, 타이틀전이 뒤다. 카드는 위로 갈수록 커진다.
-    return tuple(_rate(seed, week, m, stage=stage) for m in reversed(matches))
+    #
+    # **팀 이름은 맨 마지막에 붙인다** (§3-D62). 그 전까지는 사람 이름으로 다뤄야
+    # 한다 — 같은 밤에 두 번 서지 않는지, 그 브랜드 사람인지, 별점의 등급은 무엇인지가
+    # 전부 사람 단위의 물음이다.
+    return tuple(
+        _named(_rate(seed, week, m, stage=stage), seed) for m in reversed(matches)
+    )
+
+
+def _named(match: CardMatch, seed: int) -> CardMatch:
+    """카드 한 줄의 양쪽을 화면에 나갈 이름으로 (§3-D62)."""
+    left = title_scene.holder_label(match.left, seed)
+    right = title_scene.holder_label(match.right, seed)
+    winner = left if match.winner == match.left else right
+    return replace(match, left=left, right=right, winner=winner)
 
 
 TIER_RING: Final[dict[RivalTier, int]] = {
@@ -297,7 +311,7 @@ def _title_bout(
             # 그 밤에 타이틀전을 세우면 있지도 않은 경기를 적는 셈이 된다.
             return None
         vacated = title_scene.vacated_between(seed, since, week, title, exclude=player)
-        if not vacated and _still_there(before, week, seed):
+        if not vacated and _still_there(before, week, brand, seed):
             return CardMatch(
                 left=before,
                 right=holder,
@@ -391,8 +405,25 @@ def _feud_pairs(
             started.append(item.names)
         elif item.names in started:
             started.remove(item.names)
+    # **그 밤의 브랜드를 다시 본다.** 대립은 시작한 주차의 명단에서 뽑히는데(§3-D44)
+    # 그 뒤에 한쪽이 콜업되거나 트레이드되면(§3-D53·D63) 짝이 두 브랜드로 갈린다 —
+    # 그대로 세우면 남의 브랜드 선수가 이 카드에 선다.
     return tuple(
-        pair for pair in started if pair[0] not in taken and pair[1] not in taken
+        pair
+        for pair in started
+        if pair[0] not in taken
+        and pair[1] not in taken
+        and all(_stands_on(name, week, brand, seed) for name in pair)
+    )
+
+
+def _stands_on(name: str, week: int, brand: Brand, seed: int) -> bool:
+    """그 주차에 그 브랜드에 선 사람인지."""
+    member = roster.member_of(name, seed)
+    return (
+        member is not None
+        and member.is_active_at(week)
+        and roster.brand_at(member, week, seed) is brand
     )
 
 
@@ -411,19 +442,15 @@ def _last_show(brand: Brand, week: int) -> int:
     return 0
 
 
-def _still_there(label: str, week: int, seed: int = 0) -> bool:
-    """그 주차에 아직 링에 있는지. **팀이면 전원이 있어야 한다** (§3-D57).
+def _still_there(label: str, week: int, brand: Brand, seed: int = 0) -> bool:
+    """그 주차에 **그 브랜드 링에** 아직 있는지. 팀이면 전원이 있어야 한다 (§3-D57).
 
-    명부 밖 이름(플레이어)은 없는 것으로 본다.
+    은퇴만 보면 안 된다 — 콜업이나 트레이드로 브랜드를 떠난 사람도 이 밤에는 설 수
+    없다(§3-D53·D63). 실제로 NXT 카드에 콜업된 앞 챔피언이 섰다. 명부 밖 이름
+    (플레이어)은 없는 것으로 본다.
     """
     people = title_scene.members_of(label)
-    if not people:
-        return False
-    return all(
-        (member := roster.member_of(name, seed)) is not None
-        and member.is_active_at(week)
-        for name in people
-    )
+    return bool(people) and all(_stands_on(name, week, brand, seed) for name in people)
 
 
 def _settle(pair: tuple[str, str], brand: Brand, roll: SeededRoll) -> CardMatch:

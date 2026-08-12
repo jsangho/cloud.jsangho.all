@@ -34,20 +34,26 @@ class TestTheYearEndDraft:
             moved = [n for n, b in after.items() if n in before and before[n] is not b]
             assert 2 <= len(moved) <= 4, f"{year}년차에 {len(moved)}명이 옮겼다"
 
-    def test_nothing_moves_between_drafts(self) -> None:
-        """브랜드가 바뀌는 자리는 **연말 하나뿐**이다.
+    def test_the_year_moves_only_a_few_times(self) -> None:
+        """브랜드가 바뀌는 자리는 **연말 드래프트 + 트레이드 0~2건**뿐이다 (§3-D63).
+
+        세계가 연말에만 움직이면 나머지 쉰한 주는 명부가 굳어 있다. 그렇다고 매주
+        오가면 드래프트가 무엇 때문에 있는지가 사라진다.
 
         콜업(유망주 → 메인)은 등급이 하는 일이라 여기서 보지 않는다 — 두 주차에 모두
         메인 로스터에 있던 사람만 견준다.
         """
-        start = 5 * WEEKS_PER_YEAR
-        for step in range(1, 3 * WEEKS_PER_YEAR):
-            later = start + step
-            if (later - roster.DRAFT_WEEK) % WEEKS_PER_YEAR == 0:
-                continue  # 드래프트가 서는 주차
-            before, after = _placed(later - 1, 7777), _placed(later, 7777)
-            moved = [n for n, b in after.items() if n in before and before[n] is not b]
-            assert moved == [], f"{later}주차에 {moved}가 브랜드를 옮겼다"
+        for year in (5, 6, 7):
+            start = year * WEEKS_PER_YEAR
+            days = 0
+            for step in range(1, WEEKS_PER_YEAR):
+                later = start + step
+                before, after = _placed(later - 1, 7777), _placed(later, 7777)
+                if any(n in before and before[n] is not b for n, b in after.items()):
+                    days += 1
+            assert 1 <= days <= 1 + roster.TRADES_PER_YEAR[1], (
+                f"{year}년차에 {days}번 움직였다"
+            )
 
     def test_the_swap_keeps_both_brands_the_same_size(self) -> None:
         """맞바꾸므로 어느 칸의 인원수도 드래프트로 변하지 않는다."""

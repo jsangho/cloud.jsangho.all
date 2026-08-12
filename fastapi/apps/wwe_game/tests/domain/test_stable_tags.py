@@ -125,3 +125,59 @@ class TestWhenSomeoneDropsOut:
                     holder = title_scene.champion_at(seed, week, title)
                     assert holder is not None
                     assert len(title_scene.members_of(holder)) == 2
+
+
+class TestTheMadeUpStables:
+    """가상 팀·스테이블 (§3-D64, 2026-08-12 사용자 요청).
+
+    실존 팀은 30년 안에 은퇴로 전부 사라진다(§3-D13-1). 새로 생기는 팀이 없으면 후반의
+    태그 벨트는 늘 독립 둘이 든다 — 그래서 가상 선수도 팀을 이룬다.
+    """
+
+    @staticmethod
+    def _groups(seed: int) -> dict[str, list[roster.RosterMember]]:
+        found: dict[str, list[roster.RosterMember]] = {}
+        for member in roster.ROSTER:
+            stable = roster.stable_at(member, seed)
+            if member.slot >= 0 and stable:
+                found.setdefault(stable, []).append(member)
+        return found
+
+    @pytest.mark.parametrize("seed", (0, 7777, 1234))
+    def test_they_exist(self, seed: int) -> None:
+        assert self._groups(seed), "가상 스테이블이 하나도 없다"
+
+    @pytest.mark.parametrize("seed", (0, 7777, 1234))
+    def test_a_stable_has_at_least_two(self, seed: int) -> None:
+        # 혼자면 스테이블이 아니고, 태그 벨트의 짝도 못 짠다.
+        assert all(len(v) >= 2 for v in self._groups(seed).values())
+
+    @pytest.mark.parametrize("seed", (0, 7777, 1234))
+    def test_a_stable_shares_a_division_and_a_home(self, seed: int) -> None:
+        """**같은 디비전·같은 메인 브랜드**여야 한 카드에 설 수 있다 (§3-D53)."""
+        for members in self._groups(seed).values():
+            assert len({m.gender for m in members}) == 1
+            assert len({m.home_brand for m in members}) == 1
+
+    @pytest.mark.parametrize("seed", (0, 7777, 1234))
+    def test_no_two_stables_share_a_head(self, seed: int) -> None:
+        """앞말이 겹치면 다른 팀으로 안 읽힌다 (§3-D44가 겪은 것)."""
+        heads = [name.split()[0] for name in self._groups(seed)]
+        assert len(heads) == len(set(heads))
+
+    def test_another_seed_is_another_set_of_teams(self) -> None:
+        assert set(self._groups(7777)) != set(self._groups(1234))
+
+    def test_the_real_stables_are_untouched(self) -> None:
+        # 실존 선수의 스테이블은 원본 CSV가 정한다 — 시드와 무관하다.
+        for seed in (0, 7777):
+            for member in roster.ROSTER:
+                if member.slot < 0:
+                    assert roster.stable_at(member, seed) == member.stable
+
+    def test_some_are_left_independent(self) -> None:
+        """전원을 묶으면 독립이 사라져 태그 벨트가 늘 같은 무리에서 나온다 (§3-D58)."""
+        loners = [
+            m for m in roster.ROSTER if m.slot >= 0 and not roster.stable_at(m, 7777)
+        ]
+        assert len(loners) > 100
