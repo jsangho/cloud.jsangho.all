@@ -78,6 +78,34 @@ def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
     )
 
 
+def build_night(run: CareerRun, week: int) -> ShowReport:
+    """**로그 없이** 세우는 리포트 — 체험판의 것이다 (§3-D8 · §3-D51).
+
+    체험판 세이브에는 주차 로그가 없다. 그런데 화면이 리포트에서 실제로 그리는 것은
+    그 밤의 **배경**뿐이다 — 대회 이름, 그날의 벨트, 그 무렵의 사건. 내 경기 기록
+    (승패·상대·경기 형식)은 이미 로그 화면의 그 줄에 있고, 리포트는 그것을 되풀이하지
+    않는다.
+
+    그래서 여기서는 배경만 세우고 내 경기 자리는 비운다. **비운 것은 모른다는 뜻이 아니라
+    이 자리에서 말할 것이 아니라는 뜻이다.** 로그를 가진 로그인 플레이는 `build()`가
+    그 줄까지 채워 준다.
+    """
+    show = calendar_for(run.brand).show_for(week)
+    player = str(run.identity.name)
+    return ShowReport(
+        week=week,
+        show=show.name,
+        is_major=show.is_major,
+        result=None,
+        opponent=None,
+        match_label=None,
+        title_at_stake=None,
+        narration="",
+        champions=_champions(run, week, player),
+        around=_around(run, week, player),
+    )
+
+
 def _champions(run: CareerRun, week: int, player: str) -> tuple[TitleHolder, ...]:
     """그 주차에 이 브랜드의 벨트를 누가 감고 있었나.
 

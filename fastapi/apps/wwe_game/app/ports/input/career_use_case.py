@@ -19,6 +19,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestReportCommand,
     GuestResumeCommand,
     GuestStartCommand,
     ModeView,
@@ -143,6 +144,15 @@ class CareerUseCase(ABC):
     @abstractmethod
     def choose_guest(self, command: GuestChooseCommand) -> AdvanceResult:
         """체험판의 이벤트 선택 판정. 대기 이벤트가 없으면 `NoPendingEventError`."""
+
+    @abstractmethod
+    def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
+        """그 밤의 리포트, 체험판 (§3-D51). 대회 주차가 아니면 `ReportNotFoundError`.
+
+        `read_report`로 대신할 수 없다. 저쪽은 DB 로그에서 그 주차 줄을 되읽는데
+        체험판에는 로그가 없다(§3-D8) — **내 경기 기록은 이미 화면의 그 줄에 있고,
+        서버가 더할 것은 배경뿐이다.**
+        """
 
     # ── 메타 ──────────────────────────────────────────────────
 

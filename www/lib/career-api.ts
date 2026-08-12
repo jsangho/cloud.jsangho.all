@@ -338,6 +338,25 @@ export function advanceGuestRun(
   return post<GuestAdvance>("/guest/advance", { state, step });
 }
 
+/**
+ * 체험판의 그 밤 리포트 (§3-D51). **대회 주차가 아니면 404이므로 null로 접는다.**
+ *
+ * 로그인 쪽 `readReport()`의 짝이지만 **돌려받는 것이 좁다** — 체험판 세이브에는 로그가
+ * 없어(§3-D8) 내 경기 기록(승패·상대·서술)이 비어 온다. 화면이 그 줄을 이미 들고 있어
+ * 리포트가 채우는 것은 배경(그날의 벨트·그 무렵)뿐이다.
+ */
+export async function readGuestReport(
+  state: GuestRunState,
+  week: number,
+): Promise<CareerShowReport | null> {
+  try {
+    return await post<CareerShowReport>("/guest/report", { state, week });
+  } catch (error) {
+    if (error instanceof CareerApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export function chooseGuestEvent(state: GuestRunState, choice: string): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/choices", { state, choice });
 }

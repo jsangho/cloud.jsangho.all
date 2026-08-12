@@ -224,6 +224,17 @@ class GuestChoiceRequest(_Camel):
     choice: str
 
 
+class GuestReportRequest(_Camel):
+    """그 밤의 리포트 요청 (§3-D51). **세이브와 주차뿐이다.**
+
+    로그인 쪽은 `runId`로 물을 수 있지만 체험판에는 서버가 아는 커리어가 없어
+    세이브가 함께 와야 한다 — 벨트 계보와 배경 사건이 그 시드에서 나온다.
+    """
+
+    state: GuestRunState
+    week: int = Field(..., ge=1)
+
+
 class GuestAdvanceResponse(_Camel):
     """로그인 쪽 응답 + **세이브 전체**.
 

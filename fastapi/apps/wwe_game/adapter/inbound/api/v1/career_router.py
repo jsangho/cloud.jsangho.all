@@ -21,6 +21,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestChoiceRequest,
+    GuestReportRequest,
     GuestResumeRequest,
     GuestStartRequest,
     LogPageSchema,
@@ -46,6 +47,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestReportCommand,
     GuestResumeCommand,
     GuestStartCommand,
     StartRunCommand,
@@ -374,3 +376,23 @@ def choose_guest(
         choice_code=body.choice,
     )
     return to_guest(_sync(lambda: use_case.choose_guest(command)))
+
+
+@career_router.post("/guest/report", response_model=ShowReportSchema)
+def read_guest_report(
+    body: GuestReportRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> ShowReportSchema:
+    """그 밤의 리포트, 체험판 (§3-D51). 대회 주차가 아니면 404다.
+
+    `GET /runs/{id}/report`의 짝이지만 **돌려주는 것이 좁다** — 체험판에는 로그가 없어
+    내 경기 기록(승패·상대·서술)이 비어 온다. 화면이 그 줄을 이미 들고 있으므로
+    리포트가 채울 것은 배경(그날의 벨트·그 무렵)뿐이다.
+
+    `POST`인 이유는 `/guest/resume`과 같다 — 조회이지만 세이브가 본문에 실린다.
+    """
+    command = GuestReportCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        week=body.week,
+    )
+    return to_report(_sync(lambda: use_case.read_guest_report(command)))

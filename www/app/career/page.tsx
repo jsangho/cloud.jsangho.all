@@ -12,6 +12,7 @@ import {
   chooseEvent,
   chooseGuestEvent,
   readCurrentRun,
+  readGuestReport,
   readLog,
   readReport,
   readModes,
@@ -407,19 +408,30 @@ export default function CareerPage() {
 
   // 대회 주차를 펼치면 그 밤의 리포트를 받아 온다 (§3-D45). **열 때만 받는다** —
   // 인박스와 같은 방침이다: 30년치를 진행할 때마다 따라 받으면 낭비다.
+  //
+  // **두 갈래가 묻는 곳이 다르다** (§3-D51). 로그인은 `runId`로 서버 로그를 짚고,
+  // 체험판은 세이브를 실어 보낸다 — 서버가 아는 커리어가 없기 때문이다.
+  const guestState = screen.phase === "play" ? screen.state : null;
   useEffect(() => {
-    if (openWeek === null || runId === null) {
+    if (openWeek === null) {
+      setReport(null);
+      return;
+    }
+    const asked = guestState
+      ? readGuestReport(guestState, openWeek)
+      : runId !== null
+        ? readReport(runId, openWeek)
+        : null;
+    if (asked === null) {
       setReport(null);
       return;
     }
     let alive = true;
-    readReport(runId, openWeek)
-      .then((found) => alive && setReport(found))
-      .catch(() => alive && setReport(null));
+    asked.then((found) => alive && setReport(found)).catch(() => alive && setReport(null));
     return () => {
       alive = false;
     };
-  }, [openWeek, runId]);
+  }, [openWeek, runId, guestState]);
 
   // 재개하면 응답의 `weeks`가 비어 있다 — 진행한 적이 없어서가 아니라 서버가 로그를
   // 세이브에 끌고 오지 않기 때문이다(§3-D6). 일정 탭을 열 때만 마지막 쪽을 받아 온다.
