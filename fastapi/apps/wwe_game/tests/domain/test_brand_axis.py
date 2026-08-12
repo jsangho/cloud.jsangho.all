@@ -61,13 +61,15 @@ class TestTheBeltStaysHome:
         spec = TITLES[title]
         holder = title_scene.champion_at(SEED, week, title)
         assert holder is not None
-        member = roster.member_of(holder)
-        assert member is not None
-        if len(spec.brands) == 1:
-            assert roster.brand_at(member, week, SEED) is next(iter(spec.brands))
-        else:
-            # 브랜드 통합 벨트(여성부 태그팀)는 메인 로스터 어느 쪽이어도 된다.
-            assert roster.brand_at(member, week, SEED) in spec.brands
+        # 태그 벨트는 둘이 든다 (§3-D57) — 전원이 그 브랜드에 있어야 한다.
+        for name in title_scene.members_of(holder):
+            member = roster.member_of(name)
+            assert member is not None
+            if len(spec.brands) == 1:
+                assert roster.brand_at(member, week, SEED) is next(iter(spec.brands))
+            else:
+                # 브랜드 통합 벨트(여성부 태그팀)는 메인 로스터 어느 쪽이어도 된다.
+                assert roster.brand_at(member, week, SEED) in spec.brands
 
     @pytest.mark.parametrize("title", sorted(TITLES, key=lambda t: t.value))
     @pytest.mark.parametrize("week", WEEKS)
@@ -76,9 +78,10 @@ class TestTheBeltStaysHome:
     ) -> None:
         """은퇴한 사람이 벨트를 들고 있으면 명부의 시간 축이 무의미해진다 (§3-D13-1)."""
         holder = title_scene.champion_at(SEED, week, title)
-        member = roster.member_of(holder or "")
-        assert member is not None
-        assert member.is_active_at(week)
+        for name in title_scene.members_of(holder or ""):
+            member = roster.member_of(name)
+            assert member is not None
+            assert member.is_active_at(week)
 
 
 class TestTheNightIsOneBrand:
@@ -90,10 +93,11 @@ class TestTheNightIsOneBrand:
         report = show_report.build_night(run, week)
         assert report.card, "카드가 비었다 — 브랜드로 거르다 명단이 말랐다"
         for match in report.card:
-            for name in (match.left, match.right):
-                member = roster.member_of(name)
-                assert member is not None
-                assert roster.brand_at(member, week, SEED) is brand
+            for label in (match.left, match.right):
+                for name in title_scene.members_of(label):
+                    member = roster.member_of(name)
+                    assert member is not None
+                    assert roster.brand_at(member, week, SEED) is brand
 
     @pytest.mark.parametrize("brand", list(Brand))
     def test_my_rival_is_on_my_brand(self, brand: Brand) -> None:

@@ -156,10 +156,14 @@ def card_for(
             # **타이틀전의 양쪽은 계보에서 온다** — 명단에서 뽑는 것이 아니라 `taken`을
             # 거치지 않는다. 계보는 벨트마다 따로 걸으므로 한 사람이 두 벨트를 감을 수
             # 있고, 그러면 그가 같은 밤에 두 번 링에 선다. 그 벨트는 이 밤을 쉬어 간다.
-            if bout.left in taken or bout.right in taken:
+            people = [
+                *title_scene.members_of(bout.left),
+                *title_scene.members_of(bout.right),
+            ]
+            if any(name in taken for name in people):
                 continue
             matches.append(bout)
-            taken.extend((bout.left, bout.right))
+            taken.extend(people)
 
     for division in divisions:
         for pair in _feud_pairs(seed, week, division, brand, player, tuple(taken)):
@@ -203,8 +207,9 @@ def _rate(
     """그 경기에 별점을 붙인다 (§3-D56). **판정이 끝난 뒤에 매긴다.**"""
     tiers = [
         roster.tier_at(member, week)
-        for member in (roster.member_of(match.left), roster.member_of(match.right))
-        if member is not None
+        for label in (match.left, match.right)
+        for name in title_scene.members_of(label)
+        if (member := roster.member_of(name)) is not None
     ] or [RivalTier.MIDCARD]
     stars = match_rating.rate(
         seed,
@@ -260,19 +265,24 @@ def _title_bout(
         return None
     # **브랜드 통합 벨트는 챔피언이 선 밤에만 걸린다** (§3-D55). 여성부 태그팀은 두
     # 브랜드에 걸쳐 있어(§3-D38) 계보가 브랜드를 안 가린다 — 그대로 두면 RAW 챔피언이
-    # 스맥다운 카드에 선다.
-    champion = roster.member_of(holder)
-    if champion is not None and roster.brand_at(champion, week, seed) is not brand:
-        return None
+    # 스맥다운 카드에 선다. **팀이면 전원이 그 브랜드에 있어야 한다**(§3-D57): 둘이
+    # 갈라져 있으면 그 벨트는 이 밤을 쉬어 간다.
+    for name in title_scene.members_of(holder):
+        champion = roster.member_of(name)
+        if champion is not None and roster.brand_at(champion, week, seed) is not brand:
+            return None
     before = title_scene.champion_at(
         seed, _last_show(brand, week), title, exclude=player
     )
     display = TITLES[title].display_name
 
     if before is not None and before != holder:
-        vacated = title_scene.vacated_between(
-            seed, _last_show(brand, week), week, title, exclude=player
-        )
+        since = _last_show(brand, week)
+        if title_scene.inherited_between(seed, since, week, title, exclude=player):
+            # **스테이블이 이어받았다** (§3-D58) — 경기가 아니라 파트너가 바뀐 것이다.
+            # 그 밤에 타이틀전을 세우면 있지도 않은 경기를 적는 셈이 된다.
+            return None
+        vacated = title_scene.vacated_between(seed, since, week, title, exclude=player)
         if not vacated and _still_there(before, week):
             return CardMatch(
                 left=before,
@@ -284,13 +294,13 @@ def _title_bout(
         # **앞 챔피언이 링을 떠났거나 다쳐서 반납했다.** 벨트는 그와 함께 사라지지 않고
         # 비어 있을 뿐이라, 남은 사람들이 그 자리를 두고 붙는다 — 링에 못 서는 사람을
         # 다시 세울 수는 없다 (2026-08-12 사용자 결정).
-        rival = _pick_one(
+        rival = _pick_side(
             seed,
             week,
+            title,
             division,
             brand,
-            (*taken, holder),
-            roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
+            (*taken, *title_scene.members_of(holder)),
             roll,
         )
         if rival is None:
@@ -306,13 +316,13 @@ def _title_bout(
         )
     if not roll.chance(DEFENSE_CHANCE):
         return None
-    challenger = _pick_one(
+    challenger = _pick_side(
         seed,
         week,
+        title,
         division,
         brand,
-        (*taken, holder),
-        roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier]),
+        (*taken, *title_scene.members_of(holder)),
         roll,
     )
     if challenger is None:
@@ -324,6 +334,26 @@ def _title_bout(
         title=display,
         match_label=_stipulation(roll, for_title=True),
     )
+
+
+def _pick_side(
+    seed: int,
+    week: int,
+    title: Title,
+    division: Gender,
+    brand: Brand,
+    taken: tuple[str, ...],
+    roll: SeededRoll,
+) -> str | None:
+    """타이틀전의 도전 쪽. **태그 벨트면 둘을 뽑아 짝으로 세운다** (§3-D57)."""
+    tier = roster.tier_in(brand, title_scene.TIER_OF[TITLES[title].tier])
+    picked: list[str] = []
+    for _ in range(title_scene.HOLDERS_OF[TITLES[title].tier]):
+        name = _pick_one(seed, week, division, brand, (*taken, *picked), tier, roll)
+        if name is None:
+            return None
+        picked.append(name)
+    return title_scene.PARTNER_JOIN.join(picked)
 
 
 def _feud_pairs(
@@ -367,10 +397,18 @@ def _last_show(brand: Brand, week: int) -> int:
     return 0
 
 
-def _still_there(name: str, week: int) -> bool:
-    """그 주차에 아직 링에 있는 사람인지. 명부 밖 이름(플레이어)은 없는 것으로 본다."""
-    member = roster.member_of(name)
-    return member is not None and member.is_active_at(week)
+def _still_there(label: str, week: int) -> bool:
+    """그 주차에 아직 링에 있는지. **팀이면 전원이 있어야 한다** (§3-D57).
+
+    명부 밖 이름(플레이어)은 없는 것으로 본다.
+    """
+    people = title_scene.members_of(label)
+    if not people:
+        return False
+    return all(
+        (member := roster.member_of(name)) is not None and member.is_active_at(week)
+        for name in people
+    )
 
 
 def _settle(pair: tuple[str, str], brand: Brand, roll: SeededRoll) -> CardMatch:

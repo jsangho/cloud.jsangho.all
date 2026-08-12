@@ -37,11 +37,13 @@ class TestTheBeltIsAlwaysSomeones:
         """은퇴한 선수가 벨트를 감고 있으면 명부의 시간 축(§3-D13-1)이 무의미해진다."""
         for week in (0, 400, 900, 1400):
             name = title_scene.champion_at(SEED, week, title)
-            # **옛 이름으로도 찾는다** — 명단은 그 주차의 활동명을 돌려준다 (§3-D54).
-            member = roster.member_of(name or "")
-            assert member is not None
-            assert member.gender is TITLES[title].gender
-            assert member.is_active_at(week)
+            # 태그 벨트는 둘이 든다 (§3-D57). **옛 이름으로도 찾는다** — 명단은 그
+            # 주차의 활동명을 돌려준다 (§3-D54).
+            for part in title_scene.members_of(name or ""):
+                member = roster.member_of(part)
+                assert member is not None
+                assert member.gender is TITLES[title].gender
+                assert member.is_active_at(week)
 
     def test_same_seed_same_lineage(self) -> None:
         """§3-D4 — 저장하지 않으므로 **되짚기가 결정적이어야** 산다."""

@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from functools import lru_cache
 from typing import Final
 
@@ -36,9 +37,27 @@ TIER_OF: Final[dict[TitleTier, RivalTier]] = {
 }
 """벨트 계층 → 그 벨트를 감을 만한 선수 등급.
 
-태그 벨트를 중간급에 두는 이유: 명부는 팀을 모른다. 태그 챔피언을 정상급에서 뽑으면
-월드 챔피언과 같은 사람이 겹쳐 나온다.
+태그 벨트를 중간급에 두는 이유: 태그 챔피언을 정상급에서 뽑으면 월드 챔피언과 같은
+사람이 겹쳐 나온다.
 """
+
+HOLDERS_OF: Final[dict[TitleTier, int]] = {
+    TitleTier.WORLD: 1,
+    TitleTier.SECONDARY: 1,
+    TitleTier.TAG: 2,
+}
+"""그 벨트를 **몇 명이 드는가** (§3-D57).
+
+태그 벨트를 한 사람이 들고 있었다 — 계보가 이름 하나만 뽑았기 때문이고, 그래서 카드에도
+"A vs B"로 1대1 태그 타이틀전이 섰다. 평가에서 가장 큰 왜곡으로 꼽힌 자리다.
+
+**팀 연대기(§3-D30)를 쓰지 않는다.** 0주차 팀들은 이름만 있고 구성원이 비어 있어
+(`Team(label, (), 0)`) 성별도 브랜드도 알 수 없다. 계보가 그걸 들면 여성부 벨트를 남성부
+팀이 감는다. 그래서 여기서는 **같은 디비전·브랜드·등급의 둘**을 뽑아 짝으로 세운다.
+"""
+
+PARTNER_JOIN: Final = " & "
+"""두 사람을 한 챔피언으로 부르는 이음말. `Team.label`이 이름 없는 팀에 쓰는 것과 같다."""
 
 REIGN_WEEKS: Final[dict[TitleTier, tuple[int, int]]] = {
     TitleTier.WORLD: (26, 78),
@@ -63,6 +82,17 @@ INJURY_CHANCE: Final = 0.10
 """
 
 
+class ReignEnd(StrEnum):
+    """재위가 어떻게 끝났는지 (§3-D52·D58)."""
+
+    LOST = "lost"
+    """경기에서 졌다. 다음 챔피언이 그를 이긴 것이다."""
+    VACATED = "vacated"
+    """링 밖의 일로 비웠다 — 은퇴·부상·콜업, 또는 스테이블이 둘을 못 채운다."""
+    MEMBER_LEFT = "member_left"
+    """팀에서 한 사람이 빠졌다. 스테이블이 있으면 이어받고, 없으면 공석이 된다."""
+
+
 @dataclass(frozen=True)
 class Reign:
     """재위 한 번. **어떻게 끝났는지**를 함께 든다 (§3-D52의 공석 결정전이 그걸 읽는다)."""
@@ -76,6 +106,9 @@ class Reign:
     졌으면 다음 챔피언이 그를 이긴 것이고, 비웠으면 남은 사람들이 빈자리를 두고 붙는다.
     카드가 이 한 칸으로 두 그림을 나눈다.
     """
+    inherited: bool = False
+    """**스테이블이 이어받은 재위인지** (§3-D58). 경기로 넘어온 것이 아니라 파트너만
+    바뀐 것이라, 카드는 이 밤에 타이틀전을 세우지 않는다."""
 
 
 @lru_cache(maxsize=8192)
@@ -88,6 +121,19 @@ def champion_at(seed: int, week: int, title: Title, *, exclude: str = "") -> str
     """
     last = _walk(seed, week, title, exclude)
     return last.holder if last is not None else None
+
+
+def inherited_between(
+    seed: int, since: int, until: int, title: Title, *, exclude: str = ""
+) -> bool:
+    """그 구간에서 **스테이블이 벨트를 이어받았는지** (§3-D58).
+
+    이어받기는 경기가 아니다 — 파트너만 바뀌었으므로 그 밤에 타이틀전을 세우면 안 된다.
+    """
+    for reign in _reigns(seed, until, title, exclude):
+        if reign.inherited and since < reign.start <= until:
+            return True
+    return False
 
 
 def vacated_between(
@@ -127,36 +173,134 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
     tier = (
         TIER_OF[spec.tier] if home is None else roster.tier_in(home, TIER_OF[spec.tier])
     )
+    holders = HOLDERS_OF[spec.tier]
     low, high = REIGN_WEEKS[spec.tier]
     channel = f"{seeded_roll.TITLE_SCENE}:{title.value}"
 
     cursor = 0
     holder: str | None = None
+    inherit: tuple[str, str] | None = None
     reigns: list[Reign] = []
     while True:
         roll = SeededRoll(seed, cursor, channel)
+        held = frozenset(members_of(holder or ""))
         pool = tuple(
             n
             for n in roster.pool_for(spec.gender, tier, cursor, home, seed)
-            if n != holder and n != exclude
+            if n not in held and n != exclude
         )
-        if pool:
-            holder = roll.pick(pool)
+        inherited = False
+        if inherit is not None:
+            # **스테이블이 벨트를 이어받는다** (§3-D58) — 남은 사람 옆에 같은
+            # 스테이블의 동성 선수가 선다. 경기로 넘어간 것이 아니다.
+            stayer, stable = inherit
+            mates = _stable_mates(pool, stable, exclude=(stayer,))
+            if mates:
+                holder = PARTNER_JOIN.join((stayer, roll.pick(mates)))
+                inherited = True
+            else:
+                inherit = None
+        if not inherited:
+            picked = _pick_holders(pool, holders, roll, spec.tier)
+            if picked is not None:
+                holder = picked
         if holder is None:
             return reigns
-        length, vacated = _reign_of(holder, cursor, roll.between(low, high), roll, home)
+        length, why = _reign_of(holder, cursor, roll.between(low, high), roll, home)
         reigns.append(
-            Reign(holder=holder, start=cursor, ends=cursor + length, vacated=vacated)
+            Reign(
+                holder=holder,
+                start=cursor,
+                ends=cursor + length,
+                vacated=why is ReignEnd.VACATED,
+                inherited=inherited,
+            )
         )
         if cursor + length > upto:
             return reigns
         cursor += length
+        inherit = _inheritor(holder, cursor, why, spec.tier)
+
+
+def _pick_holders(
+    pool: tuple[str, ...], count: int, roll: SeededRoll, tier: TitleTier
+) -> str | None:
+    """챔피언 한 명 또는 한 팀. 명단이 모자라면 None.
+
+    **태그 벨트의 짝은 아무나 짜지 못한다** (§3-D58, 2026-08-12 사용자 결정):
+    스테이블 소속은 **같은 스테이블 안에서만** 짝을 짜고, 독립 선수는 **스테이블이 없는
+    사람들끼리만** 짠다. 스테이블 밖과 손을 잡으면 그 스테이블이 무엇인지가 사라진다.
+    """
+    if len(pool) < count:
+        return None
+    if count == 1:
+        return roll.pick(pool)
+
+    groups: dict[str, list[str]] = {}
+    for name in pool:
+        member = roster.member_of(name)
+        groups.setdefault(member.stable if member else "", []).append(name)
+    fit = tuple(sorted(key for key, names in groups.items() if len(names) >= count))
+    if not fit:
+        return None
+    chosen = groups[roll.pick(fit)]
+    picked: list[str] = []
+    for _ in range(count):
+        rest = tuple(n for n in chosen if n not in picked)
+        picked.append(roll.pick(rest))
+    return PARTNER_JOIN.join(picked)
+
+
+def _stable_mates(
+    pool: tuple[str, ...], stable: str, *, exclude: tuple[str, ...]
+) -> tuple[str, ...]:
+    """그 명단 안에서 같은 스테이블 사람들 (§3-D58). 독립(`""`)도 한 무리로 본다."""
+    return tuple(
+        name
+        for name in pool
+        if name not in exclude
+        and (member := roster.member_of(name)) is not None
+        and member.stable == stable
+    )
+
+
+def _inheritor(
+    holder: str, week: int, why: ReignEnd, tier: TitleTier
+) -> tuple[str, str] | None:
+    """이어받을 자리가 있는지 (§3-D58).
+
+    **한 사람이 빠졌고 남은 사람에게 스테이블이 있으면** 그 스테이블이 벨트를 잇는다.
+    빠진 이유가 링 밖의 일(은퇴·부상·콜업)일 때만이다 — 경기로 진 벨트는 이긴 쪽의
+    것이지 물려줄 것이 아니다.
+    """
+    if why is not ReignEnd.MEMBER_LEFT or HOLDERS_OF[tier] < 2:
+        return None
+    staying = [
+        name
+        for name in members_of(holder)
+        if (member := roster.member_of(name)) is not None and member.is_active_at(week)
+    ]
+    if len(staying) == len(members_of(holder)) and staying:
+        # 부상은 명부에 안 남는다(굴림이다) — 그때는 **앞사람이 빠진 것**으로 본다.
+        staying = staying[1:]
+    if len(staying) != 1:
+        return None
+    member = roster.member_of(staying[0])
+    if member is None or not member.stable:
+        # **독립 선수는 이어받을 스테이블이 없다.** 그 벨트는 공석이 된다.
+        return None
+    return staying[0], member.stable
+
+
+def members_of(holder: str) -> tuple[str, ...]:
+    """챔피언 이름 → 사람들. 태그 벨트는 둘이다 (§3-D57)."""
+    return tuple(holder.split(PARTNER_JOIN)) if holder else ()
 
 
 def _reign_of(
     holder: str, cursor: int, rolled: int, roll: SeededRoll, home: Brand | None
-) -> tuple[int, bool]:
-    """(재위 길이, 링 밖의 일로 끝났는지).
+) -> tuple[int, ReignEnd]:
+    """(재위 길이, 어떻게 끝났는지).
 
     **은퇴 주차를 넘기지 않는다.** 이걸 안 하면 링을 떠난 사람이 벨트를 들고 있다 —
     명부에 시간 축을 넣은 이유가(§3-D13-1) 그 자리에서 무너진다. 브랜드로 명단이
@@ -168,20 +312,27 @@ def _reign_of(
     **콜업도 같다.** 육성 브랜드의 벨트를 감은 채 메인 로스터로 올라갈 수는 없다
     (§3-D53) — 올라가는 주차에 그 벨트를 두고 간다.
     """
-    member = roster.member_of(holder)
-    if member is None:
-        return rolled, False
+    people = members_of(holder)
     ends: list[int] = []
-    if member.retire_week is not None:
-        ends.append(member.retire_week)
-    if home is Brand.NXT:
-        leaving = roster.call_up_week(member)
-        if leaving is not None:
-            ends.append(leaving)
+    for name in people:
+        member = roster.member_of(name)
+        if member is None:
+            continue
+        if member.retire_week is not None:
+            ends.append(member.retire_week)
+        if home is Brand.NXT:
+            leaving = roster.call_up_week(member)
+            if leaving is not None:
+                ends.append(leaving)
+    # **한 사람만 빠져도 팀은 그 벨트를 그대로 들 수 없다** — 둘이 들던 것을 하나가
+    # 들 수는 없다. 스테이블이 있으면 이어받고(§3-D58), 없으면 공석이 된다.
     leave = min(ends) if ends else None
+    solo = len(people) < 2
     if leave is not None and cursor + rolled >= leave:
-        return max(1, leave - cursor), True
+        return max(
+            1, leave - cursor
+        ), ReignEnd.VACATED if solo else ReignEnd.MEMBER_LEFT
     if roll.chance(INJURY_CHANCE):
         # 재위 중간에 다친다 — 끝나기 직전에 비우면 그냥 짧은 재위와 구별되지 않는다.
-        return max(1, rolled // 2), True
-    return rolled, False
+        return max(1, rolled // 2), (ReignEnd.VACATED if solo else ReignEnd.MEMBER_LEFT)
+    return rolled, ReignEnd.LOST

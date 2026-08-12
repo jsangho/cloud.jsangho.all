@@ -219,6 +219,12 @@ class RosterMember:
     """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
     rename_week: int = 0
     """이 주차부터 `renamed_to`로 불린다. `renamed_to`가 있을 때만 뜻이 있다."""
+    stable: str = ""
+    """속한 스테이블 (§3-D58). 빈 문자열이면 **독립 선수**다.
+
+    태그 벨트는 여기서 갈린다 — 스테이블 소속은 **같은 스테이블 안에서만** 짝을 짜고,
+    독립은 독립끼리 짠다.
+    """
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -330,9 +336,12 @@ def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
     for title, spec in TITLES.items():
         if spec.gender is not gender:
             continue
-        member = member_of(title_scene.champion_at(seed, week, title) or "")
-        if member is not None:
-            held.add(member.name)
+        # 태그 벨트는 둘이 든다 (§3-D57) — **둘 다** 보호해야 팀이 갈라지지 않는다.
+        holder = title_scene.champion_at(seed, week, title) or ""
+        for name in title_scene.members_of(holder):
+            member = member_of(name)
+            if member is not None:
+                held.add(member.name)
     return frozenset(held)
 
 
@@ -552,6 +561,24 @@ def require(name: str, field: str) -> str:
     return value
 
 
+def read_stables(path: Path) -> dict[str, str]:
+    """선수 이름 → 스테이블 (§3-D58). 없으면 빈 문자열이다.
+
+    원본의 `Stable&Team` 열이 그대로 답이다 — 추정할 것이 없다. `|`로 둘이 적힌 행
+    ("Bloodline | The Usos")은 **앞을 스테이블로 본다**: 뒤는 그 안의 태그팀 이름이라,
+    둘을 따로 세면 한 스테이블이 두 개로 갈린다.
+    """
+    rows = csv.DictReader(io.StringIO(path.read_text(encoding="utf-8-sig")))
+    found: dict[str, str] = {}
+    for row in rows:
+        name = (row.get("name") or "").strip()
+        if not name or name.startswith("#"):
+            continue
+        stable = (row.get("Stable&Team") or "").strip()
+        found[name] = stable.split("|")[0].strip()
+    return found
+
+
 def read_sections(path: Path) -> dict[str, list[str]]:
     """섹션 이름 → 선수 이름. 등장 순서를 그대로 지킨다."""
     rows = csv.DictReader(io.StringIO(path.read_text(encoding="utf-8-sig")))
@@ -751,7 +778,7 @@ FICTIONAL_MIDCARD_EVERY = 4
 
 def fictional_members(
     taken: set[str],
-) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int]]:
+) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]]:
     """가상 선수 명부. 해마다 정해진 수를 데뷔시킨다.
 
     **유망주는 육성에서 데뷔하고, 이적생은 메인에서 데뷔한다** (2026-08-12 사용자 결정).
@@ -759,7 +786,7 @@ def fictional_members(
     전력"이라, 그들만 처음부터 메인 로스터에 선다. 나머지는 NXT를 거쳐 올라온다.
     """
     members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
     ] = []
     for gender, firsts in (
         ("_M", FICTIONAL_MALE_FIRST),
@@ -784,22 +811,23 @@ def fictional_members(
             retire = debut + FICTIONAL_CAREER_YEARS * WEEKS_PER_YEAR
             experience = 6 if tier == "_MC" else 0
             members.append(
-                (name, gender, tier, debut, retire, experience, None, None, 0)
+                (name, gender, tier, debut, retire, experience, None, None, 0, "")
             )
             made += 1
     return members
 
 
 def build() -> list[
-    tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
 ]:
-    """(한글명, 성별, 시작 등급, 데뷔 주차, 은퇴 주차, 경력, 메인 브랜드).
+    """(한글명, 성별, 등급, 데뷔, 은퇴, 경력, 메인 브랜드, 바꾼 이름, 개명 주차, 스테이블).
 
-    디비전 → 등급 순 정렬. 마지막 칸은 **콜업되면 설 메인 브랜드**다 (§3-D53).
+    디비전 → 등급 순 정렬.
     """
     members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
     ] = []
+    stables = read_stables(CSV_PATH)
     for section, names in read_sections(CSV_PATH).items():
         if section not in SECTION_HOME:
             raise SystemExit(f"모르는 섹션 {section!r} — SECTION_HOME에 넣으세요")
@@ -829,6 +857,7 @@ def build() -> list[
                     SECTION_HOME[section],
                     renamed,
                     rename_week_for(korean) if renamed else 0,
+                    stables.get(name, ""),
                 )
             )
 
@@ -841,9 +870,9 @@ def build() -> list[
 
 def _assign_homes(
     members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
     ],
-) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int]]:
+) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]]:
     """아직 갈 곳이 없는 사람에게 메인 브랜드를 준다 — **두 브랜드에 번갈아**.
 
     디비전마다 따로 돌린다. 한 줄로 돌리면 남성부가 홀수로 끝나는 해에 여성부가
@@ -851,7 +880,7 @@ def _assign_homes(
     """
     turn: dict[str, int] = {}
     filled: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
     ] = []
     for (
         name,
@@ -863,20 +892,32 @@ def _assign_homes(
         home,
         renamed,
         rename_at,
+        stable,
     ) in members:
         if home is None:
             index = turn.get(gender, 0)
             turn[gender] = index + 1
             home = "_RAW" if index % 2 == 0 else "_SD"
         filled.append(
-            (name, gender, tier, debut, retire, experience, home, renamed, rename_at)
+            (
+                name,
+                gender,
+                tier,
+                debut,
+                retire,
+                experience,
+                home,
+                renamed,
+                rename_at,
+                stable,
+            )
         )
     return filled
 
 
 def render(
     members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
     ],
 ) -> str:
     lines: list[str] = []
@@ -891,6 +932,7 @@ def render(
         home,
         renamed,
         rename_at,
+        stable,
     ) in members:
         mark = (gender, debut)
         if mark != seen:
@@ -902,6 +944,9 @@ def render(
         escaped = name.replace('"', '\\"')
         retire_arg = "None" if retire is None else str(retire)
         tail = "" if renamed is None else f', "{renamed}", {rename_at}'
+        if stable:
+            tail = tail or ", None, 0"
+            tail += f', "{stable}"'
         lines.append(
             f'    RosterMember("{escaped}", {gender}, {tier}, '
             f"{debut}, {retire_arg}, {experience}, {home}{tail}),"
@@ -1070,7 +1115,7 @@ def main() -> int:
     members = build()
     counts: dict[tuple[str, str], int] = {}
     homes: dict[str, int] = {}
-    for _, gender, tier, _, _, _, home, _renamed, _at in members:
+    for _, gender, tier, _, _, _, home, _renamed, _at, _stable in members:
         counts[(gender, tier)] = counts.get((gender, tier), 0) + 1
         homes[home or "?"] = homes.get(home or "?", 0) + 1
     real = sum(1 for m in members if m[3] == 0)
