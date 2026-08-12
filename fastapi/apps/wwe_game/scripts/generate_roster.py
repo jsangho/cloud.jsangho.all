@@ -111,6 +111,20 @@ Evolve는 NXT 아래 육성 단계다. 오늘 명부에 넣으면 유망주가 �
 REQUIRED_FIELDS = ("korean_name", "gender", "tier", "play_style")
 """비어 있으면 생성기가 멈추는 칸. `birth_date`만 비워 둘 수 있다 (미공개 정보)."""
 
+# `korean_name`의 `|` 규약 (2026-08-12 사용자 결정) — **앞이 처음 활동명, 뒤가 바꾼 뒤**.
+#
+# 로스 아메리카노스 셋(브라보·엘 그란데·라요)은 그 이름으로 뛰다가 본래 활동명으로
+# 돌아가고, 내티는 내티로 뛰다가 나탈리아가 된다. 이름만 보고는 어느 쪽이 먼저인지 알 수
+# 없어서 — 아메리카노가 앞인 행도 뒤인 행도 있었다 — **순서가 곧 규칙**이 되게 CSV를
+# 맞췄다. 규칙을 이름에서 추측하면 새 행을 더할 때마다 그 추측이 틀린다.
+
+RENAME_WINDOW = (2, 5)
+"""활동명을 바꾸는 시점(연차) 구간 (2026-08-12 사용자 결정).
+
+넷이 같은 주에 한꺼번에 이름을 바꾸면 그 주 인박스가 개명으로만 찬다. 이름 해시로
+구간 안에 흩뿌린다 — `LATE_CAREER_WINDOW`가 은퇴에 쓰는 방식 그대로다.
+"""
+
 GENDER_ALIAS = {"male": "_M", "female": "_F"}
 TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
 
@@ -166,6 +180,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from functools import lru_cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
 from wwe_game.domain.value_objects.title import Brand
@@ -198,6 +213,10 @@ class RosterMember:
     """콜업된 뒤 설 메인 브랜드 (§3-D53). **지금 있는 브랜드가 아니다** — 그건
     `brand_at()`이 등급에서 읽는다.
     """
+    renamed_to: str | None = None
+    """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
+    rename_week: int = 0
+    """이 주차부터 `renamed_to`로 불린다. `renamed_to`가 있을 때만 뜻이 있다."""
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -233,12 +252,106 @@ def active_at(week: int) -> tuple[RosterMember, ...]:
     return tuple(m for m in ROSTER if m.is_active_at(week))
 
 
-_BY_NAME: dict[str, RosterMember] = {m.name: m for m in ROSTER}
+_BY_NAME: dict[str, RosterMember] = {}
+for _m in ROSTER:  # pragma: no cover - 임포트 시 색인
+    _BY_NAME[_m.name] = _m
+    if _m.renamed_to is not None:
+        _BY_NAME[_m.renamed_to] = _m
 
 
 def member_of(name: str) -> RosterMember | None:
-    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**"""
+    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**
+
+    **바꾸기 전 이름으로도 찾힌다** (§3-D54). 로그와 대립에 남은 옛 이름이 그대로
+    없는 사람이 되면, 개명이 곧 실종이 된다.
+    """
     return _BY_NAME.get(name)
+
+
+def name_at(member: RosterMember, week: int) -> str:
+    """그 주차에 불리던 활동명 (§3-D54).
+
+    **명부의 시간 축에 이름이 하나 더 붙었다.** 로스 아메리카노스 셋은 그 이름으로
+    뛰다가 본래 활동명으로 돌아가고, 내티는 나탈리아가 된다 — 원본 CSV가 `|`로 병기해
+    둔 것이 곧 그 이력이다.
+    """
+    if member.renamed_to is not None and week >= member.rename_week:
+        return member.renamed_to
+    return member.name
+
+
+DRAFT_WEEK = 50
+"""연말 드래프트가 서는 주차 (2026-08-12 사용자 결정).
+
+52주차가 아니라 50주차인 이유: 마지막 두 주에 두면 해가 바뀌는 경계와 겹쳐, 로그에서
+"몇 년차의 일인가"가 흐려진다.
+"""
+
+DRAFT_PAIRS = 2
+"""해마다 자리를 맞바꾸는 **쌍**의 수 — 한 해에 네 명이 브랜드를 옮긴다 (사용자: 3~4명).
+
+**맞바꾸는 이유는 균형이다.** 한쪽으로만 보내면 30년 동안 브랜드 하나가 말라 벨트에
+주인이 없어진다(§3-D53의 `MIN_BRAND_POOL`). 같은 디비전·같은 등급끼리 바꾸므로 어느
+칸의 인원수도 드래프트로 변하지 않는다 — 바뀌는 것은 **누가 어디 있는가**뿐이다.
+
+쌍은 (디비전 × 등급) 네 칸을 **해마다 돌아가며** 집는다. 칸마다 두 쌍씩 돌리면 한 해에
+열여섯 명이 움직여 "연말에 몇 명 오간다"가 아니라 명부 재편이 된다(실측 14.6명).
+"""
+
+
+@lru_cache(maxsize=None)
+def _draft_flips(year: int) -> frozenset[str]:
+    """그 해 연말까지 브랜드가 뒤집힌 사람들 (§3-D54).
+
+    **시드를 받지 않는다.** 명부는 모든 커리어가 공유하는 상수라(이 파일 전체가 그렇다)
+    드래프트도 명부의 성질로 둔다 — 커리어마다 다른 세계를 원한다면 시드를 타고 내려가야
+    하는데, 그러면 `pool_for`부터 네 호출부까지 시드를 들고 다녀야 한다. 얻는 것에 비해
+    번지는 곳이 너무 넓다.
+
+    **해마다 누적으로 센다.** 캐시가 없으면 `pool_for` 한 번이 30년을 다시 걷는다 —
+    순수 함수라 캐시가 안전하고, 서른한 칸이면 메모리도 문제가 아니다.
+    """
+    flipped: set[str] = set()
+    cells = [
+        (gender, tier)
+        for gender in Gender
+        for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
+    ]
+    for step in range(1, year + 1):
+        week = step * WEEKS_PER_YEAR + DRAFT_WEEK
+        for index in range(DRAFT_PAIRS):
+            gender, tier = cells[(step * 3 + index) % len(cells)]
+            pools = {
+                brand: [
+                    m
+                    for m in ROSTER
+                    if m.gender is gender
+                    and m.is_active_at(week)
+                    and tier_at(m, week) is tier
+                    and _home_at(m, flipped) is brand
+                ]
+                for brand in (Brand.RAW, Brand.SMACKDOWN)
+            }
+            if not all(pools.values()):
+                continue
+            for brand in (Brand.RAW, Brand.SMACKDOWN):
+                chosen = _draft_pick(pools[brand], step, index)
+                if chosen in flipped:
+                    flipped.discard(chosen)
+                else:
+                    flipped.add(chosen)
+    return frozenset(flipped)
+
+
+def _draft_pick(pool: list[RosterMember], step: int, index: int) -> str:
+    """그 해 이 칸에서 옮길 사람. 해마다 다른 자리를 집는다."""
+    return pool[(step * 7 + index * 13) % len(pool)].name
+
+
+def _home_at(member: RosterMember, flipped: frozenset[str] | set[str]) -> Brand:
+    if member.name not in flipped:
+        return member.home_brand
+    return Brand.SMACKDOWN if member.home_brand is Brand.RAW else Brand.RAW
 
 
 def tier_at(member: RosterMember, week: int) -> RivalTier:
@@ -272,7 +385,8 @@ def brand_at(member: RosterMember, week: int) -> Brand:
     """
     if tier_at(member, week) is RivalTier.PROSPECT:
         return Brand.NXT
-    return member.home_brand
+    year = (week - DRAFT_WEEK) // WEEKS_PER_YEAR
+    return _home_at(member, _draft_flips(max(0, year)))
 
 
 def call_up_week(member: RosterMember) -> int | None:
@@ -311,7 +425,7 @@ def pool_for(
     `tier_in(brand, tier)`을 거치지 않고 부르면 빈 명단이 나올 수 있다.
     """
     return tuple(
-        m.name
+        name_at(m, week)
         for m in ROSTER
         if m.gender is gender
         and m.is_active_at(week)
@@ -440,6 +554,23 @@ DEBUT_AGE = 22
 
 def experience_of(age: int) -> int:
     return max(0, age - DEBUT_AGE)
+
+
+def names_of(korean: str) -> tuple[str, str | None]:
+    """`korean_name` → (처음 활동명, 바꾼 뒤 이름). 안 바꾸면 뒤가 None이다.
+
+    **`|`의 앞이 처음, 뒤가 나중이다** (§3-D54). 셋 이상 적혀 있으면 앞의 둘만 쓴다 —
+    한 커리어에 이름을 세 번 바꾸는 사람까지 그리기 시작하면 명부가 이야기를 갖는다.
+    """
+    parts = [part.strip() for part in korean.split("|") if part.strip()]
+    if len(parts) < 2:
+        return korean.strip(), None
+    return parts[0], parts[1]
+
+
+def rename_week_for(korean: str) -> int:
+    """활동명을 바꾸는 주차. 이름 해시로 `RENAME_WINDOW` 안에 흩뿌린다."""
+    return _spread(korean, *RENAME_WINDOW) * WEEKS_PER_YEAR
 
 
 def _spread(name: str, low: int, high: int) -> int:
@@ -583,14 +714,16 @@ FICTIONAL_MIDCARD_EVERY = 4
 
 def fictional_members(
     taken: set[str],
-) -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int]]:
     """가상 선수 명부. 해마다 정해진 수를 데뷔시킨다.
 
     **유망주는 육성에서 데뷔하고, 이적생은 메인에서 데뷔한다** (2026-08-12 사용자 결정).
     `FICTIONAL_MIDCARD_EVERY`마다 한 명씩 나오는 미드카드가 곧 "다른 단체에서 온 즉시
     전력"이라, 그들만 처음부터 메인 로스터에 선다. 나머지는 NXT를 거쳐 올라온다.
     """
-    members: list[tuple[str, str, str, int, int | None, int, str | None]] = []
+    members: list[
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    ] = []
     for gender, firsts in (
         ("_M", FICTIONAL_MALE_FIRST),
         ("_F", FICTIONAL_FEMALE_FIRST),
@@ -613,17 +746,23 @@ def fictional_members(
             tier = "_MC" if made % FICTIONAL_MIDCARD_EVERY == 0 else "_P"
             retire = debut + FICTIONAL_CAREER_YEARS * WEEKS_PER_YEAR
             experience = 6 if tier == "_MC" else 0
-            members.append((name, gender, tier, debut, retire, experience, None))
+            members.append(
+                (name, gender, tier, debut, retire, experience, None, None, 0)
+            )
             made += 1
     return members
 
 
-def build() -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+def build() -> list[
+    tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+]:
     """(한글명, 성별, 시작 등급, 데뷔 주차, 은퇴 주차, 경력, 메인 브랜드).
 
     디비전 → 등급 순 정렬. 마지막 칸은 **콜업되면 설 메인 브랜드**다 (§3-D53).
     """
-    members: list[tuple[str, str, str, int, int | None, int, str | None]] = []
+    members: list[
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    ] = []
     for section, names in read_sections(CSV_PATH).items():
         if section not in SECTION_HOME:
             raise SystemExit(f"모르는 섹션 {section!r} — SECTION_HOME에 넣으세요")
@@ -641,15 +780,18 @@ def build() -> list[tuple[str, str, str, int, int | None, int, str | None]]:
                 low, high = window
                 debut = (low + index % (high - low + 1)) * WEEKS_PER_YEAR
             age = age_of(name)
+            korean, renamed = names_of(require(name, "korean_name"))
             members.append(
                 (
-                    require(name, "korean_name"),
+                    korean,
                     GENDER_ALIAS[gender],
                     tier,
                     debut,
                     debut + retire_week_for(name, age, gender),
                     experience_of(age),
                     SECTION_HOME[section],
+                    renamed,
+                    rename_week_for(korean) if renamed else 0,
                 )
             )
 
@@ -661,30 +803,58 @@ def build() -> list[tuple[str, str, str, int, int | None, int, str | None]]:
 
 
 def _assign_homes(
-    members: list[tuple[str, str, str, int, int | None, int, str | None]],
-) -> list[tuple[str, str, str, int, int | None, int, str | None]]:
+    members: list[
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    ],
+) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int]]:
     """아직 갈 곳이 없는 사람에게 메인 브랜드를 준다 — **두 브랜드에 번갈아**.
 
     디비전마다 따로 돌린다. 한 줄로 돌리면 남성부가 홀수로 끝나는 해에 여성부가
     통째로 한쪽으로 쏠린다.
     """
     turn: dict[str, int] = {}
-    filled: list[tuple[str, str, str, int, int | None, int, str | None]] = []
-    for name, gender, tier, debut, retire, experience, home in members:
+    filled: list[
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    ] = []
+    for (
+        name,
+        gender,
+        tier,
+        debut,
+        retire,
+        experience,
+        home,
+        renamed,
+        rename_at,
+    ) in members:
         if home is None:
             index = turn.get(gender, 0)
             turn[gender] = index + 1
             home = "_RAW" if index % 2 == 0 else "_SD"
-        filled.append((name, gender, tier, debut, retire, experience, home))
+        filled.append(
+            (name, gender, tier, debut, retire, experience, home, renamed, rename_at)
+        )
     return filled
 
 
 def render(
-    members: list[tuple[str, str, str, int, int | None, int, str | None]],
+    members: list[
+        tuple[str, str, str, int, int | None, int, str | None, str | None, int]
+    ],
 ) -> str:
     lines: list[str] = []
     seen: tuple[str, int] | None = None
-    for name, gender, tier, debut, retire, experience, home in members:
+    for (
+        name,
+        gender,
+        tier,
+        debut,
+        retire,
+        experience,
+        home,
+        renamed,
+        rename_at,
+    ) in members:
         mark = (gender, debut)
         if mark != seen:
             seen = mark
@@ -694,9 +864,10 @@ def render(
             lines.append(f"    # ── {title} " + "─" * max(1, 40 - len(title)))
         escaped = name.replace('"', '\\"')
         retire_arg = "None" if retire is None else str(retire)
+        tail = "" if renamed is None else f', "{renamed}", {rename_at}'
         lines.append(
             f'    RosterMember("{escaped}", {gender}, {tier}, '
-            f"{debut}, {retire_arg}, {experience}, {home}),"
+            f"{debut}, {retire_arg}, {experience}, {home}{tail}),"
         )
     return HEADER + "\n".join(lines) + "\n" + FOOTER
 
@@ -760,9 +931,12 @@ def build_presets() -> list[tuple[str, str, str, str]]:
     for names in read_sections(CSV_PATH).values():
         for name in names:
             row = raw.get(name, {})
+            first, renamed = names_of(require(name, "korean_name"))
             presets.append(
                 (
-                    require(name, "korean_name"),
+                    # "○○를 바탕으로"는 **알아보는 이름**이어야 한다 — 개명 전 링네임보다
+                    # 본래 활동명이 그 자리에 맞는다 (§3-D54).
+                    renamed or first,
                     require(name, "gender").upper(),
                     require(name, "play_style").upper(),
                     preset_country(
@@ -859,7 +1033,7 @@ def main() -> int:
     members = build()
     counts: dict[tuple[str, str], int] = {}
     homes: dict[str, int] = {}
-    for _, gender, tier, _, _, _, home in members:
+    for _, gender, tier, _, _, _, home, _renamed, _at in members:
         counts[(gender, tier)] = counts.get((gender, tier), 0) + 1
         homes[home or "?"] = homes.get(home or "?", 0) + 1
     real = sum(1 for m in members if m[3] == 0)

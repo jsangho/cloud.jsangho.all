@@ -37,12 +37,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("아키라 토자와", Gender.MALE, PlayStyle.HIGH_FLYER, Country.JP),
     CharacterPreset("안젤로 도킨스", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("오스틴 씨어리", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.US),
-    CharacterPreset(
-        "타일러 베이트 | 브라보 아메리카노",
-        Gender.MALE,
-        PlayStyle.HIGH_FLYER,
-        Country.GB,
-    ),
+    CharacterPreset("타일러 베이트", Gender.MALE, PlayStyle.HIGH_FLYER, Country.GB),
     CharacterPreset("빅 캐스", Gender.MALE, PlayStyle.GIANT, Country.US),
     CharacterPreset("브론 브레이커", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("브론슨 리드", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.AU),
@@ -53,12 +48,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
         "도미닉 미스테리오", Gender.MALE, PlayStyle.LUCHA_LIBRE, Country.US
     ),
     CharacterPreset("드래곤 리", Gender.MALE, PlayStyle.TECHNICIAN, Country.MX),
-    CharacterPreset(
-        "엘 그란데 아메리카노 | 루드비히 카이저",
-        Gender.MALE,
-        PlayStyle.LUCHA_LIBRE,
-        Country.DE,
-    ),
+    CharacterPreset("루드비히 카이저", Gender.MALE, PlayStyle.LUCHA_LIBRE, Country.DE),
     CharacterPreset("에릭", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("에단 페이지", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.CA),
     CharacterPreset("그레이슨 월러", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.AU),
@@ -77,9 +67,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("오바 페미", Gender.MALE, PlayStyle.POWERHOUSE, Country.OTHER),
     CharacterPreset("오티스", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("펜타", Gender.MALE, PlayStyle.LUCHA_LIBRE, Country.MX),
-    CharacterPreset(
-        "피트 던 | 라요 아메리카노", Gender.MALE, PlayStyle.HEEL_STYLE, Country.GB
-    ),
+    CharacterPreset("피트 던", Gender.MALE, PlayStyle.HEEL_STYLE, Country.GB),
     CharacterPreset("레이 미스테리오", Gender.MALE, PlayStyle.LUCHA_LIBRE, Country.US),
     CharacterPreset("로만 레인즈", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.US),
     CharacterPreset("루세프", Gender.MALE, PlayStyle.POWERHOUSE, Country.RU),
@@ -94,7 +82,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("리브 모건", Gender.FEMALE, PlayStyle.ALL_ROUNDER, Country.US),
     CharacterPreset("라이라 발키리아", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.IE),
     CharacterPreset("맥신 듀프리", Gender.FEMALE, PlayStyle.SHOWMAN, Country.US),
-    CharacterPreset("나탈리아 | 내티", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.CA),
+    CharacterPreset("나탈리아", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.CA),
     CharacterPreset("니키 벨라", Gender.FEMALE, PlayStyle.HEEL_STYLE, Country.US),
     CharacterPreset("라켈 로드리게스", Gender.FEMALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("록샌 페레즈", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.US),
