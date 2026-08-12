@@ -30,3 +30,11 @@ class NarrationPort(ABC):
 
         반영된 뒤의 상태를 넘기면 승리 문장에 이미 오른 인기도가 반영돼 온도가 어긋난다.
         """
+
+    @abstractmethod
+    def venue_of(self, run: CareerRun, week: int) -> str:
+        """그 주차의 무대 (§3-D69).
+
+        **서술이 이미 쓰고 있는 값이다** — 리포트 머리가 그걸 다시 뽑으면 같은 밤이 두
+        곳에서 열린다. 무대는 서술의 슬롯이라(§3-D14-1) 포트를 통해 가져온다.
+        """

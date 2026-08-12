@@ -56,6 +56,8 @@ class ShowReport:
     """그 무렵 배경에서 일어난 일. **내 일이 아니어서 뉴스에는 안 뜬 것들도 포함한다.**"""
     card: tuple[show_card.CardMatch, ...] = ()
     """그날 밤의 다른 경기들 (§3-D52). **내 경기는 없다** — 화면이 따로 그린다."""
+    venue: str = ""
+    """그 밤의 경기장 (§3-D69). 서술이 쓴 것과 같은 값이라 화면이 둘을 나란히 둘 수 있다."""
     stars: float = 0.0
     """그 밤의 평점 — 카드에 선 경기들의 평균 (§3-D56). 카드가 비면 0이다.
 
@@ -64,7 +66,9 @@ class ShowReport:
     """
 
 
-def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
+def build(
+    run: CareerRun, report: WeekReport, narration: str, venue: str = ""
+) -> ShowReport:
     """그 주차의 리포트. 경기가 없는 주차도 만든다 — 빈 카드가 곧 그 밤의 기록이다."""
     player = str(run.identity.name)
     card = _card(
@@ -92,6 +96,7 @@ def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
         around=_around(run, report.week, player),
         card=card,
         stars=_night_stars(card),
+        venue=venue,
     )
 
 
@@ -101,6 +106,7 @@ def build_night(
     *,
     busy: tuple[str, ...] = (),
     stakes: tuple[Title, ...] = (),
+    venue: str = "",
 ) -> ShowReport:
     """**로그 없이** 세우는 리포트 — 체험판의 것이다 (§3-D8 · §3-D51).
 
@@ -136,6 +142,7 @@ def build_night(
         around=_around(run, week, player),
         card=card,
         stars=_night_stars(card),
+        venue=venue,
     )
 
 

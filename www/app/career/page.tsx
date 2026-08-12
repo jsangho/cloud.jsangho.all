@@ -1238,15 +1238,20 @@ type MyMatch = {
 function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
-      <p className="flex items-baseline gap-1.5 font-sport text-sm">
-        {report.show}
-        {report.isMajor && <span className="text-xs text-brand-link">대형</span>}
-        {report.stars > 0 && (
-          <span className="ml-auto text-xs font-normal">
-            <Stars value={report.stars} />
-          </span>
-        )}
-      </p>
+      <div>
+        <p className="flex items-baseline gap-1.5 font-sport text-sm">
+          {report.show}
+          {report.isMajor && <span className="text-xs text-brand-link">대형</span>}
+          {report.stars > 0 && (
+            <span className="ml-auto text-xs font-normal">
+              <Stars value={report.stars} />
+            </span>
+          )}
+        </p>
+        {/* 그 밤이 어디서 열렸는지 (§3-D69). 서술이 쓰는 것과 같은 값이라, 로그 줄의
+            문장과 이 머리가 같은 경기장을 말한다. */}
+        {report.venue && <p className="text-xs text-muted-foreground">{report.venue}</p>}
+      </div>
       {report.card.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground">그날의 카드</p>

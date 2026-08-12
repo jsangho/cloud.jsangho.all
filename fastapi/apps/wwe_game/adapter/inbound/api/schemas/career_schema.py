@@ -344,6 +344,8 @@ class ShowReportSchema(_Camel):
     """그날 밤의 다른 경기들, 오프너부터 (§3-D52). **내 경기는 없다.**"""
     stars: float = 0.0
     """그 밤의 평점 — 카드의 평균 (§3-D56)."""
+    venue: str = ""
+    """그 밤의 경기장 (§3-D69)."""
 
 
 class NewsPageSchema(_Camel):
@@ -471,6 +473,7 @@ def to_report(report: ShowReport) -> ShowReportSchema:
             for m in report.card
         ],
         stars=report.stars,
+        venue=report.venue,
     )
 
 
