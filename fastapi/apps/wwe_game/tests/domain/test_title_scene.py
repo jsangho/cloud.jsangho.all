@@ -37,7 +37,9 @@ class TestTheBeltIsAlwaysSomeones:
         """은퇴한 선수가 벨트를 감고 있으면 명부의 시간 축(§3-D13-1)이 무의미해진다."""
         for week in (0, 400, 900, 1400):
             name = title_scene.champion_at(SEED, week, title)
-            member = next(m for m in roster.ROSTER if m.name == name)
+            # **옛 이름으로도 찾는다** — 명단은 그 주차의 활동명을 돌려준다 (§3-D54).
+            member = roster.member_of(name or "")
+            assert member is not None
             assert member.gender is TITLES[title].gender
             assert member.is_active_at(week)
 

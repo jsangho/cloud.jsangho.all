@@ -35,6 +35,9 @@ STIPULATION: Final = "stipulation"
 ELIMINATION: Final = "elimination"
 CONTRACT: Final = "contract"
 """복귀 오퍼 굴림 (§3-D50). 무소속 주차마다 한 번."""
+DRAFT: Final = "draft"
+"""연말 드래프트 (§3-D54). **명부가 쓰는 유일한 채널이다** — 해마다 한 번, 그 해에
+자리를 맞바꿀 칸과 사람을 고른다."""
 TITLE_SCENE: Final = "title_scene"
 """배경 챔피언의 재위 (§3-D38). **벨트마다 따로 굴린다** — 한 채널을 나눠 쓰면
 월드 벨트의 재위가 바뀔 때 태그 벨트 계보까지 통째로 밀린다."""
