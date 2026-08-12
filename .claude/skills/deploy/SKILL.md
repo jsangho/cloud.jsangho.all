@@ -87,14 +87,34 @@ git switch ho
 cat > /tmp/deploy.sh <<'EOF'
 set -euo pipefail
 cd /home/ec2-user/cloud.jsangho.all
-git fetch origin
-git merge --ff-only origin/aws        # 서버 로컬 수정을 보존한다
-docker compose exec -T backend sh -c 'cd /app/fastapi && alembic upgrade head'
-docker compose up -d backend auth
-docker compose restart backend auth   # ← 이게 실제 반영이다. 아래를 읽을 것
+git fetch origin </dev/null
+git merge --ff-only origin/aws </dev/null   # 서버 로컬 수정을 보존한다
+docker compose exec -T backend sh -c 'cd /app/fastapi && alembic upgrade head' </dev/null
+docker compose up -d backend auth </dev/null
+docker compose restart backend auth </dev/null   # ← 이게 실제 반영이다. 아래를 읽을 것
+echo "STEP=done"                                 # ← 이 줄이 안 보이면 배포가 중간에 끊긴 것이다
 EOF
 ssh aws-ec2 bash -s < /tmp/deploy.sh
 ```
+
+#### `</dev/null`을 빼면 스크립트가 중간에 증발한다 (2026-08-12 실측)
+
+`ssh bash -s < deploy.sh`는 **스크립트 자체를 stdin으로 흘려보낸다.** bash는 그걸 한 줄씩
+읽어 실행하는데, 중간에 stdin을 읽는 명령이 있으면 **남은 스크립트를 그 명령이 먹어치운다.**
+`docker compose exec -T`가 정확히 그렇다 — `-T`는 TTY만 끄고 stdin은 그대로 붙인다.
+
+실측: `alembic upgrade head` 다음 줄부터 통째로 사라졌다. `up -d`도 `restart`도 실행되지
+않았고 **에러도 나지 않았다** — bash 입장에서는 스크립트가 거기서 끝난 것이라 종료 코드가
+0이다. 아래 §4의 "`up -d`만으로는 코드가 안 바뀐다"와 증상이 똑같아서(`Up About an hour`)
+원인을 오해하기 쉽다. 둘은 다른 문제다:
+
+| | 증상 | 원인 |
+|---|---|---|
+| 이 함정 | `restart`가 **아예 실행되지 않는다** | stdin을 `exec -T`가 먹었다 |
+| §4의 함정 | `restart`는 실행됐지만 `up -d`만 믿었다 | 볼륨 마운트라 `up -d`가 할 일이 없다 |
+
+**모든 줄에 `</dev/null`을 붙이고, 끝에 `STEP=done`을 찍는다.** 그 줄이 안 보이면 배포가
+중간에 끊긴 것이고, 그때 `docker compose ps`의 가동 시간이 유일한 진실이다.
 
 #### `up -d`만으로는 코드가 안 바뀐다 (2026-08-11 실측)
 
