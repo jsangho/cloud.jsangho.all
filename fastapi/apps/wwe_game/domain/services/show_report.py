@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from wwe_game.domain.constants.ple_calendar import calendar_for
+from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import rivalry_scene, show_card, title_scene
 from wwe_game.domain.value_objects.title import TITLES, Title, titles_of
@@ -70,7 +70,7 @@ def build(run: CareerRun, report: WeekReport, narration: str) -> ShowReport:
     card = _card(
         run,
         report.week,
-        report.is_major_show,
+        _stage_of(report.show),
         busy=(report.opponent,) if report.opponent else (),
         stakes=(report.title_at_stake,) if report.title_at_stake else (),
     )
@@ -117,13 +117,16 @@ def build_night(
     내가 도전한 벨트. 카드가 그 둘을 다시 쓰지 않게 하려고 받는다(§3-D52). 없으면 카드가
     조금 어긋날 뿐 리포트는 선다.
     """
-    show = calendar_for(run.brand).show_for(week)
+    calendar = calendar_for(run.brand)
+    # **주간 방송에는 대회 이름이 없다** — 브랜드가 그 밤의 이름이다 (§3-D60).
+    show = calendar.show_for(week) if calendar.is_show_week(week) else None
     player = str(run.identity.name)
-    card = _card(run, week, show.is_major, busy=busy, stakes=stakes)
+    stage = _stage_of(show)
+    card = _card(run, week, stage, busy=busy, stakes=stakes)
     return ShowReport(
         week=week,
-        show=show.name,
-        is_major=show.is_major,
+        show=show.name if show is not None else run.brand.value.upper(),
+        is_major=show is not None and show.is_major,
         result=None,
         opponent=None,
         match_label=None,
@@ -143,10 +146,19 @@ def _night_stars(card: tuple[show_card.CardMatch, ...]) -> float:
     return round(sum(m.stars for m in card) / len(card) / 0.25) * 0.25
 
 
+def _stage_of(show: PleShow | None) -> str:
+    """그 밤의 크기 (§3-D60). 카드 수·별점·타이틀전 확률이 이걸 읽는다."""
+    if show is None:
+        return "weekly"
+    if show.is_major:
+        return "major"
+    return "special" if show.is_special else "ple"
+
+
 def _card(
     run: CareerRun,
     week: int,
-    is_major: bool,
+    stage: str,
     *,
     busy: tuple[str, ...],
     stakes: tuple[Title, ...],
@@ -161,7 +173,7 @@ def _card(
         week,
         run.identity.gender,
         run.brand,
-        is_major=is_major,
+        stage=stage,
         player=str(run.identity.name),
         busy=busy,
         skip_titles=frozenset(run.titles_held) | frozenset(stakes),
@@ -209,9 +221,12 @@ def _around(run: CareerRun, week: int, player: str) -> tuple[str, ...]:
 
 
 def is_reportable(run: CareerRun, week: int) -> bool:
-    """리포트를 만들 만한 주차인지 — **대회와 특별 방송만**.
+    """리포트를 만들 만한 주차인지 — **경기가 서는 밤이면 연다** (§3-D60).
 
-    주간 방송까지 열면 1560주 전부가 리포트가 되고, 그건 로그와 같은 것이다.
+    §3-D45는 "대회 주차만"으로 닫았다. 주간 방송까지 열면 1560주 전부가 리포트가 되고
+    그건 로그와 같아진다는 이유였다. 사용자 요청으로 그 문을 연다 — 다만 **밤의 크기가
+    다르다**: 주간 방송은 카드가 넷이고 벨트가 잘 안 걸린다(`show_card.CARD_SIZE`).
+
+    0주차는 아직 아무것도 없었던 자리라 연다고 할 것이 없다.
     """
-    calendar = calendar_for(run.brand)
-    return calendar.is_show_week(week)
+    return week > 0

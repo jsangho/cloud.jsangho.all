@@ -147,7 +147,20 @@ const NEWS_KINDS: Record<string, string> = {
   turn: "턴",
   team: "팀",
   scene: "세계",
+  debut: "데뷔",
+  call_up_scene: "콜업",
+  retire: "은퇴",
 };
+
+/**
+ * 인박스에서 접을 수 있는 배경 소식 (§3-D61).
+ *
+ * 명부의 들고 남까지 흘리면 30년에 백 줄이 넘는다. **규칙으로 숨기지 않고 사용자가
+ * 접게 한다** — 세계가 도는 것을 보고 싶은 사람과 내 커리어만 보고 싶은 사람이 다르다.
+ */
+const BACKGROUND_KINDS = ["scene", "team", "debut", "call_up_scene", "retire"] as const;
+
+type BackgroundKind = (typeof BACKGROUND_KINDS)[number];
 
 /** 군중 반응 → 색. 환호·구호만 띄우고 나머지는 죽인다 (DESIGN.md §7). */
 const MOOD_TONE: Record<string, string> = {
@@ -323,6 +336,7 @@ export default function CareerPage() {
   const [tab, setTab] = useState<PanelKey>("schedule");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
+  const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
   const [openWeek, setOpenWeek] = useState<number | null>(null);
   const [report, setReport] = useState<CareerShowReport | null>(null);
   const [draft, setDraft] = useState<Draft>({
@@ -996,7 +1010,34 @@ export default function CareerPage() {
                 <p className="text-sm text-muted-foreground">아직 남을 만한 사건이 없습니다.</p>
               ) : (
                 <div className="space-y-5">
-                  {groupNewsByYear(inbox.items).map(([year, rows]) => (
+                  <div className="flex flex-wrap gap-1.5">
+                    {BACKGROUND_KINDS.map((kind) => {
+                      const off = hidden.includes(kind);
+                      return (
+                        <button
+                          key={kind}
+                          type="button"
+                          aria-pressed={!off}
+                          onClick={() =>
+                            setHidden((now) =>
+                              now.includes(kind) ? now.filter((k) => k !== kind) : [...now, kind],
+                            )
+                          }
+                          className={cn(
+                            "rounded-[4px] px-2 py-1 text-xs transition-colors duration-[120ms]",
+                            off
+                              ? "text-muted-foreground/60 line-through hover:text-muted-foreground"
+                              : "bg-card text-foreground ring-1 ring-brand-400/40 ring-inset",
+                          )}
+                        >
+                          {NEWS_KINDS[kind] ?? kind}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {groupNewsByYear(
+                    inbox.items.filter((item) => !hidden.includes(item.kind as BackgroundKind)),
+                  ).map(([year, rows]) => (
                     <div key={year}>
                       <p className="font-sport border-b border-stone-300/60 pb-1 text-sm dark:border-stone-700/60">
                         {year}년차
@@ -1070,8 +1111,10 @@ function WeekRow({
   onToggle: () => void;
 }) {
   const stagedNight = week.matchSummary !== null;
-  // 대회 밤은 펼칠 것이 하나 더 있다 — 그날의 리포트다 (§3-D45).
-  const showNight = week.kind === "ple" || week.kind === "special";
+  // 경기가 선 밤은 펼칠 것이 하나 더 있다 — 그날의 리포트다 (§3-D45·D60).
+  // 주간 방송도 연다: 밤이 작을 뿐 그날도 카드가 섰다. 프로모·결장은 링에 서지
+  // 않은 주차라 열지 않는다.
+  const showNight = week.kind === "ple" || week.kind === "special" || week.kind === "weekly_show";
   return (
     <div className="border-b border-stone-200/40 dark:border-stone-800/60">
       <div className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr]">

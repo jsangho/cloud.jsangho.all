@@ -357,20 +357,26 @@ class TestGuestReport:
         assert body["opponent"] is None
         assert body["narration"] == ""
 
-    def test_an_ordinary_week_has_none(self, client: TestClient) -> None:
+    def test_an_ordinary_week_is_a_smaller_night(self, client: TestClient) -> None:
+        """주간 방송도 리포트가 있다 (§3-D60) — **다만 밤이 작다.**
+
+        §3-D45는 "대회 주차만"으로 닫았지만 사용자 요청으로 열었다. 크기가 같으면
+        1560주가 전부 대회가 되므로, 카드가 작다는 것으로 그 자리를 지킨다.
+        """
         state, weeks = self._play(client)
-        plain = next(
-            (w["week"] for w in weeks if w["kind"] == "weekly_show"),
-            None,
+        plain = next((w["week"] for w in weeks if w["kind"] == "weekly_show"), None)
+        show = next((w["week"] for w in weeks if w["kind"] in ("ple", "special")), None)
+        if plain is None or show is None:
+            pytest.skip("주간 방송과 대회가 함께 있는 판이 아니다")
+        night = client.post(
+            "/api/career/guest/report", json={"state": state, "week": plain}
         )
-        if plain is None:
-            pytest.skip("주간 방송 주차가 없다")
-        assert (
-            client.post(
-                "/api/career/guest/report", json={"state": state, "week": plain}
-            ).status_code
-            == 404
-        )
+        assert night.status_code == 200, night.text
+        big = client.post(
+            "/api/career/guest/report", json={"state": state, "week": show}
+        ).json()
+        assert len(night.json()["card"]) < len(big["card"])
+        assert night.json()["isMajor"] is False
 
     def test_a_week_not_yet_played_is_refused(self, client: TestClient) -> None:
         # 세이브를 고쳐 미래를 물으면 아직 오지 않은 밤의 계보가 나온다.

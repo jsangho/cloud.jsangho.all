@@ -30,6 +30,7 @@ from enum import StrEnum
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.services.rivalry_scene import SceneNews
+from wwe_game.domain.services.roster_scene import RosterBeat, RosterNews
 from wwe_game.domain.services.team_engine import TeamNews
 from wwe_game.domain.value_objects.title import TITLES
 from wwe_game.domain.value_objects.week_report import (
@@ -60,6 +61,13 @@ class NewsKind(StrEnum):
     TURN = "turn"
     """성향이 반대편으로 넘어갔다 — 힐턴·베이비페이스턴 (§3-D39)."""
     TEAM = "team"
+    DEBUT = "debut"
+    """배경 선수가 링에 처음 섰다 (§3-D61)."""
+    CALL_UP_SCENE = "call_up_scene"
+    """배경 선수가 메인 로스터로 올라왔다 (§3-D61). 내 콜업(`CALL_UP`)과 나눠 둔다 —
+    화면이 "내 일"과 "남의 일"을 다른 색으로 읽는다."""
+    RETIRE = "retire"
+    """배경 선수가 링을 떠났다 (§3-D61)."""
 
 
 class CrowdMood(StrEnum):
@@ -240,11 +248,32 @@ def from_scene_news(news: SceneNews, stats: WrestlerStats) -> NewsItem:
     )
 
 
+_ROSTER_KINDS: dict[RosterBeat, NewsKind] = {
+    RosterBeat.DEBUT: NewsKind.DEBUT,
+    RosterBeat.CALL_UP: NewsKind.CALL_UP_SCENE,
+    RosterBeat.RETIRE: NewsKind.RETIRE,
+}
+
+
+def from_roster_news(news: RosterNews, stats: WrestlerStats) -> NewsItem:
+    """명부의 들고 남 한 줄 (§3-D61). 배경이라 내 일 뒤에 붙는다."""
+    kind = _ROSTER_KINDS[news.beat]
+    mood = mood_for(kind, stats)
+    return NewsItem(
+        week=news.week,
+        kind=kind,
+        headline=news.headline,
+        mood=mood,
+        crowd_line=_crowd_line(mood, news.week),
+    )
+
+
 def compile_feed(
     entries: tuple[tuple[WeekReport, WrestlerStats], ...],
     team_news: tuple[TeamNews, ...],
     player: str,
     scene_news: tuple[SceneNews, ...] = (),
+    roster_news: tuple[RosterNews, ...] = (),
 ) -> tuple[NewsItem, ...]:
     """두 갈래를 하나의 시간순 피드로 합친다.
 
@@ -262,8 +291,15 @@ def compile_feed(
     last = entries[-1][1] if entries else WrestlerStats()
     items += [from_team_news(n, last) for n in team_news]
     items += [from_scene_news(n, last) for n in scene_news]
-    # **같은 주차면 내 일이 먼저다.** 배경(팀·대립)은 그 뒤에 붙는다.
-    background = {NewsKind.TEAM, NewsKind.SCENE}
+    items += [from_roster_news(n, last) for n in roster_news]
+    # **같은 주차면 내 일이 먼저다.** 배경(팀·대립·명부)은 그 뒤에 붙는다.
+    background = {
+        NewsKind.TEAM,
+        NewsKind.SCENE,
+        NewsKind.DEBUT,
+        NewsKind.CALL_UP_SCENE,
+        NewsKind.RETIRE,
+    }
     return tuple(sorted(items, key=lambda i: (i.week, i.kind in background)))
 
 
