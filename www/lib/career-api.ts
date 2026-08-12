@@ -389,6 +389,16 @@ export async function readGuestReport(
   }
 }
 
+/**
+ * 체험판 인박스 (§3-D67). **배경 소식만 온다** — 내 로그가 서버에 없기 때문이다(§3-D8).
+ *
+ * 로그인 쪽 `readNews()`의 짝이지만 담기는 것이 좁다: 세계 벨트·대립·팀·명부는 시드에서
+ * 되짚히고, 내 대관·부상·턴은 주차 로그에서만 나온다.
+ */
+export function readGuestNews(state: GuestRunState): Promise<CareerNewsPage> {
+  return post<CareerNewsPage>("/guest/news", { state });
+}
+
 export function chooseGuestEvent(state: GuestRunState, choice: string): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/choices", { state, choice });
 }

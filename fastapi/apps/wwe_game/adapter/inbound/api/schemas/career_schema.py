@@ -25,13 +25,15 @@ from wwe_game.app.dtos.career_dto import (
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
+from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.services import match_rating
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.title import TITLES, Title
-from wwe_game.domain.value_objects.week_report import WeekKind
+from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
+from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 
 class _Camel(BaseModel):
@@ -354,6 +356,21 @@ class NewsPageSchema(_Camel):
 # ── 도메인 → 스키마 ──────────────────────────────────────────
 
 
+def _rival_tier(report: WeekReport, stats: WrestlerStats, seed: int) -> RivalTier:
+    """그 경기 상대의 급 (§3-D66).
+
+    **상대를 이름으로 찾는다.** 예전에는 내 인기도로 상대의 급을 짐작했는데
+    (`tier_for_popularity(내 인기도)`), 그러면 내가 인기를 얻는 것만으로 상대가 누구든
+    별점이 함께 올랐다 — 별점이 스탯의 다른 표기가 되는 자리다.
+
+    이름이 없거나(여럿이 붙는 경기·프로모) 명부 밖이면 그때만 인기도로 되돌아간다.
+    """
+    member = roster.member_of(report.opponent or "", seed)
+    if member is None:
+        return roster.tier_for_popularity(stats.popularity)
+    return roster.tier_at(member, report.week)
+
+
 def _stars_of(view: WeekReportView, seed: int) -> float:
     """내 경기의 별점 (§3-D56). **경기가 없는 주차는 0이다.**
 
@@ -372,7 +389,7 @@ def _stars_of(view: WeekReportView, seed: int) -> float:
         seed,
         report.week,
         in_ring=view.stats.in_ring,
-        rival_tier=roster.tier_for_popularity(view.stats.popularity),
+        rival_tier=_rival_tier(report, view.stats, seed),
         stage=stage,
         has_title=report.title_at_stake is not None,
         has_stipulation=report.match_kind is not MatchKind.SINGLES,

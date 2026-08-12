@@ -151,6 +151,18 @@ def vacated_between(
     return False
 
 
+def reigns_upto(
+    seed: int, week: int, title: Title, *, exclude: str = ""
+) -> tuple[Reign, ...]:
+    """그 주차까지의 재위 연대기 (§3-D65).
+
+    벨트가 언제 누구에게 넘어갔는지를 **인박스가 읽는다** — 지금까지 그 사실은 카드를
+    펼친 사람만 볼 수 있었고, RAW 남성부만 30년에 146번 바뀌는데 뉴스에는 한 줄도
+    없었다. 계보는 이미 다 알고 있었다.
+    """
+    return tuple(_reigns(seed, week, title, exclude))
+
+
 def _walk(seed: int, week: int, title: Title, exclude: str) -> Reign | None:
     """그 주차를 품는 재위."""
     found: Reign | None = None
