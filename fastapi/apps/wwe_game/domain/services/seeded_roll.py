@@ -35,10 +35,16 @@ STIPULATION: Final = "stipulation"
 ELIMINATION: Final = "elimination"
 CONTRACT: Final = "contract"
 """복귀 오퍼 굴림 (§3-D50). 무소속 주차마다 한 번."""
+ROSTER_STABLE: Final = "roster_stable"
+"""그 판의 가상 스테이블 (§3-D64). 이름 굴림과 채널을 나눈다 — 한쪽을 손대면 다른
+쪽이 밀리면 안 된다."""
 ROSTER_CAST: Final = "roster_cast"
 """그 판의 가상 선수 이름 (§3-D59). **판마다 한 번만 굴린다.**"""
 RATING: Final = "rating"
 """경기 별점 (§3-D56). **판정과 나눠 둔다** — 별점을 굴려도 승패가 밀리면 안 된다."""
+TRADE: Final = "trade"
+"""시즌 중 트레이드 (§3-D63). **드래프트와 채널을 나눈다** — 한쪽 굴림이 늘어도
+다른 쪽이 밀리면 안 된다."""
 DRAFT: Final = "draft"
 """연말 드래프트 (§3-D54). **명부가 쓰는 유일한 채널이다** — 해마다 한 번, 그 해에
 자리를 맞바꿀 칸과 사람을 고른다."""

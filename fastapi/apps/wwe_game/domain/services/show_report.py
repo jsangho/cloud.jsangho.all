@@ -192,7 +192,10 @@ def _champions(run: CareerRun, week: int, player: str) -> tuple[TitleHolder, ...
         holder = (
             player
             if mine
-            else title_scene.champion_at(run.seed, week, title, exclude=player)
+            else title_scene.holder_label(
+                title_scene.champion_at(run.seed, week, title, exclude=player) or "",
+                run.seed,
+            )
         )
         if holder is None:
             continue

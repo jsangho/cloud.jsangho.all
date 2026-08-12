@@ -93,7 +93,9 @@ class TestTheCardAgreesWithTheBeltLineage:
     def test_a_defence_keeps_the_champion(self) -> None:
         """벨트가 안 넘어간 밤의 타이틀전은 챔피언이 이긴다 — 계보가 그대로이므로."""
         holders = {
-            title_scene.champion_at(SEED, SHOW_WEEK, title)
+            title_scene.holder_label(
+                title_scene.champion_at(SEED, SHOW_WEEK, title) or "", SEED
+            )
             for gender in Gender
             for title in titles_of(Brand.RAW, gender)
         }
@@ -124,7 +126,8 @@ class TestTheCardAgreesWithTheBeltLineage:
                 for label in (match.left, match.right):
                     for name in title_scene.members_of(label):
                         member = roster.member_of(name, SEED)
-                        assert member is not None
+                        if member is None:
+                            continue  # 팀 이름 (§3-D62) — 사람이 아니다
                         assert member.is_active_at(week), f"{name}은 이미 링을 떠났다"
         assert found > 0, "30년에 공석이 한 번도 안 생겼다 — 은퇴가 계보에 안 닿는다"
 
@@ -139,13 +142,14 @@ class TestTheCardAgreesWithTheBeltLineage:
                 if match.title is None:
                     continue
                 # 카드는 두 디비전을 다 세운다 (§3-D55) — 벨트도 양쪽에서 찾는다.
+                # 화면 이름으로 견준다: 같은 스테이블 둘이면 팀 이름이 찍힌다 (§3-D62).
                 holder = next(
                     title_scene.champion_at(SEED, week, t)
                     for gender in Gender
                     for t in titles_of(Brand.RAW, gender)
                     if TITLES[t].display_name == match.title
                 )
-                assert match.winner == holder
+                assert match.winner == title_scene.holder_label(holder or "", SEED)
 
     def test_my_own_belt_is_not_defended_by_someone_else(self) -> None:
         # 내가 감고 있는 벨트를 카드가 다시 걸면 "그날의 벨트: 나"와 어긋난다.

@@ -26,6 +26,7 @@ from typing import Final
 
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.roster import RivalTier
+from wwe_game.domain.constants.teams import KOREAN_TEAM_NAMES
 from wwe_game.domain.services import seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
@@ -241,7 +242,9 @@ def _pick_holders(
     groups: dict[str, list[str]] = {}
     for name in pool:
         member = roster.member_of(name, seed)
-        groups.setdefault(member.stable if member else "", []).append(name)
+        groups.setdefault(roster.stable_at(member, seed) if member else "", []).append(
+            name
+        )
     fit = tuple(sorted(key for key, names in groups.items() if len(names) >= count))
     if not fit:
         return None
@@ -262,7 +265,7 @@ def _stable_mates(
         for name in pool
         if name not in exclude
         and (member := roster.member_of(name, seed)) is not None
-        and member.stable == stable
+        and roster.stable_at(member, seed) == stable
     )
 
 
@@ -288,15 +291,44 @@ def _inheritor(
     if len(staying) != 1:
         return None
     member = roster.member_of(staying[0], seed)
-    if member is None or not member.stable:
+    stable = roster.stable_at(member, seed) if member is not None else ""
+    if not stable:
         # **독립 선수는 이어받을 스테이블이 없다.** 그 벨트는 공석이 된다.
         return None
-    return staying[0], member.stable
+    return staying[0], stable
 
 
 def members_of(holder: str) -> tuple[str, ...]:
     """챔피언 이름 → 사람들. 태그 벨트는 둘이다 (§3-D57)."""
     return tuple(holder.split(PARTNER_JOIN)) if holder else ()
+
+
+def holder_label(holder: str, seed: int = 0) -> str:
+    """화면에 나갈 이름 (§3-D62). **같은 스테이블 둘이면 팀 이름이다.**
+
+    §3-D57이 태그 벨트를 둘에게 준 뒤로 화면에는 "킷 윌슨 & 엘튼 프린스"가 찍혔다 —
+    그 둘의 이름은 **프리티 데들리**다. 명부가 스테이블을 알게 되면서(§3-D58) 그 이름을
+    부를 수 있게 됐고, 한글 표기는 §3-D30이 이미 갖고 있었다.
+
+    독립 선수 둘은 팀이 아니므로 "A & B" 그대로다 — 이름 없는 팀을 `Team.label`이
+    구성원으로 부르는 것과 같은 규약이다.
+
+    `|`가 든 표기(LWO · OTM)는 **앞의 약칭**을 쓴다. 벨트 옆에 붙는 자리라 좁다.
+    """
+    people = members_of(holder)
+    if len(people) < 2:
+        return holder
+    stables = {
+        roster.stable_at(member, seed)
+        for name in people
+        if (member := roster.member_of(name, seed)) is not None
+    }
+    if len(stables) != 1:
+        return holder
+    stable = next(iter(stables))
+    if not stable:
+        return holder
+    return KOREAN_TEAM_NAMES.get(stable, stable).split("|")[0].strip()
 
 
 def _reign_of(

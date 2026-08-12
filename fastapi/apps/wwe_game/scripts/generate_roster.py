@@ -187,6 +187,10 @@ from enum import IntEnum
 from functools import lru_cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
+from wwe_game.domain.constants.teams import (
+    FICTIONAL_TEAM_HEADS,
+    FICTIONAL_TEAM_TAILS,
+)
 from wwe_game.domain.services import seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.title import Brand
@@ -303,6 +307,68 @@ def cast_for(seed: int) -> dict[int, str]:
     return picked
 
 
+STABLE_SIZE: tuple[int, int] = (2, 3)
+"""가상 스테이블의 크기 (§3-D64). 둘이면 태그팀, 셋이면 스테이블이다(§3-D30)."""
+
+STABLE_SHARE = 0.35
+"""가상 선수가 스테이블에 묶일 확률.
+
+전원을 묶으면 독립 선수가 사라져 태그 벨트의 짝이 늘 같은 무리에서 나온다(§3-D58).
+아무도 안 묶으면 실존 팀이 은퇴로 사라진 뒤 30년째 명부에 팀이 하나도 없다.
+"""
+
+
+@lru_cache(maxsize=256)
+def stables_for(seed: int) -> dict[int, str]:
+    """그 판의 가상 스테이블 — 슬롯 번호 → 팀 이름 (§3-D64).
+
+    **가상 선수와 이어진다**(2026-08-12 사용자 요청). 실존 팀은 30년 안에 전부 은퇴로
+    사라지는데(§3-D13-1) 새로 생기는 팀이 없어서, 후반의 태그 벨트는 늘 독립 둘이 들었다.
+
+    **같은 디비전·같은 메인 브랜드에서 묶는다** — 그래야 그 둘이 실제로 한 카드에 설 수
+    있다(§3-D53). 앞말은 겹치지 않게 하나씩만 쓴다: 앞말이 열둘뿐이라 그냥 뽑으면 한
+    판에 "새비지 브리게이드 · 새비지 커넥션"이 함께 서고, 그러면 다른 팀으로 안 읽힌다
+    (§3-D44가 겪은 것).
+    """
+    roll = SeededRoll(seed, 0, seeded_roll.ROSTER_STABLE)
+    # **앞말 목록에 같은 말이 두 번 들어 있다**("새비지") — 접지 않으면 한 판에
+    # 같은 앞말의 팀이 둘 선다.
+    heads = list(dict.fromkeys(FICTIONAL_TEAM_HEADS))
+    picked: dict[int, str] = {}
+    for gender in Gender:
+        for brand in (Brand.RAW, Brand.SMACKDOWN):
+            slots = [
+                m
+                for m in ROSTER
+                if m.slot >= 0 and m.gender is gender and m.home_brand is brand
+            ]
+            index = 0
+            while index < len(slots) and heads:
+                if not roll.chance(STABLE_SHARE):
+                    index += 1
+                    continue
+                size = roll.between(*STABLE_SIZE)
+                group = slots[index : index + size]
+                index += size
+                if len(group) < 2:
+                    continue
+                head = heads.pop(roll.between(0, len(heads) - 1))
+                name = f"{head} {roll.pick(FICTIONAL_TEAM_TAILS)}"
+                for member in group:
+                    picked[member.slot] = name
+    return picked
+
+
+def stable_at(member: RosterMember, seed: int = 0) -> str:
+    """그 판에서 속한 스테이블. 없으면 빈 문자열이다 (§3-D58·D64).
+
+    실존 선수는 원본 CSV가 정하고(시드와 무관하다), 가상 선수는 판마다 다시 묶인다.
+    """
+    if member.slot >= 0:
+        return stables_for(seed).get(member.slot, "")
+    return member.stable
+
+
 @lru_cache(maxsize=256)
 def _index(seed: int) -> dict[str, RosterMember]:
     """그 판의 이름 → 명부 한 줄.
@@ -402,25 +468,36 @@ def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
     return frozenset(held)
 
 
-@lru_cache(maxsize=4096)
-def _draft_flips(seed: int, year: int) -> frozenset[str]:
-    """그 해 연말까지 브랜드가 뒤집힌 사람들 (§3-D54).
+TRADES_PER_YEAR: tuple[int, int] = (0, 2)
+"""시즌 중 트레이드 수 (§3-D63). 연말 드래프트와 **별개로** 선다.
 
-    **커리어마다 다른 드래프트가 돈다** (2026-08-12 사용자 요청). 명부 자체는 모든
-    커리어가 공유하는 상수이지만, *누가 어느 브랜드에 서 있는가*는 시드를 탄다 —
-    배경 세계를 시드에서 되짚는 다른 층들과 같은 규약이다(§3-D38·D44·D52).
+세계가 연말에만 움직이면 나머지 쉰한 주는 명부가 굳어 있다. 다만 잦으면 연말 드래프트가
+무엇 때문에 있는지가 사라진다 — 해마다 0~2건이면 "가끔 한 명씩 오간다"로 읽힌다.
 
-    **앞 해를 다시 걷지 않는다.** 재귀 + 캐시라 한 해치 일만 새로 한다. 그냥 1년부터
-    다시 세면 `pool_for` 한 번이 30년을 걷고, 그게 주차마다 반복된다.
+트레이드도 **맞바꿈이다**(§3-D54). 한쪽으로만 보내면 브랜드가 마른다.
+"""
+
+TRADE_WINDOW: tuple[int, int] = (4, DRAFT_WEEK - 4)
+"""트레이드가 설 수 있는 주차 구간. 연초와 드래프트 직전은 비운다 — 드래프트에 붙어
+일어나면 그냥 드래프트가 길어진 것으로 읽힌다."""
+
+
+def _swaps(
+    seed: int,
+    schedule: list[int],
+    state: set[str],
+    roll: SeededRoll,
+    guard_week: int,
+) -> list[tuple[int, str]]:
+    """정해진 주차마다 한 쌍씩 맞바꾼다 (§3-D54).
+
+    `guard_week`는 **챔피언을 어느 시점으로 볼지**다 — 그 주차의 벨트 주인은 자리를
+    옮기지 않는다(2026-08-12 사용자 결정).
     """
-    if year <= 0:
-        return frozenset()
-    flipped = set(_draft_flips(seed, year - 1))
-    week = year * WEEKS_PER_YEAR + DRAFT_WEEK
-    roll = SeededRoll(seed, year, seeded_roll.DRAFT)
-    for _ in range(DRAFT_PAIRS):
+    moves: list[tuple[int, str]] = []
+    for week in schedule:
         gender, tier = roll.pick(_DRAFT_CELLS)
-        guarded = _champions_at(seed, week - 1, gender)
+        guarded = _champions_at(seed, guard_week, gender)
         pools = {
             brand: [
                 m
@@ -428,7 +505,7 @@ def _draft_flips(seed: int, year: int) -> frozenset[str]:
                 if m.gender is gender
                 and m.is_active_at(week)
                 and tier_at(m, week) is tier
-                and _home_at(m, flipped) is brand
+                and _home_at(m, state) is brand
                 and m.name not in guarded
             ]
             for brand in (Brand.RAW, Brand.SMACKDOWN)
@@ -437,7 +514,74 @@ def _draft_flips(seed: int, year: int) -> frozenset[str]:
             continue
         for brand in (Brand.RAW, Brand.SMACKDOWN):
             chosen = roll.pick(pools[brand]).name
-            flipped.symmetric_difference_update({chosen})
+            state.symmetric_difference_update({chosen})
+            moves.append((week, chosen))
+    return moves
+
+
+@lru_cache(maxsize=4096)
+def _trades(seed: int, year: int) -> tuple[tuple[int, str], ...]:
+    """그 해 시즌 중 트레이드 (§3-D63).
+
+    **챔피언은 그 해 초로 본다.** 트레이드가 선 그 주의 계보를 물으면 계보가 브랜드를,
+    브랜드가 이 함수를 다시 불러 서로를 부르며 돈다 — 연말 드래프트는 그 고리를 피할
+    수 있어(트레이드가 이미 정해진 뒤라) 정확한 시점으로 본다.
+    """
+    if year <= 0:
+        return ()
+    state = set(_flips_upto(seed, year - 1))
+    roll = SeededRoll(seed, year, seeded_roll.TRADE)
+    start = year * WEEKS_PER_YEAR
+    when = sorted(
+        roll.between(*TRADE_WINDOW) for _ in range(roll.between(*TRADES_PER_YEAR))
+    )
+    return tuple(_swaps(seed, [start + o for o in when], state, roll, start - 1))
+
+
+@lru_cache(maxsize=4096)
+def _draft(seed: int, year: int) -> tuple[tuple[int, str], ...]:
+    """그 해 연말 드래프트 (§3-D54). **그 주 직전의 챔피언은 옮기지 않는다.**
+
+    트레이드를 먼저 반영한 상태 위에서 짠다 — 그래야 한 해에 두 번 옮기는 사람이 나오지
+    않는다. 고리가 안 도는 이유는 `_flips_at`이 드래프트 주차 **전**의 주차를 물을 때
+    이 함수를 부르지 않기 때문이다.
+    """
+    if year <= 0:
+        return ()
+    state = set(_flips_upto(seed, year - 1))
+    for _, name in _trades(seed, year):
+        state.symmetric_difference_update({name})
+    week = year * WEEKS_PER_YEAR + DRAFT_WEEK
+    roll = SeededRoll(seed, year, seeded_roll.DRAFT)
+    return tuple(_swaps(seed, [week] * DRAFT_PAIRS, state, roll, week - 1))
+
+
+@lru_cache(maxsize=4096)
+def _flips_upto(seed: int, year: int) -> frozenset[str]:
+    """그 해 **끝**까지 브랜드가 뒤집힌 사람들.
+
+    **앞 해를 다시 걷지 않는다.** 재귀 + 캐시라 한 해치 일만 새로 한다 — 그냥 1년부터
+    다시 세면 `pool_for` 한 번이 30년을 걷고, 그게 주차마다 반복된다.
+    """
+    if year < 0:
+        return frozenset()
+    flipped = set(_flips_upto(seed, year - 1))
+    for _, name in (*_trades(seed, year), *_draft(seed, year)):
+        flipped.symmetric_difference_update({name})
+    return frozenset(flipped)
+
+
+@lru_cache(maxsize=8192)
+def _flips_at(seed: int, week: int) -> frozenset[str]:
+    """그 주차까지 뒤집힌 사람들. **주 단위로 본다** — 트레이드는 연중에 선다(§3-D63)."""
+    year = week // WEEKS_PER_YEAR
+    flipped = set(_flips_upto(seed, year - 1))
+    for at, name in _trades(seed, year):
+        if at <= week:
+            flipped.symmetric_difference_update({name})
+    if week % WEEKS_PER_YEAR >= DRAFT_WEEK:
+        for _, name in _draft(seed, year):
+            flipped.symmetric_difference_update({name})
     return frozenset(flipped)
 
 
@@ -478,8 +622,7 @@ def brand_at(member: RosterMember, week: int, seed: int = 0) -> Brand:
     """
     if tier_at(member, week) is RivalTier.PROSPECT:
         return Brand.NXT
-    year = (week - DRAFT_WEEK) // WEEKS_PER_YEAR
-    return _home_at(member, _draft_flips(seed, max(0, year)))
+    return _home_at(member, _flips_at(seed, week))
 
 
 def call_up_week(member: RosterMember) -> int | None:

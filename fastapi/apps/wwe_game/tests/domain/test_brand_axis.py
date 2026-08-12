@@ -96,7 +96,10 @@ class TestTheNightIsOneBrand:
             for label in (match.left, match.right):
                 for name in title_scene.members_of(label):
                     member = roster.member_of(name, SEED)
-                    assert member is not None
+                    if member is None:
+                        # 팀 이름이다 (§3-D62) — 사람이 아니라 조회되지 않는다.
+                        # 그쪽의 브랜드는 `_title_bout`이 이름을 붙이기 전에 본다.
+                        continue
                     assert roster.brand_at(member, week, SEED) is brand
 
     @pytest.mark.parametrize("brand", list(Brand))
