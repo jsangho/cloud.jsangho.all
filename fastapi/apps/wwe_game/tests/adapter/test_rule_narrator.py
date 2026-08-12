@@ -16,19 +16,22 @@ from wwe_game.adapter.outbound.narration.rule_narrator import (
     stage_region,
 )
 from wwe_game.adapter.outbound.narration.templates import (
+    INDIE_VENUES,
     MOVES,
     REACTIONS_HIGH,
     REACTIONS_LOW,
+    STADIUMS,
     TEMPLATES,
     VENUES,
     Beat,
 )
 from wwe_game.domain.constants.countries import Region
+from wwe_game.domain.constants.ple_calendar import calendar_for
 from wwe_game.domain.entities.career_run import Rivalry, RivalryStage
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.services.week_simulation import simulate_week
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
-from wwe_game.domain.value_objects.title import Title
+from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
@@ -376,3 +379,59 @@ class TestTheVenueIsOneNight:
         run = make_run(seed=7777)
         venues = {narrator.venue_of(run, week) for week in range(1, 1560)}
         assert len(venues) > 10
+
+
+class TestTheStageMatchesTheStature:
+    """무대의 급이 그 사람의 처지를 말한다 (§3-D70, 2026-08-12 사용자 지적).
+
+    "탬파의 물류창고 링"에 세우면 세계 최대 단체의 주간 투어가 인디로 읽힌다. 반대로
+    방출된 선수를 아레나에 세우면 방출이 아무 일도 아닌 것이 된다(§3-D50).
+    """
+
+    def test_a_signed_wrestler_stands_in_an_arena(self) -> None:
+        narrator = RuleNarrator()
+        run = make_run(seed=7777)
+        stages = {narrator.venue_of(run, week) for week in range(1, 400)}
+        assert stages
+        assert not (stages & set(INDIE_VENUES))
+
+    def test_an_unsigned_wrestler_works_the_indies(self) -> None:
+        narrator = RuleNarrator()
+        run = replace(make_run(seed=7777), contract=None, titles_held=frozenset())
+        stages = {narrator.venue_of(run, week) for week in range(1, 400)}
+        assert stages <= set(INDIE_VENUES)
+
+    def test_a_major_night_stands_in_a_stadium(self) -> None:
+        """레슬매니아가 주간 방송과 같은 곳에 서면 그 밤이 커지지 않는다 (§3-D70)."""
+        narrator = RuleNarrator()
+        run = replace(make_run(seed=7777), brand=Brand.RAW)
+        calendar = calendar_for(Brand.RAW)
+        checked = 0
+        for show in calendar.shows:
+            if not show.is_major:
+                continue
+            for year in range(1, 6):
+                week = show.week_of_year + 52 * year
+                assert narrator.venue_of(run, week) in STADIUMS[Region.NA] or any(
+                    narrator.venue_of(run, week) in bank for bank in STADIUMS.values()
+                )
+                checked += 1
+        assert checked > 0
+
+    def test_an_ordinary_night_does_not(self) -> None:
+        narrator = RuleNarrator()
+        run = replace(make_run(seed=7777), brand=Brand.RAW)
+        calendar = calendar_for(Brand.RAW)
+        stadiums = {name for bank in STADIUMS.values() for name in bank}
+        for week in range(1, 300):
+            if calendar.is_show_week(week) and calendar.show_for(week).is_major:
+                continue
+            assert narrator.venue_of(run, week) not in stadiums
+
+    def test_the_three_banks_never_share_a_name(self) -> None:
+        """한 이름이 두 뱅크에 있으면 급이 섞인다 — 고척스카이돔이 실제로 그랬다."""
+        arenas = {name for bank in VENUES.values() for name in bank}
+        stadiums = {name for bank in STADIUMS.values() for name in bank}
+        assert not (arenas & stadiums)
+        assert not (arenas & set(INDIE_VENUES))
+        assert not (stadiums & set(INDIE_VENUES))
