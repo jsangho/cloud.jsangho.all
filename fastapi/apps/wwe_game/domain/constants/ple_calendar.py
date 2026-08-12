@@ -113,6 +113,14 @@ class PleShow:
     month: int
     tier: ShowTier
     week_offset: int = 0
+    logo: str = ""
+    """로고 파일 키 (§3-D71). 화면이 `/ple/<key>.png`로 찾는다."""
+    nights: int = 1
+    """며칠에 걸쳐 여는가 (2026-08-12 사용자 결정).
+
+    **레슬매니아·서머슬램은 이틀이다.** 이틀이면 카드도 두 배로 선다(§3-D55) — 그게
+    "그 밤이 크다"를 화면에서 말하는 방식이다.
+    """
     """그 달 한가운데에서 몇 주 밀 것인지.
 
     **한 달에 대회와 특별 방송이 함께 설 수 있어야 한다**(SNME). 달만으로 자리를 잡으면
@@ -174,8 +182,22 @@ _MAJOR, _STD, _SPECIAL = ShowTier.MAJOR, ShowTier.STANDARD, ShowTier.SPECIAL
 WRESTLEMANIA: Final = "레슬매니아"
 """**도전권이 현금화되는 밤** (§3-D36). 럼블·챔버 우승자가 여기서 벨트에 도전한다."""
 
-KING_AND_QUEEN: Final = "킹 앤 퀸 오브 더 링"
-"""**한 주에 안 끝나는 유일한 대회** (§3-D33). 결승만 이 밤에 서고 예선은 앞 두 주에 있다."""
+NIGHT_OF_CHAMPIONS: Final = "나이트 오브 챔피언스"
+"""**토너먼트 결승이 서는 밤** (§3-D71, 2026-08-12 사용자 결정).
+
+킹 앤 퀸 오브 더 링이 달력에서 빠지면서 그 결승이 갈 곳을 잃었다. 예선 둘은 그대로 앞
+두 주에 서고(§3-D33) 결승만 이 밤으로 옮겼다.
+"""
+
+CLASH_SERIES: Final = "클래시"
+"""**해외에서 여는 밤** (§3-D71). 이름이 "클래시 인 ○○"로 완성된다 — 그 해의 개최지가
+이름의 절반이다. 이 대회 앞뒤 한 주는 투어가 그쪽에 머문다(§3-D14-1의 예외).
+"""
+
+SURVIVOR_SERIES: Final = "서바이버 시리즈"
+"""**두 얼굴을 가진 밤** (§3-D71). 기본은 워게임즈이고 가끔 전통 제거 매치로 열린다 —
+로고도 그래서 둘이다.
+"""
 
 MITB: Final = "머니 인 더 뱅크"
 """**가방이 걸리는 밤** (§3-D36). 래더 매치는 다른 밤에도 열리지만 가방은 여기서만 나온다.
@@ -187,35 +209,41 @@ MITB: Final = "머니 인 더 뱅크"
 
 MAIN_CALENDAR = ShowCalendar(
     shows=(
-        PleShow("로열럼블", 1, _MAJOR),
-        PleShow("엘리미네이션 챔버", 2, _STD),
-        PleShow("킹 앤 퀸 오브 더 링", 3, _STD),
-        PleShow("레슬매니아", 4, _MAJOR),
-        PleShow("백래시", 5, _STD),
-        PleShow("머니 인 더 뱅크", 6, _STD),
-        PleShow("배드 블러드", 7, _STD),
-        PleShow("서머슬램", 8, _MAJOR),
-        PleShow("나이트 오브 챔피언스", 9, _STD),
-        PleShow("크라운 주얼", 10, _STD),
-        PleShow("서바이버 시리즈", 11, _MAJOR),
+        PleShow("로열럼블", 1, _MAJOR, logo="1_royal_rumble"),
+        PleShow("엘리미네이션 챔버", 2, _STD, logo="2_elimination_chamber"),
+        PleShow(WRESTLEMANIA, 4, _MAJOR, logo="4_wrestlemania", nights=2),
+        PleShow("백래시", 5, _STD, logo="5_backlash"),
+        PleShow(CLASH_SERIES, 6, _STD, logo="6_clash_series"),
+        PleShow(NIGHT_OF_CHAMPIONS, 7, _STD, logo="7_night_of_champions"),
+        PleShow("서머슬램", 8, _MAJOR, logo="8_summerslam", nights=2),
+        PleShow(MITB, 9, _STD, logo="9_money_in_the_bank"),
+        PleShow("크라운 주얼", 10, _STD, logo="10_crown_jewel"),
+        PleShow(SURVIVOR_SERIES, 11, _MAJOR, logo="11_survivor_series_war"),
         # ── 분기별 특별 방송 (§3-D21-2) ──
-        PleShow("새터데이 나이트 메인 이벤트", 3, _SPECIAL, week_offset=2),
-        PleShow("새터데이 나이트 메인 이벤트", 6, _SPECIAL, week_offset=2),
-        PleShow("새터데이 나이트 메인 이벤트", 9, _SPECIAL, week_offset=2),
-        PleShow("새터데이 나이트 메인 이벤트", 12, _SPECIAL, week_offset=2),
+        PleShow("새터데이 나이트 메인 이벤트", 3, _SPECIAL, week_offset=2, logo="snme"),
+        # 6월 SNME는 한 주 앞이다 — 뒤로 두면 나이트 오브 챔피언스의 **토너먼트 예선**과
+        # 겹친다(§3-D33: 결승 앞 두 주). 예선 주차에 특별 방송이 서면 그 주에 경기가
+        # 없어서 대진이 끊긴다. SNME 자리는 §3-D71에서 간격 기준으로 다시 잡는다.
+        PleShow("새터데이 나이트 메인 이벤트", 6, _SPECIAL, week_offset=1, logo="snme"),
+        PleShow("새터데이 나이트 메인 이벤트", 9, _SPECIAL, week_offset=2, logo="snme"),
+        PleShow(
+            "새터데이 나이트 메인 이벤트", 12, _SPECIAL, week_offset=2, logo="snme"
+        ),
     ),
 )
 """메인 로스터 — 1월부터 11월까지 달마다 한 번. **12월은 쉰다**(2026-08-07 사용자 결정).
 
-목록도 사용자가 고른다 — 클래시 앳 더 캐슬·헬 인 어 셀은 뺐다.
+목록은 사용자가 고른다. **2026-08-12에 사용자가 가져온 로고 목록에 맞췄다**(§3-D71):
+킹 앤 퀸 오브 더 링과 배드 블러드를 빼고 **클래시 시리즈**를 넣었으며, 머니 인 더
+뱅크(6→9월)와 나이트 오브 챔피언스(9→7월)의 달을 옮겼다. 토너먼트 결승은 사라진 킹 앤
+퀸 대신 **나이트 오브 챔피언스**에서 열린다.
 
-달을 실제 시기에 맞췄다: 로열럼블 1월 · 레슬매니아 4월 · 서머슬램 8월 · 서바이버 11월.
+**레슬매니아와 서머슬램은 이틀이다**(`nights=2`) — 카드도 두 배로 선다(§3-D55).
 
-**분기별 특별 방송(SNME)이 3·6·9·12월 하순에 함께 선다**(2026-08-07 사용자 요청).
-같은 달의 대회와 2주를 띄워 겹치지 않고, **12월에는 이것만 있다** — 대회는 쉬어도
-방송은 돈다.
-**대형이 고르게 흩어져 있지 않다** — 간격이 일정하면 "다음 큰 대회까지 몇 달"이 늘 같아
-계획이 무의미해진다.
+**아직 안 한 것**(사용자와 합의된 다음 판): 고정 여섯(1·2·4·5·8·11월) 말고 나머지 넷의
+달을 해마다 다시 뽑기 · SNME를 분기 고정 대신 **대회 사이가 가장 먼 자리**에 두기 ·
+로열럼블 3년차부터 이틀 · 서바이버 시리즈의 전통 제거 매치 변형 · 클래시 앞뒤 한 주의
+해외 투어 고정.
 """
 
 NXT_CALENDAR = ShowCalendar(
@@ -253,7 +281,7 @@ def calendar_for(brand: Brand) -> ShowCalendar:
 
 # 규칙이 이름으로 짚는 밤들이 실제 달력에 있어야 한다 (§3-D36). 오타는 실패가 아니라
 # **아무 일도 안 일어남**으로 나타나므로 여기서 잡는다.
-_NAMED = {WRESTLEMANIA, MITB, KING_AND_QUEEN}
+_NAMED = {WRESTLEMANIA, MITB, NIGHT_OF_CHAMPIONS}
 _MAIN_NAMES = {show.name for show in MAIN_CALENDAR.shows}
 if not _NAMED <= _MAIN_NAMES:  # pragma: no cover - 임포트 시 구조 검증
     raise RuntimeError(

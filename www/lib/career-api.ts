@@ -235,6 +235,10 @@ export type CareerShowReport = {
   stars: number;
   /** 그 밤의 경기장 (§3-D69). 서술이 쓴 것과 같은 값이다. */
   venue: string;
+  /** 그 밤의 로고 키 (§3-D71). `/ple/<key>.png`에 있다. 없으면 빈 문자열. */
+  logo: string;
+  /** 며칠에 걸쳐 열렸는가. 이틀이면 카드가 두 배다. */
+  nights: number;
 };
 
 /** 그 주차의 리포트. **대회 주차가 아니면 404이므로 null로 접는다.** */

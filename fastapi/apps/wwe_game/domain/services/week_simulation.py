@@ -29,8 +29,8 @@ from wwe_game.domain.constants.career_flags import (
 )
 from wwe_game.domain.constants.play_styles import INJURY_STYLE_MULTIPLIER
 from wwe_game.domain.constants.ple_calendar import (
-    KING_AND_QUEEN,
     MITB,
+    NIGHT_OF_CHAMPIONS,
     WRESTLEMANIA,
     PleShow,
     calendar_for,
@@ -165,7 +165,8 @@ def tournament_round_at(run: CareerRun, week: int) -> int:
         return 0
     calendar = calendar_for(run.brand)
     final = next(
-        (s.week_of_year for s in calendar.shows if s.name == KING_AND_QUEEN), None
+        (s.week_of_year for s in calendar.shows if s.name == NIGHT_OF_CHAMPIONS),
+        None,
     )
     if final is None:
         return 0

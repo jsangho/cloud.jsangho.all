@@ -56,6 +56,10 @@ class ShowReport:
     """그 무렵 배경에서 일어난 일. **내 일이 아니어서 뉴스에는 안 뜬 것들도 포함한다.**"""
     card: tuple[show_card.CardMatch, ...] = ()
     """그날 밤의 다른 경기들 (§3-D52). **내 경기는 없다** — 화면이 따로 그린다."""
+    logo: str = ""
+    """그 밤의 로고 키 (§3-D71). 화면이 `/ple/<key>.png`로 찾는다."""
+    nights: int = 1
+    """며칠에 걸쳐 열렸는가. 이틀이면 카드가 두 배다."""
     venue: str = ""
     """그 밤의 경기장 (§3-D69). 서술이 쓴 것과 같은 값이라 화면이 둘을 나란히 둘 수 있다."""
     stars: float = 0.0
@@ -75,6 +79,7 @@ def build(
         run,
         report.week,
         _stage_of(report.show),
+        nights=report.show.nights if report.show is not None else 1,
         busy=(report.opponent,) if report.opponent else (),
         stakes=(report.title_at_stake,) if report.title_at_stake else (),
     )
@@ -83,6 +88,8 @@ def build(
         week=report.week,
         show=show,
         is_major=report.is_major_show,
+        logo=report.show.logo if report.show is not None else "",
+        nights=report.show.nights if report.show is not None else 1,
         result=report.result.value if report.result else None,
         opponent=report.opponent,
         match_label=report.match_kind.value if report.match_kind else None,
@@ -128,11 +135,20 @@ def build_night(
     show = calendar.show_for(week) if calendar.is_show_week(week) else None
     player = str(run.identity.name)
     stage = _stage_of(show)
-    card = _card(run, week, stage, busy=busy, stakes=stakes)
+    card = _card(
+        run,
+        week,
+        stage,
+        nights=show.nights if show is not None else 1,
+        busy=busy,
+        stakes=stakes,
+    )
     return ShowReport(
         week=week,
         show=show.name if show is not None else run.brand.value.upper(),
         is_major=show is not None and show.is_major,
+        logo=show.logo if show is not None else "",
+        nights=show.nights if show is not None else 1,
         result=None,
         opponent=None,
         match_label=None,
@@ -167,6 +183,7 @@ def _card(
     week: int,
     stage: str,
     *,
+    nights: int = 1,
     busy: tuple[str, ...],
     stakes: tuple[Title, ...],
 ) -> tuple[show_card.CardMatch, ...]:
@@ -181,6 +198,7 @@ def _card(
         run.identity.gender,
         run.brand,
         stage=stage,
+        nights=nights,
         player=str(run.identity.name),
         busy=busy,
         skip_titles=frozenset(run.titles_held) | frozenset(stakes),

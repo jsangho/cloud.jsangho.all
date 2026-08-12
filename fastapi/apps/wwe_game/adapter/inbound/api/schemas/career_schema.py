@@ -346,6 +346,10 @@ class ShowReportSchema(_Camel):
     """그 밤의 평점 — 카드의 평균 (§3-D56)."""
     venue: str = ""
     """그 밤의 경기장 (§3-D69)."""
+    logo: str = ""
+    """그 밤의 로고 키 (§3-D71). 화면이 `/ple/<key>.png`로 찾는다."""
+    nights: int = 1
+    """며칠에 걸쳐 열렸는가. 이틀이면 카드가 두 배다."""
 
 
 class NewsPageSchema(_Camel):
@@ -474,6 +478,8 @@ def to_report(report: ShowReport) -> ShowReportSchema:
         ],
         stars=report.stars,
         venue=report.venue,
+        logo=report.logo,
+        nights=report.nights,
     )
 
 

@@ -1,4 +1,7 @@
-"""킹 앤 퀸 오브 더 링 — 한 주에 안 끝나는 유일한 형식 (하네스 §3-D33).
+"""킹 앤 퀸 오브 더 링 토너먼트 — 한 주에 안 끝나는 유일한 형식 (하네스 §3-D33).
+
+**결승이 서는 밤이 바뀌었다** (§3-D71, 2026-08-12): 사용자가 가져온 목록에 킹 앤 퀸
+대회가 없어서, 결승은 나이트 오브 챔피언스로 옮겼다. 예선 둘은 그대로 앞 두 주다.
 
 다른 경기는 그 주에 결판이 나므로 리포트 하나로 끝난다. 토너먼트만 **지난주에
 이겼는가**를 다음 주가 알아야 하고, 그래서 세이브에 칸이 하나 생겼다.
@@ -9,7 +12,7 @@ from __future__ import annotations
 import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.constants import career_rules as rules
-from wwe_game.domain.constants.ple_calendar import KING_AND_QUEEN, calendar_for
+from wwe_game.domain.constants.ple_calendar import NIGHT_OF_CHAMPIONS, calendar_for
 from wwe_game.domain.services.week_simulation import (
     apply_week,
     simulate_week,
@@ -22,7 +25,9 @@ from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, Wee
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 FINAL_WEEK = next(
-    s.week_of_year for s in calendar_for(Brand.RAW).shows if s.name == KING_AND_QUEEN
+    s.week_of_year
+    for s in calendar_for(Brand.RAW).shows
+    if s.name == NIGHT_OF_CHAMPIONS
 )
 YEAR = 52 * 6
 """6년차 — 메인 로스터에 올라와 있을 만한 시점."""
