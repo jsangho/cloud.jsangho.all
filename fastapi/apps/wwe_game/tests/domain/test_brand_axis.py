@@ -63,7 +63,7 @@ class TestTheBeltStaysHome:
         assert holder is not None
         # 태그 벨트는 둘이 든다 (§3-D57) — 전원이 그 브랜드에 있어야 한다.
         for name in title_scene.members_of(holder):
-            member = roster.member_of(name)
+            member = roster.member_of(name, SEED)
             assert member is not None
             if len(spec.brands) == 1:
                 assert roster.brand_at(member, week, SEED) is next(iter(spec.brands))
@@ -79,7 +79,7 @@ class TestTheBeltStaysHome:
         """은퇴한 사람이 벨트를 들고 있으면 명부의 시간 축이 무의미해진다 (§3-D13-1)."""
         holder = title_scene.champion_at(SEED, week, title)
         for name in title_scene.members_of(holder or ""):
-            member = roster.member_of(name)
+            member = roster.member_of(name, SEED)
             assert member is not None
             assert member.is_active_at(week)
 
@@ -95,7 +95,7 @@ class TestTheNightIsOneBrand:
         for match in report.card:
             for label in (match.left, match.right):
                 for name in title_scene.members_of(label):
-                    member = roster.member_of(name)
+                    member = roster.member_of(name, SEED)
                     assert member is not None
                     assert roster.brand_at(member, week, SEED) is brand
 
@@ -109,7 +109,7 @@ class TestTheNightIsOneBrand:
         )
         rival = rivalry_engine.pick_rival(run, SeededRoll(SEED, 300, "test"))
         assert rival is not None
-        member = roster.member_of(rival)
+        member = roster.member_of(rival, SEED)
         assert member is not None
         assert roster.brand_at(member, 300, SEED) is brand
 

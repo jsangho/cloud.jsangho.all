@@ -109,7 +109,7 @@ class TestTheYearEndDraft:
         for year in range(1, 20):
             week = year * WEEKS_PER_YEAR + roster.DRAFT_WEEK
             champions = {
-                roster.member_of(name)
+                roster.member_of(name, seed)
                 for title in TITLES
                 for name in title_scene.members_of(
                     title_scene.champion_at(seed, week - 1, title) or ""
@@ -191,3 +191,61 @@ class TestTheRingNameChanges:
         for member in roster.ROSTER:
             assert "|" not in member.name
             assert "|" not in (member.renamed_to or "")
+
+
+class TestTheCastChangesEachRun:
+    """가상 선수 이름은 **판마다 다르다** (§3-D59, 2026-08-12 사용자 요청).
+
+    명부의 크기·데뷔·은퇴는 상수다 — 바뀌는 것은 그 자리에 서는 사람의 이름뿐이다.
+    """
+
+    @staticmethod
+    def _cast(seed: int) -> list[str]:
+        return [
+            roster.name_at(member, 500, seed)
+            for member in roster.ROSTER
+            if member.slot >= 0
+        ]
+
+    def test_another_seed_is_another_cast(self) -> None:
+        assert self._cast(42) != self._cast(7777)
+
+    def test_the_same_seed_is_the_same_cast(self) -> None:
+        assert self._cast(42) == self._cast(42)
+
+    def test_nobody_shares_a_name(self) -> None:
+        for seed in (0, 42, 7777, 1234):
+            names = [roster.name_at(member, 500, seed) for member in roster.ROSTER]
+            assert len(names) == len(set(names)), f"시드 {seed}에 같은 이름이 둘 있다"
+
+    def test_the_real_wrestlers_keep_their_names(self) -> None:
+        # 실존 선수는 시드와 무관하다 — 판마다 로만 레인즈가 다른 사람일 수는 없다.
+        for seed in (42, 7777):
+            for member in roster.ROSTER:
+                if member.slot < 0 and member.renamed_to is None:
+                    assert roster.name_at(member, 0, seed) == member.name
+
+    def test_the_roster_shape_never_changes(self) -> None:
+        """**크기·데뷔·은퇴는 상수다.** 여기가 흔들리면 `MIN_POOL` 검증이 무의미해진다."""
+        shape = [
+            (m.gender, m.start_tier, m.debut_week, m.retire_week) for m in roster.ROSTER
+        ]
+        for seed in (0, 42, 7777):
+            for gender in Gender:
+                for tier in RivalTier:
+                    sizes = {
+                        len(roster.pool_for(gender, tier, week, None, seed))
+                        for week in (0, 500, 1000)
+                    }
+                    assert sizes
+        assert shape == [
+            (m.gender, m.start_tier, m.debut_week, m.retire_week) for m in roster.ROSTER
+        ]
+
+    def test_a_name_finds_its_person_in_that_run(self) -> None:
+        for seed in (42, 7777):
+            for member in roster.ROSTER:
+                if member.slot < 0:
+                    continue
+                name = roster.name_at(member, 500, seed)
+                assert roster.member_of(name, seed) is member

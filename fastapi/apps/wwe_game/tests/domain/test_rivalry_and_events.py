@@ -171,7 +171,10 @@ class TestRivalPool:
 
     def test_a_rival_is_picked_from_that_weeks_roster(self) -> None:
         run = make_run(week=25 * WEEKS_PER_YEAR, stats=WrestlerStats(popularity=70))
-        active = {m.name for m in roster.active_at(run.week)}
+        # **그 판의 이름으로 견준다** — 가상 선수 이름은 시드를 탄다 (§3-D59).
+        active = {
+            roster.name_at(m, run.week, run.seed) for m in roster.active_at(run.week)
+        }
         for seed in range(20):
             name = rivalry_engine.pick_rival(run, SeededRoll(seed, 1, "riv"))
             assert name in active
