@@ -297,3 +297,98 @@ class TestResume:
             client.post("/api/career/guest/resume", json={"state": state}).status_code
             == 400
         )
+
+
+class TestGuestReport:
+    """그 밤의 리포트를 체험판에서 (§3-D51).
+
+    화면은 대회 주차에 "그날의 리포트" 토글을 띄우는데, 리포트 경로가 로그인 전용이라
+    **누르면 아무것도 안 떴다** (2026-08-12 사용자 신고). 체험판에는 로그가 없으므로
+    (§3-D8) 물어보는 방식도 다르다 — 세이브를 본문에 실어 보낸다.
+    """
+
+    @staticmethod
+    def _play(client: TestClient) -> tuple[dict, list[dict]]:
+        """대회 주차가 나올 때까지 진행한다. 세이브와 지나온 주차를 함께 돌려준다."""
+        state = _start(client)["state"]
+        weeks: list[dict] = []
+        for _ in range(12):
+            body = client.post(
+                "/api/career/guest/advance", json={"state": state, "step": "auto"}
+            ).json()
+            state = body["state"]
+            weeks.extend(body.get("weeks", []))
+            if body.get("pendingEvent"):
+                body = client.post(
+                    "/api/career/guest/choices",
+                    json={
+                        "state": state,
+                        "choice": body["pendingEvent"]["choices"][0]["code"],
+                    },
+                ).json()
+                state = body["state"]
+            if any(w["kind"] in ("ple", "special") for w in weeks):
+                return state, weeks
+        pytest.skip("12번 진행 동안 대회 주차가 안 나왔다")
+
+    def test_a_show_week_has_a_report(self, client: TestClient) -> None:
+        state, weeks = self._play(client)
+        show_week = next(w["week"] for w in weeks if w["kind"] in ("ple", "special"))
+        response = client.post(
+            "/api/career/guest/report", json={"state": state, "week": show_week}
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["week"] == show_week
+        assert body["show"]
+        # **벨트에는 늘 주인이 있다** (§3-D38) — 리포트가 그걸 한자리에 모은다.
+        assert body["champions"]
+        assert all(c["holder"] for c in body["champions"])
+
+    def test_my_match_is_left_to_the_screen(self, client: TestClient) -> None:
+        # 로그가 없어 승패·상대를 서버가 모른다. **화면이 이미 그 줄에 들고 있으므로**
+        # 비워 보내는 것이 맞다 — 없는 것을 지어내면 그게 더 나쁘다.
+        state, weeks = self._play(client)
+        show_week = next(w["week"] for w in weeks if w["kind"] in ("ple", "special"))
+        body = client.post(
+            "/api/career/guest/report", json={"state": state, "week": show_week}
+        ).json()
+        assert body["result"] is None
+        assert body["opponent"] is None
+        assert body["narration"] == ""
+
+    def test_an_ordinary_week_has_none(self, client: TestClient) -> None:
+        state, weeks = self._play(client)
+        plain = next(
+            (w["week"] for w in weeks if w["kind"] == "weekly_show"),
+            None,
+        )
+        if plain is None:
+            pytest.skip("주간 방송 주차가 없다")
+        assert (
+            client.post(
+                "/api/career/guest/report", json={"state": state, "week": plain}
+            ).status_code
+            == 404
+        )
+
+    def test_a_week_not_yet_played_is_refused(self, client: TestClient) -> None:
+        # 세이브를 고쳐 미래를 물으면 아직 오지 않은 밤의 계보가 나온다.
+        state = _start(client)["state"]
+        assert (
+            client.post(
+                "/api/career/guest/report", json={"state": state, "week": 900}
+            ).status_code
+            == 404
+        )
+
+    def test_a_tampered_state_is_refused(self, client: TestClient) -> None:
+        state, weeks = self._play(client)
+        show_week = next(w["week"] for w in weeks if w["kind"] in ("ple", "special"))
+        state["stats"]["popularity"] = 500
+        assert (
+            client.post(
+                "/api/career/guest/report", json={"state": state, "week": show_week}
+            ).status_code
+            == 400
+        )

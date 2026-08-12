@@ -27,6 +27,7 @@ from wwe_game.app.dtos.career_dto import (
     ChooseCommand,
     GuestAdvanceCommand,
     GuestChooseCommand,
+    GuestReportCommand,
     GuestResumeCommand,
     GuestStartCommand,
     ModeView,
@@ -224,6 +225,23 @@ class CareerInteractor(CareerUseCase):
         self._require_guest_mode(command.run.mode.code)
         resolved = self._resolve(command.run, command.choice_code)
         return self._view(resolved, self._resting_reason(resolved))
+
+    def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
+        """그 밤의 리포트, 체험판 (§3-D51).
+
+        **로그를 되읽지 않는다** — 체험판 세이브에는 로그가 없다(§3-D8). 세울 수 있는
+        것은 배경(그날의 벨트·그 무렵)이고 그것은 시드와 주차만으로 정해진다. 내 경기
+        기록은 화면이 이미 그 줄에 들고 있으므로 서버가 다시 실어 보내지 않는다.
+
+        **지나지 않은 주차는 거절한다.** 세이브를 고쳐 미래를 물으면 아직 일어나지 않은
+        밤의 계보가 나온다 — 판정이 아니라 세계를 미리 보는 것이라 여기서 막는다.
+        """
+        self._require_guest_mode(command.run.mode.code)
+        if command.week > command.run.week:
+            raise ReportNotFoundError(f"{command.week}주차는 아직 지나지 않았습니다.")
+        if not show_report.is_reportable(command.run, command.week):
+            raise ReportNotFoundError(f"{command.week}주차는 대회 주차가 아닙니다.")
+        return show_report.build_night(command.run, command.week)
 
     # ── 메타 ──────────────────────────────────────────────────
 

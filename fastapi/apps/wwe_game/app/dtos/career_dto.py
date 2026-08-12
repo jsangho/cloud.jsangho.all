@@ -106,6 +106,19 @@ class GuestChooseCommand:
     choice_code: str
 
 
+@dataclass(frozen=True)
+class GuestReportCommand:
+    """그 밤의 리포트를 체험판에서 (§3-D51).
+
+    **세이브와 주차뿐이다.** 체험판에는 로그가 없어 리포트가 로그인 쪽처럼 그 주차
+    기록을 되읽을 수 없다 — 세울 수 있는 것은 배경(벨트·그 무렵)이고, 그것은 시드와
+    주차만으로 결정된다.
+    """
+
+    run: CareerRun
+    week: int
+
+
 # ── 결과 ─────────────────────────────────────────────────────
 
 

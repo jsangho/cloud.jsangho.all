@@ -12,6 +12,7 @@ import {
   chooseEvent,
   chooseGuestEvent,
   readCurrentRun,
+  readGuestReport,
   readLog,
   readReport,
   readModes,
@@ -35,6 +36,9 @@ import {
 } from "@/lib/career-api";
 
 const GUEST_SAVE_KEY = "kayfabe.career.guest";
+
+/** 체험판 일정. 세이브에 로그가 없어(§3-D8) 브라우저가 따로 들고 있어야 한다. */
+const GUEST_LOG_KEY = "kayfabe.career.guest.log";
 
 /** 프리셋 없이 만들 때 골라야 하는 값들. **넷을 다 주지 않으면 도메인이 거절한다.** */
 const GENDERS = [
@@ -204,6 +208,14 @@ const TOURNAMENT_ROUNDS: Record<number, string> = {
 /** 재개했을 때 되읽는 주차 수. 30년이면 1560줄이라 전부 받지 않는다. */
 const HISTORY_WEEKS = 60;
 
+/**
+ * 화면이 들고 있는 일정의 상한 — 한 해가 52주니 10년치다.
+ *
+ * '다음'을 누를 때마다 진행분이 쌓이므로 상한이 없으면 30년 커리어가 1560줄이 되어
+ * 브라우저가 먼저 무너진다. 오래된 쪽부터 버린다.
+ */
+const TIMELINE_WEEKS = 520;
+
 /** 화면이 가질 수 있는 상태. 불가능한 조합을 타입에서 지운다. */
 type Screen =
   | { phase: "loading" }
@@ -240,6 +252,62 @@ function writeGuestSave(state: GuestRunState | null): void {
   } catch {
     // 사파리 프라이빗 모드 등에서 막힌다. 진행 자체는 계속할 수 있다.
   }
+}
+
+/**
+ * 체험판이 되읽는 일정. **세이브와 다른 칸에 둔다** — 세이브는 서버가 준 것을 그대로
+ * 돌려보내는 불투명한 값이라(§3-D8) 화면이 안에 무엇을 끼워 넣을 수 없다.
+ *
+ * 로그인 쪽에는 서버 로그가 있지만 체험판에는 없다. 이걸 저장하지 않으면 새로고침
+ * 한 번에 지나온 해가 전부 사라진다 — 커리어가 지워진 것처럼 보인다.
+ */
+function readGuestLog(uptoWeek: number): CareerWeek[] {
+  try {
+    const raw = window.localStorage.getItem(GUEST_LOG_KEY);
+    if (!raw) return [];
+    const rows: unknown = JSON.parse(raw);
+    if (!Array.isArray(rows)) return [];
+    // 세이브보다 앞선 주차는 짝이 맞지 않는 잔재다 — 앞 커리어의 줄을 물려받지 않는다.
+    return (rows as CareerWeek[]).filter(
+      (row) => typeof row?.week === "number" && row.week <= uptoWeek,
+    );
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * `beats`는 버리고 저장한다. 로그인 쪽도 다시 연 로그에는 입장·탈락을 싣지 않으므로
+ * (§3-D34) 여기서만 남기면 두 갈래가 다르게 굴고, 럼블 30인의 비트가 브라우저에 쌓인다.
+ */
+function writeGuestLog(weeks: CareerWeek[]): void {
+  try {
+    if (weeks.length === 0) {
+      window.localStorage.removeItem(GUEST_LOG_KEY);
+      return;
+    }
+    const rows = weeks.map((week) => ({ ...week, beats: null }));
+    window.localStorage.setItem(GUEST_LOG_KEY, JSON.stringify(rows));
+  } catch {
+    // 용량 초과·프라이빗 모드. 일정을 못 남길 뿐 진행 자체는 계속할 수 있다.
+  }
+}
+
+/**
+ * 진행분을 타임라인에 **얹는다** — 갈아끼우지 않는다.
+ *
+ * 한 번의 '다음'은 그 요청이 흘려보낸 주차만 돌려주므로(§3-D17) 그대로 세우면 지난
+ * 해가 화면에서 사라진다. 같은 주차가 겹치면 `beats`를 든 쪽을 남긴다: 되읽은 로그에는
+ * 입장·탈락이 실리지 않아(§3-D34) 그걸로 덮으면 펼칠 수 있던 줄이 닫힌다.
+ */
+function mergeWeeks(prev: CareerWeek[], incoming: CareerWeek[]): CareerWeek[] {
+  if (incoming.length === 0) return prev;
+  const byWeek = new Map(prev.map((week) => [week.week, week]));
+  for (const week of incoming) {
+    const had = byWeek.get(week.week);
+    byWeek.set(week.week, week.beats === null && had?.beats ? had : week);
+  }
+  return [...byWeek.values()].sort((a, b) => a.week - b.week).slice(-TIMELINE_WEEKS);
 }
 
 export default function CareerPage() {
@@ -308,11 +376,14 @@ export default function CareerPage() {
       .then((next) => {
         if (!alive) return;
         writeGuestSave(next.state);
+        // 재개는 진행하지 않으므로 `weeks`가 비어서 온다 — 지나온 해는 여기서만 돌아온다.
+        setHistory(readGuestLog(next.run.week));
         setScreen({ phase: "play", advance: next, state: next.state, busy: false });
       })
       .catch(() => {
         // 읽을 수 없는 세이브(포맷 변경·조작)는 버리고 새로 시작하게 둔다.
         writeGuestSave(null);
+        writeGuestLog([]);
         if (alive) setScreen({ phase: "create" });
       });
     return () => {
@@ -337,36 +408,59 @@ export default function CareerPage() {
 
   // 대회 주차를 펼치면 그 밤의 리포트를 받아 온다 (§3-D45). **열 때만 받는다** —
   // 인박스와 같은 방침이다: 30년치를 진행할 때마다 따라 받으면 낭비다.
+  //
+  // **두 갈래가 묻는 곳이 다르다** (§3-D51). 로그인은 `runId`로 서버 로그를 짚고,
+  // 체험판은 세이브를 실어 보낸다 — 서버가 아는 커리어가 없기 때문이다.
+  const guestState = screen.phase === "play" ? screen.state : null;
   useEffect(() => {
-    if (openWeek === null || runId === null) {
+    if (openWeek === null) {
+      setReport(null);
+      return;
+    }
+    const asked = guestState
+      ? readGuestReport(guestState, openWeek)
+      : runId !== null
+        ? readReport(runId, openWeek)
+        : null;
+    if (asked === null) {
       setReport(null);
       return;
     }
     let alive = true;
-    readReport(runId, openWeek)
-      .then((found) => alive && setReport(found))
-      .catch(() => alive && setReport(null));
+    asked.then((found) => alive && setReport(found)).catch(() => alive && setReport(null));
     return () => {
       alive = false;
     };
-  }, [openWeek, runId]);
+  }, [openWeek, runId, guestState]);
 
   // 재개하면 응답의 `weeks`가 비어 있다 — 진행한 적이 없어서가 아니라 서버가 로그를
   // 세이브에 끌고 오지 않기 때문이다(§3-D6). 일정 탭을 열 때만 마지막 쪽을 받아 온다.
+  // **받은 쪽도 얹는다** — 갈아끼우면 이번 판에 진행한 주차가 탭 전환 한 번에 날아간다.
   useEffect(() => {
     if (tab !== "schedule" || runId === null) return;
     let alive = true;
     readLog(runId, 0, 1)
       .then((head) => readLog(runId, Math.max(0, head.total - HISTORY_WEEKS), HISTORY_WEEKS))
-      .then((page) => alive && setHistory(page.entries))
-      .catch(() => alive && setHistory([]));
+      .then((page) => alive && setHistory((prev) => mergeWeeks(prev, page.entries)))
+      // 못 받아 온 것은 "기록이 없다"가 아니다. 들고 있던 타임라인을 그대로 둔다.
+      .catch(() => {});
     return () => {
       alive = false;
     };
   }, [tab, runId]);
 
+  // 체험판은 일정도 브라우저가 남긴다. **로그인 플레이는 건드리지 않는다** — 그쪽은
+  // 서버 로그가 원본이고, 여기서 덮으면 두 개의 진실이 생긴다.
+  const guestPlaying = !user && screen.phase === "play";
+  useEffect(() => {
+    if (!guestPlaying) return;
+    writeGuestLog(history);
+  }, [guestPlaying, history]);
+
   const handleStart = useCallback(async () => {
     setScreen({ phase: draft.basedOn ? "create" : "detail" });
+    // 새 커리어는 빈 일정에서 시작한다 — 앞 선수의 주차를 물려받으면 안 된다.
+    setHistory([]);
     try {
       const input = {
         name: draft.name.trim(),
@@ -403,14 +497,10 @@ export default function CareerPage() {
         const next = await work();
         const state = "state" in next ? next.state : null;
         if (state) writeGuestSave(state);
-        setScreen((s) => {
-          // **응답의 `weeks`는 "이번 요청이 진행시킨 주차"다.** 이벤트에 답하는 것은
-          // 아무 주차도 진행시키지 않으므로 비어서 온다. 그대로 갈아끼우면 방금까지
-          // 보던 일정이 통째로 사라져 새 커리어처럼 보인다 — 화면에 남은 것을 지킨다.
-          const weeks =
-            next.weeks.length > 0 || s.phase !== "play" ? next.weeks : s.advance.weeks;
-          return { phase: "play", advance: { ...next, weeks }, state, busy: false };
-        });
+        // **응답의 `weeks`는 "이번 요청이 진행시킨 주차"다.** 이벤트에 답하면 아무 주차도
+        // 진행하지 않아 비어서 온다. 일정은 이 응답이 아니라 누적된 타임라인이 세운다.
+        setHistory((prev) => mergeWeeks(prev, next.weeks));
+        setScreen({ phase: "play", advance: next, state, busy: false });
       } catch {
         setScreen((s) => (s.phase === "play" ? { ...s, busy: false } : s));
       }
@@ -437,6 +527,8 @@ export default function CareerPage() {
   function handleRetire() {
     if (!run?.run.id) {
       writeGuestSave(null);
+      writeGuestLog([]);
+      setHistory([]);
       setScreen({ phase: "create" });
       return;
     }
@@ -703,9 +795,9 @@ export default function CareerPage() {
 
   const { advance, busy } = screen;
   const { run: view, weeks, pendingEvent } = advance;
-  // 방금 진행한 주차가 먼저다 — 그쪽만 비트를 들고 있어 펼칠 수 있다. 재개 직후처럼
-  // 진행분이 없을 때만 되읽은 로그를 세운다.
-  const shownWeeks = weeks.length > 0 ? weeks : history;
+  // 일정은 **누적된 타임라인**이 세운다 — 방금 진행한 주차는 이미 그 안에 얹혀 있다.
+  // 아직 한 번도 쌓이지 않은 첫 화면에서만 응답의 진행분을 그대로 쓴다.
+  const shownWeeks = history.length > 0 ? history : weeks;
   const ended = advance.stopReason === "ended";
   const blocked = pendingEvent !== null;
 
