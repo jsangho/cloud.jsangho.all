@@ -132,6 +132,7 @@ def card_for(
     brand: Brand,
     *,
     stage: str = "ple",
+    nights: int = 1,
     player: str = "",
     busy: tuple[str, ...] = (),
     skip_titles: frozenset[Title] = frozenset(),
@@ -186,7 +187,9 @@ def card_for(
             taken.extend(pair)
 
     # 목표 수까지 채운다. 디비전을 번갈아 집어 한쪽만 늘어나지 않게 한다.
-    target = CARD_SIZE[stage]
+    # **이틀이면 두 배로 선다** (§3-D71). 레슬매니아가 하루짜리와 같은 크기면
+    # 이틀이라는 사실이 화면 어디에도 안 남는다.
+    target = CARD_SIZE[stage] * max(1, nights)
     dry: set[Gender] = set()
     while len(matches) < target and len(dry) < len(divisions):
         division = divisions[len(matches) % len(divisions)]

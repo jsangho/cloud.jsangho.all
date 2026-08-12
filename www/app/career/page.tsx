@@ -1238,19 +1238,35 @@ type MyMatch = {
 function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
-      <div>
-        <p className="flex items-baseline gap-1.5 font-sport text-sm">
-          {report.show}
-          {report.isMajor && <span className="text-xs text-brand-link">대형</span>}
-          {report.stars > 0 && (
-            <span className="ml-auto text-xs font-normal">
-              <Stars value={report.stars} />
-            </span>
-          )}
-        </p>
-        {/* 그 밤이 어디서 열렸는지 (§3-D69). 서술이 쓰는 것과 같은 값이라, 로그 줄의
+      <div className="flex items-start gap-2.5">
+        {/* 그 밤의 로고 (§3-D71). 대회마다 얼굴이 다르다는 것이 카드보다 먼저 읽힌다.
+            없는 밤(주간 방송)은 자리도 안 잡는다. */}
+        {report.logo && (
+          // eslint-disable-next-line @next/next/no-img-element -- public 정적 파일
+          <img
+            src={`/ple/${report.logo}.png`}
+            alt=""
+            className="mt-0.5 h-9 w-9 shrink-0 object-contain"
+            loading="lazy"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="flex items-baseline gap-1.5 font-sport text-sm">
+            {report.show}
+            {report.nights > 1 && (
+              <span className="text-xs text-brand-link">{report.nights}일차</span>
+            )}
+            {report.isMajor && <span className="text-xs text-brand-link">대형</span>}
+            {report.stars > 0 && (
+              <span className="ml-auto text-xs font-normal">
+                <Stars value={report.stars} />
+              </span>
+            )}
+          </p>
+          {/* 그 밤이 어디서 열렸는지 (§3-D69). 서술이 쓰는 것과 같은 값이라, 로그 줄의
             문장과 이 머리가 같은 경기장을 말한다. */}
-        {report.venue && <p className="text-xs text-muted-foreground">{report.venue}</p>}
+          {report.venue && <p className="text-xs text-muted-foreground">{report.venue}</p>}
+        </div>
       </div>
       {report.card.length > 0 && (
         <div>
