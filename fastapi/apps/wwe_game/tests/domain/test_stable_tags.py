@@ -33,7 +33,7 @@ def _pair(seed: int, week: int, title: Title) -> tuple[roster.RosterMember, ...]
     people = tuple(
         member
         for name in title_scene.members_of(holder)
-        if (member := roster.member_of(name)) is not None
+        if (member := roster.member_of(name, seed)) is not None
     )
     return people
 
@@ -98,7 +98,7 @@ class TestWhenSomeoneDropsOut:
                     stables = {
                         member.stable
                         for name in title_scene.members_of(reign.holder)
-                        if (member := roster.member_of(name)) is not None
+                        if (member := roster.member_of(name, seed)) is not None
                     }
                     assert stables and "" not in stables, (
                         "독립 선수에게는 이어받을 스테이블이 없다"
@@ -114,7 +114,7 @@ class TestWhenSomeoneDropsOut:
                     if not reign.inherited:
                         continue
                     for name in title_scene.members_of(reign.holder):
-                        member = roster.member_of(name)
+                        member = roster.member_of(name, seed)
                         assert member is not None and member.stable
 
     def test_a_vacated_belt_is_never_held_by_a_lone_wrestler(self) -> None:

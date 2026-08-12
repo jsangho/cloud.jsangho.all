@@ -125,7 +125,7 @@ class TestTheCardAgreesWithTheBeltLineage:
                 assert match.title is not None
                 for label in (match.left, match.right):
                     for name in title_scene.members_of(label):
-                        member = roster.member_of(name)
+                        member = roster.member_of(name, SEED)
                         assert member is not None
                         assert member.is_active_at(week), f"{name}은 이미 링을 떠났다"
         assert found > 0, "30년에 공석이 한 번도 안 생겼다 — 은퇴가 계보에 안 닿는다"

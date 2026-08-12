@@ -40,7 +40,7 @@ class TestTheBeltIsAlwaysSomeones:
             # 태그 벨트는 둘이 든다 (§3-D57). **옛 이름으로도 찾는다** — 명단은 그
             # 주차의 활동명을 돌려준다 (§3-D54).
             for part in title_scene.members_of(name or ""):
-                member = roster.member_of(part)
+                member = roster.member_of(part, SEED)
                 assert member is not None
                 assert member.gender is TITLES[title].gender
                 assert member.is_active_at(week)

@@ -194,19 +194,21 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
             # **스테이블이 벨트를 이어받는다** (§3-D58) — 남은 사람 옆에 같은
             # 스테이블의 동성 선수가 선다. 경기로 넘어간 것이 아니다.
             stayer, stable = inherit
-            mates = _stable_mates(pool, stable, exclude=(stayer,))
+            mates = _stable_mates(pool, stable, exclude=(stayer,), seed=seed)
             if mates:
                 holder = PARTNER_JOIN.join((stayer, roll.pick(mates)))
                 inherited = True
             else:
                 inherit = None
         if not inherited:
-            picked = _pick_holders(pool, holders, roll, spec.tier)
+            picked = _pick_holders(pool, holders, roll, spec.tier, seed)
             if picked is not None:
                 holder = picked
         if holder is None:
             return reigns
-        length, why = _reign_of(holder, cursor, roll.between(low, high), roll, home)
+        length, why = _reign_of(
+            holder, cursor, roll.between(low, high), roll, home, seed
+        )
         reigns.append(
             Reign(
                 holder=holder,
@@ -219,11 +221,11 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
         if cursor + length > upto:
             return reigns
         cursor += length
-        inherit = _inheritor(holder, cursor, why, spec.tier)
+        inherit = _inheritor(holder, cursor, why, spec.tier, seed)
 
 
 def _pick_holders(
-    pool: tuple[str, ...], count: int, roll: SeededRoll, tier: TitleTier
+    pool: tuple[str, ...], count: int, roll: SeededRoll, tier: TitleTier, seed: int = 0
 ) -> str | None:
     """챔피언 한 명 또는 한 팀. 명단이 모자라면 None.
 
@@ -238,7 +240,7 @@ def _pick_holders(
 
     groups: dict[str, list[str]] = {}
     for name in pool:
-        member = roster.member_of(name)
+        member = roster.member_of(name, seed)
         groups.setdefault(member.stable if member else "", []).append(name)
     fit = tuple(sorted(key for key, names in groups.items() if len(names) >= count))
     if not fit:
@@ -252,20 +254,20 @@ def _pick_holders(
 
 
 def _stable_mates(
-    pool: tuple[str, ...], stable: str, *, exclude: tuple[str, ...]
+    pool: tuple[str, ...], stable: str, *, exclude: tuple[str, ...], seed: int = 0
 ) -> tuple[str, ...]:
     """그 명단 안에서 같은 스테이블 사람들 (§3-D58). 독립(`""`)도 한 무리로 본다."""
     return tuple(
         name
         for name in pool
         if name not in exclude
-        and (member := roster.member_of(name)) is not None
+        and (member := roster.member_of(name, seed)) is not None
         and member.stable == stable
     )
 
 
 def _inheritor(
-    holder: str, week: int, why: ReignEnd, tier: TitleTier
+    holder: str, week: int, why: ReignEnd, tier: TitleTier, seed: int = 0
 ) -> tuple[str, str] | None:
     """이어받을 자리가 있는지 (§3-D58).
 
@@ -285,7 +287,7 @@ def _inheritor(
         staying = staying[1:]
     if len(staying) != 1:
         return None
-    member = roster.member_of(staying[0])
+    member = roster.member_of(staying[0], seed)
     if member is None or not member.stable:
         # **독립 선수는 이어받을 스테이블이 없다.** 그 벨트는 공석이 된다.
         return None
@@ -298,7 +300,12 @@ def members_of(holder: str) -> tuple[str, ...]:
 
 
 def _reign_of(
-    holder: str, cursor: int, rolled: int, roll: SeededRoll, home: Brand | None
+    holder: str,
+    cursor: int,
+    rolled: int,
+    roll: SeededRoll,
+    home: Brand | None,
+    seed: int,
 ) -> tuple[int, ReignEnd]:
     """(재위 길이, 어떻게 끝났는지).
 
@@ -315,7 +322,7 @@ def _reign_of(
     people = members_of(holder)
     ends: list[int] = []
     for name in people:
-        member = roster.member_of(name)
+        member = roster.member_of(name, seed)
         if member is None:
             continue
         if member.retire_week is not None:

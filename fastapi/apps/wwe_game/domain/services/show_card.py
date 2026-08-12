@@ -209,7 +209,7 @@ def _rate(
         roster.tier_at(member, week)
         for label in (match.left, match.right)
         for name in title_scene.members_of(label)
-        if (member := roster.member_of(name)) is not None
+        if (member := roster.member_of(name, seed)) is not None
     ] or [RivalTier.MIDCARD]
     stars = match_rating.rate(
         seed,
@@ -268,7 +268,7 @@ def _title_bout(
     # 스맥다운 카드에 선다. **팀이면 전원이 그 브랜드에 있어야 한다**(§3-D57): 둘이
     # 갈라져 있으면 그 벨트는 이 밤을 쉬어 간다.
     for name in title_scene.members_of(holder):
-        champion = roster.member_of(name)
+        champion = roster.member_of(name, seed)
         if champion is not None and roster.brand_at(champion, week, seed) is not brand:
             return None
     before = title_scene.champion_at(
@@ -283,7 +283,7 @@ def _title_bout(
             # 그 밤에 타이틀전을 세우면 있지도 않은 경기를 적는 셈이 된다.
             return None
         vacated = title_scene.vacated_between(seed, since, week, title, exclude=player)
-        if not vacated and _still_there(before, week):
+        if not vacated and _still_there(before, week, seed):
             return CardMatch(
                 left=before,
                 right=holder,
@@ -397,7 +397,7 @@ def _last_show(brand: Brand, week: int) -> int:
     return 0
 
 
-def _still_there(label: str, week: int) -> bool:
+def _still_there(label: str, week: int, seed: int = 0) -> bool:
     """그 주차에 아직 링에 있는지. **팀이면 전원이 있어야 한다** (§3-D57).
 
     명부 밖 이름(플레이어)은 없는 것으로 본다.
@@ -406,7 +406,8 @@ def _still_there(label: str, week: int) -> bool:
     if not people:
         return False
     return all(
-        (member := roster.member_of(name)) is not None and member.is_active_at(week)
+        (member := roster.member_of(name, seed)) is not None
+        and member.is_active_at(week)
         for name in people
     )
 

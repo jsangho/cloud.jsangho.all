@@ -125,6 +125,10 @@ RENAME_WINDOW = (2, 5)
 구간 안에 흩뿌린다 — `LATE_CAREER_WINDOW`가 은퇴에 쓰는 방식 그대로다.
 """
 
+Row = tuple[str, str, str, int, int | None, int, str | None, str | None, int, str, int]
+"""명부 한 줄 — (한글명, 성별, 등급, 데뷔, 은퇴, 경력, 메인 브랜드, 바꾼 이름,
+개명 주차, 스테이블, **가상 슬롯**). 칸이 열하나라 이름을 붙여 둔다."""
+
 GENDER_ALIAS = {"male": "_M", "female": "_F"}
 TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
 
@@ -219,6 +223,12 @@ class RosterMember:
     """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
     rename_week: int = 0
     """이 주차부터 `renamed_to`로 불린다. `renamed_to`가 있을 때만 뜻이 있다."""
+    slot: int = -1
+    """가상 선수의 자리 번호 (§3-D59). 실존 선수는 -1이다.
+
+    **이름이 판마다 바뀌기 때문에** 자리로 식별한다 — 명부의 크기·데뷔·은퇴는 상수이고
+    거기 서는 사람의 이름만 시드를 탄다. `name_at()`이 그 판의 이름을 답한다.
+    """
     stable: str = ""
     """속한 스테이블 (§3-D58). 빈 문자열이면 **독립 선수**다.
 
@@ -249,6 +259,16 @@ _M, _F = Gender.MALE, Gender.FEMALE
 _P, _MC, _ME = RivalTier.PROSPECT, RivalTier.MIDCARD, RivalTier.MAIN_EVENT
 _RAW, _SD = Brand.RAW, Brand.SMACKDOWN
 
+FICTIONAL_NAMES: dict[Gender, tuple[str, ...]] = {
+{POOL}
+}
+"""가상 선수 이름 후보 (§3-D59). **판마다 여기서 골라 쓴다.**
+
+명부의 크기·데뷔·은퇴는 상수이고 이름만 시드를 탄다 — "새 판마다 다른 신인이 올라온다"는
+감각은 이름에서 오지, 명부 구조에서 오지 않는다. 구조까지 시드에 태우면 `MIN_POOL`
+검증이 시드마다 성립해야 하고, 그건 훨씬 큰 이야기다.
+"""
+
 ROSTER: tuple[RosterMember, ...] = (
 '''
 
@@ -260,29 +280,66 @@ def active_at(week: int) -> tuple[RosterMember, ...]:
     return tuple(m for m in ROSTER if m.is_active_at(week))
 
 
-_BY_NAME: dict[str, RosterMember] = {}
-for _m in ROSTER:  # pragma: no cover - 임포트 시 색인
-    _BY_NAME[_m.name] = _m
-    if _m.renamed_to is not None:
-        _BY_NAME[_m.renamed_to] = _m
+@lru_cache(maxsize=256)
+def cast_for(seed: int) -> dict[int, str]:
+    """그 판의 가상 선수 배역 — 슬롯 번호 → 이름 (§3-D59).
 
+    **명부는 그대로고 이름만 바뀐다.** 누가 언제 데뷔하고 은퇴하는지는 모든 판이 같고,
+    그 자리에 서는 사람의 이름을 판마다 다시 뽑는다.
 
-def member_of(name: str) -> RosterMember | None:
-    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**
-
-    **바꾸기 전 이름으로도 찾힌다** (§3-D54). 로그와 대립에 남은 옛 이름이 그대로
-    없는 사람이 되면, 개명이 곧 실종이 된다.
+    시드 0은 생성기가 찍어 둔 이름을 그대로 쓴다 — 검증과 테스트가 기준으로 삼는 세계다.
     """
-    return _BY_NAME.get(name)
+    if seed == 0:
+        return {}
+    picked: dict[int, str] = {}
+    for gender, pool in FICTIONAL_NAMES.items():
+        slots = tuple(m.slot for m in ROSTER if m.slot >= 0 and m.gender is gender)
+        names = list(pool)
+        roll = SeededRoll(seed, len(slots), seeded_roll.ROSTER_CAST)
+        for slot in slots:
+            if not names:
+                break
+            picked[slot] = names.pop(roll.between(0, len(names) - 1))
+    return picked
 
 
-def name_at(member: RosterMember, week: int) -> str:
-    """그 주차에 불리던 활동명 (§3-D54).
+@lru_cache(maxsize=256)
+def _index(seed: int) -> dict[str, RosterMember]:
+    """그 판의 이름 → 명부 한 줄.
 
-    **명부의 시간 축에 이름이 하나 더 붙었다.** 로스 아메리카노스 셋은 그 이름으로
-    뛰다가 본래 활동명으로 돌아가고, 내티는 나탈리아가 된다 — 원본 CSV가 `|`로 병기해
-    둔 것이 곧 그 이력이다.
+    **가상 선수는 그 판의 이름만 담는다** (§3-D59). 생성기가 찍어 둔 이름까지 담았더니
+    한 이름이 두 사람을 가리켰다 — 배역이 같은 후보 풀에서 나오므로, A의 기본 이름이
+    B의 이번 판 이름일 수 있다. 실측에서 아직 데뷔도 안 한 선수가 챔피언으로 나왔다.
+
+    실존 선수는 **개명 전 이름도 함께** 담는다(§3-D54) — 그쪽은 한 사람의 두 이름이라
+    충돌하지 않고, 로그에 남은 옛 이름이 없는 사람이 되면 그 기록이 깨진다.
     """
+    found: dict[str, RosterMember] = {}
+    cast = cast_for(seed)
+    for member in ROSTER:
+        if member.slot >= 0:
+            found[cast.get(member.slot, member.name)] = member
+            continue
+        for name in (member.name, member.renamed_to):
+            if name:
+                found[name] = member
+    return found
+
+
+def member_of(name: str, seed: int = 0) -> RosterMember | None:
+    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**"""
+    return _index(seed).get(name)
+
+
+def name_at(member: RosterMember, week: int, seed: int = 0) -> str:
+    """그 주차에 불리던 이름.
+
+    가상 선수는 **판마다 다른 이름**을 쓰고(§3-D59), 실존 선수는 활동명 변경을 따른다
+    (§3-D54) — 로스 아메리카노스 셋은 그 이름으로 뛰다가 본래 활동명으로 돌아가고,
+    내티는 나탈리아가 된다.
+    """
+    if member.slot >= 0:
+        return cast_for(seed).get(member.slot, member.name)
     if member.renamed_to is not None and week >= member.rename_week:
         return member.renamed_to
     return member.name
@@ -339,7 +396,7 @@ def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
         # 태그 벨트는 둘이 든다 (§3-D57) — **둘 다** 보호해야 팀이 갈라지지 않는다.
         holder = title_scene.champion_at(seed, week, title) or ""
         for name in title_scene.members_of(holder):
-            member = member_of(name)
+            member = member_of(name, seed)
             if member is not None:
                 held.add(member.name)
     return frozenset(held)
@@ -471,7 +528,7 @@ def pool_for(
     재위 경계에서 이걸 부르고, 벨트가 열둘이라 같은 칸을 수십 번 다시 센다.
     """
     return tuple(
-        name_at(m, week)
+        name_at(m, week, seed)
         for m in ROSTER
         if m.gender is gender
         and m.is_active_at(week)
@@ -778,16 +835,15 @@ FICTIONAL_MIDCARD_EVERY = 4
 
 def fictional_members(
     taken: set[str],
-) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]]:
+) -> list[Row]:
     """가상 선수 명부. 해마다 정해진 수를 데뷔시킨다.
 
     **유망주는 육성에서 데뷔하고, 이적생은 메인에서 데뷔한다** (2026-08-12 사용자 결정).
     `FICTIONAL_MIDCARD_EVERY`마다 한 명씩 나오는 미드카드가 곧 "다른 단체에서 온 즉시
     전력"이라, 그들만 처음부터 메인 로스터에 선다. 나머지는 NXT를 거쳐 올라온다.
     """
-    members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-    ] = []
+    members: list[Row] = []
+    slots: list[str] = []
     for gender, firsts in (
         ("_M", FICTIONAL_MALE_FIRST),
         ("_F", FICTIONAL_FEMALE_FIRST),
@@ -811,22 +867,50 @@ def fictional_members(
             retire = debut + FICTIONAL_CAREER_YEARS * WEEKS_PER_YEAR
             experience = 6 if tier == "_MC" else 0
             members.append(
-                (name, gender, tier, debut, retire, experience, None, None, 0, "")
+                (
+                    name,
+                    gender,
+                    tier,
+                    debut,
+                    retire,
+                    experience,
+                    None,
+                    None,
+                    0,
+                    "",
+                    len(slots),
+                )
             )
+            slots.append(name)
             made += 1
     return members
 
 
-def build() -> list[
-    tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-]:
+def fictional_pool(taken: set[str]) -> dict[str, list[str]]:
+    """가상 선수 이름 후보 **전부** (§3-D59).
+
+    판마다 여기서 골라 쓴다 — 명부의 크기·데뷔·은퇴는 상수이고 **이름만 시드를 탄다.**
+    실존 이름과 겹치는 조합은 뺀다(같은 세계에 같은 사람이 둘 있을 수 없다).
+    """
+    pools: dict[str, list[str]] = {}
+    for gender, firsts in (
+        ("_M", FICTIONAL_MALE_FIRST),
+        ("_F", FICTIONAL_FEMALE_FIRST),
+    ):
+        pairs = [f"{first} {last}" for first in firsts for last in FICTIONAL_LAST]
+        combos = sorted(
+            pairs, key=lambda n: hashlib.blake2b(n.encode(), digest_size=8).digest()
+        )
+        pools[gender] = [name for name in combos if name not in taken]
+    return pools
+
+
+def build() -> list[Row]:
     """(한글명, 성별, 등급, 데뷔, 은퇴, 경력, 메인 브랜드, 바꾼 이름, 개명 주차, 스테이블).
 
     디비전 → 등급 순 정렬.
     """
-    members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-    ] = []
+    members: list[Row] = []
     stables = read_stables(CSV_PATH)
     for section, names in read_sections(CSV_PATH).items():
         if section not in SECTION_HOME:
@@ -858,6 +942,7 @@ def build() -> list[
                     renamed,
                     rename_week_for(korean) if renamed else 0,
                     stables.get(name, ""),
+                    -1,
                 )
             )
 
@@ -869,19 +954,15 @@ def build() -> list[
 
 
 def _assign_homes(
-    members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-    ],
-) -> list[tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]]:
+    members: list[Row],
+) -> list[Row]:
     """아직 갈 곳이 없는 사람에게 메인 브랜드를 준다 — **두 브랜드에 번갈아**.
 
     디비전마다 따로 돌린다. 한 줄로 돌리면 남성부가 홀수로 끝나는 해에 여성부가
     통째로 한쪽으로 쏠린다.
     """
     turn: dict[str, int] = {}
-    filled: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-    ] = []
+    filled: list[Row] = []
     for (
         name,
         gender,
@@ -893,6 +974,7 @@ def _assign_homes(
         renamed,
         rename_at,
         stable,
+        slot,
     ) in members:
         if home is None:
             index = turn.get(gender, 0)
@@ -910,16 +992,19 @@ def _assign_homes(
                 renamed,
                 rename_at,
                 stable,
+                slot,
             )
         )
     return filled
 
 
-def render(
-    members: list[
-        tuple[str, str, str, int, int | None, int, str | None, str | None, int, str]
-    ],
-) -> str:
+def render(members: list[Row], pools: dict[str, list[str]]) -> str:
+    pool_lines = "\n".join(
+        f"    {alias}: (\n"
+        + "".join(f'        "{name}",\n' for name in pools[alias])
+        + "    ),"
+        for alias in ("_M", "_F")
+    )
     lines: list[str] = []
     seen: tuple[str, int] | None = None
     for (
@@ -933,6 +1018,7 @@ def render(
         renamed,
         rename_at,
         stable,
+        slot,
     ) in members:
         mark = (gender, debut)
         if mark != seen:
@@ -944,14 +1030,15 @@ def render(
         escaped = name.replace('"', '\\"')
         retire_arg = "None" if retire is None else str(retire)
         tail = "" if renamed is None else f', "{renamed}", {rename_at}'
-        if stable:
-            tail = tail or ", None, 0"
-            tail += f', "{stable}"'
+        if slot >= 0:
+            tail = (tail or ", None, 0") + f", {slot}"
+        elif stable:
+            tail = (tail or ", None, 0") + f', -1, "{stable}"'
         lines.append(
             f'    RosterMember("{escaped}", {gender}, {tier}, '
             f"{debut}, {retire_arg}, {experience}, {home}{tail}),"
         )
-    return HEADER + "\n".join(lines) + "\n" + FOOTER
+    return HEADER.replace("{POOL}", pool_lines) + "\n".join(lines) + "\n" + FOOTER
 
 
 # ── 캐릭터 생성 프리셋 (§3-D10-1) ─────────────────────────────
@@ -1115,7 +1202,7 @@ def main() -> int:
     members = build()
     counts: dict[tuple[str, str], int] = {}
     homes: dict[str, int] = {}
-    for _, gender, tier, _, _, _, home, _renamed, _at, _stable in members:
+    for _, gender, tier, _, _, _, home, _renamed, _at, _stable, _slot in members:
         counts[(gender, tier)] = counts.get((gender, tier), 0) + 1
         homes[home or "?"] = homes.get(home or "?", 0) + 1
     real = sum(1 for m in members if m[3] == 0)
@@ -1142,7 +1229,8 @@ def main() -> int:
     print("  스타일:", " · ".join(f"{k} {v}" for k, v in sorted(styles.items())))
 
     if args.write:
-        OUT_PATH.write_text(render(members), encoding="utf-8")
+        pools = fictional_pool({m[0] for m in members if m[10] < 0})
+        OUT_PATH.write_text(render(members, pools), encoding="utf-8")
         PRESET_OUT_PATH.write_text(render_presets(presets), encoding="utf-8")
         print(f"\n{OUT_PATH.relative_to(APP_DIR.parents[1])} 갱신")
         print(f"{PRESET_OUT_PATH.relative_to(APP_DIR.parents[1])} 갱신")
