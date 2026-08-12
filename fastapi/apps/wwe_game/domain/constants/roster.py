@@ -34,6 +34,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from functools import cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
 from wwe_game.domain.value_objects.title import Brand
@@ -66,6 +67,10 @@ class RosterMember:
     """콜업된 뒤 설 메인 브랜드 (§3-D53). **지금 있는 브랜드가 아니다** — 그건
     `brand_at()`이 등급에서 읽는다.
     """
+    renamed_to: str | None = None
+    """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
+    rename_week: int = 0
+    """이 주차부터 `renamed_to`로 불린다. `renamed_to`가 있을 때만 뜻이 있다."""
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -120,6 +125,7 @@ ROSTER: tuple[RosterMember, ...] = (
     RosterMember("댄 하우젠", _M, _MC, 0, 624, 14, _SD),
     RosterMember("도미닉 미스테리오", _M, _MC, 0, 988, 7, _RAW),
     RosterMember("드래곤 리", _M, _MC, 0, 884, 9, _RAW),
+    RosterMember("라요 아메리카노", _M, _MC, 0, 832, 10, _RAW, "피트 던", 156),
     RosterMember("레이 페닉스", _M, _MC, 0, 676, 13, _SD),
     RosterMember("로이스 키스", _M, _MC, 0, 364, 19, _SD),
     RosterMember("루세프", _M, _MC, 0, 364, 19, _RAW),
@@ -129,6 +135,7 @@ ROSTER: tuple[RosterMember, ...] = (
     RosterMember("미즈", _M, _MC, 0, 156, 23, _SD),
     RosterMember("배런 코빈", _M, _MC, 0, 364, 19, _SD),
     RosterMember("베르토", _M, _MC, 0, 936, 8, _SD),
+    RosterMember("브라보 아메리카노", _M, _MC, 0, 988, 7, _RAW, "타일러 베이트", 208),
     RosterMember("브루투스 크리드", _M, _MC, 0, 936, 8, _RAW),
     RosterMember("빅 캐스", _M, _MC, 0, 416, 18, _RAW),
     RosterMember("아이바", _M, _MC, 0, 312, 20, _RAW),
@@ -138,7 +145,9 @@ ROSTER: tuple[RosterMember, ...] = (
     RosterMember("에단 페이지", _M, _MC, 0, 624, 14, _RAW),
     RosterMember("에릭", _M, _MC, 0, 364, 19, _RAW),
     RosterMember("엔젤", _M, _MC, 0, 780, 11, _SD),
-    RosterMember("엘 그란데 아메리카노 | 루드비히 카이저", _M, _MC, 0, 676, 13, _RAW),
+    RosterMember(
+        "엘 그란데 아메리카노", _M, _MC, 0, 676, 13, _RAW, "루드비히 카이저", 156
+    ),
     RosterMember("엘튼 프린스", _M, _MC, 0, 988, 7, _SD),
     RosterMember("오모스", _M, _MC, 0, 832, 10, _RAW),
     RosterMember("오바 페미", _M, _MC, 0, 1040, 6, _RAW),
@@ -155,11 +164,9 @@ ROSTER: tuple[RosterMember, ...] = (
     RosterMember("크루즈 델 토로", _M, _MC, 0, 728, 12, _RAW),
     RosterMember("킷 윌슨", _M, _MC, 0, 832, 10, _SD),
     RosterMember("타마 통가", _M, _MC, 0, 260, 21, _SD),
-    RosterMember("타일러 베이트 | 브라보 아메리카노", _M, _MC, 0, 988, 7, _RAW),
     RosterMember("탈라 통가", _M, _MC, 0, 676, 13, _SD),
     RosterMember("트릭 윌리엄스", _M, _MC, 0, 832, 10, _SD),
     RosterMember("펜타", _M, _MC, 0, 364, 19, _RAW),
-    RosterMember("피트 던 | 라요 아메리카노", _M, _MC, 0, 832, 10, _RAW),
     RosterMember("호아킨 와일드", _M, _MC, 0, 468, 17, _RAW),
     RosterMember("EK 프로스퍼", _M, _P, 0, 1196, 3, _SD),
     RosterMember("나라쿠", _M, _P, 0, 468, 17, _RAW),
@@ -346,7 +353,7 @@ ROSTER: tuple[RosterMember, ...] = (
     RosterMember("티파니 스트랫턴", _F, _ME, 0, 780, 5, _SD),
     RosterMember("AJ 리", _F, _MC, 0, 156, 17, _RAW),
     RosterMember("B-팹", _F, _MC, 0, 364, 13, _SD),
-    RosterMember("나탈리아 | 내티", _F, _MC, 0, 156, 22, _RAW),
+    RosterMember("내티", _F, _MC, 0, 156, 22, _RAW, "나탈리아", 260),
     RosterMember("니키 벨라", _F, _MC, 0, 156, 20, _RAW),
     RosterMember("라이라 발키리아", _F, _MC, 0, 676, 7, _RAW),
     RosterMember("라켈 로드리게스", _F, _MC, 0, 364, 13, _RAW),
@@ -549,12 +556,106 @@ def active_at(week: int) -> tuple[RosterMember, ...]:
     return tuple(m for m in ROSTER if m.is_active_at(week))
 
 
-_BY_NAME: dict[str, RosterMember] = {m.name: m for m in ROSTER}
+_BY_NAME: dict[str, RosterMember] = {}
+for _m in ROSTER:  # pragma: no cover - 임포트 시 색인
+    _BY_NAME[_m.name] = _m
+    if _m.renamed_to is not None:
+        _BY_NAME[_m.renamed_to] = _m
 
 
 def member_of(name: str) -> RosterMember | None:
-    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**"""
+    """이름으로 명부 한 줄. **플레이어는 명부에 없으므로 None이 정상이다.**
+
+    **바꾸기 전 이름으로도 찾힌다** (§3-D54). 로그와 대립에 남은 옛 이름이 그대로
+    없는 사람이 되면, 개명이 곧 실종이 된다.
+    """
     return _BY_NAME.get(name)
+
+
+def name_at(member: RosterMember, week: int) -> str:
+    """그 주차에 불리던 활동명 (§3-D54).
+
+    **명부의 시간 축에 이름이 하나 더 붙었다.** 로스 아메리카노스 셋은 그 이름으로
+    뛰다가 본래 활동명으로 돌아가고, 내티는 나탈리아가 된다 — 원본 CSV가 `|`로 병기해
+    둔 것이 곧 그 이력이다.
+    """
+    if member.renamed_to is not None and week >= member.rename_week:
+        return member.renamed_to
+    return member.name
+
+
+DRAFT_WEEK = 50
+"""연말 드래프트가 서는 주차 (2026-08-12 사용자 결정).
+
+52주차가 아니라 50주차인 이유: 마지막 두 주에 두면 해가 바뀌는 경계와 겹쳐, 로그에서
+"몇 년차의 일인가"가 흐려진다.
+"""
+
+DRAFT_PAIRS = 2
+"""해마다 자리를 맞바꾸는 **쌍**의 수 — 한 해에 네 명이 브랜드를 옮긴다 (사용자: 3~4명).
+
+**맞바꾸는 이유는 균형이다.** 한쪽으로만 보내면 30년 동안 브랜드 하나가 말라 벨트에
+주인이 없어진다(§3-D53의 `MIN_BRAND_POOL`). 같은 디비전·같은 등급끼리 바꾸므로 어느
+칸의 인원수도 드래프트로 변하지 않는다 — 바뀌는 것은 **누가 어디 있는가**뿐이다.
+
+쌍은 (디비전 × 등급) 네 칸을 **해마다 돌아가며** 집는다. 칸마다 두 쌍씩 돌리면 한 해에
+열여섯 명이 움직여 "연말에 몇 명 오간다"가 아니라 명부 재편이 된다(실측 14.6명).
+"""
+
+
+@cache
+def _draft_flips(year: int) -> frozenset[str]:
+    """그 해 연말까지 브랜드가 뒤집힌 사람들 (§3-D54).
+
+    **시드를 받지 않는다.** 명부는 모든 커리어가 공유하는 상수라(이 파일 전체가 그렇다)
+    드래프트도 명부의 성질로 둔다 — 커리어마다 다른 세계를 원한다면 시드를 타고 내려가야
+    하는데, 그러면 `pool_for`부터 네 호출부까지 시드를 들고 다녀야 한다. 얻는 것에 비해
+    번지는 곳이 너무 넓다.
+
+    **해마다 누적으로 센다.** 캐시가 없으면 `pool_for` 한 번이 30년을 다시 걷는다 —
+    순수 함수라 캐시가 안전하고, 서른한 칸이면 메모리도 문제가 아니다.
+    """
+    flipped: set[str] = set()
+    cells = [
+        (gender, tier)
+        for gender in Gender
+        for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
+    ]
+    for step in range(1, year + 1):
+        week = step * WEEKS_PER_YEAR + DRAFT_WEEK
+        for index in range(DRAFT_PAIRS):
+            gender, tier = cells[(step * 3 + index) % len(cells)]
+            pools = {
+                brand: [
+                    m
+                    for m in ROSTER
+                    if m.gender is gender
+                    and m.is_active_at(week)
+                    and tier_at(m, week) is tier
+                    and _home_at(m, flipped) is brand
+                ]
+                for brand in (Brand.RAW, Brand.SMACKDOWN)
+            }
+            if not all(pools.values()):
+                continue
+            for brand in (Brand.RAW, Brand.SMACKDOWN):
+                chosen = _draft_pick(pools[brand], step, index)
+                if chosen in flipped:
+                    flipped.discard(chosen)
+                else:
+                    flipped.add(chosen)
+    return frozenset(flipped)
+
+
+def _draft_pick(pool: list[RosterMember], step: int, index: int) -> str:
+    """그 해 이 칸에서 옮길 사람. 해마다 다른 자리를 집는다."""
+    return pool[(step * 7 + index * 13) % len(pool)].name
+
+
+def _home_at(member: RosterMember, flipped: frozenset[str] | set[str]) -> Brand:
+    if member.name not in flipped:
+        return member.home_brand
+    return Brand.SMACKDOWN if member.home_brand is Brand.RAW else Brand.RAW
 
 
 def tier_at(member: RosterMember, week: int) -> RivalTier:
@@ -588,7 +689,8 @@ def brand_at(member: RosterMember, week: int) -> Brand:
     """
     if tier_at(member, week) is RivalTier.PROSPECT:
         return Brand.NXT
-    return member.home_brand
+    year = (week - DRAFT_WEEK) // WEEKS_PER_YEAR
+    return _home_at(member, _draft_flips(max(0, year)))
 
 
 def call_up_week(member: RosterMember) -> int | None:
@@ -627,7 +729,7 @@ def pool_for(
     `tier_in(brand, tier)`을 거치지 않고 부르면 빈 명단이 나올 수 있다.
     """
     return tuple(
-        m.name
+        name_at(m, week)
         for m in ROSTER
         if m.gender is gender
         and m.is_active_at(week)
