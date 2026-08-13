@@ -86,10 +86,18 @@ FORMATS: dict[MatchKind, MatchFormat] = {
     # 주인공이라고 유리할 이유가 없다. 럼블만 몫의 두 배인데, 1/30을 그대로 쓰면
     # 30년에 한 번도 못 이긴다.
     #
-    # 실측(커리어당 우승): 럼블 0.8 · 챔버 1.2 · MITB 1.2 — 대개 한 번, 없는 커리어도 있다.
-    MatchKind.BATTLE_ROYAL: MatchFormat("로열럼블 매치", 30, 0.06, 1.4, 1.3),
-    MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.11, 1.5, 1.5),
-    MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.09, 1.6, 1.7),
+    # **2026-08-13에 절반으로 내렸다** (현실 대조 · §3-D75). 커리어당 셋을 합쳐 3.2번
+    # 이기고 있었는데, 셋 다 우승이 곧 **보장된 월드 타이틀전**이라(§3-D36) 그것만으로
+    # 커리어의 72%가 월드 챔피언이 됐다. 실제로 럼블·MITB 우승은 커리어를 정의하는
+    # 사건이지 해마다 오는 것이 아니다 — 럼블은 38년에 우승자가 서른여덟 명뿐이다.
+    #
+    # 럼블은 이제 **공평한 몫 그대로**(1/30 ≈ 0.033)다. 그 아래로 내리면 주인공이
+    # 서른 명 중 평균보다 못한 것이 되어 이상해진다.
+    #
+    # 실측(커리어당 우승): 럼블 0.4 · 챔버 0.5 · MITB 0.5 — 셋 중 하나를 겪는 커리어가 흔하다.
+    MatchKind.BATTLE_ROYAL: MatchFormat("로열럼블 매치", 30, 0.030, 1.4, 1.3),
+    MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.050, 1.5, 1.5),
+    MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.040, 1.6, 1.7),
     MatchKind.WARGAMES: MatchFormat("워게임즈 매치", 10, 0.50, 1.5, 1.4),
     # 철창이 없는 대신 머릿수가 같다 — 이기기는 비슷하고 몸은 덜 상한다 (§3-D71).
     MatchKind.SURVIVOR_ELIMINATION: MatchFormat(

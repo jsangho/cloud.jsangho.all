@@ -143,6 +143,18 @@ WORLD_POPULARITY_REQUIRED = 80
 인기도 상수를 다시 만지면 이 값도 함께 재야 한다.
 """
 
+WORLD_DIFFICULTY = 97
+"""메인 로스터 월드 벨트 챔피언의 수준 (2026-08-13에 93에서 올렸다 · §3-D75).
+
+**정상은 아무나 못 간다.** 커리어의 72%가 월드 챔피언이 되고 있었는데, 실제로 월드
+벨트를 감는 선수는 로스터의 극히 일부다. 관문(인기도 80)은 그대로 뒀다 — §3-D35가
+"병목은 이길 수 있느냐가 아니라 도전 자리에 설 수 있느냐"라고 잡아 둔 결정이고,
+관문을 더 올리면 그랜드슬램이 다시 0%로 죽는다.
+
+**난도만으로는 부족했다** — 승률 바닥(`WIN_CHANCE_FLOOR`)에 걸려 100으로 올려도
+52%였다. 함께 조인 것은 상금 경기(럼블·챔버·래더)와 가방이다.
+"""
+
 SPEED_POPULARITY_REQUIRED = 15
 """스피드 벨트에 도전할 수 있는 인기도 (§3-D72, 2026-08-13 사용자 결정).
 
@@ -177,7 +189,7 @@ TITLES: dict[Title, TitleSpec] = {
         Brand.SMACKDOWN,
         _W,
         WORLD_POPULARITY_REQUIRED,
-        93,
+        WORLD_DIFFICULTY,
         16,
         7,
         "언디스퓨티드 WWE 챔피언십",
@@ -188,7 +200,7 @@ TITLES: dict[Title, TitleSpec] = {
         Brand.RAW,
         _W,
         WORLD_POPULARITY_REQUIRED,
-        93,
+        WORLD_DIFFICULTY,
         16,
         7,
         "월드 헤비웨이트 챔피언십",
@@ -269,7 +281,7 @@ TITLES: dict[Title, TitleSpec] = {
         Brand.SMACKDOWN,
         _W,
         WORLD_POPULARITY_REQUIRED,
-        93,
+        WORLD_DIFFICULTY,
         16,
         7,
         "WWE 위민스 챔피언십",
@@ -280,7 +292,7 @@ TITLES: dict[Title, TitleSpec] = {
         Brand.RAW,
         _W,
         WORLD_POPULARITY_REQUIRED,
-        93,
+        WORLD_DIFFICULTY,
         16,
         7,
         "위민스 월드 챔피언십",

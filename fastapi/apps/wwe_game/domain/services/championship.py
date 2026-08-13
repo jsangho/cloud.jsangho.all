@@ -74,6 +74,34 @@ TITLE_LOSS_IN_RING = -1
 """벨트를 잃으면 명성이 실력보다 크게 깎인다. 두 값은 항상 다르다."""
 
 
+CONTENTION_SPAN = 25
+CONTENTION_FLOOR = 0.18
+"""**관문을 넘는 것과 자리를 얻는 것은 다르다** (2026-08-13 사용자 규칙 · §3-D75).
+
+사용자의 말 그대로다 — *"내가 그 벨트를 얻을 수 있는 스탯이 되었다고 해도, 챔피언십
+매치를 얻을 수 있는 기회를 얻는 거야. 나와 비슷한 스탯의 선수들이 있으니."*
+
+관문(`popularity_required`)을 **갓 넘은** 선수는 같은 자리를 노리는 동급들과 겨루므로
+차례가 드물게 오고, 한참 넘어선 선수는 자주 온다. `CONTENTION_SPAN`(25)만큼 넘어서면
+경쟁이 사라진다.
+
+이것이 §3-D75에서 월드 벨트를 희소하게 만든 **진짜 손잡이**다. 난도(97)를 올리는
+것만으로는 승률 바닥에 걸려 안 됐다 — 병목은 이기는 것이 아니라 **서는 것**이었고,
+§3-D35가 이미 "도전 자리에 설 수 있느냐"라고 짚어 둔 자리이기도 하다.
+
+2선(관문 50)은 거의 안 깎인다 — 커리어 최고 인기도 중앙이 69라 이미 한참 위다.
+깎이는 것은 관문 80짜리 월드 벨트이고, 그게 이 규칙이 노린 자리다.
+"""
+
+
+def contention_factor(popularity: int, required: int) -> float:
+    """관문을 얼마나 넘어섰는가 → 자리가 올 확률의 배수 (`CONTENTION_FLOOR`~1.0)."""
+    over = max(0, popularity - required)
+    return CONTENTION_FLOOR + (1.0 - CONTENTION_FLOOR) * min(
+        1.0, over / CONTENTION_SPAN
+    )
+
+
 def title_shot_chance(
     popularity: int,
     *,
@@ -81,13 +109,17 @@ def title_shot_chance(
     major: bool = False,
     special: bool = False,
     standing: int = 100,
+    required: int = 0,
 ) -> float:
     """이번 무대에서 벨트가 걸릴 확률.
 
     대회가 연 4회에서 13회로 늘면서 회당 확률을 낮췄다(§3-D21-1) — 총량을 지키려면
     그래야 하지만, 그러면 큰 대회도 밋밋해진다. **급으로 다시 벌린다.**
+
+    `required`는 그 벨트의 관문이다. 넘긴 폭이 좁으면 동급 경쟁자에게 밀린다.
     """
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
+    chance *= contention_factor(popularity, required)
     if major:
         chance *= rules.MAJOR_SHOT_MULTIPLIER
     if special:
@@ -112,6 +144,11 @@ def eligible_titles(run: CareerRun) -> tuple[Title, ...]:
     **스피드 벨트에는 천장이 있다** (§3-D72). 사용자가 정한 자리가 "NXT 2선 + 메인
     로스터 하위 티어"라, 인기도가 2선 관문(50)에 닿으면 목록에서 빠진다 — 이 목록에서
     상한을 가진 벨트는 그것뿐이다.
+
+    **정착 기간은 두지 않는다** (2026-08-13 사용자 정정). 한때 "팀이 반년은 유지돼야
+    도전할 수 있다"를 넣었다가 뺐다 — 사용자가 말한 태그 벨트용 팀은 **챔피언십을
+    위한 1회성 결성**이라, 오래 유지된 팀만 도전할 수 있다고 두면 그 그림 자체가
+    막힌다. 대신 잃었을 때 흩어진다(§3-D75, `week_simulation`).
     """
     solo = run.team is None
     return tuple(
@@ -225,13 +262,17 @@ def title_win_chance(score: float, title: Title) -> float:
     return max(WIN_CHANCE_FLOOR, min(WIN_CHANCE_CEILING, 0.5 + edge))
 
 
-CASH_IN_WIN_BONUS = 0.45
+CASH_IN_WIN_BONUS = 0.25
 """가방을 쓴 경기의 승률 가산 (§3-D36).
 
 **챔피언이 방금 경기를 끝냈다** — 가방의 값어치가 여기 전부 들어 있다. 배수가 아니라
 가산인 이유: 배수면 실력이 낮을수록 이득이 적어져, 정작 가방이 필요한 선수에게 덜 준다.
 
 `WIN_CHANCE_CEILING`(0.85)에서 잘린다. **확정이 아니다** — 실제로도 실패한 현금화가 있다.
+
+**0.45에서 내렸다** (2026-08-13 · §3-D75). 실측에서 월드 대관의 절반이 가방으로
+들어오고 있었다 — 가장 큰 문이었다. 0.45면 종합점수가 어지간해도 천장(0.85)에
+붙어 사실상 확정이었고, 그러면 가방을 든 순간 월드 벨트가 예약된다.
 """
 
 

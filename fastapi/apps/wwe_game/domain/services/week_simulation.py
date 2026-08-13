@@ -35,6 +35,7 @@ from wwe_game.domain.constants.ple_calendar import (
     PleShow,
     calendar_for,
 )
+from wwe_game.domain.constants.teams import TeamKind
 from wwe_game.domain.entities.career_run import CareerRun, Trophy
 from wwe_game.domain.services import (
     championship,
@@ -654,16 +655,23 @@ def _draw_title_match(
     if kind not in (WeekKind.PLE, WeekKind.SPECIAL, WeekKind.WEEKLY_SHOW):
         return None, None
     roll = SeededRoll(run.seed, week, seeded_roll.TITLE)
+    # **대상을 먼저 고르고 그 벨트의 관문으로 확률을 잰다** (§3-D75). 순서를 뒤집으면
+    # 월드 벨트와 스피드 벨트가 같은 확률로 자리를 받는다 — 경쟁의 세기는 벨트마다
+    # 다르다는 것이 이 규칙의 전부다.
+    target = championship.target_title(run, roll)
+    if target is None:
+        return None, None
     chance = championship.title_shot_chance(
         run.stats.popularity,
         on_tv=kind is WeekKind.WEEKLY_SHOW,
         major=show is not None and show.is_major,
         special=kind is WeekKind.SPECIAL,
         standing=run.stats.backstage,
+        required=TITLES[target].popularity_required,
     )
     if not roll.chance(chance):
         return None, None
-    return championship.target_title(run, roll), None
+    return target, None
 
 
 def promo_hit_chance(mic_work: int) -> float:
@@ -829,11 +837,13 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
     for vacated in report.vacated:
         # 길게 빠지는 챔피언은 자리를 비운다 (§3-D40). 이력은 남는다.
         moved = championship.strip(moved, vacated)
+    lost_tag = False
     if report.title_at_stake is not None:
         if report.result is OutcomeKind.WIN:
             moved = championship.award(run, report.title_at_stake)
         elif report.title_defended:
             moved = championship.strip(run, report.title_at_stake)
+            lost_tag = TITLES[report.title_at_stake].tier is TitleTier.TAG
 
     heat_gain = {
         WeekKind.PLE: rivalry_engine.HEAT_PER_PLE,
@@ -862,6 +872,12 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         if formed is not None:
             team = formed
             flags = flags - {TEAM_PENDING}
+
+    # **벨트를 잃으면 팀이 흩어진다 — 스테이블이 아니라면** (§3-D75, 2026-08-13
+    # 사용자 규칙). 둘이 벨트 하나로 묶여 있던 사이라 이유가 사라지면 남을 것이
+    # 없다. 스테이블은 벨트보다 큰 무리라 그대로 간다.
+    if lost_tag and team is not None and team.kind is TeamKind.TAG_TEAM:
+        team = None
 
     title_shot, briefcase_week, flags = _spoils(moved, report, flags)
     tournament_round, crown = _tournament_after(moved, report)
