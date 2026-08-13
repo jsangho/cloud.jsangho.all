@@ -674,6 +674,7 @@ def _draw_title_match(
             standing=run.stats.backstage,
             required=TITLES[candidate].popularity_required,
             rung=rung,
+            proven=candidate in run.titles_won,
         )
         if roll.chance(chance):
             return candidate, None

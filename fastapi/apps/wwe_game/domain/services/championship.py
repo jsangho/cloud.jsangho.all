@@ -117,12 +117,31 @@ LADDER_DECAY = 0.35
 """
 
 
-def contention_factor(popularity: int, required: int) -> float:
-    """관문을 얼마나 넘어섰는가 → 자리가 올 확률의 배수 (`CONTENTION_FLOOR`~1.0)."""
+PROVEN_SHARE = 0.5
+"""**전 챔피언은 줄 뒤에 서지 않는다** (§3-D77, 2026-08-13).
+
+그 벨트를 감아 본 적이 있으면 경쟁에서 밀리는 몫의 절반을 메운다. 지금까지 경쟁
+배수는 처음 도전하는 선수와 그 벨트를 세 번 감은 선수를 **똑같이** 취급했다 —
+현실은 반대다. 전 월드 챔피언은 미드카더 뒤에 줄 서지 않는다.
+
+**넓이가 아니라 깊이를 늘린다.** 이미 채운 그룹의 벨트를 다시 감는 쪽이라
+그랜드슬램(네 그룹의 최솟값)은 거의 움직이지 않는다 — 그것이 이 손잡이를 고른
+이유다. 전설급 커리어의 천장이 여기서 열린다.
+"""
+
+
+def contention_factor(popularity: int, required: int, *, proven: bool = False) -> float:
+    """관문을 얼마나 넘어섰는가 → 자리가 올 확률의 배수 (`CONTENTION_FLOOR`~1.0).
+
+    `proven`은 **그 벨트를 감아 본 적이 있는가**다. 있으면 밀리는 몫이 절반으로 준다.
+    """
     over = max(0, popularity - required)
-    return CONTENTION_FLOOR + (1.0 - CONTENTION_FLOOR) * min(
+    factor = CONTENTION_FLOOR + (1.0 - CONTENTION_FLOOR) * min(
         1.0, over / CONTENTION_SPAN
     )
+    if proven:
+        factor += (1.0 - factor) * PROVEN_SHARE
+    return factor
 
 
 def title_shot_chance(
@@ -134,6 +153,7 @@ def title_shot_chance(
     standing: int = 100,
     required: int = 0,
     rung: int = 0,
+    proven: bool = False,
 ) -> float:
     """이번 무대에서 벨트가 걸릴 확률.
 
@@ -143,7 +163,7 @@ def title_shot_chance(
     `required`는 그 벨트의 관문이다. 넘긴 폭이 좁으면 동급 경쟁자에게 밀린다.
     """
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
-    chance *= contention_factor(popularity, required)
+    chance *= contention_factor(popularity, required, proven=proven)
     chance *= LADDER_DECAY**rung
     if major:
         chance *= rules.MAJOR_SHOT_MULTIPLIER
