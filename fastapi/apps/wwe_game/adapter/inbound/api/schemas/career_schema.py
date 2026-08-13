@@ -22,6 +22,7 @@ from wwe_game.app.dtos.career_dto import (
     StatsView,
     WeekReportView,
 )
+from wwe_game.domain.constants import career_flags as flags
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
@@ -31,7 +32,7 @@ from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import contract_office, match_rating
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
-from wwe_game.domain.value_objects.body_part import PARTS
+from wwe_game.domain.value_objects.body_part import PARTS, BodyPart
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.title import (
@@ -156,6 +157,15 @@ class WeekSchema(_Camel):
     """`earned`(실력으로) · `emergency`(공백을 메우러) — 콜업의 결 (§3-D22·D22-1)."""
     draft_night: bool = False
     """그 주가 연말 드래프트였는지 (§3-D54). 소속이 바뀌는 밤이다."""
+    stat_delta: dict[str, int] = Field(default_factory=dict)
+    """그 주에 오르내린 스탯 (§3-D75 평가의 남은 자리). **성장이 보이지 않았다** —
+    로그는 "이겼다"만 말하고 그 승리가 무엇을 남겼는지는 프로필의 숫자가 조용히
+    올라갈 뿐이었다."""
+    wear_delta: int = 0
+    """그 주에 쌓인 마모. 몸이 닳는 것이 화면에 없었다."""
+    promo_hit: bool | None = None
+    """프로모가 먹혔는지 (§3-D41). 경기 없는 주차의 유일한 성패다 — `None`은
+    프로모 주차가 아니라는 뜻이다."""
 
 
 class SkillSchema(_Camel):
@@ -253,6 +263,34 @@ class GrandSlamSchema(_Camel):
     groups: list[GrandSlamGroupSchema] = Field(default_factory=list)
 
 
+PLAYER_FLAGS: Final[dict[str, str]] = {
+    flags.PAINKILLER: "진통제",
+    flags.GROUNDED: "지상 전환",
+    flags.PUSH_FROZEN: "푸시 동결",
+    flags.GRUDGE: "라커룸 앙금",
+    flags.MANAGER: "매니저",
+    flags.NEMESIS_LOCKED: "숙적 고정",
+    flags.CURSED: "댄하우젠의 저주",
+    flags.WENT_INTO_BUSINESS: "제멋대로",
+    flags.SUSPENSION_PENDING: "징계 대기",
+}
+"""화면에 나가는 상태 표식과 그 이름 (§3-D79).
+
+**표식과 신호를 나눈다** (T11에서 정한 구분). `TEAM_PENDING`·`CASH_IN_PENDING`처럼
+규칙이 읽고 지우는 **신호**는 여기 없다 — 그건 다음 주차에 무슨 일이 일어날지에
+대한 내부 예약이지 지금 내 상태가 아니다. 여기 있는 것은 전부 "지금 나에게 붙어
+있는 것"이다.
+
+모르는 코드는 조용히 빠진다. 새 플래그를 더할 때 이 표에 넣을지 정하는 것이,
+그 플래그가 표식인지 신호인지 정하는 것과 같다.
+"""
+
+
+class TrophySchema(_Camel):
+    code: str
+    week: int
+
+
 class RunSchema(_Camel):
     id: int | None
     name: str
@@ -274,6 +312,13 @@ class RunSchema(_Camel):
     rivalries: list[RivalrySchema] = Field(default_factory=list)
     money: MoneySchema | None = None
     """돈과 계약 (§3-D73). 옛 응답과 섞이지 않게 기본은 `None`이다."""
+    injured_parts: list[str] = Field(default_factory=list)
+    """다쳤던 곳들의 **이름** (§3-D43). *몸은 기억한다*가 이 게임의 문장인데
+    화면에는 그 기억이 없었다 — 다음 부상이 여기로 돌아올 확률이 오른다."""
+    trophies: list[TrophySchema] = Field(default_factory=list)
+    """왕관 등 벨트가 아닌 훈장 (§3-D33). 토너먼트 우승이 로그를 지나가면 사라졌다."""
+    flags: list[str] = Field(default_factory=list)
+    """지금 붙어 있는 상태 표식의 **이름** (`PLAYER_FLAGS`). 신호는 빠진다."""
     grand_slam: GrandSlamSchema | None = None
     """그랜드슬램 진행도 (§3-D73)."""
     disclaimer: str = Field(
@@ -523,6 +568,9 @@ def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
         injury_part=PARTS[report.injury_part].label if report.injury_part else None,
         call_up=report.call_up.value if report.call_up else None,
         draft_night=report.draft_night,
+        stat_delta=dict(report.stat_delta),
+        wear_delta=report.wear_delta,
+        promo_hit=report.promo_hit,
         beats=(
             [
                 BeatSchema(
@@ -676,6 +724,13 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             ],
             money=to_money(run),
             grand_slam=to_grand_slam(run),
+            injured_parts=[
+                PARTS[BodyPart(code)].label
+                for code in sorted(run.injured_parts)
+                if code in {p.value for p in BodyPart}
+            ],
+            trophies=[TrophySchema(code=t.code, week=t.week) for t in run.trophies],
+            flags=[PLAYER_FLAGS[f] for f in sorted(run.flags) if f in PLAYER_FLAGS],
             team=(
                 TeamSchema(
                     label=run.team.label,

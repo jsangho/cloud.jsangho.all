@@ -116,6 +116,12 @@ export type CareerWeek = {
   callUp?: "earned" | "emergency" | null;
   /** 그 주가 연말 드래프트였는지 (§3-D54). */
   draftNight?: boolean;
+  /** 그 주에 오르내린 스탯. 승리가 무엇을 남겼는지 (§3-D79). */
+  statDelta?: Record<string, number>;
+  /** 그 주에 쌓인 마모. */
+  wearDelta?: number;
+  /** 프로모가 먹혔는지 (§3-D41). `null`이면 프로모 주차가 아니다. */
+  promoHit?: boolean | null;
 };
 
 /** 경기 진행 한 마디 (§3-D34). */
@@ -149,6 +155,12 @@ export type CareerRunView = {
   money?: CareerMoney | null;
   /** 그랜드슬램 진행도 (§3-D73). */
   grandSlam?: CareerGrandSlam | null;
+  /** 다쳤던 곳들의 이름 (§3-D43). **몸은 기억한다.** */
+  injuredParts?: string[];
+  /** 왕관 등 벨트가 아닌 훈장 (§3-D33). */
+  trophies?: CareerTrophy[];
+  /** 지금 붙어 있는 상태 표식의 이름. 규칙이 읽는 신호는 오지 않는다. */
+  flags?: string[];
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
@@ -174,6 +186,8 @@ export type CareerMoney = {
   /** 몇 주 뒤 잊히는가. 소속이 있으면 `null` — 무소속 구간의 유일한 시계다. */
   fadeInWeeks: number | null;
 };
+
+export type CareerTrophy = { code: string; week: number };
 
 export type CareerGrandSlamGroup = { name: string; count: number };
 
