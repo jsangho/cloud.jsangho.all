@@ -79,6 +79,14 @@ class SetGoalCommand:
 
 
 @dataclass(frozen=True)
+class GuestSetGoalCommand:
+    """체험판의 분기 목표 (§3-D80·D8). 세이브를 통째로 받아 통째로 돌려준다."""
+
+    run: CareerRun
+    goal_code: str
+
+
+@dataclass(frozen=True)
 class GuestStartCommand:
     """체험판 시작. `user_id`가 없다 — 저장은 브라우저가 한다(§3-D8)."""
 

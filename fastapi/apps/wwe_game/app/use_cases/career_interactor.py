@@ -29,6 +29,7 @@ from wwe_game.app.dtos.career_dto import (
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
+    GuestSetGoalCommand,
     GuestStartCommand,
     ModeView,
     NewsFeedPage,
@@ -297,6 +298,12 @@ class CareerInteractor(CareerUseCase):
         self._require_guest_mode(command.run.mode.code)
         resolved = self._resolve(command.run, command.choice_code)
         return self._view(resolved, self._resting_reason(resolved))
+
+    def set_guest_goal(self, command: GuestSetGoalCommand) -> AdvanceResult:
+        """체험판의 분기 목표 (§3-D80). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        self._require_guest_mode(command.run.mode.code)
+        chosen = quarter_plan.choose(command.run, _goal_of(command.goal_code))
+        return self._view(chosen, self._resting_reason(chosen))
 
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""

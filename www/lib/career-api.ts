@@ -161,6 +161,13 @@ export type CareerRunView = {
   trophies?: CareerTrophy[];
   /** 지금 붙어 있는 상태 표식의 이름. 규칙이 읽는 신호는 오지 않는다. */
   flags?: string[];
+  /** 이번 분기에 건 것 (§3-D80). 안 걸었으면 `null`. */
+  goal?: string | null;
+  /**
+   * 지금 고를 수 있는 목표들. **비어 있으면 고를 때가 아니다** — NXT·무소속
+   * 구간이거나 이미 이번 분기를 걸었다.
+   */
+  goalOptions?: CareerGoalOption[];
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
@@ -188,6 +195,14 @@ export type CareerMoney = {
 };
 
 export type CareerTrophy = { code: string; week: number };
+
+export type CareerGoalOption = {
+  code: string;
+  label: string;
+  blurb: string;
+  /** 그 분기를 시작할 때 나가는 돈. 0이면 공짜다. */
+  cost: number;
+};
 
 export type CareerGrandSlamGroup = { name: string; count: number };
 
@@ -217,7 +232,16 @@ export type CareerAdvance = {
   run: CareerRunView;
   weeks: CareerWeek[];
   /** `recovered` = 부상에서 돌아왔다 (§3-D37) — 부상 구간은 통째로 흘러가고 여기서 끊긴다. */
-  stopReason: "ready" | "event" | "ple" | "ended" | "recovered" | "tick" | "max_weeks";
+  stopReason:
+    | "ready"
+    | "event"
+    | "ple"
+    | "ended"
+    | "recovered"
+    | "tick"
+    | "max_weeks"
+    /** 새 분기가 열렸다 — 무엇에 걸지 정해야 간다 (§3-D80). */
+    | "goal";
   pendingEvent: CareerPendingEvent | null;
 };
 
@@ -390,6 +414,21 @@ export function advanceRun(runId: number, step: StepMode = "auto"): Promise<Care
 
 export function chooseEvent(runId: number, choice: string): Promise<CareerAdvance> {
   return post<CareerAdvance>(`/runs/${runId}/choices`, { choice });
+}
+
+/**
+ * 이번 분기에 걸 것을 정한다 (§3-D80).
+ *
+ * **`chooseEvent`와 따로 둔다.** 이벤트 응답은 벌어진 일에 답하는 것이고 이쪽은
+ * 먼저 거는 것이라, 한 함수로 합치면 그 구분이 사라진다.
+ */
+export function setGoal(runId: number, goal: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/goal`, { goal });
+}
+
+/** 체험판의 분기 목표 (§3-D80). 없으면 콜업 뒤 체험판이 통째로 막힌다. */
+export function setGuestGoal(state: GuestRunState, goal: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/goal", { state, goal });
 }
 
 export function readLog(runId: number, offset = 0, limit = 50): Promise<CareerLogPage> {

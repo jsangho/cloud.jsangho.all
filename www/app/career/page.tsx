@@ -11,6 +11,8 @@ import {
   advanceRun,
   chooseEvent,
   chooseGuestEvent,
+  setGoal,
+  setGuestGoal,
   readCurrentRun,
   readGuestReport,
   readLog,
@@ -30,6 +32,7 @@ import {
   type CareerCardMatch,
   type CareerPreset,
   type CareerGrandSlam,
+  type CareerRunView,
   type CareerMoney,
   type CareerShowReport,
   type CareerNewsItem,
@@ -195,6 +198,16 @@ const END_REASONS: Record<string, string> = {
   player: "스스로 은퇴",
   injury: "중대 부상",
   released: "방출",
+  faded: "잊혔다",
+};
+
+/** 결산 머리에 거는 한 줄 — **어떻게 끝났는가가 곧 그 커리어의 마지막 문장이다.** */
+const END_LINES: Record<string, string> = {
+  age_50: "서른 해를 다 채우고 링을 떠났다.",
+  player: "스스로 마지막 밤을 골랐다.",
+  injury: "몸이 먼저 그만두자고 했다.",
+  released: "계약이 끝난 자리에서 멈췄다.",
+  faded: "두 해 동안 아무도 부르지 않았다.",
 };
 
 /**
@@ -229,6 +242,16 @@ const SHOT_LABELS: Record<string, string> = {
   gate: "타이틀전",
   earned: "도전권 · 타이틀전",
   briefcase: "가방 · 타이틀전",
+};
+
+/** 분기 목표 코드 → 짧은 이름 (§3-D80). 머리에 걸어 두는 용도라 서술은 뺀다. */
+const GOAL_SHORT: Record<string, string> = {
+  title: "벨트",
+  rivalry: "대립",
+  body: "몸",
+  mic: "마이크",
+  money: "돈",
+  drift: "그냥 뛴다",
 };
 
 /** 스탯 코드 → 화면 이름. 백엔드 `stat_delta`의 키와 같은 표다. */
@@ -596,6 +619,13 @@ export default function CareerPage() {
     );
   }
 
+  /** 이번 분기에 걸 것을 정한다 (§3-D80). 진행은 안 시킨다 — 고른 것을 먼저 본다. */
+  function handleGoal(code: string) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() => (state ? setGuestGoal(state, code) : setGoal(run.run.id as number, code)));
+  }
+
   function handleRetire() {
     if (!run?.run.id) {
       writeGuestSave(null);
@@ -901,6 +931,14 @@ export default function CareerPage() {
    * 숫자가 아니라 있다/없다인 이유: 몇 개인지는 들어가서 보면 되고, 머리에서
    * 필요한 것은 "들어가 볼 이유가 있는가" 하나다.
    */
+  /**
+   * 지금 고를 수 있는 분기 목표 (§3-D80).
+   *
+   * **비어 있으면 고를 때가 아니다** — NXT·무소속 구간이거나 이미 이번 분기를
+   * 걸었다. 백엔드가 그 판단을 하고 화면은 목록의 길이만 본다.
+   */
+  const goalOptions = view.goalOptions ?? [];
+
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
     schedule: advance.weeks.length > 0,
@@ -1013,6 +1051,12 @@ export default function CareerPage() {
               <span>{view.team.label}</span>
             </>
           )}
+          {view.goal && view.goal !== "drift" && (
+            <>
+              <span className="text-muted-foreground/60">·</span>
+              <span className="text-brand-link">{GOAL_SHORT[view.goal] ?? view.goal}</span>
+            </>
+          )}
           {view.condition !== "healthy" && <span className="text-brand-link">부상</span>}
           {view.money?.contract === null && <span className="text-brand-link">무소속</span>}
           {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
@@ -1022,6 +1066,45 @@ export default function CareerPage() {
           )}
         </div>
       </header>
+
+      {/*
+       * **분기 목표** (§3-D80) — 이벤트와 같은 자리를 쓰되 성격이 반대다.
+       * 이벤트는 벌어진 일에 답하는 것이고 이쪽은 **먼저 거는 것**이라, 문구도
+       * "무슨 일이 있었다"가 아니라 "무엇에 걸까"로 연다.
+       */}
+      {goalOptions.length > 0 && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+          <h2 className="font-sport text-lg">{view.year}년차 — 무엇에 걸까</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            고른 것이 이번 석 달의 규칙을 바꿉니다. 잔액이 모자란 것은 목록에 없습니다.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {goalOptions.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                disabled={busy}
+                onClick={() => void handleGoal(option.code)}
+                className={cn(
+                  "rounded-[6px] bg-background p-3 text-left transition-colors duration-[120ms]",
+                  "ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70",
+                  "hover:ring-brand-400 disabled:opacity-50",
+                )}
+              >
+                <span className="flex items-baseline gap-2">
+                  <span className="font-sport text-base">{option.label}</span>
+                  {option.cost > 0 && (
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      ${option.cost.toLocaleString("en-US")}
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">{option.blurb}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 대기 이벤트는 어느 화면에 있든 위로 올라온다 — 답하기 전에는 진행이 막힌다. */}
       {pendingEvent && (
@@ -1055,7 +1138,9 @@ export default function CareerPage() {
            * 표식 · 훈장(§3-D33)이 전부 응답에도 없었고(§3-D73 평가), 있어도 갈 곳이
            * 없었다. 벨트는 따로 칸이 있으니 남기고, 그 밖의 "나"는 여기다.
            */}
-          {tab === "profile" && (
+          {tab === "profile" && ended && <CareerSummary view={view} />}
+
+          {tab === "profile" && !ended && (
             <section className="space-y-5">
               <StatGrid stats={view.stats} />
 
@@ -1120,12 +1205,6 @@ export default function CareerPage() {
                   <span className="text-muted-foreground">소속 팀 </span>
                   {view.team.label}
                   <span className="text-muted-foreground"> · {view.team.members.join(" · ")}</span>
-                </p>
-              )}
-              {ended && (
-                <p className="text-sm">
-                  커리어가 끝났습니다
-                  {view.endReason ? ` · ${END_REASONS[view.endReason] ?? view.endReason}` : ""}.
                 </p>
               )}
             </section>
@@ -1920,6 +1999,93 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
 }
 
 /** FM의 속성 격자. 값이 아니라 **관계**가 읽혀야 해서 라벨과 숫자를 붙여 둔다. */
+/**
+ * **최종 결산** (2026-08-13 사용자 요청).
+ *
+ * 지금까지 커리어가 끝나면 프로필 칸에 한 줄이 붙는 게 전부였다 — 서른 해가
+ * "커리어가 끝났습니다 · 50세 만기"로 닫혔다. 30년을 되짚어 주는 자리가 있어야
+ * 그 시간이 무엇이었는지가 남는다.
+ *
+ * **새로 계산하지 않는다.** 세이브가 이미 들고 있는 것만 모은다 — 대관·훈장·
+ * 그랜드슬램·잔액·다친 곳·최종 스탯. 따로 집계를 만들면 그 수치가 화면에서만
+ * 참인 값이 되고, 되짚기가 결정적이라는 §3-D4가 그 자리에서 끊긴다.
+ */
+function CareerSummary({ view }: { view: CareerRunView }) {
+  const reason = view.endReason ?? "";
+  const belts = view.titlesWon.length;
+  const distinct = new Set(view.titlesWon).size;
+  const slam = view.grandSlam;
+  return (
+    <section className="rounded-lg bg-card p-5 ring-1 ring-brand-400/50 ring-inset">
+      <p className="font-sport text-xs tracking-[0.3em] text-brand-link">CAREER OVER</p>
+      <h2 className="font-sport mt-1 text-3xl leading-none">{view.name}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {END_LINES[reason] ?? "커리어가 끝났다."}
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Figure label="뛴 기간" value={`${view.year}년`} note={`${view.age}세에 끝`} />
+        <Figure
+          label="감은 벨트"
+          value={`${belts}회`}
+          note={distinct > 0 ? `${distinct}종` : "없음"}
+          tone={belts > 0 ? "up" : undefined}
+        />
+        <Figure
+          label="그랜드슬램"
+          value={slam && slam.level > 0 ? `${slam.level}회` : "미달"}
+          note={
+            slam
+              ? slam.groups
+                  .filter((g) => g.count === 0)
+                  .map((g) => g.name)
+                  .join(" · ") || "네 칸 모두"
+              : undefined
+          }
+          tone={slam && slam.level > 0 ? "up" : undefined}
+        />
+        <Figure
+          label="누적 수입"
+          value={view.money ? usd(view.money.balance) : "—"}
+          note={END_REASONS[reason] ?? reason}
+        />
+      </div>
+
+      {/* 무엇을 감았는가 — 결산의 본문이다. */}
+      {view.titlesWon.length > 0 && (
+        <div className="mt-5">
+          <p className="text-xs text-muted-foreground">감은 벨트</p>
+          <div className="mt-2">
+            <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+          </div>
+        </div>
+      )}
+
+      {(view.trophies?.length ?? 0) > 0 && (
+        <p className="mt-4 text-sm">
+          <span className="text-muted-foreground">훈장 </span>
+          {view.trophies?.map((t) => TROPHIES[t.code] ?? t.code).join(" · ")}
+        </p>
+      )}
+
+      {/* 몸이 기억하는 것 (§3-D43) — 끝나고 보면 이게 그 커리어의 값이다. */}
+      {(view.injuredParts?.length ?? 0) > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="text-muted-foreground">다쳤던 곳 </span>
+          {view.injuredParts?.join(" · ")}
+        </p>
+      )}
+
+      <div className="mt-5 border-t border-stone-300/50 pt-4 dark:border-stone-700/50">
+        <p className="text-xs text-muted-foreground">마지막 스탯</p>
+        <div className="mt-2">
+          <StatGrid stats={view.stats} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /**
  * 그 주가 남긴 것 — 스탯 변화·마모·프로모 성패 (§3-D79).
  *

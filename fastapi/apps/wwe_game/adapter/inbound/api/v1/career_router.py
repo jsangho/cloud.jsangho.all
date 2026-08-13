@@ -22,6 +22,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestChoiceRequest,
+    GuestGoalRequest,
     GuestReportRequest,
     GuestResumeRequest,
     GuestStartRequest,
@@ -51,6 +52,7 @@ from wwe_game.app.dtos.career_dto import (
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
+    GuestSetGoalCommand,
     GuestStartCommand,
     SetGoalCommand,
     StartRunCommand,
@@ -397,6 +399,19 @@ def choose_guest(
         choice_code=body.choice,
     )
     return to_guest(_sync(lambda: use_case.choose_guest(command)))
+
+
+@career_router.post("/guest/goal", response_model=GuestAdvanceResponse)
+def set_guest_goal(
+    body: GuestGoalRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 분기 목표 (§3-D80). 없으면 콜업 뒤 체험판이 통째로 막힌다."""
+    command = GuestSetGoalCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        goal_code=body.goal,
+    )
+    return to_guest(_sync(lambda: use_case.set_guest_goal(command)))
 
 
 @career_router.post("/guest/news", response_model=NewsPageSchema)

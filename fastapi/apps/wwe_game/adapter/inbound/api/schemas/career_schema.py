@@ -296,6 +296,11 @@ class GoalRequest(_Camel):
     goal: str
 
 
+class GuestGoalRequest(_Camel):
+    state: GuestRunState
+    goal: str
+
+
 class GoalOptionSchema(_Camel):
     """고를 수 있는 목표 하나 (§3-D80). 잔액이 모자란 것은 아예 오지 않는다."""
 
