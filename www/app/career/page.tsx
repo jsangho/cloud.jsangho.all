@@ -231,6 +231,15 @@ const SHOT_LABELS: Record<string, string> = {
   briefcase: "가방 · 타이틀전",
 };
 
+/** 스탯 코드 → 화면 이름. 백엔드 `stat_delta`의 키와 같은 표다. */
+const STAT_LABELS: Record<string, string> = {
+  popularity: "인기도",
+  in_ring: "경기력",
+  mic_work: "마이크웍",
+  backstage: "평판",
+  alignment: "성향",
+};
+
 /** 훈장 코드 → 이름 (§3-D33). 모르는 코드는 원문 그대로 나간다. */
 const TROPHIES: Record<string, string> = {
   king_of_the_ring: "킹 오브 더 링",
@@ -1329,6 +1338,11 @@ function WeekRow({
   // 주간 방송도 연다: 밤이 작을 뿐 그날도 카드가 섰다. 프로모·결장은 링에 서지
   // 않은 주차라 열지 않는다.
   const showNight = week.kind === "ple" || week.kind === "special" || week.kind === "weekly_show";
+  // 링에 서지 않은 주차에도 남는 것이 있다 — 프로모의 성패와 그 주의 성장 (§3-D79).
+  const hasDelta =
+    Object.values(week.statDelta ?? {}).some((v) => v !== 0) ||
+    (week.wearDelta ?? 0) > 0 ||
+    (week.promoHit !== null && week.promoHit !== undefined);
   return (
     <div className="border-b border-stone-200/40 dark:border-stone-800/60">
       <div className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr]">
@@ -1413,6 +1427,19 @@ function WeekRow({
               그날의 리포트<span className="ml-1">{open ? "▾" : "▸"}</span>
             </button>
           )}
+          {/* 프로모·결장 주차에는 리포트가 없어 펼칠 자리도 없었다 — 남긴 것이
+              있으면 그 주차도 연다. */}
+          {!showNight && hasDelta && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={open}
+              className="mt-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              그 주가 남긴 것<span className="ml-1">{open ? "▾" : "▸"}</span>
+            </button>
+          )}
+          {open && hasDelta && <WeekDelta week={week} />}
           {open && week.beats && <BeatList beats={week.beats} player={player} />}
           {open && report && (
             <ShowCard
@@ -1893,6 +1920,44 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
 }
 
 /** FM의 속성 격자. 값이 아니라 **관계**가 읽혀야 해서 라벨과 숫자를 붙여 둔다. */
+/**
+ * 그 주가 남긴 것 — 스탯 변화·마모·프로모 성패 (§3-D79).
+ *
+ * **접어 둔다.** 30년이면 1560줄이라 매 줄에 펼쳐 두면 일정 탭이 숫자밭이 된다.
+ * 로그가 "이겼다"만 말하고 그 승리가 무엇을 남겼는지는 프로필의 숫자가 조용히
+ * 올라갈 뿐이었는데, 그 연결을 여기서 잇는다.
+ */
+function WeekDelta({ week }: { week: CareerWeek }) {
+  const moves = Object.entries(week.statDelta ?? {}).filter(([, v]) => v !== 0);
+  const wear = week.wearDelta ?? 0;
+  return (
+    <p className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-xs">
+      {moves.map(([key, value]) => (
+        <span key={key}>
+          <span className="text-muted-foreground">{STAT_LABELS[key] ?? key} </span>
+          <span
+            className={cn("tabular-nums", value > 0 ? "text-brand-link" : "text-muted-foreground")}
+          >
+            {value > 0 ? `+${value}` : value}
+          </span>
+        </span>
+      ))}
+      {wear > 0 && (
+        <span>
+          <span className="text-muted-foreground">마모 </span>
+          <span className="tabular-nums text-muted-foreground">+{wear}</span>
+        </span>
+      )}
+      {/* 경기 없는 주차의 유일한 성패다 (§3-D41) — 마이크웍이 그 결과를 정한다. */}
+      {week.promoHit !== null && week.promoHit !== undefined && (
+        <span className={week.promoHit ? "text-brand-link" : "text-muted-foreground"}>
+          {week.promoHit ? "프로모가 먹혔다" : "프로모가 겉돌았다"}
+        </span>
+      )}
+    </p>
+  );
+}
+
 function StatGrid({ stats }: { stats: CareerStats }) {
   return (
     <div className="space-y-4">
