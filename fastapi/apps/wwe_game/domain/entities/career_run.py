@@ -22,6 +22,7 @@ from wwe_game.domain.value_objects.contract import (
     Contract,
 )
 from wwe_game.domain.value_objects.game_mode import GameMode
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title
 from wwe_game.domain.value_objects.wrestler_identity import WrestlerIdentity
@@ -206,6 +207,11 @@ class CareerRun:
     방출은 이 값을 지우는 사건이지 커리어를 닫는 사건이 아니다.
     """
     unsigned_weeks: int = 0
+    goal: QuarterGoal | None = None
+    """지금 분기에 건 것 (§3-D80). `None`이면 아직 안 골랐다 — 진행이 막힌다."""
+    goal_quarter: int = -1
+    """그 목표를 고른 분기 번호. **지난 목표는 남기지 않는다** — 그 분기에 무슨 일이
+    있었는지는 뉴스가 이미 말한다."""
     """계약 없이 보낸 연속 주차 (§3-D50). 계약을 맺으면 0으로 돌아간다.
 
     `release_weeks`와 다른 값이다 — 저쪽은 **잘리기까지** 남은 인내를 세고, 이쪽은
@@ -366,6 +372,11 @@ def start_run(
         mode=mode,
         seed=seed,
         user_id=user_id,
+        # **첫 분기는 그냥 뛴다** (§3-D80). 데뷔 첫날 커리어 목표를 세우는 선수는
+        # 없고, 게임 쪽으로도 아무것도 모르는 채 고르라고 하면 그건 선택이 아니라
+        # 제비뽑기다. 석 달을 살아 본 뒤 13주차에 처음 묻는다.
+        goal=QuarterGoal.DRIFT,
+        goal_quarter=0,
         contract=Contract(
             weekly_pay=DEBUT_WEEKLY_PAY,
             signed_week=0,

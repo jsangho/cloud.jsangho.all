@@ -131,6 +131,9 @@ class CareerRunModel(Base):
     contract_signed_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     contract_ends_week: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unsigned_weeks: Mapped[int] = mapped_column(Integer, default=0)
+    goal: Mapped[str | None] = mapped_column(String(16), nullable=True, default=None)
+    """이번 분기에 건 것 (§3-D80). 옛 세이브는 `NULL`이라 처음 이어 갈 때 묻는다."""
+    goal_quarter: Mapped[int] = mapped_column(Integer, default=-1)
     """계약 없이 보낸 연속 주차 (§3-D50). 여기가 차면 `EndReason.FADED`다."""
     """계약 한 장을 세 칼럼으로 편다. **셋은 함께 있거나 함께 없다** — 무소속이 None이다.
 

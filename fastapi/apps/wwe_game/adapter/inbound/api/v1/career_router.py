@@ -18,6 +18,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     AdvanceRequest,
     AdvanceResponse,
     ChoiceRequest,
+    GoalRequest,
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestChoiceRequest,
@@ -51,6 +52,7 @@ from wwe_game.app.dtos.career_dto import (
     GuestReportCommand,
     GuestResumeCommand,
     GuestStartCommand,
+    SetGoalCommand,
     StartRunCommand,
 )
 from wwe_game.app.ports.input.career_use_case import (
@@ -238,6 +240,24 @@ async def choose(
         run_id=run_id, user_id=_user_id(claims), choice_code=body.choice
     )
     return to_advance(await _guard(lambda: use_case.choose(command)))
+
+
+@career_router.post("/runs/{run_id}/goal", response_model=AdvanceResponse)
+async def set_goal(
+    run_id: int,
+    body: GoalRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """이번 분기에 걸 것을 정한다 (§3-D80).
+
+    **`choices`와 따로 둔다.** 이벤트 응답과 목표 선언은 성격이 반대라(반응 대 선언)
+    한 엔드포인트로 합치면 그 구분이 URL에서 사라진다.
+    """
+    command = SetGoalCommand(
+        run_id=run_id, user_id=_user_id(claims), goal_code=body.goal
+    )
+    return to_advance(await _guard(lambda: use_case.set_goal(command)))
 
 
 @career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)

@@ -31,6 +31,7 @@ from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.contract import Contract
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.match_kind import MatchKind
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
@@ -125,6 +126,8 @@ class CareerMapper:
             money=row.money or 0,
             contract=_contract_from_row(row),
             unsigned_weeks=row.unsigned_weeks or 0,
+            goal=QuarterGoal(row.goal) if row.goal else None,
+            goal_quarter=row.goal_quarter if row.goal_quarter is not None else -1,
         )
 
     @staticmethod
@@ -175,6 +178,8 @@ class CareerMapper:
         row.contract_signed_week = contract.signed_week if contract else None
         row.contract_ends_week = contract.ends_week if contract else None
         row.unsigned_weeks = run.unsigned_weeks
+        row.goal = run.goal.value if run.goal else None
+        row.goal_quarter = run.goal_quarter
 
     @staticmethod
     def log_row(run_id: int, view: WeekReportView) -> CareerLogEntryModel:

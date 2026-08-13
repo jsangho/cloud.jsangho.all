@@ -69,6 +69,16 @@ class ChooseCommand:
 
 
 @dataclass(frozen=True)
+class SetGoalCommand:
+    """이번 분기에 걸 것을 정한다 (§3-D80). `ChooseCommand`와 따로 둔다 —
+    이벤트 응답과 목표 선언은 성격이 반대라 한 명령으로 합치면 그 구분이 사라진다."""
+
+    run_id: int
+    user_id: int
+    goal_code: str
+
+
+@dataclass(frozen=True)
 class GuestStartCommand:
     """체험판 시작. `user_id`가 없다 — 저장은 브라우저가 한다(§3-D8)."""
 

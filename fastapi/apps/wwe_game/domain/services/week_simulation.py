@@ -41,6 +41,7 @@ from wwe_game.domain.services import (
     championship,
     elimination,
     event_draw,
+    quarter_plan,
     rivalry_engine,
     seeded_roll,
     team_engine,
@@ -214,6 +215,8 @@ def injury_chance(run: CareerRun, kind: WeekKind, *, major: bool = False) -> flo
         chance *= rules.INJURY_PLE_MULTIPLIER
         if major:
             chance *= rules.MAJOR_INJURY_MULTIPLIER
+    # 이번 분기에 건 것 (§3-D80) — 벨트를 노리면 더 다치고 몸을 만들면 덜 다친다.
+    chance *= quarter_plan.plan_of(run).injury
     return min(1.0, chance)
 
 
@@ -267,7 +270,10 @@ def simulate_week(run: CareerRun) -> WeekReport:
             week=week,
             kind=kind,
             stat_delta=_decay_only(run, week),
-            wear_delta=-rules.WEAR_RECOVERY_PER_OFF_WEEK,
+            wear_delta=-round(
+                rules.WEAR_RECOVERY_PER_OFF_WEEK
+                * quarter_plan.plan_of(run).wear_recovery
+            ),
             draft_night=draft_night,
             pay=pay,
         )
@@ -676,9 +682,20 @@ def _draw_title_match(
             rung=rung,
             proven=candidate in run.titles_won,
         )
+        chance *= quarter_plan.plan_of(run).title_shot
         if roll.chance(chance):
             return candidate, None
     return None, None
+
+
+def promo_hit_chance_of(run: CareerRun) -> float:
+    """그 선수의 프로모 성공률 — **분기 목표를 함께 본다** (§3-D80).
+
+    `promo_hit_chance`는 마이크웍만 받는 순수 함수로 남긴다. 목표는 상태이지
+    스탯이 아니라, 섞으면 "마이크웍 얼마면 몇 %"를 더는 말할 수 없다.
+    """
+    base = promo_hit_chance(run.stats.mic_work)
+    return min(1.0, base * quarter_plan.plan_of(run).promo)
 
 
 def promo_hit_chance(mic_work: int) -> float:
@@ -694,7 +711,7 @@ def _promo_gain(run: CareerRun, week: int) -> tuple[dict[str, int], bool]:
     """
     roll = SeededRoll(run.seed, week, seeded_roll.GROWTH)
     delta: dict[str, int] = {}
-    hit = roll.chance(promo_hit_chance(run.stats.mic_work))
+    hit = roll.chance(promo_hit_chance_of(run))
     headroom = _headroom(run.stats.mic_work)
     if roll.chance(min(1.0, rules.PROMO_MIC_GAIN_CHANCE * headroom)):
         delta["mic_work"] = 1
@@ -822,7 +839,25 @@ def _growth(run: CareerRun, week: int, result: OutcomeKind) -> dict[str, int]:
     if roll.chance(backstage_chance):
         delta["backstage"] = delta.get("backstage", 0) + 1
 
-    return delta
+    return _by_goal(run, delta)
+
+
+def _by_goal(run: CareerRun, delta: dict[str, int]) -> dict[str, int]:
+    """분기 목표가 성장분을 키우거나 줄인다 (§3-D80).
+
+    **오른 것에만 곱한다.** 내려간 값에 배수를 걸면 "대립을 키운다"가 인기도 하락을
+    1.35배로 만든다 — 목표는 미는 방향이지 흔드는 방향이 아니다.
+
+    **0으로 죽지 않게 올림한다.** 1점이 오를 자리에 0.75를 곱하면 그냥 사라지는데,
+    그러면 "돈을 번다"가 성장을 늦추는 게 아니라 없앤다.
+    """
+    out: dict[str, int] = {}
+    for stat, value in delta.items():
+        factor = quarter_plan.growth_factor(run, stat)
+        out[stat] = (
+            max(1, round(value * factor)) if value > 0 and factor != 1.0 else value
+        )
+    return out
 
 
 def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
@@ -852,6 +887,8 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
             moved = championship.strip(run, report.title_at_stake)
             lost_tag = TITLES[report.title_at_stake].tier is TitleTier.TAG
 
+    # 분기 목표가 히트를 키운다 (§3-D80). 식은 그대로 두고 결과에만 곱한다.
+    heat_factor = quarter_plan.plan_of(run).heat
     heat_gain = {
         WeekKind.PLE: rivalry_engine.HEAT_PER_PLE,
         WeekKind.SPECIAL: rivalry_engine.HEAT_PER_MATCH,
@@ -863,6 +900,9 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         ),
         WeekKind.OFF: -rivalry_engine.COOL_PER_QUIET_WEEK,
     }[report.kind]
+    # 식히는 쪽은 안 건드린다 — 목표는 "키운다"이지 "안 식는다"가 아니다.
+    if heat_gain > 0:
+        heat_gain = round(heat_gain * heat_factor)
     # 저주는 경기 하나를 먹고 사라진다 — 경기 없는 주차는 그냥 지나간다.
     flags = moved.flags - {CURSED} if report.cursed else moved.flags
 

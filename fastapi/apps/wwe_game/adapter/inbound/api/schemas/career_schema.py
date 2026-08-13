@@ -29,12 +29,13 @@ from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import contract_office, match_rating
+from wwe_game.domain.services import contract_office, match_rating, quarter_plan
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.body_part import PARTS, BodyPart
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.title import (
     GRAND_SLAM_GROUPS,
     TITLES,
@@ -291,6 +292,19 @@ class TrophySchema(_Camel):
     week: int
 
 
+class GoalRequest(_Camel):
+    goal: str
+
+
+class GoalOptionSchema(_Camel):
+    """고를 수 있는 목표 하나 (§3-D80). 잔액이 모자란 것은 아예 오지 않는다."""
+
+    code: str
+    label: str
+    blurb: str
+    cost: int
+
+
 class RunSchema(_Camel):
     id: int | None
     name: str
@@ -321,6 +335,11 @@ class RunSchema(_Camel):
     """지금 붙어 있는 상태 표식의 **이름** (`PLAYER_FLAGS`). 신호는 빠진다."""
     grand_slam: GrandSlamSchema | None = None
     """그랜드슬램 진행도 (§3-D73)."""
+    goal: str | None = None
+    """이번 분기에 건 것 (§3-D80). 안 걸었으면 `None`이다."""
+    goal_options: list[GoalOptionSchema] = Field(default_factory=list)
+    """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
+    NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
     disclaimer: str = Field(
         default="이 게임의 전개는 가상입니다.",
         description="로그 화면 하단에 상시 노출한다 (§3-D13).",
@@ -724,6 +743,20 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             ],
             money=to_money(run),
             grand_slam=to_grand_slam(run),
+            goal=quarter_plan.plan_of(run).goal.value
+            if run.goal and quarter_plan.plan_of(run).goal is not QuarterGoal.DRIFT
+            else (run.goal.value if run.goal else None),
+            goal_options=[
+                GoalOptionSchema(
+                    code=spec.goal.value,
+                    label=spec.label,
+                    blurb=spec.blurb,
+                    cost=spec.cost,
+                )
+                for spec in (
+                    quarter_plan.options(run) if quarter_plan.needs_goal(run) else ()
+                )
+            ],
             injured_parts=[
                 PARTS[BodyPart(code)].label
                 for code in sorted(run.injured_parts)

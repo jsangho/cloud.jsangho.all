@@ -148,6 +148,8 @@ class TestDtosCarryNoInternals:
             "ple",
             "ended",
             "recovered",
+            # 분기 목표를 기다린다 (§3-D80) — 이벤트와 나란한 두 번째 멈춤이다.
+            "goal",
             "tick",
             "max_weeks",
             "ready",

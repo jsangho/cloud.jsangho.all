@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import career_end
+from wwe_game.domain.services import career_end, quarter_plan
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.contract import WEEKS_PER_YEAR, Contract
 from wwe_game.domain.value_objects.title import (
@@ -171,6 +171,9 @@ def appraise(run: CareerRun) -> int:
         * standing
         * _body_factor(run)
         * brand
+        # 이번 분기에 "돈을 번다"를 걸었으면 협상력이 오른다 (§3-D80). 링 밖의
+        # 일이라 이름값은 덜 오르고(성장 배수 0.75) 대신 값이 붙는다.
+        * quarter_plan.plan_of(run).pay
     )
     return max(1, round(pay))
 

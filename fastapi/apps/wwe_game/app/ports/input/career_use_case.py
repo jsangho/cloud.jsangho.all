@@ -25,6 +25,7 @@ from wwe_game.app.dtos.career_dto import (
     ModeView,
     NewsFeedPage,
     PresetView,
+    SetGoalCommand,
     StartRunCommand,
 )
 from wwe_game.domain.services.show_report import ShowReport
@@ -88,6 +89,11 @@ class CareerUseCase(ABC):
     @abstractmethod
     async def choose(self, command: ChooseCommand) -> AdvanceResult:
         """대기 이벤트에 답한다. 없으면 `NoPendingEventError`."""
+
+    @abstractmethod
+    async def set_goal(self, command: SetGoalCommand) -> AdvanceResult:
+        """이번 분기에 걸 것을 정한다 (§3-D80). 진행시키지는 않는다."""
+        ...
 
     @abstractmethod
     async def read_log(

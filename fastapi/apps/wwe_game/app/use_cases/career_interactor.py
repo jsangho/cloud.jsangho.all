@@ -34,6 +34,7 @@ from wwe_game.app.dtos.career_dto import (
     NewsFeedPage,
     PendingEventView,
     PresetView,
+    SetGoalCommand,
     StartRunCommand,
     WeekReportView,
 )
@@ -52,11 +53,13 @@ from wwe_game.domain.constants.character_presets import PRESETS
 from wwe_game.domain.constants.countries import country_of
 from wwe_game.domain.constants.event_deck import BY_CODE
 from wwe_game.domain.entities.career_run import CareerRun, EndReason, start_run
+from wwe_game.domain.exceptions import InvalidChoiceError
 from wwe_game.domain.services import (
     career_advance,
     career_end,
     event_draw,
     news_feed,
+    quarter_plan,
     rivalry_scene,
     roster_scene,
     show_report,
@@ -71,6 +74,7 @@ from wwe_game.domain.services.title_news import TitleNews
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.week_report import WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 
@@ -133,6 +137,17 @@ class CareerInteractor(CareerUseCase):
         run = await self._repository.get(command.run_id, command.user_id)
         resolved = self._resolve(run, command.choice_code)
         saved = await self._repository.save(resolved)
+        return self._view(saved, self._resting_reason(saved))
+
+    async def set_goal(self, command: SetGoalCommand) -> AdvanceResult:
+        """분기 목표를 걸고 그 자리에서 멈춘 채 돌려준다 (§3-D80).
+
+        **진행시키지 않는다.** 고른 것을 화면이 먼저 보여 주고, 다음 '다음'부터
+        그 배수로 흘러가는 편이 "내가 이걸 걸었다"를 읽게 한다.
+        """
+        run = await self._repository.get(command.run_id, command.user_id)
+        goal = _goal_of(command.goal_code)
+        saved = await self._repository.save(quarter_plan.choose(run, goal))
         return self._view(saved, self._resting_reason(saved))
 
     async def read_log(
@@ -458,4 +473,15 @@ class CareerInteractor(CareerUseCase):
         """진행하지 않은 응답의 상태값. 끝났는지 · 막혔는지 · 그냥 서 있는지."""
         if not run.is_active:
             return StopReason.ENDED
-        return StopReason.EVENT if run.is_blocked else StopReason.READY
+        if run.is_blocked:
+            return StopReason.EVENT
+        # 목표를 아직 안 걸었으면 화면이 그 사실을 알아야 한다 (§3-D80).
+        return StopReason.GOAL if quarter_plan.needs_goal(run) else StopReason.READY
+
+
+def _goal_of(code: str) -> QuarterGoal:
+    """코드 → 목표. 모르는 코드는 400이 되도록 도메인 예외로 바꾼다."""
+    try:
+        return QuarterGoal(code)
+    except ValueError as exc:
+        raise InvalidChoiceError(f"선택할 수 없는 목표입니다: {code}") from exc
