@@ -31,6 +31,7 @@ import {
   type CareerBeat,
   type CareerCardMatch,
   type CareerPreset,
+  type CareerChampion,
   type CareerGrandSlam,
   type CareerRunView,
   type CareerMoney,
@@ -1364,12 +1365,20 @@ export default function CareerPage() {
           )}
 
           {tab === "belts" && (
-            <section className="space-y-4">
+            <section className="space-y-5">
               {view.grandSlam && <GrandSlamPanel slam={view.grandSlam} />}
-              {view.titlesWon.length === 0 ? (
-                <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
-              ) : (
-                <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+              <div>
+                <p className="font-sport text-sm">내가 감은 벨트</p>
+                <div className="mt-2">
+                  {view.titlesWon.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
+                  ) : (
+                    <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+                  )}
+                </div>
+              </div>
+              {(view.champions?.length ?? 0) > 0 && (
+                <ChampionScene champions={view.champions ?? []} />
               )}
             </section>
           )}
@@ -1999,6 +2008,46 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
 }
 
 /** FM의 속성 격자. 값이 아니라 **관계**가 읽혀야 해서 라벨과 숫자를 붙여 둔다. */
+/**
+ * **지금 이 세계선의 챔피언들** (2026-08-13 사용자 요청).
+ *
+ * §3-D38이 "벨트는 늘 누군가의 것이다"를 잠갔고 §3-D65가 그 교체를 인박스로
+ * 흘렸는데, **한자리에 모아 보는 화면은 없었다** — 지금 이 세계에서 누가 무엇을
+ * 들고 있는지가 커리어 밖 세계의 상태 전부인데도.
+ *
+ * 내 벨트를 골드로 짚는다. 계보는 플레이어가 없는 세계를 그리므로, 겹쳐 주지
+ * 않으면 내가 챔피언인데 목록에는 남이 적힌다.
+ */
+function ChampionScene({ champions }: { champions: CareerChampion[] }) {
+  return (
+    <div>
+      <p className="font-sport text-sm">
+        지금 세계의 챔피언
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          {champions.length}개 벨트
+        </span>
+      </p>
+      <div className="mt-2 divide-y divide-stone-300/40 dark:divide-stone-700/40">
+        {champions.map((c) => (
+          <div key={c.title} className="flex items-baseline gap-3 py-1.5">
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-xs",
+                c.mine ? "text-brand-link" : "text-muted-foreground",
+              )}
+            >
+              {c.title}
+            </span>
+            <span className={cn("text-sm", c.mine && "font-semibold text-brand-link")}>
+              {c.holder}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * **최종 결산** (2026-08-13 사용자 요청).
  *

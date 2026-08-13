@@ -258,3 +258,32 @@ def is_reportable(run: CareerRun, week: int) -> bool:
     0주차는 아직 아무것도 없었던 자리라 연다고 할 것이 없다.
     """
     return week > 0
+
+
+def world_champions(run: CareerRun) -> tuple[TitleHolder, ...]:
+    """**지금 이 세계선의 모든 벨트와 그 주인** (2026-08-13 사용자 요청).
+
+    `_champions`는 그 밤의 리포트용이라 **내 브랜드·내 성별만** 뽑는다 — 그 밤의
+    카드에 설 사람들이기 때문이다. 이쪽은 반대로 열여덟 벨트를 전부 본다: 내가 못
+    보는 브랜드에서 누가 벨트를 들고 있는지가 "세계가 돌고 있다"의 증거다(§3-D38).
+
+    **내가 든 벨트는 내 이름으로 덮는다** — `_champions`와 같은 이유다.
+    """
+    player = str(run.identity.name)
+    holders: list[TitleHolder] = []
+    for title in sorted(TITLES, key=lambda t: t.value):
+        mine = title in run.titles_held
+        holder = (
+            player
+            if mine
+            else title_scene.holder_label(
+                title_scene.champion_at(run.seed, run.week, title, exclude=player) or "",
+                run.seed,
+            )
+        )
+        if holder is None:
+            continue
+        holders.append(
+            TitleHolder(title=TITLES[title].display_name, holder=holder, mine=mine)
+        )
+    return tuple(holders)

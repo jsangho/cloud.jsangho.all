@@ -29,7 +29,12 @@ from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import contract_office, match_rating, quarter_plan
+from wwe_game.domain.services import (
+    contract_office,
+    match_rating,
+    quarter_plan,
+    show_report,
+)
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.body_part import PARTS, BodyPart
@@ -342,6 +347,13 @@ class RunSchema(_Camel):
     """그랜드슬램 진행도 (§3-D73)."""
     goal: str | None = None
     """이번 분기에 건 것 (§3-D80). 안 걸었으면 `None`이다."""
+    champions: list[TitleHolderSchema] = Field(default_factory=list)
+    """**지금 이 세계선의 열여덟 벨트와 그 주인** (2026-08-13 사용자 요청).
+
+    리포트의 `champions`는 그 밤의 카드에 설 사람들(내 브랜드·내 성별)이고, 이쪽은
+    세계 전체다 — 내가 못 보는 브랜드의 벨트도 주인이 바뀌고 있다는 것이 §3-D38의
+    전부이고, 그게 화면에 한 번도 안 나왔다.
+    """
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
     NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
@@ -751,6 +763,10 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             goal=quarter_plan.plan_of(run).goal.value
             if run.goal and quarter_plan.plan_of(run).goal is not QuarterGoal.DRIFT
             else (run.goal.value if run.goal else None),
+            champions=[
+                TitleHolderSchema(title=c.title, holder=c.holder, mine=c.mine)
+                for c in show_report.world_champions(run)
+            ],
             goal_options=[
                 GoalOptionSchema(
                     code=spec.goal.value,

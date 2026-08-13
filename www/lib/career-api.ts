@@ -161,6 +161,13 @@ export type CareerRunView = {
   trophies?: CareerTrophy[];
   /** 지금 붙어 있는 상태 표식의 이름. 규칙이 읽는 신호는 오지 않는다. */
   flags?: string[];
+  /**
+   * **지금 이 세계선의 열여덟 벨트와 그 주인.**
+   *
+   * 리포트의 `champions`는 그 밤의 카드에 설 사람들이고 이쪽은 세계 전체다 —
+   * 내가 못 보는 브랜드의 벨트도 주인이 바뀐다는 것이 §3-D38의 전부다.
+   */
+  champions?: CareerChampion[];
   /** 이번 분기에 건 것 (§3-D80). 안 걸었으면 `null`. */
   goal?: string | null;
   /**
@@ -195,6 +202,13 @@ export type CareerMoney = {
 };
 
 export type CareerTrophy = { code: string; week: number };
+
+export type CareerChampion = {
+  title: string;
+  holder: string;
+  /** 내가 감고 있는 벨트인지 — 화면이 내 줄을 짚는다. */
+  mine: boolean;
+};
 
 export type CareerGoalOption = {
   code: string;
