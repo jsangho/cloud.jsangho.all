@@ -301,6 +301,14 @@ class GoalRequest(_Camel):
     goal: str
 
 
+class ChampionGroupSchema(_Camel):
+    """한 브랜드(또는 통합)의 벨트들. 순서는 아래 `_CHAMPION_GROUPS`가 정한다."""
+
+    brand: str
+    label: str
+    champions: list[TitleHolderSchema] = Field(default_factory=list)
+
+
 class GuestGoalRequest(_Camel):
     state: GuestRunState
     goal: str
@@ -347,12 +355,15 @@ class RunSchema(_Camel):
     """그랜드슬램 진행도 (§3-D73)."""
     goal: str | None = None
     """이번 분기에 건 것 (§3-D80). 안 걸었으면 `None`이다."""
-    champions: list[TitleHolderSchema] = Field(default_factory=list)
-    """**지금 이 세계선의 열여덟 벨트와 그 주인** (2026-08-13 사용자 요청).
+    champions: list[ChampionGroupSchema] = Field(default_factory=list)
+    """**지금 이 세계선의 벨트와 그 주인 — 브랜드로 묶어서** (2026-08-13 사용자 요청).
 
     리포트의 `champions`는 그 밤의 카드에 설 사람들(내 브랜드·내 성별)이고, 이쪽은
     세계 전체다 — 내가 못 보는 브랜드의 벨트도 주인이 바뀌고 있다는 것이 §3-D38의
     전부이고, 그게 화면에 한 번도 안 나왔다.
+
+    **통합 벨트는 따로 선다.** 위민스 태그팀(§3-D72)과 남녀 스피드는 한 브랜드의
+    것이 아니라, RAW 줄에 끼워 넣으면 그 벨트가 무엇인지가 사라진다.
     """
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
@@ -732,6 +743,43 @@ def to_grand_slam(run: CareerRun) -> GrandSlamSchema:
     )
 
 
+_CHAMPION_GROUPS: Final[tuple[tuple[str, str], ...]] = (
+    ("raw", "RAW"),
+    ("smackdown", "스맥다운"),
+    ("nxt", "NXT"),
+    ("unified", "브랜드 통합"),
+)
+"""화면에 서는 순서와 이름. **통합이 마지막이다** — 브랜드 셋을 먼저 읽고 나서
+"그리고 이건 어디서나 걸린다"로 닫는 편이 목록이 덜 흔들린다."""
+
+
+def to_champion_groups(run: CareerRun) -> list[ChampionGroupSchema]:
+    """세계선의 챔피언을 브랜드로 묶는다 (§3-D83).
+
+    **브랜드가 둘 이상이면 통합이다.** 여성부 태그팀과 남녀 스피드가 그렇고
+    (§3-D72), 이유는 서로 다르지만 화면에서 서는 자리는 같다 — 한 브랜드의 것이
+    아니라는 사실이 그 벨트를 읽는 열쇠이기 때문이다.
+    """
+    buckets: dict[str, list[TitleHolderSchema]] = {
+        key: [] for key, _ in _CHAMPION_GROUPS
+    }
+    for champion in show_report.world_champions(run):
+        brands = TITLES[champion.title].brands
+        key = next(iter(brands)).value if len(brands) == 1 else "unified"
+        buckets[key].append(
+            TitleHolderSchema(
+                title=TITLES[champion.title].display_name,
+                holder=champion.holder,
+                mine=champion.mine,
+            )
+        )
+    return [
+        ChampionGroupSchema(brand=key, label=label, champions=buckets[key])
+        for key, label in _CHAMPION_GROUPS
+        if buckets[key]
+    ]
+
+
 def to_advance(result: AdvanceResult) -> AdvanceResponse:
     run = result.run
     return AdvanceResponse(
@@ -763,10 +811,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             goal=quarter_plan.plan_of(run).goal.value
             if run.goal and quarter_plan.plan_of(run).goal is not QuarterGoal.DRIFT
             else (run.goal.value if run.goal else None),
-            champions=[
-                TitleHolderSchema(title=c.title, holder=c.holder, mine=c.mine)
-                for c in show_report.world_champions(run)
-            ],
+            champions=to_champion_groups(run),
             goal_options=[
                 GoalOptionSchema(
                     code=spec.goal.value,

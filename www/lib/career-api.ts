@@ -167,7 +167,7 @@ export type CareerRunView = {
    * 리포트의 `champions`는 그 밤의 카드에 설 사람들이고 이쪽은 세계 전체다 —
    * 내가 못 보는 브랜드의 벨트도 주인이 바뀐다는 것이 §3-D38의 전부다.
    */
-  champions?: CareerChampion[];
+  champions?: CareerChampionGroup[];
   /** 이번 분기에 건 것 (§3-D80). 안 걸었으면 `null`. */
   goal?: string | null;
   /**
@@ -202,6 +202,13 @@ export type CareerMoney = {
 };
 
 export type CareerTrophy = { code: string; week: number };
+
+export type CareerChampionGroup = {
+  /** `raw` · `smackdown` · `nxt` · `unified`. 브랜드 로고를 집는 데 쓴다. */
+  brand: string;
+  label: string;
+  champions: CareerChampion[];
+};
 
 export type CareerChampion = {
   title: string;

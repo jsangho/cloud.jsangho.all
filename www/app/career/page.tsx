@@ -31,7 +31,7 @@ import {
   type CareerBeat,
   type CareerCardMatch,
   type CareerPreset,
-  type CareerChampion,
+  type CareerChampionGroup,
   type CareerGrandSlam,
   type CareerRunView,
   type CareerMoney,
@@ -1377,9 +1377,7 @@ export default function CareerPage() {
                   )}
                 </div>
               </div>
-              {(view.champions?.length ?? 0) > 0 && (
-                <ChampionScene champions={view.champions ?? []} />
-              )}
+              {(view.champions?.length ?? 0) > 0 && <ChampionScene groups={view.champions ?? []} />}
             </section>
           )}
 
@@ -2018,29 +2016,45 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
  * 내 벨트를 골드로 짚는다. 계보는 플레이어가 없는 세계를 그리므로, 겹쳐 주지
  * 않으면 내가 챔피언인데 목록에는 남이 적힌다.
  */
-function ChampionScene({ champions }: { champions: CareerChampion[] }) {
+function ChampionScene({ groups }: { groups: CareerChampionGroup[] }) {
+  const total = groups.reduce((sum, g) => sum + g.champions.length, 0);
   return (
     <div>
       <p className="font-sport text-sm">
         지금 세계의 챔피언
-        <span className="ml-2 text-xs font-normal text-muted-foreground">
-          {champions.length}개 벨트
-        </span>
+        <span className="ml-2 text-xs font-normal text-muted-foreground">{total}개 벨트</span>
       </p>
-      <div className="mt-2 divide-y divide-stone-300/40 dark:divide-stone-700/40">
-        {champions.map((c) => (
-          <div key={c.title} className="flex items-baseline gap-3 py-1.5">
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate text-xs",
-                c.mine ? "text-brand-link" : "text-muted-foreground",
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        {groups.map((group) => (
+          <div
+            key={group.brand}
+            className="rounded-[6px] bg-card p-3 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50"
+          >
+            {/* 브랜드는 로고로 (§3-D79) — 통합은 로고가 없으니 이름으로 선다. */}
+            <div className="flex items-center gap-2">
+              {group.brand === "unified" ? (
+                <span className="font-sport text-sm text-muted-foreground">{group.label}</span>
+              ) : (
+                <BrandLogo brand={group.brand} width={64} />
               )}
-            >
-              {c.title}
-            </span>
-            <span className={cn("text-sm", c.mine && "font-semibold text-brand-link")}>
-              {c.holder}
-            </span>
+            </div>
+            <div className="mt-2 divide-y divide-stone-300/40 dark:divide-stone-700/40">
+              {group.champions.map((c) => (
+                <div key={c.title} className="py-1.5">
+                  <p
+                    className={cn(
+                      "truncate text-xs",
+                      c.mine ? "text-brand-link" : "text-muted-foreground",
+                    )}
+                  >
+                    {c.title}
+                  </p>
+                  <p className={cn("text-sm", c.mine && "font-semibold text-brand-link")}>
+                    {c.holder}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

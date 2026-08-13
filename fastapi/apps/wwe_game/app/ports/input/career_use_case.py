@@ -152,11 +152,11 @@ class CareerUseCase(ABC):
     def choose_guest(self, command: GuestChooseCommand) -> AdvanceResult:
         """체험판의 이벤트 선택 판정. 대기 이벤트가 없으면 `NoPendingEventError`."""
 
-
     @abstractmethod
     def set_guest_goal(self, command: GuestSetGoalCommand) -> AdvanceResult:
         """체험판의 분기 목표 (§3-D80)."""
         ...
+
     @abstractmethod
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 — **배경 소식만** (§3-D67).

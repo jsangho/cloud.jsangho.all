@@ -260,7 +260,16 @@ def is_reportable(run: CareerRun, week: int) -> bool:
     return week > 0
 
 
-def world_champions(run: CareerRun) -> tuple[TitleHolder, ...]:
+@dataclass(frozen=True)
+class WorldChampion:
+    """세계선의 벨트 한 줄. **코드를 함께 든다** — 화면이 브랜드로 묶으려면 필요하다."""
+
+    title: Title
+    holder: str
+    mine: bool
+
+
+def world_champions(run: CareerRun) -> tuple[WorldChampion, ...]:
     """**지금 이 세계선의 모든 벨트와 그 주인** (2026-08-13 사용자 요청).
 
     `_champions`는 그 밤의 리포트용이라 **내 브랜드·내 성별만** 뽑는다 — 그 밤의
@@ -270,20 +279,19 @@ def world_champions(run: CareerRun) -> tuple[TitleHolder, ...]:
     **내가 든 벨트는 내 이름으로 덮는다** — `_champions`와 같은 이유다.
     """
     player = str(run.identity.name)
-    holders: list[TitleHolder] = []
+    holders: list[WorldChampion] = []
     for title in sorted(TITLES, key=lambda t: t.value):
         mine = title in run.titles_held
         holder = (
             player
             if mine
             else title_scene.holder_label(
-                title_scene.champion_at(run.seed, run.week, title, exclude=player) or "",
+                title_scene.champion_at(run.seed, run.week, title, exclude=player)
+                or "",
                 run.seed,
             )
         )
         if holder is None:
             continue
-        holders.append(
-            TitleHolder(title=TITLES[title].display_name, holder=holder, mine=mine)
-        )
+        holders.append(WorldChampion(title=title, holder=holder, mine=mine))
     return tuple(holders)
