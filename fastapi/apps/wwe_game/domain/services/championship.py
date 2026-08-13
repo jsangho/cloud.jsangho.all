@@ -94,6 +94,18 @@ CONTENTION_FLOOR = 0.18
 """
 
 
+LADDER_DECAY = 0.30
+"""사다리를 한 칸 내려갈 때마다 자리가 올 확률에 곱하는 값 (§3-D76).
+
+**아래를 보는 것과 아래가 보장되는 것은 다르다.** 감쇠 없이 네 칸을 전부 굴렸더니
+한 주차의 실효 확률이 네 배가 되어 커리어당 대관이 4.6에서 12.4로 튀었다 —
+정상권 선수가 매주 어느 벨트든 걸고 싸우는 그림이다.
+
+부커가 그 밤에 나를 떠올리는 순서라고 보면 된다: 1선에서 밀린 사람이 곧바로 2선
+자리를 받는 것이 아니라, 그럴 수도 있는 정도다.
+"""
+
+
 def contention_factor(popularity: int, required: int) -> float:
     """관문을 얼마나 넘어섰는가 → 자리가 올 확률의 배수 (`CONTENTION_FLOOR`~1.0)."""
     over = max(0, popularity - required)
@@ -110,6 +122,7 @@ def title_shot_chance(
     special: bool = False,
     standing: int = 100,
     required: int = 0,
+    rung: int = 0,
 ) -> float:
     """이번 무대에서 벨트가 걸릴 확률.
 
@@ -120,6 +133,7 @@ def title_shot_chance(
     """
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
     chance *= contention_factor(popularity, required)
+    chance *= LADDER_DECAY**rung
     if major:
         chance *= rules.MAJOR_SHOT_MULTIPLIER
     if special:
@@ -255,6 +269,26 @@ def target_title(run: CareerRun, roll: SeededRoll) -> Title | None:
         return chase
     tiers = eligible_titles(run)
     return tiers[0] if tiers else None
+
+
+def shot_ladder(run: CareerRun, target: Title) -> tuple[Title, ...]:
+    """자리를 찾아 내려갈 순서 — 노린 벨트부터, 그 아래로 (§3-D76).
+
+    **한 주차에 사다리를 한 칸만 보던 것을 전부 보게 했다.** 위에서 밀린 선수가
+    아래에서도 못 서는 것은 경쟁이 아니라 그냥 기회를 버리는 것이다.
+
+    `target`이 맨 앞이다 — 그랜드슬램 추격이 고른 벨트일 수 있고(§3-D20-3), 그때는
+    사다리 순서를 덮는 것이 그 규칙의 뜻이다.
+    """
+    # **태그는 내려가는 길에 없다** (§3-D76). 태그 타이틀전은 파트너가 함께 서는
+    # 다른 부킹이라, 싱글 자리에서 밀린 선수가 그 밤에 흘러들어 갈 자리가 아니다.
+    # 노린 벨트가 태그였다면 그건 그대로 선다 — 빠지는 것은 폴백뿐이다.
+    rest = tuple(
+        t
+        for t in eligible_titles(run)
+        if t is not target and TITLES[t].tier is not TitleTier.TAG
+    )
+    return (target, *rest)
 
 
 def title_win_chance(score: float, title: Title) -> float:

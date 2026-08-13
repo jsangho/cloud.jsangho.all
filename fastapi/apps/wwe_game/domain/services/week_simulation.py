@@ -661,17 +661,23 @@ def _draw_title_match(
     target = championship.target_title(run, roll)
     if target is None:
         return None, None
-    chance = championship.title_shot_chance(
-        run.stats.popularity,
-        on_tv=kind is WeekKind.WEEKLY_SHOW,
-        major=show is not None and show.is_major,
-        special=kind is WeekKind.SPECIAL,
-        standing=run.stats.backstage,
-        required=TITLES[target].popularity_required,
-    )
-    if not roll.chance(chance):
-        return None, None
-    return target, None
+    # **1선에서 밀리면 아래를 본다** (§3-D76). 예전에는 사다리 맨 위 하나만 굴리고
+    # 떨어지면 그 주차에 타이틀전이 아예 없었다 — 인기도 85짜리가 월드에서 밀렸다고
+    # 2선 자리까지 못 받는 것은 그림이 아니다. 정상권 선수가 월드 그림 밖일 때
+    # 인터컨티넨탈을 감는 것이 실제 모습이고, §3-D20-3이 이미 그 결을 잡아 뒀다.
+    for rung, candidate in enumerate(championship.shot_ladder(run, target)):
+        chance = championship.title_shot_chance(
+            run.stats.popularity,
+            on_tv=kind is WeekKind.WEEKLY_SHOW,
+            major=show is not None and show.is_major,
+            special=kind is WeekKind.SPECIAL,
+            standing=run.stats.backstage,
+            required=TITLES[candidate].popularity_required,
+            rung=rung,
+        )
+        if roll.chance(chance):
+            return candidate, None
+    return None, None
 
 
 def promo_hit_chance(mic_work: int) -> float:

@@ -262,3 +262,53 @@ class TestItActuallyHappensInACareer:
                         MatchKind.SPEED,
                         MatchKind.SUDDEN_DEATH,
                     )
+
+
+# ── 그랜드슬램의 네 칸 (§3-D76) ──────────────────────────────
+
+
+class TestTheTagBeltIsRequiredForTheSlam:
+    """**태그팀은 그랜드슬램 필수다** (2026-08-13 사용자 확인).
+
+    §3-D76에서 태그를 **폴백 사다리**에서 뺐다 — 싱글 자리에서 밀린 선수가 그 밤에
+    흘러들어 갈 자리가 아니라서다. 뺀 것은 그 경로뿐이고 **필수 조건은 그대로**인데,
+    둘을 헷갈리면 언젠가 "폴백에 없으니 그룹에서도 빼자"가 된다. 여기서 막는다.
+    """
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_the_tag_group_is_one_of_the_four(self, gender: Gender) -> None:
+        from wwe_game.domain.value_objects.title import GRAND_SLAM_GROUPS
+
+        names = [name for name, _ in GRAND_SLAM_GROUPS[gender]]
+        assert "태그팀" in names
+        assert len(names) == 4
+
+    @pytest.mark.parametrize("gender", list(Gender))
+    def test_without_a_tag_belt_there_is_no_slam(self, gender: Gender) -> None:
+        """나머지 셋을 다 감아도 태그가 비면 0이다 — 등급은 최솟값이 정한다."""
+        from wwe_game.domain.value_objects.title import (
+            GRAND_SLAM_GROUPS,
+            grand_slam_level,
+        )
+
+        groups = dict(GRAND_SLAM_GROUPS[gender])
+        without_tag = tuple(
+            next(iter(sorted(belts, key=lambda t: t.value)))
+            for name, belts in GRAND_SLAM_GROUPS[gender]
+            if name != "태그팀"
+        )
+        assert grand_slam_level(without_tag, gender) == 0
+        with_tag = (
+            *without_tag,
+            next(iter(sorted(groups["태그팀"], key=lambda t: t.value))),
+        )
+        assert grand_slam_level(with_tag, gender) == 1
+
+    def test_the_tag_belt_is_still_reachable(self) -> None:
+        """폴백에서 뺐다고 못 가는 벨트가 되면 그랜드슬램이 통째로 닫힌다."""
+        from wwe_game.domain.services.championship import eligible_titles
+
+        teamed = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=45)).evolve(
+            team=TEAM
+        )
+        assert any(TITLES[t].tier is TitleTier.TAG for t in eligible_titles(teamed))
