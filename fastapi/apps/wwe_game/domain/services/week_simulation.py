@@ -135,7 +135,7 @@ def week_kind_of(run: CareerRun) -> WeekKind:
             if roll.chance(rules.INDIE_MATCH_CHANCE)
             else WeekKind.PROMO
         )
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     if calendar.is_show_week(upcoming):
         # 특별 방송은 대회가 아니다 — 경기는 보장되지만 위상이 한 단계 아래다 (§3-D21-2).
         return (
@@ -152,22 +152,21 @@ def week_kind_of(run: CareerRun) -> WeekKind:
 
 
 def tournament_round_at(run: CareerRun, week: int) -> int:
-    """그 주차가 킹 앤 퀸 오브 더 링의 몇 회전인지. 0이면 토너먼트 주차가 아니다.
+    """그 주차가 그 해 토너먼트의 몇 회전인지. 0이면 토너먼트 주차가 아니다.
 
     **결승은 대회 밤이고 예선은 그 앞 두 주다** (§3-D33) — 한 주에 안 끝나는 유일한
     형식이라, 어느 주차가 몇 회전인지를 달력에서 되짚는다. 상태(`tournament_round`)는
     "이겨서 올라왔는가"만 들고 있고 일정은 여기가 안다.
+
+    **결승이 서는 달은 해마다 바뀐다** (§3-D71) — 그래서 선언이 아니라 그 해의
+    달력에게 묻는다(`week_of`).
 
     **NXT에는 이 대회가 없다.** 육성 브랜드 달력에 없는 이름이라 자동으로 0이 된다.
     **무소속에도 없다** — 단체의 대회다 (§3-D50).
     """
     if not run.is_signed:
         return 0
-    calendar = calendar_for(run.brand)
-    final = next(
-        (s.week_of_year for s in calendar.shows if s.name == NIGHT_OF_CHAMPIONS),
-        None,
-    )
+    final = calendar_for(run.brand, run.seed).week_of(NIGHT_OF_CHAMPIONS, week)
     if final is None:
         return 0
     offset = final - (week - 1) % WEEKS_PER_YEAR - 1
@@ -185,7 +184,7 @@ def is_ple_stop_week(run: CareerRun) -> bool:
     if run.mode.weeks_per_tick > rules.PLE_STOP_MAX_TICK_WEEKS:
         return False
     upcoming = run.week + 1
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     if week_kind_of(run) is not WeekKind.PLE:
         return False
     return calendar.show_for(upcoming).is_major
@@ -279,7 +278,11 @@ def simulate_week(run: CareerRun) -> WeekReport:
             pay=pay,
         )
 
-    show = calendar_for(run.brand).show_for(week) if kind is WeekKind.PLE else None
+    show = (
+        calendar_for(run.brand, run.seed).show_for(week)
+        if kind is WeekKind.PLE
+        else None
+    )
     match_roll = SeededRoll(run.seed, week, seeded_roll.MATCH)
     score = performance_score(run.stats, run.condition, run.age)
 
@@ -482,9 +485,12 @@ def _opponent_for(run: CareerRun, week: int, title: Title | None) -> str | None:
     )
 
 
-def _is_show(brand: Brand, week: int, name: str) -> bool:
-    """그 주차가 이 브랜드의 `name` 대회 주차인지. NXT 달력에는 없는 이름이면 늘 거짓."""
-    calendar = calendar_for(brand)
+def _is_show(brand: Brand, week: int, name: str, seed: int) -> bool:
+    """그 주차가 이 브랜드의 `name` 대회 주차인지. NXT 달력에는 없는 이름이면 늘 거짓.
+
+    **시드를 받는다** — 달력이 해마다 다시 뽑히므로 판마다 답이 다르다 (§3-D71).
+    """
+    calendar = calendar_for(brand, seed)
     return calendar.is_show_week(week) and calendar.show_for(week).name == name
 
 
@@ -514,7 +520,7 @@ def _spoils(
         # 이미 들고 있었다면 시계가 새로 간다 — 새 계약이다.
         briefcase_week = report.week
 
-    if _is_show(run.brand, report.week, WRESTLEMANIA):
+    if _is_show(run.brand, report.week, WRESTLEMANIA, run.seed):
         # **달력으로 지운다, 리포트로 지우지 않는다.** 그 주에 부상으로 결장하면
         # `report.show`가 비어 도전권이 이듬해로 넘어간다 — 그 해 레슬매니아에서
         # 쓰는 것이 도전권이고(2026-08-11 사용자 확인), 못 쓴 것은 사라진다.

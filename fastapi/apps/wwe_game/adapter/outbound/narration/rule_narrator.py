@@ -170,8 +170,15 @@ def _bank_for(run: CareerRun, stage: Region, show: PleShow | None) -> tuple[str,
     return VENUES[stage]
 
 
-def stage_region(home: Region, roll: SeededRoll) -> Region:
-    """이번 주 무대의 권역. 평소 북미, 가끔 해외, 그중 얼마간은 선수의 고향."""
+def stage_region(home: Region, roll: SeededRoll, tour: Region | None = None) -> Region:
+    """이번 주 무대의 권역. 평소 북미, 가끔 해외, 그중 얼마간은 선수의 고향.
+
+    **투어가 머무는 주차는 굴리지 않는다** (§3-D71). 클래시 앞뒤 한 주가 그렇다 —
+    바다 건너가 대회 하나만 열고 다음 주에 돌아오는 그림을 막는 것이 이 예외의
+    목적이라, 확률로 두면 그 목적이 사라진다.
+    """
+    if tour is not None:
+        return tour
     if not roll.chance(TOUR_CHANCE):
         return HOME_REGION
     if home is not HOME_REGION and roll.chance(HOMECOMING_SHARE):
@@ -252,13 +259,13 @@ class RuleNarrator(NarrationPort):
         한쪽만 바뀌는 일이 없다.
         """
         roll = SeededRoll(run.seed, week, seeded_roll.NARRATION)
-        calendar = calendar_for(run.brand)
+        calendar = calendar_for(run.brand, run.seed)
         show = calendar.show_for(week) if calendar.is_show_week(week) else None
-        return self._stage(run, roll, show)[1]
+        return self._stage(run, roll, week, show)[1]
 
     @staticmethod
     def _stage(
-        run: CareerRun, roll: SeededRoll, show: PleShow | None = None
+        run: CareerRun, roll: SeededRoll, week: int, show: PleShow | None = None
     ) -> tuple[Region, str]:
         """이번 주 무대의 (권역, 경기장). **굴림 순서가 여기서 정해진다.**
 
@@ -269,14 +276,22 @@ class RuleNarrator(NarrationPort):
         뒤가 같아지지는 않는다**: `randrange`는 후보 수에 따라 소비하는 비트가 달라서,
         18개 뱅크와 8개 뱅크에서 뽑으면 그 뒤 슬롯부터 수열이 갈린다(테스트가 잡았다).
         무소속 구간의 문장이 통째로 달라지는 것은 그래서이고, 그 자체는 문제가 아니다.
+
+        **투어가 머무는 주차면 권역이 먼저 정해진다** (§3-D71) — 클래시 앞뒤 한 주다.
+        무소속은 단체의 투어를 따라가지 않는다(§3-D50).
         """
-        stage = stage_region(run.identity.region, roll)
+        tour = (
+            calendar_for(run.brand, run.seed).tour_region(week)
+            if run.contract is not None
+            else None
+        )
+        stage = stage_region(run.identity.region, roll, tour)
         return stage, roll.pick(_bank_for(run, stage, show))
 
     def _slots(
         self, run: CareerRun, report: WeekReport, roll: SeededRoll
     ) -> dict[str, str | None]:
-        stage, venue = self._stage(run, roll, report.show)
+        stage, venue = self._stage(run, roll, report.week, report.show)
         rival = rivalry_engine.top_rivalry(run)
         title = report.title_at_stake
         return {

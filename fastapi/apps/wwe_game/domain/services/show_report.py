@@ -130,7 +130,7 @@ def build_night(
     내가 도전한 벨트. 카드가 그 둘을 다시 쓰지 않게 하려고 받는다(§3-D52). 없으면 카드가
     조금 어긋날 뿐 리포트는 선다.
     """
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     # **주간 방송에는 대회 이름이 없다** — 브랜드가 그 밤의 이름이다 (§3-D60).
     show = calendar.show_for(week) if calendar.is_show_week(week) else None
     player = str(run.identity.name)

@@ -30,7 +30,10 @@ from wwe_game.domain.value_objects.week_report import CallUpReason, WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
-FIRST_SHOW_WEEK = min(s.week_of_year for s in calendar_for(Brand.RAW).shows)
+SEED = 42
+"""`make_run`의 기본 시드. **달력이 시드를 타므로**(§3-D71) 같은 값을 써야 한다."""
+
+FIRST_SHOW_WEEK = min(s.week_of_year for s in calendar_for(Brand.RAW).shows_in(1))
 """메인 로스터의 첫 대회 주차. 테스트가 "대회 주차"를 만들 때 쓴다."""
 
 
@@ -141,14 +144,15 @@ class TestPopularityOutranksAge:
 
 class TestWeekKind:
     def test_the_calendar_decides_which_weeks_are_shows(self) -> None:
-        # 달마다 한 번, 12월은 쉰다 (§3-D21-1). NXT는 달력이 따로다.
-        main = calendar_for(Brand.RAW)
+        """**대형 넷은 달이 고정이다** (§3-D71) — 럼블·레슬매니아·서머슬램·서바이버."""
+        main = calendar_for(Brand.RAW, SEED)
         for week in (2, 15, 32, 46):
             assert main.is_show_week(week)
             assert (
                 week_kind_of(make_run(week=week - 1, brand=Brand.RAW)) is WeekKind.PLE
             )
-        for week in (3, 12, 44, 50):
+        booked = {s.week_of_year for s in main.shows_in(1)}
+        for week in (w for w in range(1, 53) if w not in booked):
             assert not main.is_show_week(week)
             assert (
                 week_kind_of(make_run(week=week - 1, brand=Brand.RAW))
@@ -157,26 +161,28 @@ class TestWeekKind:
 
     def test_december_has_no_ple_but_keeps_the_special(self) -> None:
         # 대회는 쉬어도 방송은 돈다 (§3-D21-2).
-        main = calendar_for(Brand.RAW)
-        december = [show for show in main.shows if show.month == QUIET_MONTH]
+        main = calendar_for(Brand.RAW, SEED)
+        december = [show for show in main.shows_in(1) if show.month == QUIET_MONTH]
         assert december, "12월에 아무것도 없다"
         assert all(show.is_special for show in december)
 
     def test_a_special_is_not_a_ple_week(self) -> None:
-        main = calendar_for(Brand.RAW)
-        special = next(show for show in main.shows if show.is_special)
+        main = calendar_for(Brand.RAW, SEED)
+        special = next(show for show in main.shows_in(1) if show.is_special)
         kind = week_kind_of(make_run(week=special.week_of_year - 1, brand=Brand.RAW))
         assert kind is WeekKind.SPECIAL
         assert kind is not WeekKind.PLE
 
     def test_nxt_runs_its_own_calendar(self) -> None:
-        main, nxt = calendar_for(Brand.RAW), calendar_for(Brand.NXT)
+        main = calendar_for(Brand.RAW, SEED)
+        nxt = calendar_for(Brand.NXT, SEED)
         assert nxt is not main
-        assert nxt.per_year < main.per_year
-        assert not {s.name for s in nxt.shows} & {s.name for s in main.shows}
+        assert nxt.per_year() < main.per_year()
+        main_shows, nxt_shows = main.shows_in(1), nxt.shows_in(1)
+        assert not {s.name for s in nxt_shows} & {s.name for s in main_shows}
         # NXT 대회 주차는 메인의 부분집합이지만 그 반대는 아니다.
-        nxt_weeks = {s.week_of_year for s in nxt.shows}
-        main_weeks = {s.week_of_year for s in main.shows}
+        nxt_weeks = {s.week_of_year for s in nxt_shows}
+        main_weeks = {s.week_of_year for s in main_shows}
         assert nxt_weeks < main_weeks
 
     def test_injured_weeks_are_off_weeks(self) -> None:

@@ -31,6 +31,8 @@ class MatchKind(StrEnum):
     """머니 인 더 뱅크 — 사다리 위의 가방."""
     WARGAMES = "wargames"
     """서바이버 시리즈 — 두 팀이 두 링 위에서."""
+    SURVIVOR_ELIMINATION = "survivor_elimination"
+    """서바이버 시리즈의 옛 얼굴 — 5 대 5로 하나씩 지워 나간다 (§3-D71)."""
     STREET_FIGHT = "street_fight"
     """노 디스퀄리피케이션 — 둘이 붙되 규칙이 없다."""
     STEEL_CAGE = "steel_cage"
@@ -85,6 +87,10 @@ FORMATS: dict[MatchKind, MatchFormat] = {
     MatchKind.CHAMBER: MatchFormat("엘리미네이션 챔버 매치", 6, 0.11, 1.5, 1.5),
     MatchKind.LADDER: MatchFormat("래더 매치", 8, 0.09, 1.6, 1.7),
     MatchKind.WARGAMES: MatchFormat("워게임즈 매치", 10, 0.50, 1.5, 1.4),
+    # 철창이 없는 대신 머릿수가 같다 — 이기기는 비슷하고 몸은 덜 상한다 (§3-D71).
+    MatchKind.SURVIVOR_ELIMINATION: MatchFormat(
+        "5 대 5 일리미네이션 태그 매치", 10, 0.50, 1.3, 1.1
+    ),
     # 둘이 붙는 특수 경기 — 승률은 싱글과 같고 몸만 더 상한다.
     MatchKind.STREET_FIGHT: MatchFormat("스트리트 파이트", 2, 1.0, 1.5, 1.6),
     MatchKind.STEEL_CAGE: MatchFormat("스틸 케이지 매치", 2, 1.0, 1.3, 1.3),
@@ -116,13 +122,17 @@ SIGNATURE_MATCHES: dict[str, MatchKind] = {
     "로열럼블": MatchKind.BATTLE_ROYAL,
     "엘리미네이션 챔버": MatchKind.CHAMBER,
     "머니 인 더 뱅크": MatchKind.LADDER,
-    "서바이버 시리즈": MatchKind.WARGAMES,
+    "서바이버 시리즈: 워게임즈": MatchKind.WARGAMES,
+    "서바이버 시리즈": MatchKind.SURVIVOR_ELIMINATION,
 }
 """대회 이름 → 그 대회에만 있는 경기 (2026-08-10 사용자 요청).
 
 **반드시 열린다.** 확률로 두면 로열럼블이 없는 해가 생기고, 그건 그 대회가 아니다.
-`킹 앤 퀸 오브 더 링`은 토너먼트라 여기 없다 — 한 주에 끝나지 않는 형식이라
-공석 토너먼트(§3-D33)와 같은 자리에서 다룬다.
+토너먼트는 여기 없다 — 한 주에 끝나지 않는 형식이라 공석 토너먼트(§3-D33)와 같은
+자리에서 다룬다.
+
+**서바이버 시리즈가 두 줄인 이유** (§3-D71): 그 밤은 해마다 얼굴이 갈리고, 이름이 곧
+그 손잡이다. 워게임즈인 해와 전통 제거 매치인 해는 링 위의 형식도 달라야 한다.
 """
 
 STIPULATION_ODDS: tuple[tuple[MatchKind, int], ...] = (
