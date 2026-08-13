@@ -4,9 +4,13 @@ import { cn } from "@/lib/utils";
 /**
  * 벨트 표시 — 코드 → 한글 이름 + 계층별 색.
  *
- * **아이콘은 SVG다.** 실제 벨트 사진은 저작권이 있어 저장소에 넣지 않는다. 사진을
- * 쓰려면 `public/belts/<코드>.png`를 두면 되고, 아래 `hasPhoto`가 자동으로 그쪽을
- * 집는다 — 파일을 넣는 것 말고 코드는 손댈 게 없다.
+ * **사진이 기본이다** (2026-08-13). 사용자가 열여덟 장을 직접 가져와 `public/belts/`에
+ * 넣었고, 원본이 1300px대라 640px WebP로 줄여 뒀다(22MB → 1.1MB). 아래 `PHOTOS`에
+ * 없는 코드만 SVG 아이콘으로 떨어진다 — 새 벨트가 생겨도 화면이 비지 않는다.
+ *
+ * **사진이 가로로 길다**(약 2.2:1). 벨트는 스트랩까지가 한 벌이라 정사각형에 넣으면
+ * 어느 벨트든 가운데 금색 판만 남아 서로 구별이 안 된다. 그래서 기록 목록도 칩이
+ * 아니라 카드다 — 사용자 요청이 "내 벨트 기록을 최대한 구별이 가게"였다.
  */
 
 type Tier = "world" | "secondary" | "tag";
@@ -25,10 +29,13 @@ const TITLES: Record<string, [name: string, tier: Tier]> = {
   womens_world_championship: ["위민스 월드", "world"],
   wwe_womens_united_states_championship: ["위민스 US", "secondary"],
   wwe_womens_intercontinental_championship: ["위민스 인터컨티넨탈", "secondary"],
+  // RAW·SD·NXT 공용이다 (2026-08-13 사용자 확인) — NXT 전용 위민스 태그 벨트는 없다.
   wwe_womens_tag_team_championship: ["위민스 태그팀", "tag"],
   nxt_womens_championship: ["NXT 위민스", "world"],
   nxt_womens_north_american_championship: ["NXT 위민스 노스 아메리칸", "secondary"],
-  nxt_womens_tag_team_championship: ["NXT 위민스 태그팀", "tag"],
+  // 스피드는 3분 경기다 (§3-D72). 급이 아니라 선수의 급이 자리를 정하는 벨트다.
+  wwe_speed_championship: ["WWE 스피드", "secondary"],
+  wwe_womens_speed_championship: ["위민스 스피드", "secondary"],
 };
 
 /** 계층이 색을 정한다 — 월드가 가장 금빛이고 태그가 가장 차분하다. */
@@ -39,8 +46,16 @@ const PLATE: Record<Tier, { face: string; edge: string }> = {
   tag: { face: "#d6d3d1", edge: "#78716c" },
 };
 
-/** 사진을 넣어 둔 벨트. `public/belts/<코드>.png`를 두면 여기에 코드를 더한다. */
-const PHOTOS = new Set<string>();
+/** 사진이 있는 벨트. `public/belts/<코드>.webp`를 두면 여기에 코드를 더한다. */
+const PHOTOS = new Set(Object.keys(TITLES));
+
+/** 사진의 가로:세로. 열여덟 장이 640×260~330이라 그 언저리로 잡았다. */
+const PHOTO_RATIO = 2.2;
+
+function entryOf(code: string): [string, Tier] {
+  // 모르는 코드는 원문 그대로 보여 준다 — 조용히 숨기면 벨트를 잃은 것처럼 읽힌다.
+  return TITLES[code] ?? [code, "secondary"];
+}
 
 export function BeltIcon({ tier, size = 18 }: { tier: Tier; size?: number }) {
   const { face, edge } = PLATE[tier];
@@ -67,10 +82,30 @@ export function BeltIcon({ tier, size = 18 }: { tier: Tier; size?: number }) {
   );
 }
 
+/** 벨트 사진 한 장. 사진이 없는 코드는 같은 자리에 SVG를 세운다. */
+export function BeltPhoto({ code, width }: { code: string; width: number }) {
+  const [name, tier] = entryOf(code);
+  const height = Math.round(width / PHOTO_RATIO);
+  if (!PHOTOS.has(code)) {
+    return (
+      <span className="flex shrink-0 items-center justify-center" style={{ width, height }}>
+        <BeltIcon tier={tier} size={height} />
+      </span>
+    );
+  }
+  return (
+    <Image
+      src={`/belts/${code}.webp`}
+      alt={name}
+      width={width}
+      height={height}
+      className="shrink-0 object-contain"
+    />
+  );
+}
+
 export function BeltChip({ code, held = false }: { code: string; held?: boolean }) {
-  const entry = TITLES[code];
-  // 모르는 코드는 원문 그대로 보여 준다 — 조용히 숨기면 벨트를 잃은 것처럼 읽힌다.
-  const [name, tier] = entry ?? [code, "secondary" as Tier];
+  const [name] = entryOf(code);
   return (
     <span
       title={name}
@@ -80,29 +115,76 @@ export function BeltChip({ code, held = false }: { code: string; held?: boolean 
         held ? "bg-card ring-1 ring-brand-400/60 ring-inset" : "bg-card text-muted-foreground",
       )}
     >
-      {PHOTOS.has(code) ? (
-        <Image src={`/belts/${code}.png`} alt="" width={18} height={18} className="shrink-0" />
-      ) : (
-        <BeltIcon tier={tier} />
-      )}
+      <BeltPhoto code={code} width={40} />
       {name}
     </span>
   );
 }
 
-/** 같은 벨트를 여러 번 감았으면 `×N`으로 접는다 — 30년이면 목록이 길어진다. */
+/**
+ * **그 경기에 걸린 벨트** (2026-08-13 사용자 요청 1).
+ *
+ * "챔피언십 기회를 가져 경기가 열린다면 이 벨트가 처음에 나오게" — 그래서 문장보다
+ * 위에, 그 주차 줄의 맨 앞에 선다. 30년에 몇 번 없는 밤이라 이만한 자리를 준다.
+ */
+export function BeltBanner({ code, won }: { code: string; won?: boolean }) {
+  const [name] = entryOf(code);
+  return (
+    <div
+      className={cn(
+        "mb-1.5 flex items-center gap-2.5 rounded-[6px] px-2.5 py-1.5",
+        won
+          ? "bg-brand-400/10 ring-1 ring-brand-400/60 ring-inset"
+          : "bg-card ring-1 ring-stone-300/60 ring-inset dark:ring-stone-700/60",
+      )}
+    >
+      <BeltPhoto code={code} width={88} />
+      <span className="min-w-0">
+        <span className="block font-sport text-sm leading-tight">{name} 챔피언십</span>
+        <span className="block text-xs text-muted-foreground">
+          {won ? "이 밤에 감았다" : "이 밤에 걸렸다"}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * 감아 본 벨트 목록. 같은 벨트를 여러 번 감았으면 `×N`으로 접는다 — 30년이면 길어진다.
+ *
+ * **칩이 아니라 카드다** (2026-08-13 사용자 요청 2). 18px 아이콘으로는 열여덟 벨트가
+ * 전부 "금색 판"으로 보였다. 사진을 넣은 이유가 구별인데 그 크기로는 넣으나 마나다.
+ */
 export function BeltList({ codes, held }: { codes: string[]; held: string[] }) {
   const counts = new Map<string, number>();
   for (const code of codes) counts.set(code, (counts.get(code) ?? 0) + 1);
   const heldSet = new Set(held);
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {[...counts.entries()].map(([code, times]) => (
-        <span key={code} className="inline-flex items-center gap-1">
-          <BeltChip code={code} held={heldSet.has(code)} />
-          {times > 1 && <span className="text-xs text-muted-foreground">×{times}</span>}
-        </span>
-      ))}
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {[...counts.entries()].map(([code, times]) => {
+        const [name] = entryOf(code);
+        const holding = heldSet.has(code);
+        return (
+          <div
+            key={code}
+            title={name}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-[6px] px-2 py-2 text-center",
+              holding
+                ? "bg-brand-400/10 ring-1 ring-brand-400/60 ring-inset"
+                : "bg-card ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50",
+            )}
+          >
+            <BeltPhoto code={code} width={104} />
+            <span className="flex items-baseline gap-1">
+              <span className="text-xs leading-tight">{name}</span>
+              {times > 1 && <span className="text-xs text-muted-foreground">×{times}</span>}
+            </span>
+            {/* 지금 들고 있는 벨트는 감아 본 벨트와 다른 사실이다 — 색만으로는 안 읽힌다. */}
+            {holding && <span className="text-[10px] text-brand-link">보유 중</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }

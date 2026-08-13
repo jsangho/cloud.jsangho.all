@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BeltList } from "@/components/career-belt";
+import { BeltBanner, BeltList } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -1151,6 +1151,12 @@ function WeekRow({
           <WeekOpponent week={week} />
         </span>
         <div className="col-span-3 sm:col-span-1">
+          {/* **벨트가 문장보다 먼저다** (2026-08-13 사용자 요청). 챔피언십 기회를
+              얻은 밤은 30년에 몇 번 없고, 그 사실이 서술 한 줄에 섞이면 지나간다.
+              `titleAtStake`는 표시 이름이 아니라 벨트 코드라 사진을 바로 집는다. */}
+          {week.titleAtStake && (
+            <BeltBanner code={week.titleAtStake} won={week.result === "win"} />
+          )}
           <p className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}>
             {/* 토너먼트는 한 주에 안 끝난다 — 몇 회전인지가 그 밤의 뜻이다 (§3-D33). */}
             {week.tournamentRound > 0 && (

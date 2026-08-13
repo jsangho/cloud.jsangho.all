@@ -30,7 +30,13 @@ from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import career_end
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.contract import WEEKS_PER_YEAR, Contract
-from wwe_game.domain.value_objects.title import TITLES, Brand, TitleTier
+from wwe_game.domain.value_objects.title import (
+    SPEED_TITLES,
+    TITLES,
+    Brand,
+    Title,
+    TitleTier,
+)
 
 BASE_WEEKLY_PAY = 1_300
 """바닥 주급(달러). 인기도 0·무관 경력의 신인이 받는 값 — 연 $67,600.
@@ -39,11 +45,31 @@ BASE_WEEKLY_PAY = 1_300
 $4.7M)에 닿는다. **바닥과 천장의 비가 70배**인데, 그게 이 바닥의 실제 격차다.
 """
 
-POPULARITY_SLOPE = 0.09
-"""인기도 1점당 배수 증가. 인기도 100이면 ×10이다.
+POPULARITY_PEAK = 16.0
+POPULARITY_CURVE = 3.2
+"""인기도 배수 — `1 + PEAK × (인기도/100)^CURVE`. 인기도 100이면 ×17이다.
 
-주축이라 가장 가파르다. 나머지 넷을 다 최대로 올려도 인기도 20짜리는 정상급 주급에
-닿지 못한다 — **돈이 되는 선수가 돈을 받는다.**
+**선형이던 것을 곡선으로 바꿨다** (2026-08-13 사용자 지적: "연봉이 터무니없이 큰 것
+같은데"). 문제는 값이 아니라 **격차가 없다는 것**이었다. 배수 다섯이 곱해지는데
+인기도 항만 선형이라, 평범한 커리어와 톱스타의 최고 연봉이 5.8배밖에 안 벌어졌다 —
+그 바닥의 실제 격차는 그보다 훨씬 크다.
+
+50판 실측(커리어 최고 연봉):
+
+| | 선형 0.09 | 곡선 3.2 |
+|---|---|---|
+| 하위 10% | $605K | **$251K** |
+| 중앙 | $1,305K | **$971K** |
+| 상위 10% | $2,615K | $2,584K |
+| 최대 | $3.5M | $3.9M |
+| 격차 | 5.8배 | **15.5배** |
+
+**위를 깎지 않고 아래를 깎았다.** 톱스타 $3.9M은 실제 정상급 계약의 감각 그대로이고,
+평범한 커리어가 그 근처에 있던 것이 어긋남이었다. 지수를 올리면 중간이 먼저 무너지고
+정점은 `PEAK`로 따로 잡을 수 있어서, 둘을 한 쌍으로 둔다.
+
+인기도 경제(§13-Q13)를 다시 만지면 이 둘도 함께 재야 한다 — 실측 커리어 최고
+인기도 중앙값 72가 이 곡선의 기준점이다.
 """
 
 TITLE_PAY_WEIGHT: dict[TitleTier, float] = {
@@ -53,15 +79,32 @@ TITLE_PAY_WEIGHT: dict[TitleTier, float] = {
 }
 """벨트 한 번당 배수 가산. **횟수로 센다** — 같은 벨트를 두 번 감으면 두 번 쳐 준다."""
 
-TITLE_PAY_CAP = 3.0
-"""챔피언 이력 가산의 상한 (배수로는 ×4).
+SPEED_PAY_WEIGHT = 0.06
+"""스피드 벨트 한 번당 가산 (§3-D72). **표에서 가장 낮다.**
+
+급으로 치면 2선(0.22)인데 그 값을 주면 안 된다. 관문이 15라 커리어당 평균 3.5번
+감히고(40판 실측), 2선 값이면 그것만으로 상한(3.0)의 4분의 1을 채운다 — 하위 티어
+벨트가 정상급 주급을 만드는 셈이다.
+
+태그(0.12)의 절반으로 둔 이유: 태그는 파트너가 있어야 하고 관문도 두 배(30)다.
+"""
+
+TITLE_PAY_CAP = 2.0
+"""챔피언 이력 가산의 상한 (배수로는 ×3).
+
+**3.0이었다** (2026-08-13). 인기도 곡선을 세우면서 함께 낮췄다 — 벨트는 인기도가
+오른 결과이기도 해서, 둘 다 후하면 같은 성취를 두 번 쳐 준다.
 
 상한이 없으면 30년 커리어 후반이 이력만으로 천장을 뚫는다. 다섯 재료 중 유일하게
 **계속 쌓이기만 하는** 값이라 여기만 뚜껑이 필요하다.
 """
 
-TENURE_SLOPE = 0.03
-"""경력 1년당 배수 증가. 30년이면 ×1.9다."""
+TENURE_SLOPE = 0.02
+"""경력 1년당 배수 증가. 30년이면 ×1.6다.
+
+**0.03이었다** (2026-08-13). 오래 뛴 것은 누적 잔액이 이미 갚는다 — 주급까지 두 배로
+올리면 "오래 산 커리어가 곧 잘한 커리어"가 되어, 실력과 수명이 한 축으로 뭉친다.
+"""
 
 WEAR_PENALTY = 0.25
 """마모 100이 깎는 비율. `wear`는 회복 선택으로 내려갈 수 있어 되돌릴 여지가 있다."""
@@ -82,9 +125,19 @@ DEVELOPMENTAL_FACTOR = 0.50
 
 
 def _title_bonus(run: CareerRun) -> float:
-    """딴 벨트가 붙이는 가산. 상한에서 자른다."""
-    total = sum(TITLE_PAY_WEIGHT[TITLES[t].tier] for t in run.titles_won)
+    """딴 벨트가 붙이는 가산. 상한에서 자른다.
+
+    **스피드만 급이 아니라 이름으로 값을 찾는다** (§3-D72) — 2선이면서 2선 값을
+    받으면 안 되는 유일한 벨트다.
+    """
+    total = sum(_pay_weight_of(t) for t in run.titles_won)
     return min(TITLE_PAY_CAP, total)
+
+
+def _pay_weight_of(title: Title) -> float:
+    if title in SPEED_TITLES:
+        return SPEED_PAY_WEIGHT
+    return TITLE_PAY_WEIGHT[TITLES[title].tier]
 
 
 def _body_factor(run: CareerRun) -> float:
@@ -102,7 +155,9 @@ def appraise(run: CareerRun) -> int:
     재계약 협상도 복귀 오퍼도 이 값을 부른다. 산식이 한 곳에 있어야 "재계약이
     복귀 오퍼보다 후하다" 같은 어긋남이 생기지 않는다.
     """
-    popularity = 1.0 + run.stats.popularity * POPULARITY_SLOPE
+    popularity = (
+        1.0 + POPULARITY_PEAK * (run.stats.popularity / 100) ** POPULARITY_CURVE
+    )
     titles = 1.0 + _title_bonus(run)
     tenure = 1.0 + run.week / WEEKS_PER_YEAR * TENURE_SLOPE
     # 평판은 **깎기만 한다** — 45 이상은 1.0이고 그 아래로만 떨어진다 (§3-D42).

@@ -33,6 +33,10 @@ class MatchKind(StrEnum):
     """서바이버 시리즈 — 두 팀이 두 링 위에서."""
     SURVIVOR_ELIMINATION = "survivor_elimination"
     """서바이버 시리즈의 옛 얼굴 — 5 대 5로 하나씩 지워 나간다 (§3-D71)."""
+    SPEED = "speed"
+    """스피드 챔피언십 — **3분 안에 끝내야 한다** (§3-D72, 2026-08-13 사용자 스펙)."""
+    SUDDEN_DEATH = "sudden_death"
+    """3분이 지나도 안 끝났을 때 이어서 여는 경기 (§3-D72). **여기서는 무승부가 없다.**"""
     STREET_FIGHT = "street_fight"
     """노 디스퀄리피케이션 — 둘이 붙되 규칙이 없다."""
     STEEL_CAGE = "steel_cage"
@@ -91,6 +95,10 @@ FORMATS: dict[MatchKind, MatchFormat] = {
     MatchKind.SURVIVOR_ELIMINATION: MatchFormat(
         "5 대 5 일리미네이션 태그 매치", 10, 0.50, 1.3, 1.1
     ),
+    # 스피드 (§3-D72). **3분이면 몸이 상할 틈이 없다** — 마모도 부상도 싱글 아래다.
+    # 서든 데스는 그 3분을 이미 쓰고 다시 붙는 것이라 반대로 싱글보다 위다.
+    MatchKind.SPEED: MatchFormat("스피드 매치 (3분)", 2, 1.0, 0.6, 0.5),
+    MatchKind.SUDDEN_DEATH: MatchFormat("서든 데스 매치", 2, 1.0, 1.3, 1.2),
     # 둘이 붙는 특수 경기 — 승률은 싱글과 같고 몸만 더 상한다.
     MatchKind.STREET_FIGHT: MatchFormat("스트리트 파이트", 2, 1.0, 1.5, 1.6),
     MatchKind.STEEL_CAGE: MatchFormat("스틸 케이지 매치", 2, 1.0, 1.3, 1.3),

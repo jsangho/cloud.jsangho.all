@@ -23,6 +23,7 @@ from wwe_game.domain.value_objects.title import (
     TITLES,
     Brand,
     Title,
+    TitleSpec,
     TitleTier,
     grand_slam_level,
     group_counts,
@@ -107,6 +108,10 @@ def eligible_titles(run: CareerRun) -> tuple[Title, ...]:
     있었더니 파트너 없이 태그 챔피언이 됐다(실측 12판 중 1건). 그랜드슬램에도
     물려 있어서(§3-D20의 네 그룹 중 하나) 팀에 한 번도 안 들어간 선수가 훈장을
     받고 있었다.
+
+    **스피드 벨트에는 천장이 있다** (§3-D72). 사용자가 정한 자리가 "NXT 2선 + 메인
+    로스터 하위 티어"라, 인기도가 2선 관문(50)에 닿으면 목록에서 빠진다 — 이 목록에서
+    상한을 가진 벨트는 그것뿐이다.
     """
     solo = run.team is None
     return tuple(
@@ -114,7 +119,13 @@ def eligible_titles(run: CareerRun) -> tuple[Title, ...]:
         for t in titles_of(run.brand, run.identity.gender)
         if run.stats.popularity >= TITLES[t].popularity_required
         and not (solo and TITLES[t].tier is TitleTier.TAG)
+        and not _outgrown(run.stats.popularity, TITLES[t])
     )
+
+
+def _outgrown(popularity: int, spec: TitleSpec) -> bool:
+    """그 선수가 이 벨트를 지나쳐 온 급인지 (§3-D72). 상한이 없으면 늘 거짓."""
+    return spec.popularity_ceiling is not None and popularity >= spec.popularity_ceiling
 
 
 WORLD_GROUP = "월드"

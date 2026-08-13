@@ -59,7 +59,13 @@ from wwe_game.domain.value_objects.match_kind import (
 )
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.match_sequence import MatchSequence
-from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
+from wwe_game.domain.value_objects.title import (
+    SPEED_TITLES,
+    TITLES,
+    Brand,
+    Title,
+    TitleTier,
+)
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
@@ -554,11 +560,32 @@ def _match_kind_of(
         # 예선에 쓸 수 있는 형식은 셋뿐이다 (§3-D33 · 2026-08-10 사용자 스펙) —
         # 대진표가 도는 밤에 30인 럼블이 열릴 수는 없다.
         return SeededRoll(run.seed, week, seeded_roll.STIPULATION).pick(QUALIFIER_KINDS)
+    if title is not None and title in SPEED_TITLES:
+        return _speed_or_sudden_death(run, week)
     if show is not None and show.name in SIGNATURE_MATCHES:
         return SIGNATURE_MATCHES[show.name]
     if title is not None and TITLES[title].tier is TitleTier.TAG:
         return MatchKind.TAG
     return _stipulation_of(run, week, kind)
+
+
+def _speed_or_sudden_death(run: CareerRun, week: int) -> MatchKind:
+    """스피드 벨트가 걸린 밤 — **3분 안에 끝났는가** (§3-D72, 2026-08-13 사용자 스펙).
+
+    시계를 만들지 않았다. 이 게임에 경기 시간이라는 값이 없고, 3분을 재려고 값을
+    하나 들이면 다른 모든 경기가 그 값을 들고 다녀야 한다. 대신 **결과로만 남는
+    것**을 남긴다 — 3분을 넘겼으면 그 밤의 경기는 서든 데스가 되고, 화면에 서는
+    형식도 그것이다.
+
+    **시그니처보다 먼저 본다.** 럼블 주차에 스피드 벨트가 걸리면 30인 배틀로열로
+    3분 방어전을 치르는 그림이 되는데, 그건 두 규칙 다 아니다.
+    """
+    roll = SeededRoll(run.seed, week, seeded_roll.STIPULATION)
+    return (
+        MatchKind.SUDDEN_DEATH
+        if roll.chance(rules.SPEED_TIME_UP_CHANCE)
+        else MatchKind.SPEED
+    )
 
 
 def _stipulation_of(run: CareerRun, week: int, kind: WeekKind) -> MatchKind:
