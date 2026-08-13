@@ -22,16 +22,25 @@ from wwe_game.app.dtos.career_dto import (
     StatsView,
     WeekReportView,
 )
+from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
 from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.constants.roster import RivalTier
-from wwe_game.domain.services import match_rating
+from wwe_game.domain.entities.career_run import CareerRun
+from wwe_game.domain.services import contract_office, match_rating
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
+from wwe_game.domain.value_objects.body_part import PARTS
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
-from wwe_game.domain.value_objects.title import TITLES, Title
+from wwe_game.domain.value_objects.title import (
+    GRAND_SLAM_GROUPS,
+    TITLES,
+    Title,
+    grand_slam_level,
+    group_counts,
+)
 from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
@@ -131,6 +140,22 @@ class WeekSchema(_Camel):
     **문장이 아니라 구조로 보낸다.** "3번으로 입장"을 여기서 만들면 화면이 플레이어
     이름을 강조하거나 줄을 접는 것을 다시 파싱해야 한다.
     """
+    # ── 여기부터 3차 평가에서 "만드는데 안 나간다"로 꼽은 것들 (§3-D73) ──
+    pay: int = 0
+    """그 주 수입(달러). 무소속 주차는 인디 개런티다 (§3-D50)."""
+    title_defended: bool = False
+    """방어에 성공했는지. **이긴 것과 지킨 것은 다른 사건이다** — 승리 줄이 같아 보이면
+    챔피언으로 산 구간이 화면에서 통째로 평평해진다."""
+    vacated: list[str] = Field(default_factory=list)
+    """그 주에 **반납한** 벨트 (§3-D40). 길게 다치면 벨트를 내려놓는데, 그 사건이
+    지금까지 로그에 한 줄도 없었다 — 다음에 벨트 목록을 보면 그냥 사라져 있다."""
+    injury_part: str | None = None
+    """다친 곳의 이름 (§3-D43). **몸은 기억한다**가 이 게임의 문장인데 어디를 다쳤는지가
+    응답에 없었다."""
+    call_up: str | None = None
+    """`earned`(실력으로) · `emergency`(공백을 메우러) — 콜업의 결 (§3-D22·D22-1)."""
+    draft_night: bool = False
+    """그 주가 연말 드래프트였는지 (§3-D54). 소속이 바뀌는 밤이다."""
 
 
 class SkillSchema(_Camel):
@@ -171,6 +196,63 @@ class RivalrySchema(_Camel):
     started_week: int
 
 
+class ContractSchema(_Camel):
+    """지금 맺고 있는 계약 (§3-D47). 무소속이면 `RunSchema.contract`가 없다."""
+
+    weekly_pay: int
+    annual_pay: int
+    """`Contract.annual_pay` — **도메인이 곱한다.** 화면이 52를 곱하면 두 곳이 갈린다."""
+    signed_week: int
+    ends_week: int
+    years: int
+    weeks_left: int
+    """만료까지 남은 주차. 음수가 되지 않게 0에서 자른다 — 만료가 지나도 협상 주차를
+    부상으로 건너뛸 수 있다(`Contract.expires_at`)."""
+
+
+class MoneySchema(_Camel):
+    """돈과 계약 (§3-D47·D50). **3차 평가에서 통째로 빠져 있던 축이다** (§3-D73).
+
+    도메인은 2026-08-11에 다 만들어 뒀는데 응답에 한 필드도 안 나갔다. 잔액이 30년
+    쌓이고 커리어의 3분의 1이 무소속을 겪는데, 화면은 그 어느 것도 몰랐다.
+    """
+
+    balance: int
+    """누적 잔액(달러)."""
+    contract: ContractSchema | None = None
+    market_value: int = 0
+    """**지금 몸값** — `contract_office.appraise()`. 맺고 있는 주급과 견주라고 함께 낸다.
+
+    이 둘이 갈리는 것이 재계약의 긴장이다: 몸값이 주급보다 높으면 손해를 보며 뛰는
+    중이고, 낮으면 지난 계약이 지금의 나를 먹여 살리는 중이다.
+    """
+    unsigned_weeks: int = 0
+    """계약 없이 보낸 주차 (§3-D50). 0이면 소속이 있다."""
+    fade_in_weeks: int | None = None
+    """몇 주 뒤 잊히는가 — `FADE_GRACE_WEEKS`까지 남은 주차. 소속이 있으면 `None`.
+
+    **무소속 구간의 유일한 시계다.** 이게 없으면 2년 반을 "왜 대회가 없지" 하며 보낸다.
+    """
+
+
+class GrandSlamGroupSchema(_Camel):
+    name: str
+    count: int
+    """그 그룹에서 감은 횟수. 0이면 아직 빈 칸이다."""
+
+
+class GrandSlamSchema(_Camel):
+    """그랜드슬램 진행도 (§3-D20). **3차 평가에서 화면에 없다고 꼽은 자리** (§3-D73).
+
+    `safe` 정책 실측 달성률이 55%인 훈장인데, 네 칸 중 무엇이 비었는지 볼 수가 없었다.
+    등급은 **가장 적게 채운 그룹**이 정한다 — 월드를 다섯 번 감아도 US가 없으면 0이다.
+    """
+
+    level: int
+    """0 미달 · 1 그랜드슬램 · 2 더블 그랜드슬램."""
+    groups: list[GrandSlamGroupSchema] = Field(default_factory=list)
+
+
 class RunSchema(_Camel):
     id: int | None
     name: str
@@ -190,6 +272,10 @@ class RunSchema(_Camel):
     titles_won: list[str]
     team: TeamSchema | None = None
     rivalries: list[RivalrySchema] = Field(default_factory=list)
+    money: MoneySchema | None = None
+    """돈과 계약 (§3-D73). 옛 응답과 섞이지 않게 기본은 `None`이다."""
+    grand_slam: GrandSlamSchema | None = None
+    """그랜드슬램 진행도 (§3-D73)."""
     disclaimer: str = Field(
         default="이 게임의 전개는 가상입니다.",
         description="로그 화면 하단에 상시 노출한다 (§3-D13).",
@@ -431,6 +517,12 @@ def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
             report.title_shot_from.value if report.title_shot_from else None
         ),
         match_summary=view.match_summary,
+        pay=report.pay,
+        title_defended=report.title_defended,
+        vacated=[t.value for t in report.vacated],
+        injury_part=PARTS[report.injury_part].label if report.injury_part else None,
+        call_up=report.call_up.value if report.call_up else None,
+        draft_night=report.draft_night,
         beats=(
             [
                 BeatSchema(
@@ -512,6 +604,50 @@ def to_stats(stats: StatsView) -> StatsSchema:
     )
 
 
+def to_money(run: CareerRun) -> MoneySchema:
+    """돈과 계약을 화면 모양으로 (§3-D73).
+
+    **몸값을 함께 낸다.** 잔액만 보내면 숫자 하나가 늘기만 하는 화면이 되고, 그건
+    §3-D48이 아직 안 푼 문제("돈의 소비처가 없다")를 화면에서 되풀이하는 것이다.
+    지금 주급과 지금 몸값이 나란히 서면 적어도 "덜 받고 있다"는 읽을 거리가 생긴다.
+    """
+    contract = run.contract
+    return MoneySchema(
+        balance=run.money,
+        contract=(
+            ContractSchema(
+                weekly_pay=contract.weekly_pay,
+                annual_pay=contract.annual_pay,
+                signed_week=contract.signed_week,
+                ends_week=contract.ends_week,
+                years=contract.years,
+                weeks_left=max(0, contract.ends_week - run.week),
+            )
+            if contract
+            else None
+        ),
+        market_value=contract_office.appraise(run),
+        unsigned_weeks=run.unsigned_weeks,
+        fade_in_weeks=(
+            max(0, rules.FADE_GRACE_WEEKS - run.unsigned_weeks)
+            if contract is None
+            else None
+        ),
+    )
+
+
+def to_grand_slam(run: CareerRun) -> GrandSlamSchema:
+    """네 그룹의 진행도 (§3-D73). 순서는 `GRAND_SLAM_GROUPS`가 정한 그대로다."""
+    counts = group_counts(run.titles_won, run.identity.gender)
+    return GrandSlamSchema(
+        level=grand_slam_level(run.titles_won, run.identity.gender),
+        groups=[
+            GrandSlamGroupSchema(name=name, count=counts[name])
+            for name, _ in GRAND_SLAM_GROUPS[run.identity.gender]
+        ],
+    )
+
+
 def to_advance(result: AdvanceResult) -> AdvanceResponse:
     run = result.run
     return AdvanceResponse(
@@ -538,6 +674,8 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 )
                 for r in run.rivalries
             ],
+            money=to_money(run),
+            grand_slam=to_grand_slam(run),
             team=(
                 TeamSchema(
                     label=run.team.label,

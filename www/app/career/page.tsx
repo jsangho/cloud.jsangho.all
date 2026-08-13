@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BeltBanner, BeltList, BrandLogo } from "@/components/career-belt";
+import { BeltBanner, BeltList, BrandLogo, beltName } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,8 @@ import {
   type CareerBeat,
   type CareerCardMatch,
   type CareerPreset,
+  type CareerGrandSlam,
+  type CareerMoney,
   type CareerShowReport,
   type CareerNewsItem,
   type CareerNewsPage,
@@ -131,6 +133,10 @@ const PANELS = [
   { key: "schedule", label: "일정" },
   { key: "rivalries", label: "대립" },
   { key: "belts", label: "벨트" },
+  // 3차 평가에서 통째로 빠져 있던 축이다 (§3-D73). 도메인은 2026-08-11에 다 만들어
+  // 뒀는데 응답에 한 필드도 안 나가서, 커리어의 3분의 1이 겪는 무소속 구간을
+  // 화면이 한 번도 안 보여줬다.
+  { key: "money", label: "계약" },
   { key: "inbox", label: "인박스" },
 ] as const;
 
@@ -1098,11 +1104,22 @@ export default function CareerPage() {
           )}
 
           {tab === "belts" && (
-            <section>
+            <section className="space-y-4">
+              {view.grandSlam && <GrandSlamPanel slam={view.grandSlam} />}
               {view.titlesWon.length === 0 ? (
                 <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
               ) : (
                 <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+              )}
+            </section>
+          )}
+
+          {tab === "money" && (
+            <section>
+              {view.money ? (
+                <MoneyPanel money={view.money} week={view.week} />
+              ) : (
+                <p className="text-sm text-muted-foreground">계약 정보가 없습니다.</p>
               )}
             </section>
           )}
@@ -1169,11 +1186,31 @@ function WeekRow({
             )}
             {week.titleAtStake && (
               <span className="mr-1.5 text-xs text-brand-link">
-                {SHOT_LABELS[week.titleShotFrom ?? "gate"]}
+                {week.titleDefended ? "방어 성공" : SHOT_LABELS[week.titleShotFrom ?? "gate"]}
               </span>
             )}
             {week.narration}
           </p>
+          {/* **만드는데 안 나가던 사건들** (§3-D73, 3차 평가). 셋 다 커리어의 장이
+              바뀌는 자리인데 지금까지 서술 한 줄에만 암시되거나 그마저도 없었다. */}
+          {(week.vacated?.length ?? 0) > 0 && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              부상으로 반납:{" "}
+              <span className="text-foreground">
+                {week.vacated?.map((code) => beltName(code)).join(" · ")}
+              </span>
+            </p>
+          )}
+          {week.injuryPart && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              다친 곳 <span className="text-foreground">{week.injuryPart}</span>
+            </p>
+          )}
+          {week.callUp && (
+            <p className="mt-0.5 text-xs text-brand-link">
+              {week.callUp === "emergency" ? "긴급 콜업 — 공백을 메우러" : "콜업 — 메인 로스터로"}
+            </p>
+          )}
           {week.stars > 0 && (
             <p className="mt-0.5 text-xs">
               <Stars value={week.stars} />
@@ -1240,6 +1277,149 @@ type MyMatch = {
   titleAtStake: string | null;
   stars: number;
 };
+
+/** 달러 표기 — 자릿수가 화면에서 흔들리지 않게 한 곳에서만 만든다. */
+const usd = (value: number) => `$${value.toLocaleString("en-US")}`;
+
+/** 주차를 "3년 2개월"처럼 읽는다. 만료까지 남은 시간은 주차보다 이쪽이 와닿는다. */
+function span(weeks: number): string {
+  if (weeks <= 0) return "만료";
+  const years = Math.floor(weeks / 52);
+  const months = Math.round((weeks % 52) / 4.33);
+  if (years === 0) return `${Math.max(1, months)}개월`;
+  return months === 0 ? `${years}년` : `${years}년 ${months}개월`;
+}
+
+/**
+ * 계약 패널 (§3-D73) — 3차 평가에서 통째로 빠져 있던 축.
+ *
+ * **주급과 몸값을 나란히 세운다.** 잔액만 보여주면 숫자 하나가 늘기만 하는 화면이
+ * 되고, 그건 §3-D48이 아직 안 푼 문제("돈의 소비처가 없다")를 화면에서 되풀이하는
+ * 것이다. 둘이 갈리는 폭이 곧 재계약의 긴장이다.
+ */
+function MoneyPanel({ money, week }: { money: CareerMoney; week: number }) {
+  const { contract, marketValue } = money;
+  const gap = contract ? marketValue - contract.weeklyPay : 0;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Figure label="누적 잔액" value={usd(money.balance)} />
+        <Figure
+          label="주급"
+          value={contract ? usd(contract.weeklyPay) : "—"}
+          note={contract ? `연 ${usd(contract.annualPay)}` : "무소속"}
+        />
+        <Figure
+          label="지금 몸값"
+          value={usd(marketValue)}
+          note={
+            contract
+              ? gap > 0
+                ? `주급보다 ${usd(gap)} 높다`
+                : gap < 0
+                  ? `주급보다 ${usd(-gap)} 낮다`
+                  : "주급과 같다"
+              : "부를 값"
+          }
+          tone={contract && gap > 0 ? "up" : undefined}
+        />
+      </div>
+
+      {contract ? (
+        <div className="rounded-[6px] bg-card px-3 py-2.5 text-sm ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+          <p className="font-sport">{contract.years}년 계약</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {Math.floor(contract.signedWeek / 52) + 1}년차에 맺어 만료까지{" "}
+            <span className="text-foreground">{span(contract.weeksLeft)}</span> 남았습니다.
+          </p>
+        </div>
+      ) : (
+        // **무소속 구간의 유일한 시계다** (§3-D50). 이게 없으면 2년 반을
+        // "왜 대회가 없지" 하며 보낸다.
+        <div className="rounded-[6px] bg-card px-3 py-2.5 text-sm ring-1 ring-brand-400/50 ring-inset">
+          <p className="font-sport">무소속 — 인디 서킷</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            계약 없이 {span(money.unsignedWeeks)}를 보냈습니다.
+            {money.fadeInWeeks !== null && (
+              <>
+                {" "}
+                오퍼가 없으면 <span className="text-brand-link">{span(money.fadeInWeeks)}</span> 뒤
+                잊힙니다.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">{week}주차 기준입니다.</p>
+    </div>
+  );
+}
+
+function Figure({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: "up";
+}) {
+  return (
+    <div className="rounded-[6px] bg-card px-3 py-2.5 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("font-sport text-lg leading-tight", tone === "up" && "text-brand-link")}>
+        {value}
+      </p>
+      {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * 그랜드슬램 네 칸 (§3-D73).
+ *
+ * **등급은 가장 적게 채운 그룹이 정한다** — 월드를 다섯 번 감아도 US가 없으면 0이다.
+ * 그래서 빈 칸을 숨기지 않고 같은 크기로 세운다: 비어 있는 것이 정보다.
+ */
+function GrandSlamPanel({ slam }: { slam: CareerGrandSlam }) {
+  return (
+    <div>
+      <p className="flex items-baseline gap-2">
+        <span className="font-sport text-sm">그랜드슬램</span>
+        <span
+          className={cn("text-xs", slam.level > 0 ? "text-brand-link" : "text-muted-foreground")}
+        >
+          {slam.level === 0 ? "미달" : slam.level === 1 ? "달성" : `${slam.level}회 달성`}
+        </span>
+      </p>
+      <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+        {slam.groups.map((group) => (
+          <div
+            key={group.name}
+            className={cn(
+              "rounded-[4px] px-2 py-1.5 text-center",
+              group.count > 0
+                ? "bg-brand-400/10 ring-1 ring-brand-400/50 ring-inset"
+                : "bg-card ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50",
+            )}
+          >
+            <p className="truncate text-xs text-muted-foreground">{group.name}</p>
+            <p
+              className={cn(
+                "font-sport text-base leading-tight",
+                group.count === 0 && "text-muted-foreground/50",
+              )}
+            >
+              {group.count > 0 ? `×${group.count}` : "—"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (

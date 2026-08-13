@@ -73,6 +73,11 @@ function entryOf(code: string): [string, Tier] {
   return TITLES[code] ?? [code, "secondary"];
 }
 
+/** 벨트 코드 → 화면 이름. 사진 없이 이름만 필요한 자리가 쓴다 (반납 줄 등). */
+export function beltName(code: string): string {
+  return entryOf(code)[0];
+}
+
 export function BeltIcon({ tier, size = 18 }: { tier: Tier; size?: number }) {
   const { face, edge } = PLATE[tier];
   return (

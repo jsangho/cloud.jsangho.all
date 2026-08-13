@@ -104,6 +104,18 @@ export type CareerWeek = {
    * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
    */
   beats: CareerBeat[] | null;
+  /** 그 주 수입(달러). 무소속 주차는 인디 개런티다 (§3-D50). */
+  pay?: number;
+  /** 방어 성공. **이긴 것과 지킨 것은 다른 사건이다** (§3-D73). */
+  titleDefended?: boolean;
+  /** 그 주에 반납한 벨트 (§3-D40). 길게 다치면 내려놓는다. */
+  vacated?: string[];
+  /** 다친 곳의 이름 (§3-D43). */
+  injuryPart?: string | null;
+  /** `earned`(실력으로) · `emergency`(공백을 메우러) (§3-D22-1). */
+  callUp?: "earned" | "emergency" | null;
+  /** 그 주가 연말 드래프트였는지 (§3-D54). */
+  draftNight?: boolean;
 };
 
 /** 경기 진행 한 마디 (§3-D34). */
@@ -133,8 +145,42 @@ export type CareerRunView = {
   titlesWon: string[];
   team: CareerTeam | null;
   rivalries: CareerRivalry[];
+  /** 돈과 계약 (§3-D73). 옛 응답에는 없어 옵셔널이다. */
+  money?: CareerMoney | null;
+  /** 그랜드슬램 진행도 (§3-D73). */
+  grandSlam?: CareerGrandSlam | null;
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
+};
+
+export type CareerContract = {
+  weeklyPay: number;
+  /** 연봉. **도메인이 곱한 값이다** — 화면이 52를 곱하면 두 곳이 갈린다. */
+  annualPay: number;
+  signedWeek: number;
+  endsWeek: number;
+  years: number;
+  /** 만료까지 남은 주차. 0이면 이번이 협상 주차다. */
+  weeksLeft: number;
+};
+
+export type CareerMoney = {
+  balance: number;
+  /** 무소속이면 `null`이다 (§3-D50) — 주급 0짜리 계약을 만들지 않는다. */
+  contract: CareerContract | null;
+  /** 지금 몸값. 맺고 있는 주급과 견주라고 함께 온다 — 둘이 갈리는 것이 재계약의 긴장이다. */
+  marketValue: number;
+  unsignedWeeks: number;
+  /** 몇 주 뒤 잊히는가. 소속이 있으면 `null` — 무소속 구간의 유일한 시계다. */
+  fadeInWeeks: number | null;
+};
+
+export type CareerGrandSlamGroup = { name: string; count: number };
+
+export type CareerGrandSlam = {
+  /** 0 미달 · 1 그랜드슬램 · 2 더블. **가장 적게 채운 그룹**이 정한다. */
+  level: number;
+  groups: CareerGrandSlamGroup[];
 };
 
 export type CareerRivalry = {
