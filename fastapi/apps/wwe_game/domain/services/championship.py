@@ -37,10 +37,13 @@ from wwe_game.domain.value_objects.week_report import CallUpReason
 # ── 기회 ─────────────────────────────────────────────────────
 
 SHOT_CHANCE_BASE = 0.016
-SHOT_CHANCE_SPAN = 0.108
+SHOT_CHANCE_SPAN = 0.20
 """대회 한 번당 타이틀전이 잡힐 확률 = BASE + SPAN × 인기도/100.
 
-인기도 10이면 2.7%, 90이면 11.3%. **인기도가 기회를 만든다**는 결정을 그대로 옮긴 식이다.
+인기도 10이면 3.6%, 90이면 19.6%. **인기도가 기회를 만든다**는 결정을 그대로 옮긴 식이다.
+
+**0.108에서 올렸다** (§3-D78). 30년에 타이틀전이 열다섯 번뿐이라 전설급 커리어가
+설 자리가 없었다 — 사용자 목표가 "평균 10개 · 최고점은 에지처럼 30개"다.
 
 **0.06/0.40에서 내렸다**(2026-08-07, §3-D21-1). 대회가 연 4회에서 11회로 늘자 커리어당
 타이틀전이 47회에서 149회로 뛰었고, 그랜드슬램이 25%에서 75%로 튀었다. 회당 확률을
@@ -74,7 +77,7 @@ TITLE_LOSS_IN_RING = -1
 """벨트를 잃으면 명성이 실력보다 크게 깎인다. 두 값은 항상 다르다."""
 
 
-CONTENTION_SPAN = 25
+CONTENTION_RATIO = 1.5
 CONTENTION_FLOOR = 0.18
 """**관문을 넘는 것과 자리를 얻는 것은 다르다** (2026-08-13 사용자 규칙 · §3-D75).
 
@@ -117,7 +120,24 @@ LADDER_DECAY = 0.35
 """
 
 
-PROVEN_SHARE = 0.5
+SUPERSTAR_GATE = 88
+SUPERSTAR_BONUS = 3.0
+"""**간판은 매주 타이틀 그림 안에 있다** (§3-D78, 2026-08-13 사용자 제안).
+
+사용자의 말 그대로다 — *"최고점은 에지처럼 30개씩 얻게 해 주고 평균을 지금처럼."*
+
+인기도가 `SUPERSTAR_GATE`를 넘어선 만큼 타이틀전 확률이 **따로 더해진다**. 곱이 아니라
+합인 이유: 곱이면 모든 구간이 함께 올라 중앙값이 밀린다.
+
+**중앙값이 안 움직이는 이유**는 이 문이 거의 안 열리기 때문이다 — 커리어 최고 인기도
+중앙이 69이고 82를 넘는 커리어는 소수다. 넘은 커리어만 타이틀전이 몇 배가 되고,
+그것이 곧 에지·시나 같은 예외적 커리어의 자리다.
+
+**그랜드슬램이 덜 따라오는 이유**는 §3-D78의 짝 규칙 때문이다: 폴백이 감아 본 벨트를
+먼저 보므로, 늘어난 기회가 **새 그룹이 아니라 제 벨트**로 흐른다.
+"""
+
+PROVEN_SHARE = 0.95
 """**전 챔피언은 줄 뒤에 서지 않는다** (§3-D77, 2026-08-13).
 
 그 벨트를 감아 본 적이 있으면 경쟁에서 밀리는 몫의 절반을 메운다. 지금까지 경쟁
@@ -130,15 +150,28 @@ PROVEN_SHARE = 0.5
 """
 
 
+def _superstar_share(popularity: int) -> float:
+    """간판 구간을 얼마나 넘어섰는가 (0.0~1.0)."""
+    if popularity <= SUPERSTAR_GATE:
+        return 0.0
+    return min(1.0, (popularity - SUPERSTAR_GATE) / (100 - SUPERSTAR_GATE))
+
+
 def contention_factor(popularity: int, required: int, *, proven: bool = False) -> float:
     """관문을 얼마나 넘어섰는가 → 자리가 올 확률의 배수 (`CONTENTION_FLOOR`~1.0).
+
+    **폭은 관문에 비례한다** (`CONTENTION_RATIO`). 월드(관문 80)는 폭이 120이라
+    인기도 100에서도 배수가 0.32에 머물고, 2선(50)은 75라 인기도 95면 1.0에 닿는다.
+    그랜드슬램을 20%대에 묶어 두는 것이 이 비례다 — GS는 네 그룹의 최솟값이고
+    가장 좁은 문이 월드이기 때문이다.
 
     `proven`은 **그 벨트를 감아 본 적이 있는가**다. 있으면 밀리는 몫이 절반으로 준다.
     """
     over = max(0, popularity - required)
-    factor = CONTENTION_FLOOR + (1.0 - CONTENTION_FLOOR) * min(
-        1.0, over / CONTENTION_SPAN
-    )
+    # **관문이 높은 벨트일수록 경쟁이 길다** (§3-D78). 월드 자리를 노리는 줄과
+    # 스피드 벨트를 노리는 줄은 길이가 다르다 — 폭을 관문에 비례시켜 그 차이를 낸다.
+    span = max(1.0, required * CONTENTION_RATIO)
+    factor = CONTENTION_FLOOR + (1.0 - CONTENTION_FLOOR) * min(1.0, over / span)
     if proven:
         factor += (1.0 - factor) * PROVEN_SHARE
     return factor
@@ -163,6 +196,7 @@ def title_shot_chance(
     `required`는 그 벨트의 관문이다. 넘긴 폭이 좁으면 동급 경쟁자에게 밀린다.
     """
     chance = SHOT_CHANCE_BASE + SHOT_CHANCE_SPAN * (popularity / 100)
+    chance += SUPERSTAR_BONUS * _superstar_share(popularity)
     chance *= contention_factor(popularity, required, proven=proven)
     chance *= LADDER_DECAY**rung
     if major:
@@ -314,11 +348,18 @@ def shot_ladder(run: CareerRun, target: Title) -> tuple[Title, ...]:
     # **태그는 내려가는 길에 없다** (§3-D76). 태그 타이틀전은 파트너가 함께 서는
     # 다른 부킹이라, 싱글 자리에서 밀린 선수가 그 밤에 흘러들어 갈 자리가 아니다.
     # 노린 벨트가 태그였다면 그건 그대로 선다 — 빠지는 것은 폴백뿐이다.
-    rest = tuple(
+    rest = [
         t
         for t in eligible_titles(run)
         if t is not target and TITLES[t].tier is not TitleTier.TAG
-    )
+    ]
+    # **감아 본 벨트가 앞에 선다** (§3-D78). 부커는 그 자리에서 챔피언이었던 사람을
+    # 먼저 떠올린다 — 밀린 밤이 새 벨트가 아니라 **제 벨트**로 흐른다.
+    #
+    # 이것이 "대관은 늘리되 그랜드슬램은 늘리지 않는" 손잡이다: 그랜드슬램은 네
+    # 그룹의 **넓이**이고 여기서 늘어나는 것은 **깊이**다. 뒤로 밀린 새 그룹은
+    # `LADDER_DECAY`를 한 칸 더 먹는다.
+    rest.sort(key=lambda t: t not in run.titles_won)
     return (target, *rest)
 
 
