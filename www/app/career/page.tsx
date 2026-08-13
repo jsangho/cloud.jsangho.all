@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BeltBanner, BeltList } from "@/components/career-belt";
+import { BeltBanner, BeltList, BrandLogo } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -859,10 +859,12 @@ export default function CareerPage() {
           <span className="font-sport text-lg leading-none">
             {view.year}년차 <span className="text-muted-foreground">·</span> {view.age}세
           </span>
-          <span className="text-xs text-muted-foreground">
-            {view.brand.toUpperCase()}
-            {view.team && ` · ${view.team.label}`}
-            {view.condition !== "healthy" && " · 부상"}
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {/* 브랜드가 텍스트 한 줄이었다 (2026-08-13 사용자가 로고를 가져왔다).
+                소속이 바뀌는 것은 커리어의 장이 바뀌는 일이라(§3-D53) 이름값을 준다. */}
+            <BrandLogo brand={view.brand} width={72} />
+            {view.team && <span>{view.team.label}</span>}
+            {view.condition !== "healthy" && <span>부상</span>}
           </span>
           {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
               방금 지나간 결장 열두 주가 로그 안에서만 조용히 흘러간다. */}
@@ -1154,9 +1156,7 @@ function WeekRow({
           {/* **벨트가 문장보다 먼저다** (2026-08-13 사용자 요청). 챔피언십 기회를
               얻은 밤은 30년에 몇 번 없고, 그 사실이 서술 한 줄에 섞이면 지나간다.
               `titleAtStake`는 표시 이름이 아니라 벨트 코드라 사진을 바로 집는다. */}
-          {week.titleAtStake && (
-            <BeltBanner code={week.titleAtStake} won={week.result === "win"} />
-          )}
+          {week.titleAtStake && <BeltBanner code={week.titleAtStake} won={week.result === "win"} />}
           <p className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}>
             {/* 토너먼트는 한 주에 안 끝난다 — 몇 회전인지가 그 밤의 뜻이다 (§3-D33). */}
             {week.tournamentRound > 0 && (
@@ -1244,18 +1244,22 @@ type MyMatch = {
 function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
-      <div className="flex items-start gap-2.5">
-        {/* 그 밤의 로고 (§3-D71). 대회마다 얼굴이 다르다는 것이 카드보다 먼저 읽힌다.
-            없는 밤(주간 방송)은 자리도 안 잡는다. */}
-        {report.logo && (
-          // eslint-disable-next-line @next/next/no-img-element -- public 정적 파일
+      {/* **그 밤의 로고를 크게 세운다** (2026-08-13 사용자: "PLE 이럴 때는 화면에
+          크게 보여야 하는데"). 36px 아이콘일 때는 대회 이름의 장식이었는데, 이 크기가
+          되면 로고가 그 밤을 여는 자리가 된다 (§3-D71). 없는 밤(주간 방송)은 자리도
+          안 잡는다 — 브랜드가 그 밤의 이름이다 (§3-D60). */}
+      {report.logo && (
+        <div className="flex justify-center py-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- public 정적 파일 */}
           <img
-            src={`/ple/${report.logo}.png`}
+            src={`/ple/hero/${report.logo}.webp`}
             alt=""
-            className="mt-0.5 h-9 w-9 shrink-0 object-contain"
+            className="h-24 max-w-full object-contain"
             loading="lazy"
           />
-        )}
+        </div>
+      )}
+      <div className="flex items-start gap-2.5">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-1.5 font-sport text-sm">
             {report.show}

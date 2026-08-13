@@ -49,8 +49,24 @@ const PLATE: Record<Tier, { face: string; edge: string }> = {
 /** 사진이 있는 벨트. `public/belts/<코드>.webp`를 두면 여기에 코드를 더한다. */
 const PHOTOS = new Set(Object.keys(TITLES));
 
-/** 사진의 가로:세로. 열여덟 장이 640×260~330이라 그 언저리로 잡았다. */
+/** 사진의 가로:세로. 열여덟 장이 260~330 높이라 그 언저리로 잡았다. */
 const PHOTO_RATIO = 2.2;
+
+/**
+ * 이 너비를 넘으면 큰 파일을 집는다 — `belts/hero/`.
+ *
+ * **화질을 깎는 것은 WebP가 아니라 축소다** (2026-08-13 실측). 같은 픽셀 수라면
+ * q88과 q95의 차이가 0.6dB이고, 1280px을 384px로 줄이는 손실은 9dB다. 그래서
+ * 압축률이 아니라 **어느 크기를 집느냐**로 나눈다.
+ *
+ * Next 이미지 최적화가 꺼져 있어(`next.config.mjs`의 `unoptimized: true`) 브라우저가
+ * 파일을 그대로 받는다 — 크기를 코드가 아니라 파일로 나눠야 하는 이유다. 목록에
+ * 큰 파일을 물리면 벨트 여덟 개짜리 커리어가 2MB를 받는다.
+ *
+ * 320은 3배 화면(모바일)에서 큰 파일이 필요해지는 경계다: 작은 쪽이 384px이므로
+ * 128 CSS px까지는 3배로도 충분하고, 그 위는 큰 파일이 답이다.
+ */
+const HERO_FROM = 128;
 
 function entryOf(code: string): [string, Tier] {
   // 모르는 코드는 원문 그대로 보여 준다 — 조용히 숨기면 벨트를 잃은 것처럼 읽힌다.
@@ -93,9 +109,10 @@ export function BeltPhoto({ code, width }: { code: string; width: number }) {
       </span>
     );
   }
+  const folder = width >= HERO_FROM ? "/belts/hero" : "/belts";
   return (
     <Image
-      src={`/belts/${code}.webp`}
+      src={`${folder}/${code}.webp`}
       alt={name}
       width={width}
       height={height}
@@ -126,26 +143,58 @@ export function BeltChip({ code, held = false }: { code: string; held?: boolean 
  *
  * "챔피언십 기회를 가져 경기가 열린다면 이 벨트가 처음에 나오게" — 그래서 문장보다
  * 위에, 그 주차 줄의 맨 앞에 선다. 30년에 몇 번 없는 밤이라 이만한 자리를 준다.
+ *
+ * **크게 세운다** (사용자: "챔피언십 경기나 PLE 이럴 때는 화면에 크게 보여야 하는데").
+ * 벨트가 칸의 주인공이고 문구는 그 아래 받침이다 — 목록의 104px 카드와 같은 크기면
+ * "이 밤은 다르다"가 화면에서 안 읽힌다.
  */
 export function BeltBanner({ code, won }: { code: string; won?: boolean }) {
   const [name] = entryOf(code);
   return (
     <div
       className={cn(
-        "mb-1.5 flex items-center gap-2.5 rounded-[6px] px-2.5 py-1.5",
+        "mb-2 flex flex-col items-center gap-1.5 rounded-[6px] px-3 py-3",
         won
           ? "bg-brand-400/10 ring-1 ring-brand-400/60 ring-inset"
           : "bg-card ring-1 ring-stone-300/60 ring-inset dark:ring-stone-700/60",
       )}
     >
-      <BeltPhoto code={code} width={88} />
-      <span className="min-w-0">
-        <span className="block font-sport text-sm leading-tight">{name} 챔피언십</span>
+      {/* 큰 파일(`belts/hero/`)을 집는 크기다 — 320px는 3배 화면에서도 또렷하다. */}
+      <BeltPhoto code={code} width={320} />
+      <span className="text-center">
+        <span className="block font-sport text-base leading-tight">{name} 챔피언십</span>
         <span className="block text-xs text-muted-foreground">
           {won ? "이 밤에 감았다" : "이 밤에 걸렸다"}
         </span>
       </span>
     </div>
+  );
+}
+
+/**
+ * 브랜드 로고 (2026-08-13 사용자가 가져왔다). 없으면 대문자 텍스트로 떨어진다.
+ *
+ * 파일명은 백엔드 `Brand` 열거값 그대로다 — `raw` · `smackdown` · `nxt`.
+ */
+const BRANDS = new Set(["raw", "smackdown", "nxt"]);
+
+export function BrandLogo({ brand, width = 96 }: { brand: string; width?: number }) {
+  const code = brand.toLowerCase();
+  if (!BRANDS.has(code)) return <>{brand.toUpperCase()}</>;
+  const folder = width >= HERO_FROM ? "/brands/hero" : "/brands";
+  return (
+    // **어두운 칩 위에 얹는다.** 셋의 색이 제각각이라(RAW 밝은 적색 · SmackDown 짙은
+    // 청색 · NXT 무채색) 일괄 반전은 어느 하나를 반드시 망가뜨린다. 방송 로고는
+    // 어두운 바탕을 전제로 그려진 것이라, 배경을 고정하는 쪽이 맞다.
+    <span className="inline-flex items-center rounded-[4px] bg-stone-900 px-2 py-1">
+      <Image
+        src={`${folder}/${code}.webp`}
+        alt={brand.toUpperCase()}
+        width={width}
+        height={Math.round(width / 2.4)}
+        className="object-contain"
+      />
+    </span>
   );
 }
 
