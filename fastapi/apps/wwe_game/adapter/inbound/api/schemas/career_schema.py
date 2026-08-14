@@ -26,7 +26,7 @@ from wwe_game.domain.constants import career_flags as flags
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants import roster
 from wwe_game.domain.constants.play_styles import KOREAN_STYLE_NAMES
-from wwe_game.domain.constants.ple_calendar import date_of
+from wwe_game.domain.constants.ple_calendar import calendar_for, date_of
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
@@ -41,6 +41,7 @@ from wwe_game.domain.services import (
     rivalry_desk,
     rivalry_engine,
     show_report,
+    week_simulation,
 )
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
@@ -505,6 +506,14 @@ class RunSchema(_Camel):
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
     NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
+    next_kind: str = ""
+    """**다음 주에 무엇이 서는가** (§3-D81-3, 2026-08-14 사용자 요청).
+
+    `weekly_show` · `ple` · `special`이면 경기 밤이고, 그때 '다음' 버튼이 '경기
+    시작'으로 바뀐다 — FM이 경기 앞에서 멈추는 것과 같은 자리다. 끝난 커리어는 빈
+    문자열이다."""
+    next_show: str | None = None
+    """다음 주가 대회면 그 이름. 주간 방송·프로모면 `None`이다."""
     finisher: FinisherSchema | None = None
     """지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다."""
     call_out: CallOutSchema | None = None
@@ -983,6 +992,30 @@ def to_briefcase(run: CareerRun) -> BriefcaseSchema | None:
     )
 
 
+def _next_kind(run: CareerRun) -> str:
+    """다음 주의 성격 (§3-D81-3). **규칙이 쓰는 것과 같은 함수를 부른다** —
+    `week_kind_of`가 이미 `run.week + 1`을 보므로 화면과 판정이 갈리지 않는다.
+
+    끝난 커리어와 마지막 주차는 빈 문자열이다: 다음 주가 없다.
+    """
+    if not run.is_active or run.weeks_remaining < 1:
+        return ""
+    return week_simulation.week_kind_of(run).value
+
+
+def _next_show(run: CareerRun) -> str | None:
+    """다음 주가 대회면 그 이름. 아니면 `None`."""
+    if _next_kind(run) not in (WeekKind.PLE.value, WeekKind.SPECIAL.value):
+        return None
+    if not run.is_signed:
+        return None
+    calendar = calendar_for(run.brand, run.seed)
+    upcoming = run.week + 1
+    if not calendar.is_show_week(upcoming):
+        return None
+    return calendar.show_for(upcoming).name
+
+
 def to_finisher(run: CareerRun) -> FinisherSchema:
     """지금 쓰는 피니셔와 고를 수 있는 것들 (§3-D88). **늘 채운다.**"""
     now = finisher_desk.current(run)
@@ -1077,6 +1110,8 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 )
             ],
             briefcase=to_briefcase(run),
+            next_kind=_next_kind(run),
+            next_show=_next_show(run),
             finisher=to_finisher(run),
             call_out=to_call_out(run),
             offer_options=to_offer_options(run),
