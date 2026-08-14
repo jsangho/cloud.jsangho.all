@@ -86,7 +86,15 @@ services:
       - ./cloudflared:/etc/cloudflared:ro
     networks:
       default: {}
-      auth_net: {}
+      # **고정 IP를 준다.** 비워 두면 동적 할당이고, auth_net의 풀은 172.28.0.2부터
+      # 시작한다(.1은 게이트웨이) — 즉 auth가 쓰는 바로 그 주소다.
+      #
+      # 아래 `depends_on`은 **기동 순서만** 정할 뿐 auth가 죽어 있으면 소용이 없다.
+      # auth가 내려간 사이 이 컨테이너가 .2를 가져가면 auth는 `Address already in
+      # use`로 영영 못 뜨고, `restart: unless-stopped`로도 못 빠져나온다 —
+      # 2026-08-14에 실제로 16시간 동안 auth가 죽어 있었다.
+      auth_net:
+        ipv4_address: 172.28.0.3
     depends_on:
       - backend
       - auth
