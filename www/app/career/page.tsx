@@ -9,6 +9,8 @@ import {
   CareerApiError,
   advanceGuestRun,
   advanceRun,
+  answerGuestOffer,
+  answerOffer,
   chooseEvent,
   chooseGuestEvent,
   setGoal,
@@ -627,6 +629,18 @@ export default function CareerPage() {
     void act(() => (state ? setGuestGoal(state, code) : setGoal(run.run.id as number, code)));
   }
 
+  /**
+   * 재계약 협상에 답한다 (§3-D84). 목표와 같은 모양이다 — **진행은 안 시킨다.**
+   * 도장을 찍었는지 나갔는지를 먼저 보고, 다음 '다음'부터 그 계약으로 흘러간다.
+   */
+  function handleOffer(code: string) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() =>
+      state ? answerGuestOffer(state, code) : answerOffer(run.run.id as number, code),
+    );
+  }
+
   function handleRetire() {
     if (!run?.run.id) {
       writeGuestSave(null);
@@ -939,6 +953,13 @@ export default function CareerPage() {
    * 걸었다. 백엔드가 그 판단을 하고 화면은 목록의 길이만 본다.
    */
   const goalOptions = view.goalOptions ?? [];
+  /**
+   * 지금 열려 있는 재계약 협상 (§3-D84).
+   *
+   * **비어 있으면 협상 중이 아니다.** 목표와 마찬가지로 판단은 백엔드가 하고
+   * 화면은 목록의 길이만 본다.
+   */
+  const offerOptions = view.offerOptions ?? [];
 
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
@@ -1069,11 +1090,58 @@ export default function CareerPage() {
       </header>
 
       {/*
+       * **재계약 협상** (§3-D84) — 목표와 같은 자리이고, **목표보다 앞선다.**
+       *
+       * 순서를 화면에서도 지킨다: 협상이 열려 있으면 목표는 안 띄운다. 계약이
+       * 없을 수도 있는데 다음 석 달에 무엇을 걸지부터 물으면 순서가 뒤집힌다 —
+       * `career_advance.advance`가 백엔드에서 하는 판단과 같은 것이다.
+       */}
+      {offerOptions.length > 0 && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+          <h2 className="font-sport text-lg">계약이 끝났다 — 다시 앉는다</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {view.money && (
+              <>
+                지금까지 주 ${view.money.contract?.weeklyPay.toLocaleString("en-US") ?? 0}, 단체가
+                매긴 몸값 주 ${view.money.marketValue.toLocaleString("en-US")}.{" "}
+              </>
+            )}
+            답하기 전에는 다음 주로 가지 않습니다.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {offerOptions.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                disabled={busy}
+                onClick={() => void handleOffer(option.code)}
+                className={cn(
+                  "rounded-[6px] bg-background p-3 text-left transition-colors duration-[120ms]",
+                  "ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70",
+                  "hover:ring-brand-400 disabled:opacity-50",
+                )}
+              >
+                <span className="flex items-baseline gap-2">
+                  <span className="font-sport text-base">{option.label}</span>
+                  {option.years > 0 && (
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      ${option.weeklyPay.toLocaleString("en-US")}/주 · {option.years}년
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">{option.blurb}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/*
        * **분기 목표** (§3-D80) — 이벤트와 같은 자리를 쓰되 성격이 반대다.
        * 이벤트는 벌어진 일에 답하는 것이고 이쪽은 **먼저 거는 것**이라, 문구도
        * "무슨 일이 있었다"가 아니라 "무엇에 걸까"로 연다.
        */}
-      {goalOptions.length > 0 && (
+      {goalOptions.length > 0 && offerOptions.length === 0 && (
         <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
           <h2 className="font-sport text-lg">{view.year}년차 — 무엇에 걸까</h2>
           <p className="mt-1 text-xs text-muted-foreground">

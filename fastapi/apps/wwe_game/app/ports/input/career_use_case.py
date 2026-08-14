@@ -15,9 +15,11 @@ from abc import ABC, abstractmethod
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
     AdvanceResult,
+    AnswerOfferCommand,
     CareerLogPage,
     ChooseCommand,
     GuestAdvanceCommand,
+    GuestAnswerOfferCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -97,6 +99,14 @@ class CareerUseCase(ABC):
         ...
 
     @abstractmethod
+    async def answer_offer(self, command: AnswerOfferCommand) -> AdvanceResult:
+        """재계약 협상에 답한다 (§3-D84). 협상 중이 아니면 `NoOfferOpenError`.
+
+        `set_goal`과 나란히 둔다 — `choose`에 합치지 않는 이유도 같다(반응 대 선언).
+        """
+        ...
+
+    @abstractmethod
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -155,6 +165,11 @@ class CareerUseCase(ABC):
     @abstractmethod
     def set_guest_goal(self, command: GuestSetGoalCommand) -> AdvanceResult:
         """체험판의 분기 목표 (§3-D80)."""
+        ...
+
+    @abstractmethod
+    def answer_guest_offer(self, command: GuestAnswerOfferCommand) -> AdvanceResult:
+        """체험판의 재계약 협상 (§3-D84). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
         ...
 
     @abstractmethod

@@ -273,7 +273,12 @@ def settle(run: CareerRun, roll: SeededRoll) -> CareerRun:
         if run.contract.expires_at(run.week):
             # 만료 시점에 위험권이면 오퍼가 없다. 방출과 같은 판정을 쓴다 —
             # 기준을 따로 두면 "잘리지는 않는데 재계약도 안 되는" 구간이 생긴다.
-            return release(run) if career_end.is_at_release_risk(run) else renew(run)
+            if career_end.is_at_release_risk(run):
+                return release(run)
+            # **여기서 도장을 찍지 않는다** (§3-D84). 예전에는 `renew()`가 조용히
+            # 다시 맺어서 플레이어는 협상이 있었다는 사실도 몰랐다. 이제 협상을
+            # 열어 두고, 답하기 전에는 진행이 막힌다.
+            return run.evolve(offer_week=run.week)
         return run
     if roll.chance(comeback_chance(run)):
         return renew(run)

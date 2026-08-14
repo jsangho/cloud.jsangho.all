@@ -210,6 +210,92 @@ class TestSameRulesAsLogin:
         pytest.skip("30번 진행 동안 이벤트가 안 떴다")
 
 
+class TestGuestOffer:
+    """재계약 협상, 체험판 (§3-D84·D8).
+
+    **여기가 없으면 만료 주차에서 체험판이 통째로 막힌다** — 진행은 `OFFER`로 서는데
+    답할 엔드포인트가 없으면 그 세이브는 다시 못 움직인다.
+    """
+
+    @staticmethod
+    def _until_offer(client: TestClient) -> dict | None:
+        """협상이 열릴 때까지 진행한다. 안 열리면 None."""
+        body = _start(client)
+        state = body["state"]
+        for _ in range(60):
+            body = client.post(
+                "/api/career/guest/advance", json={"state": state, "step": "auto"}
+            ).json()
+            if body["stopReason"] == "offer":
+                return body
+            if body.get("pendingEvent"):
+                body = client.post(
+                    "/api/career/guest/choices",
+                    json={
+                        "state": body["state"],
+                        "choice": body["pendingEvent"]["choices"][0]["code"],
+                    },
+                ).json()
+            elif body["stopReason"] == "goal":
+                body = client.post(
+                    "/api/career/guest/goal",
+                    json={"state": body["state"], "goal": "drift"},
+                ).json()
+            elif body["run"]["endReason"]:
+                return None
+            state = body["state"]
+        return None
+
+    def test_an_open_offer_arrives_with_its_choices(self, client: TestClient) -> None:
+        body = self._until_offer(client)
+        if body is None:
+            pytest.skip("60번 진행 동안 만료 주차가 안 왔다")
+        assert body["run"]["offerOptions"], "협상이 열렸는데 선택지가 안 왔다"
+        assert set(body["run"]["offerOptions"][0]) == {
+            "code",
+            "label",
+            "blurb",
+            "weeklyPay",
+            "years",
+        }, "거절 확률 같은 내부 수치가 새면 안 된다 (§11-14)"
+
+    def test_answering_unblocks_the_save(self, client: TestClient) -> None:
+        body = self._until_offer(client)
+        if body is None:
+            pytest.skip("60번 진행 동안 만료 주차가 안 왔다")
+        answered = client.post(
+            "/api/career/guest/offer", json={"state": body["state"], "offer": "accept"}
+        )
+        assert answered.status_code == 200, answered.text
+        after = answered.json()
+        assert after["stopReason"] != "offer"
+        assert not after["run"]["offerOptions"]
+        # 답했으니 다시 흘러간다 — 안 그러면 진행이 영영 막힌다.
+        moved = client.post(
+            "/api/career/guest/advance", json={"state": after["state"], "step": "auto"}
+        ).json()
+        assert moved["run"]["week"] > after["run"]["week"]
+
+    def test_answering_outside_a_negotiation_is_refused(
+        self, client: TestClient
+    ) -> None:
+        state = _start(client)["state"]
+        response = client.post(
+            "/api/career/guest/offer", json={"state": state, "offer": "accept"}
+        )
+        assert response.status_code == 409
+
+    def test_an_unknown_answer_is_refused(self, client: TestClient) -> None:
+        body = self._until_offer(client)
+        if body is None:
+            pytest.skip("60번 진행 동안 만료 주차가 안 왔다")
+        response = client.post(
+            "/api/career/guest/offer",
+            json={"state": body["state"], "offer": "돈을_두_배로"},
+        )
+        assert response.status_code == 400
+
+
 class TestResume:
     """재개는 **진행이 아니다** (2026-08-11 버그).
 

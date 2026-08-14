@@ -11,6 +11,7 @@ from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없
 from wwe_game.adapter.outbound.narration.rule_narrator import RuleNarrator
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
+    AnswerOfferCommand,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestStartCommand,
@@ -33,6 +34,8 @@ from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun, EndReason
 from wwe_game.domain.services.career_advance import MAX_WEEKS_PER_ADVANCE
 from wwe_game.domain.value_objects.advance_outcome import StepMode, StopReason
+from wwe_game.domain.value_objects.contract import Contract
+from wwe_game.domain.value_objects.contract_offer import OfferChoice
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.title import Brand
@@ -305,6 +308,17 @@ class TestFullCareer:
             # 옛 기준은 "'다음'만 눌러도 끝까지"였는데, 그러면 목표가 안 골라도
             # 그만인 장식이 된다. 새 기준은 "'다음'과 **선택**만으로 끝까지"다 —
             # 막히는 곳은 이벤트와 목표 둘뿐이고, 둘 다 화면이 물어본다.
+            # **재계약도 답해야 간다** (§3-D84). 목표와 나란한 세 번째 멈춤이고,
+            # 여기서도 막히는 곳은 화면이 물어보는 자리뿐이다.
+            if result.stop_reason is StopReason.OFFER:
+                result = await interactor.answer_offer(
+                    AnswerOfferCommand(
+                        run_id=run_id,
+                        user_id=USER,
+                        offer_code=OfferChoice.ACCEPT.value,
+                    )
+                )
+                continue
             if result.stop_reason is StopReason.GOAL:
                 result = await interactor.set_goal(
                     SetGoalCommand(
@@ -350,9 +364,12 @@ class TestSafetyCeiling:
 
         # 예산을 다 쓴 세이브는 이벤트가 안 뜨고, yearly는 PLE에서도 안 선다.
         # **분기 목표도 미리 걸어 둔다** (§3-D80) — 안 걸면 그쪽에서 먼저 선다.
+        # **계약도 상한 너머까지 늘려 둔다** (§3-D84). `make_run`은 0주차 계약을 둔 채
+        # 시계만 미므로, 손대지 않으면 만료 주차에서 협상이 먼저 선다.
         run = make_run(mode="yearly", week=100).evolve(
             events_fired=game_mode_of("yearly").event_budget,
             brand=Brand.NXT,
+            contract=Contract(weekly_pay=3_000, signed_week=99, ends_week=CAREER_WEEKS),
         )
         outcome = career_advance.advance(run)
         assert outcome.stop_reason is StopReason.MAX_WEEKS
@@ -364,6 +381,11 @@ class TestSafetyCeiling:
         run = make_run(mode="yearly", week=CAREER_WEEKS - 3).evolve(
             events_fired=game_mode_of("yearly").event_budget,
             brand=Brand.NXT,
+            contract=Contract(
+                weekly_pay=3_000,
+                signed_week=CAREER_WEEKS - 4,
+                ends_week=CAREER_WEEKS,
+            ),
         )
         outcome = career_advance.advance(run)
         assert outcome.run.week <= CAREER_WEEKS

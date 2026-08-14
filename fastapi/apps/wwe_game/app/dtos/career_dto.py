@@ -87,6 +87,24 @@ class GuestSetGoalCommand:
 
 
 @dataclass(frozen=True)
+class AnswerOfferCommand:
+    """재계약 협상에 답한다 (§3-D84). `SetGoalCommand`와 나란한 자리다 —
+    둘 다 **먼저 정하는 것**이고, 둘 다 답하기 전에는 진행이 막힌다."""
+
+    run_id: int
+    user_id: int
+    offer_code: str
+
+
+@dataclass(frozen=True)
+class GuestAnswerOfferCommand:
+    """체험판의 재계약 협상 (§3-D84·D8)."""
+
+    run: CareerRun
+    offer_code: str
+
+
+@dataclass(frozen=True)
 class GuestStartCommand:
     """체험판 시작. `user_id`가 없다 — 저장은 브라우저가 한다(§3-D8)."""
 

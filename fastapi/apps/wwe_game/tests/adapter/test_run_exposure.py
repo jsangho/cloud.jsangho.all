@@ -18,8 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "domain"))
 
 from _helpers import make_run  # noqa: E402, I001
 from wwe_game.adapter.inbound.api.schemas.career_schema import (  # noqa: E402
+    OfferOptionSchema,
     to_grand_slam,
     to_money,
+    to_offer_options,
     to_week,
 )
 from wwe_game.app.dtos.career_dto import WeekReportView  # noqa: E402
@@ -27,6 +29,7 @@ from wwe_game.domain.constants import career_rules as rules  # noqa: E402
 from wwe_game.domain.services.week_simulation import simulate_week  # noqa: E402
 from wwe_game.domain.value_objects.condition import InjuryGrade  # noqa: E402
 from wwe_game.domain.value_objects.body_part import BodyPart  # noqa: E402
+from wwe_game.domain.value_objects.contract_offer import OfferChoice  # noqa: E402
 from wwe_game.domain.value_objects.title import Title  # noqa: E402
 from wwe_game.domain.value_objects.week_report import (  # noqa: E402
     CallUpReason,
@@ -84,6 +87,41 @@ class TestTheContractReachesTheScreen:
             contract=None, unsigned_weeks=rules.FADE_GRACE_WEEKS + 20
         )
         assert to_money(run).fade_in_weeks == 0
+
+
+# ── 재계약 협상 (§3-D84) ─────────────────────────────────────
+
+
+class TestTheOfferReachesTheScreen:
+    """**협상은 화면이 없으면 존재하지 않는 것과 같다.** 도메인만 만들어 두고
+    응답에 안 실은 채 하루를 보낸 것이 바로 이 파일이 생긴 이유다(§3-D73)."""
+
+    @staticmethod
+    def opened():
+        return make_run(week=300).evolve(offer_week=300)
+
+    def test_an_open_offer_sends_all_five_choices(self) -> None:
+        options = to_offer_options(self.opened())
+        assert len(options) == len(OfferChoice), "다섯이 다 가야 선택이 된다"
+        assert {o.code for o in options} == {c.value for c in OfferChoice}
+
+    def test_a_quiet_week_sends_none(self) -> None:
+        """**비어 있으면 협상 중이 아니다** — 화면은 목록의 길이만 본다."""
+        assert to_offer_options(make_run(week=300)) == []
+
+    def test_each_choice_carries_its_terms(self) -> None:
+        by_code = {o.code: o for o in to_offer_options(self.opened())}
+        assert by_code[OfferChoice.ACCEPT.value].weekly_pay > 0
+        assert by_code[OfferChoice.LONG.value].years == 5
+        # 나가는 길에는 조건이 없다 — 0이 그 사실을 말한다.
+        assert by_code[OfferChoice.WALK.value].years == 0
+        assert by_code[OfferChoice.WALK.value].weekly_pay == 0
+
+    def test_the_refusal_odds_never_leave_the_domain(self) -> None:
+        """**거절 확률은 안 나간다** (§11-14). 보이면 '더 부른다'가 계산이 된다."""
+        fields = set(OfferOptionSchema.model_fields)
+        assert "refusal" not in fields
+        assert not fields & {"pay_factor", "risk", "chance"}
 
 
 # ── 그랜드슬램 (§3-D20) ──────────────────────────────────────

@@ -55,3 +55,7 @@ class NoGoalNeededError(Exception):
 
 class CannotAffordGoalError(ValueError):
     """잔액이 모자란 목표를 골랐다 (§3-D80·D48)."""
+
+
+class NoOfferOpenError(Exception):
+    """재계약 협상 중이 아닌데 답했다 (§3-D84)."""

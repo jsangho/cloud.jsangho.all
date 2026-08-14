@@ -30,6 +30,7 @@ from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
+    contract_desk,
     contract_office,
     match_rating,
     quarter_plan,
@@ -323,6 +324,32 @@ class GoalOptionSchema(_Camel):
     cost: int
 
 
+class OfferRequest(_Camel):
+    offer: str
+
+
+class GuestOfferRequest(_Camel):
+    state: GuestRunState
+    offer: str
+
+
+class OfferOptionSchema(_Camel):
+    """재계약 협상의 선택지 하나 (§3-D84).
+
+    **거절 확률은 내보내지 않는다** (§11-14). "등을 돌릴 수 있다"는 `blurb`가 말하고,
+    그 이상은 수치라 그대로 내면 최적해가 드러난다 — 확률이 보이면 `PUSH`는 도박이
+    아니라 계산이 된다.
+    """
+
+    code: str
+    label: str
+    blurb: str
+    weekly_pay: int
+    """그 선택지로 도장을 찍었을 때의 주급. 나간다(`walk`)면 0이다."""
+    years: int
+    """계약 연수. 0이면 계약을 맺지 않는다."""
+
+
 class RunSchema(_Camel):
     id: int | None
     name: str
@@ -368,6 +395,11 @@ class RunSchema(_Camel):
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
     NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
+    offer_options: list[OfferOptionSchema] = Field(default_factory=list)
+    """재계약 협상의 선택지들 (§3-D84). **비어 있으면 협상 중이 아니다.**
+
+    제시 주급은 따로 담지 않는다 — `money.market_value`가 곧 그 값이고(둘 다
+    `contract_office.appraise`), 같은 수를 두 번 실어 보내면 언젠가 갈린다."""
     disclaimer: str = Field(
         default="이 게임의 전개는 가상입니다.",
         description="로그 화면 하단에 상시 노출한다 (§3-D13).",
@@ -780,6 +812,26 @@ def to_champion_groups(run: CareerRun) -> list[ChampionGroupSchema]:
     ]
 
 
+def to_offer_options(run: CareerRun) -> list[OfferOptionSchema]:
+    """지금 열려 있는 협상의 선택지들 (§3-D84). 협상 중이 아니면 빈 목록이다.
+
+    **금액은 도메인에 묻는다**(`contract_desk.pay_for`) — 여기서 곱셈을 다시 적으면
+    보여 준 금액과 실제로 찍히는 금액이 갈린다.
+    """
+    if not contract_desk.is_open(run):
+        return []
+    return [
+        OfferOptionSchema(
+            code=spec.choice.value,
+            label=spec.label,
+            blurb=spec.blurb,
+            weekly_pay=contract_desk.pay_for(run, spec),
+            years=spec.years,
+        )
+        for spec in contract_desk.options(run)
+    ]
+
+
 def to_advance(result: AdvanceResult) -> AdvanceResponse:
     run = result.run
     return AdvanceResponse(
@@ -823,6 +875,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                     quarter_plan.options(run) if quarter_plan.needs_goal(run) else ()
                 )
             ],
+            offer_options=to_offer_options(run),
             injured_parts=[
                 PARTS[BodyPart(code)].label
                 for code in sorted(run.injured_parts)

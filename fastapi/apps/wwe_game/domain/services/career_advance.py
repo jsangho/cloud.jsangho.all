@@ -31,6 +31,7 @@ from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
     career_end,
+    contract_desk,
     contract_office,
     quarter_plan,
     seeded_roll,
@@ -89,6 +90,10 @@ def advance(
     # 진행이 그 선택을 기다리는 것이 맞다.
     #
     # 새 기준은 §11-1에 적어 뒀다: *'다음'과 **선택**만으로 끝까지 간다.*
+    # **협상이 목표보다 앞선다** (§3-D84). 계약이 없으면 다음 분기에 무엇을 걸지가
+    # 성립하지 않는다 — 무소속에는 목표를 묻지 않는다는 §3-D80과 같은 이유다.
+    if contract_desk.is_open(run):
+        return AdvanceOutcome(run=run, stop_reason=StopReason.OFFER)
     if quarter_plan.needs_goal(run):
         return AdvanceOutcome(run=run, stop_reason=StopReason.GOAL)
     if max_weeks < 1:
@@ -102,6 +107,8 @@ def advance(
         reports.append(report)
 
         stop = _stop_reason(run, report, step, len(reports), limit)
+        if stop is None and contract_desk.is_open(run):
+            stop = StopReason.OFFER
         if stop is None and quarter_plan.needs_goal(run):
             # 분기가 넘어갔다 — 여기서 한 번 끊어 묻는다. 답하지 않고 다시
             # '다음'을 누르면 위에서 `drift`가 흘려보낸다.

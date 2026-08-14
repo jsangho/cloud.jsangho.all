@@ -175,6 +175,12 @@ export type CareerRunView = {
    * 구간이거나 이미 이번 분기를 걸었다.
    */
   goalOptions?: CareerGoalOption[];
+  /**
+   * 재계약 협상의 선택지들 (§3-D84). **비어 있으면 협상 중이 아니다.**
+   *
+   * 제시 주급은 따로 오지 않는다 — `money.marketValue`가 곧 그 값이다.
+   */
+  offerOptions?: CareerOfferOption[];
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
@@ -225,6 +231,22 @@ export type CareerGoalOption = {
   cost: number;
 };
 
+/**
+ * 재계약 협상의 선택지 하나 (§3-D84).
+ *
+ * **거절 확률은 오지 않는다.** "등을 돌릴 수 있다"는 `blurb`가 말하고, 그 이상은
+ * 수치라 화면에 뜨면 "더 부른다"가 도박이 아니라 계산이 된다 (§11-14).
+ */
+export type CareerOfferOption = {
+  code: string;
+  label: string;
+  blurb: string;
+  /** 그 선택지로 도장을 찍었을 때의 주급. 나간다면 0이다. */
+  weeklyPay: number;
+  /** 계약 연수. 0이면 계약을 맺지 않는다. */
+  years: number;
+};
+
 export type CareerGrandSlamGroup = { name: string; count: number };
 
 export type CareerGrandSlam = {
@@ -262,7 +284,9 @@ export type CareerAdvance = {
     | "tick"
     | "max_weeks"
     /** 새 분기가 열렸다 — 무엇에 걸지 정해야 간다 (§3-D80). */
-    | "goal";
+    | "goal"
+    /** 계약이 만료됐다 — 재계약에 답해야 간다 (§3-D84). **목표보다 앞선다.** */
+    | "offer";
   pendingEvent: CareerPendingEvent | null;
 };
 
@@ -450,6 +474,21 @@ export function setGoal(runId: number, goal: string): Promise<CareerAdvance> {
 /** 체험판의 분기 목표 (§3-D80). 없으면 콜업 뒤 체험판이 통째로 막힌다. */
 export function setGuestGoal(state: GuestRunState, goal: string): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/goal", { state, goal });
+}
+
+/**
+ * 재계약 협상에 답한다 (§3-D84).
+ *
+ * `setGoal`과 나란한 자리다 — 둘 다 **먼저 정하는 것**이고, 답하기 전에는 진행이
+ * 막힌다. 협상 중이 아닌데 부르면 409다.
+ */
+export function answerOffer(runId: number, offer: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/offer`, { offer });
+}
+
+/** 체험판의 재계약 협상 (§3-D84). 없으면 만료 주차에서 체험판이 통째로 막힌다. */
+export function answerGuestOffer(state: GuestRunState, offer: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/offer", { state, offer });
 }
 
 export function readLog(runId: number, offset = 0, limit = 50): Promise<CareerLogPage> {
