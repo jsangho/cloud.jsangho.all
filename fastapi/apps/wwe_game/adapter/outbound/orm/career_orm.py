@@ -139,7 +139,9 @@ class CareerRunModel(Base):
     finisher_name: Mapped[str] = mapped_column(String(40), default="")
     """직접 지은 기술 이름 (§3-D88). 코드 칸과 나눠 둔다."""
     finisher_week: Mapped[int] = mapped_column(Integer, default=0)
-    """마지막으로 바꾼 주차. 쿨다운 전용이다."""
+    """마지막으로 손댄 주차. 기록용이다."""
+    finisher_ask_week: Mapped[int] = mapped_column(Integer, default=0)
+    """이 주차 전에는 안 묻는다 (§3-D88). 0이면 첫 분기 규칙, 커리어 끝 너머면 평생."""
     offer_week: Mapped[int] = mapped_column(Integer, default=0)
     """재계약 협상이 열린 주차 (§3-D84). 0이면 열려 있지 않다.
 

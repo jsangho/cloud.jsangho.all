@@ -135,6 +135,7 @@ class CareerMapper:
             finisher=row.finisher or "",
             finisher_name=row.finisher_name or "",
             finisher_week=row.finisher_week or 0,
+            finisher_ask_week=row.finisher_ask_week or 0,
         )
 
     @staticmethod
@@ -191,6 +192,7 @@ class CareerMapper:
         row.finisher = run.finisher
         row.finisher_name = run.finisher_name
         row.finisher_week = run.finisher_week
+        row.finisher_ask_week = run.finisher_ask_week
 
     @staticmethod
     def log_row(run_id: int, view: WeekReportView) -> CareerLogEntryModel:

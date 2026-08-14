@@ -583,13 +583,33 @@ def _apply_finisher(
 ) -> CareerRun:
     """두 갈래 중 하나를 고른다 (§3-D88).
 
-    **이름이 먼저다.** 둘 다 오면 직접 지은 쪽을 쓴다 — 화면이 갈래를 먼저 묻고
+    **"그대로 쓴다"가 가장 앞이다.** 바꾸지 않겠다는 선언이므로 코드·이름이 함께
+    와도 그쪽이 이긴다.
+
+    그다음은 이름이다. 둘 다 오면 직접 지은 쪽을 쓴다 — 화면이 갈래를 먼저 묻고
     보내므로 둘 다 채워 보내는 것은 잘못된 요청이고, 그때 조용히 목록 쪽으로
     떨어지면 사용자가 지은 이름이 사라진다.
     """
+    if command.hold:
+        return finisher_desk.hold(run, _hold_weeks(command.hold))
     if command.name:
         return finisher_desk.name_it(run, command.name)
     return finisher_desk.pick(run, command.code)
+
+
+_HOLD_WEEKS: dict[str, int] = {
+    "quarter": finisher_desk.HOLD_QUARTER,
+    "year": finisher_desk.HOLD_YEAR,
+    "forever": finisher_desk.HOLD_FOREVER,
+}
+
+
+def _hold_weeks(code: str) -> int:
+    """다시 묻기까지의 주차. 모르는 코드는 400이 되도록 도메인 예외로 바꾼다."""
+    weeks = _HOLD_WEEKS.get(code)
+    if weeks is None:
+        raise InvalidChoiceError(f"선택할 수 없는 항목입니다: {code}")
+    return weeks
 
 
 def _offer_of(code: str) -> OfferChoice:

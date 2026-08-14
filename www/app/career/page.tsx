@@ -46,6 +46,7 @@ import {
   type CareerShowReport,
   type CareerNewsItem,
   type CareerNewsPage,
+  type FinisherHold,
   type CareerStats,
   type CareerWeek,
   type GuestRunState,
@@ -778,7 +779,7 @@ export default function CareerPage() {
   }
 
   /** 피니셔를 바꾼다 (§3-D88). 두 갈래 중 하나를 실어 보낸다. */
-  function handleFinisher(pick: { code?: string; name?: string }) {
+  function handleFinisher(pick: { code?: string; name?: string; hold?: FinisherHold }) {
     if (!run) return;
     const state = screen.phase === "play" ? screen.state : null;
     // **성공해도 여기서 닫지 않는다.** `act`는 실패를 삼키고 void를 돌려주므로
@@ -1442,33 +1443,68 @@ export default function CareerPage() {
                 <span className="font-sport text-base">피니셔 — {finisher.name}</span>
                 {!finisher.canChange && (
                   <span className="text-xs tabular-nums text-muted-foreground">
-                    {finisher.weeksUntilChange}주 뒤 변경 가능
+                    {finisher.settled
+                      ? "평생 쓰기로 정했습니다"
+                      : `${finisher.weeksUntilChange}주 뒤 변경 가능`}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{finisher.blurb}</p>
 
               {finisher.canChange && finisherMode === null && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => setFinisherMode("list")}
-                  >
-                    기존 선수의 기술에서 고른다
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => setFinisherMode("custom")}
-                  >
-                    이름을 직접 짓는다
-                  </Button>
-                </div>
+                <>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setFinisherMode("list")}
+                    >
+                      기존 선수의 기술에서 고른다
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setFinisherMode("custom")}
+                    >
+                      이름을 직접 짓는다
+                    </Button>
+                  </div>
+                  {/*
+                   * **안 바꾸는 것도 선택이다** (2026-08-14 사용자 요청). 분기마다
+                   * 자리가 열려 화면이 계속 물어보므로, 얼마나 안 물을지를 고른다.
+                   */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">그대로 쓴다</span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleFinisher({ hold: "quarter" })}
+                      className="rounded-[3px] bg-card px-2 py-1 text-xs transition-colors hover:bg-brand-400/15 disabled:opacity-50"
+                    >
+                      이번 분기는
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleFinisher({ hold: "year" })}
+                      className="rounded-[3px] bg-card px-2 py-1 text-xs transition-colors hover:bg-brand-400/15 disabled:opacity-50"
+                    >
+                      1년 뒤에 물어보기
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleFinisher({ hold: "forever" })}
+                      className="rounded-[3px] bg-card px-2 py-1 text-xs transition-colors hover:bg-brand-400/15 disabled:opacity-50"
+                    >
+                      평생 쓰기
+                    </button>
+                  </div>
+                </>
               )}
 
               {finisher.canChange && finisherMode === "list" && (

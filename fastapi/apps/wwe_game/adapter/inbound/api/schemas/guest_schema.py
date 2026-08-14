@@ -100,6 +100,7 @@ class GuestRunState(BaseModel):
     """지금 쓰는 피니셔 (§3-D88). 옛 체험판 세이브는 비어 있고, 그게 곧 기본값이다."""
     finisher_name: str = ""
     finisher_week: int = 0
+    finisher_ask_week: int = 0
 
 
 def to_domain(state: GuestRunState) -> CareerRun:
@@ -186,6 +187,7 @@ def to_domain(state: GuestRunState) -> CareerRun:
         finisher=state.finisher,
         finisher_name=state.finisher_name,
         finisher_week=state.finisher_week,
+        finisher_ask_week=state.finisher_ask_week,
         contract=(
             Contract(
                 weekly_pay=int(state.contract["weekly_pay"]),
@@ -283,4 +285,5 @@ def to_state(run: CareerRun) -> GuestRunState:
         finisher=run.finisher,
         finisher_name=run.finisher_name,
         finisher_week=run.finisher_week,
+        finisher_ask_week=run.finisher_ask_week,
     )

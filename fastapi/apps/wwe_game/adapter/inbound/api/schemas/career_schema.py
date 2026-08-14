@@ -368,12 +368,15 @@ class FinisherRequest(_Camel):
 
     code: str = ""
     name: str = ""
+    hold: str = ""
+    """지금 것을 그대로 쓰고 다시 묻는 날만 미룬다 — `quarter`·`year`·`forever`."""
 
 
 class GuestFinisherRequest(_Camel):
     state: GuestRunState
     code: str = ""
     name: str = ""
+    hold: str = ""
 
 
 class FinisherOptionSchema(_Camel):
@@ -394,6 +397,8 @@ class FinisherSchema(_Camel):
     custom: bool
     """직접 지은 이름인지."""
     can_change: bool
+    settled: bool = False
+    """**평생 쓰기로 못 박았는가** — 참이면 화면이 바꾸기 자리를 아예 안 낸다."""
     weeks_until_change: int
     """다시 바꿀 수 있을 때까지 남은 주차. **첫 분기에는 여기가 0이 아니다.**"""
     options: list[FinisherOptionSchema] = Field(default_factory=list)
@@ -1025,6 +1030,7 @@ def to_finisher(run: CareerRun) -> FinisherSchema:
         blurb=now.blurb,
         custom=now.code == CUSTOM_CODE,
         can_change=finisher_desk.can_change(run),
+        settled=finisher_desk.is_settled(run),
         weeks_until_change=finisher_desk.weeks_until_change(run),
         options=[
             FinisherOptionSchema(code=f.code, label=f.name, blurb=f.blurb)

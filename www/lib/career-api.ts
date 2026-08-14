@@ -315,6 +315,14 @@ export type CareerBriefcase = {
 export type CareerFinisherOption = { code: string; label: string; blurb: string };
 
 /**
+ * 지금 것을 그대로 쓰고 **다시 묻는 날만 미룬다** (2026-08-14 사용자 요청).
+ *
+ * 바꾸는 것만이 선택이 아니다 — 분기마다 자리가 열리므로 "이대로 간다"도 한 번의
+ * 결정이다.
+ */
+export type FinisherHold = "quarter" | "year" | "forever";
+
+/**
  * 지금 쓰는 피니셔와 바꿀 수 있는 자리 (§3-D88).
  *
  * **모두 수플렉스에서 시작한다.** 첫 분기가 지나야 바꿀 수 있고, 바꾼 뒤에도 한
@@ -327,6 +335,8 @@ export type CareerFinisher = {
   /** 직접 지은 이름인지. */
   custom: boolean;
   canChange: boolean;
+  /** **평생 쓰기로 못 박았는가** — 참이면 바꾸기 자리를 아예 안 낸다. */
+  settled?: boolean;
   weeksUntilChange: number;
   options: CareerFinisherOption[];
   nameMin: number;
@@ -651,23 +661,25 @@ export function callOutGuestRival(state: GuestRunState, rival: string): Promise<
  */
 export function changeFinisher(
   runId: number,
-  pick: { code?: string; name?: string },
+  pick: { code?: string; name?: string; hold?: FinisherHold },
 ): Promise<CareerAdvance> {
   return post<CareerAdvance>(`/runs/${runId}/finisher`, {
     code: pick.code ?? "",
     name: pick.name ?? "",
+    hold: pick.hold ?? "",
   });
 }
 
 /** 체험판의 피니셔 교체 (§3-D88). */
 export function changeGuestFinisher(
   state: GuestRunState,
-  pick: { code?: string; name?: string },
+  pick: { code?: string; name?: string; hold?: FinisherHold },
 ): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/finisher", {
     state,
     code: pick.code ?? "",
     name: pick.name ?? "",
+    hold: pick.hold ?? "",
   });
 }
 
