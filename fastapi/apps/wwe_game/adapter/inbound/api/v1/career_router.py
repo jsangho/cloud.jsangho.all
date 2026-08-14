@@ -17,10 +17,12 @@ from core.security.token_verifier import TokenPayload
 from wwe_game.adapter.inbound.api.schemas.career_schema import (
     AdvanceRequest,
     AdvanceResponse,
+    CallOutRequest,
     ChoiceRequest,
     GoalRequest,
     GuestAdvanceRequest,
     GuestAdvanceResponse,
+    GuestCallOutRequest,
     GuestChoiceRequest,
     GuestGoalRequest,
     GuestOfferRequest,
@@ -50,9 +52,13 @@ from wwe_game.adapter.inbound.api.schemas.guest_schema import (
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
     AnswerOfferCommand,
+    CallOutCommand,
+    CashInCommand,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
+    GuestCallOutCommand,
+    GuestCashInCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -72,6 +78,8 @@ from wwe_game.app.ports.input.career_use_case import (
 from wwe_game.app.ports.output.career_repository import RunNotFoundError
 from wwe_game.dependencies.career_provider import get_career_use_case
 from wwe_game.domain.exceptions import (
+    CannotCallOutError,
+    CannotCashInError,
     InvalidCareerRunError,
     InvalidChoiceError,
     InvalidRingNameError,
@@ -98,6 +106,8 @@ _STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
     (ChoiceRequiredError, status.HTTP_409_CONFLICT, "먼저 선택을 마쳐야 합니다."),
     (NoPendingEventError, status.HTTP_409_CONFLICT, "선택할 이벤트가 없습니다."),
     (NoOfferOpenError, status.HTTP_409_CONFLICT, "지금은 협상 중이 아닙니다."),
+    (CannotCashInError, status.HTTP_409_CONFLICT, "지금은 가방을 쓸 수 없습니다."),
+    (CannotCallOutError, status.HTTP_409_CONFLICT, "지금은 시비를 걸 수 없습니다."),
     (RunNotActiveError, status.HTTP_409_CONFLICT, "이미 끝난 커리어입니다."),
     (InvalidChoiceError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
     (
@@ -286,6 +296,43 @@ async def answer_offer(
     return to_advance(await _guard(lambda: use_case.answer_offer(command)))
 
 
+@career_router.post("/runs/{run_id}/cash-in", response_model=AdvanceResponse)
+async def cash_in(
+    run_id: int,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """가방을 쓰기로 한다 (§3-D85).
+
+    **본문이 없다.** 고를 선택지가 아니라 "지금 한다"는 사실 하나뿐이라, 목표·협상과
+    달리 무엇을 골랐는지 실어 보낼 것이 없다.
+
+    **진행을 막고 있던 것이 아니다** — 안 부르고 '다음'을 눌러도 아무 일도 일어나지
+    않는다. 쓸 수 없는 상태(없거나 · 이미 정했거나 · 무소속이거나 · 이미 그 벨트를
+    감고 있거나)면 409다.
+    """
+    command = CashInCommand(run_id=run_id, user_id=_user_id(claims))
+    return to_advance(await _guard(lambda: use_case.cash_in(command)))
+
+
+@career_router.post("/runs/{run_id}/call-out", response_model=AdvanceResponse)
+async def call_out(
+    run_id: int,
+    body: CallOutRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """그 사람에게 시비를 건다 (§3-D86).
+
+    **후보 목록 밖의 이름은 409다.** 급·브랜드 그림이 요청 한 줄로 무너지지 않게
+    도메인이 막는다(§3-D53).
+    """
+    command = CallOutCommand(
+        run_id=run_id, user_id=_user_id(claims), rival_name=body.rival
+    )
+    return to_advance(await _guard(lambda: use_case.call_out(command)))
+
+
 @career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)
 async def read_report(
     run_id: int,
@@ -449,6 +496,29 @@ def answer_guest_offer(
         offer_code=body.offer,
     )
     return to_guest(_sync(lambda: use_case.answer_guest_offer(command)))
+
+
+@career_router.post("/guest/cash-in", response_model=GuestAdvanceResponse)
+def cash_in_guest(
+    body: GuestResumeRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 가방 현금화 (§3-D85). **세이브만 받는다** — 고를 것이 없다."""
+    command = GuestCashInCommand(run=_restore(body.state))  # type: ignore[arg-type]
+    return to_guest(_sync(lambda: use_case.cash_in_guest(command)))
+
+
+@career_router.post("/guest/call-out", response_model=GuestAdvanceResponse)
+def call_out_guest(
+    body: GuestCallOutRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 시비 걸기 (§3-D86)."""
+    command = GuestCallOutCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        rival_name=body.rival,
+    )
+    return to_guest(_sync(lambda: use_case.call_out_guest(command)))
 
 
 @career_router.post("/guest/news", response_model=NewsPageSchema)

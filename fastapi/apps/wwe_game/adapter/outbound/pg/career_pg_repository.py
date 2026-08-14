@@ -131,6 +131,7 @@ class CareerPgRepository(CareerRepository):
                     stage=rivalry.stage.value,
                     heat=rivalry.heat,
                     started_week=rivalry.started_week,
+                    opened_by=rivalry.opened_by.value,
                 )
             )
 

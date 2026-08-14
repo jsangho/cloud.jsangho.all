@@ -19,6 +19,7 @@ from wwe_game.domain.entities.career_run import (
     HEAT_MIN,
     CareerRun,
     Rivalry,
+    RivalryOrigin,
     RivalryStage,
 )
 from wwe_game.domain.services.seeded_roll import SeededRoll
@@ -88,26 +89,53 @@ def top_rivalry(run: CareerRun) -> Rivalry | None:
     return max(run.rivalries, default=None, key=lambda r: r.heat)
 
 
-def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
-    """급이 맞는 상대를 고른다. 이미 대립 중인 사람은 제외한다.
+def candidate_pool(run: CareerRun) -> tuple[str, ...]:
+    """지금 대립 상대가 될 수 있는 사람들. 급과 브랜드가 맞고, 아직 안 엮인 사람.
 
-    **자기 자신도 제외한다** (2026-08-10). 실존 선수를 골라 그 선수가 되는 시스템이라
+    **자기 자신을 제외한다** (2026-08-10). 실존 선수를 골라 그 선수가 되는 시스템이라
     (§3-D10-1) 플레이어 이름이 명부에 그대로 있을 수 있고, 그러면 "로만 레인즈가
     로만 레인즈와 대립한다"가 나온다.
+
+    **규칙과 화면이 같은 풀을 본다** (§3-D86). 예전에는 이 계산이 `pick_rival` 안에
+    있었고, 플레이어가 고르는 목록을 만들려면 밖에서 같은 식을 다시 적어야 했다 —
+    그러면 "화면에 뜬 사람인데 규칙은 모르는" 상대가 생긴다.
     """
     # **같은 브랜드에서 고른다** (§3-D53). 내가 NXT에 있는데 메인 로스터와 대립하면
     # 브랜드가 있다는 사실 자체가 화면에서 사라진다. 등급은 그 브랜드에 있는 것으로
     # 접는다 — 육성에는 유망주만 산다.
     tier = roster.tier_in(run.brand, roster.tier_for_popularity(run.stats.popularity))
     taken = {r.rival_name for r in run.rivalries} | {str(run.identity.name)}
-    pool = tuple(
+    return tuple(
         n
         for n in roster.pool_for(
             run.identity.gender, tier, run.week, run.brand, run.seed
         )
         if n not in taken
     )
+
+
+def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:
+    """급이 맞는 상대를 고른다. 이미 대립 중인 사람은 제외한다."""
+    pool = candidate_pool(run)
     return roll.pick(pool) if pool else None
+
+
+def open_with(
+    name: str, week: int, *, by: RivalryOrigin = RivalryOrigin.RIVAL
+) -> Rivalry:
+    """그 사람과 대립을 연다. **여는 자리는 하나다** — 규칙이 굴려서 열든
+    플레이어가 걸어서 열든(§3-D86) 시작 열기와 단계가 같아야 한다.
+
+    갈리는 것은 `opened_by` 하나다. **규칙이 여는 것은 전부 `RIVAL`이다** — 상대가
+    나를 지목해 온 것이고, 그것이 §3-D86 이전에 있던 유일한 갈래였다.
+    """
+    return Rivalry(
+        rival_name=name,
+        stage=RivalryStage.INDIFFERENT,
+        heat=HEAT_PER_PROMO,
+        started_week=week,
+        opened_by=by,
+    )
 
 
 def pick_opponent(run: CareerRun, roll: SeededRoll) -> str | None:
@@ -129,12 +157,7 @@ def start_rivalry(run: CareerRun, week: int, roll: SeededRoll) -> Rivalry | None
     name = pick_rival(run, roll)
     if name is None:
         return None
-    return Rivalry(
-        rival_name=name,
-        stage=RivalryStage.INDIFFERENT,
-        heat=HEAT_PER_PROMO,
-        started_week=week,
-    )
+    return open_with(name, week)
 
 
 def advance_rivalries(

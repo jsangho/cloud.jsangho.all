@@ -59,3 +59,17 @@ class CannotAffordGoalError(ValueError):
 
 class NoOfferOpenError(Exception):
     """재계약 협상 중이 아닌데 답했다 (§3-D84)."""
+
+
+class CannotCallOutError(Exception):
+    """걸 수 없는 상대에게 시비를 걸었다 (§3-D86).
+
+    자리가 찼거나(`MAX_ACTIVE`) · 후보 목록 밖의 이름이다.
+    """
+
+
+class CannotCashInError(Exception):
+    """쓸 수 없는 가방을 쓰려 했다 (§3-D85).
+
+    없거나 · 이미 쓰기로 했거나 · 무소속이거나 · 이미 그 벨트를 감고 있다.
+    """

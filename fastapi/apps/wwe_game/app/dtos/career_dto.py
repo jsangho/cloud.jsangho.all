@@ -105,6 +105,42 @@ class GuestAnswerOfferCommand:
 
 
 @dataclass(frozen=True)
+class CashInCommand:
+    """가방을 쓰기로 한다 (§3-D85).
+
+    **답할 것이 없다** — 목표·협상과 달리 이건 멈춤이 아니라 상시 행동이라, 고를
+    선택지가 아니라 "지금 한다"는 사실 하나뿐이다. 그래서 코드 필드가 없다.
+    """
+
+    run_id: int
+    user_id: int
+
+
+@dataclass(frozen=True)
+class CallOutCommand:
+    """그 사람에게 시비를 건다 (§3-D86). 상대 이름이 곧 선택이다."""
+
+    run_id: int
+    user_id: int
+    rival_name: str
+
+
+@dataclass(frozen=True)
+class GuestCallOutCommand:
+    """체험판의 시비 걸기 (§3-D86·D8)."""
+
+    run: CareerRun
+    rival_name: str
+
+
+@dataclass(frozen=True)
+class GuestCashInCommand:
+    """체험판의 가방 현금화 (§3-D85·D8)."""
+
+    run: CareerRun
+
+
+@dataclass(frozen=True)
 class GuestStartCommand:
     """체험판 시작. `user_id`가 없다 — 저장은 브라우저가 한다(§3-D8)."""
 
@@ -326,6 +362,10 @@ class NewsFeedPage:
     items: tuple[NewsItem, ...] = ()
     total: int = 0
     offset: int = 0
+    seed: int = 0
+    """그 커리어의 시드 (§3-D87). **기사를 되짚는 데 쓴다** — 매체·본문 변주·댓글은
+    저장하지 않고 매번 세우므로, 뉴스를 다시 열 때도 시드가 필요하다.
+    `CareerLogPage.seed`가 별점 때문에 같은 자리에 있다(§3-D56)."""
 
     @property
     def has_more(self) -> bool:

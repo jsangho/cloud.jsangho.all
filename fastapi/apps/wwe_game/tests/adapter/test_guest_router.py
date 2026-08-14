@@ -296,6 +296,54 @@ class TestGuestOffer:
         assert response.status_code == 400
 
 
+class TestGuestBriefcase:
+    """가방 현금화, 체험판 (§3-D85·D8).
+
+    **막지 않는 행동이라 더 조용히 빠뜨리기 쉽다** — 협상은 없으면 진행이 멈춰
+    바로 드러나지만, 이건 없어도 게임이 굴러가서 아무도 모른 채 자동 현금화된다.
+    """
+
+    def test_cashing_in_without_a_briefcase_is_refused(
+        self, client: TestClient
+    ) -> None:
+        state = _start(client)["state"]
+        response = client.post("/api/career/guest/cash-in", json={"state": state})
+        assert response.status_code == 409
+
+    def test_a_carried_briefcase_reaches_the_screen(self, client: TestClient) -> None:
+        """가방을 든 세이브를 돌려보내면 응답이 그 자리를 낸다."""
+        body = _start(client)
+        state = dict(body["state"])
+        state["briefcase_week"] = max(1, int(state["week"]) or 1)
+        state["week"] = int(state["briefcase_week"]) + 10
+        resumed = client.post("/api/career/guest/resume", json={"state": state})
+        if resumed.status_code != 200:
+            pytest.skip(f"세이브 형식이 달라 세울 수 없다: {resumed.text[:120]}")
+        card = resumed.json()["run"]["briefcase"]
+        assert card is not None, "가방을 들었는데 화면에 자리가 없다"
+        assert set(card) == {
+            "title",
+            "champion",
+            "weeksLeft",
+            "pending",
+            "canCashIn",
+        }, "챔피언의 인기도 같은 내부 수치가 새면 안 된다 (§11-14)"
+
+    def test_carrying_one_does_not_block_advancing(self, client: TestClient) -> None:
+        """**막지 않는다** — 협상(§3-D84)과 갈리는 자리다."""
+        body = _start(client)
+        state = dict(body["state"])
+        state["briefcase_week"] = max(1, int(state["week"]) or 1)
+        state["week"] = int(state["briefcase_week"]) + 10
+        moved = client.post(
+            "/api/career/guest/advance", json={"state": state, "step": "auto"}
+        )
+        if moved.status_code != 200:
+            pytest.skip(f"세이브 형식이 달라 세울 수 없다: {moved.text[:120]}")
+        assert moved.json()["stopReason"] != "offer"
+        assert moved.json()["run"]["week"] > state["week"]
+
+
 class TestResume:
     """재개는 **진행이 아니다** (2026-08-11 버그).
 

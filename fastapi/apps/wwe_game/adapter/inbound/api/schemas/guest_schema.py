@@ -28,6 +28,7 @@ from wwe_game.domain.entities.career_run import (
     EndReason,
     EventInstance,
     Rivalry,
+    RivalryOrigin,
     RivalryStage,
     RunStatus,
     Trophy,
@@ -129,6 +130,10 @@ def to_domain(state: GuestRunState) -> CareerRun:
                 stage=RivalryStage(r["stage"]),
                 heat=int(r["heat"]),
                 started_week=int(r["started_week"]),
+                # 옛 체험판 세이브에는 이 칸이 없다 — 그때는 전부 상대가 걸어왔다.
+                opened_by=RivalryOrigin(
+                    str(r.get("opened_by") or RivalryOrigin.RIVAL.value)
+                ),
             )
             for r in state.rivalries
         ),
@@ -215,6 +220,7 @@ def to_state(run: CareerRun) -> GuestRunState:
                 "stage": r.stage.value,
                 "heat": r.heat,
                 "started_week": r.started_week,
+                "opened_by": r.opened_by.value,
             }
             for r in run.rivalries
         ],

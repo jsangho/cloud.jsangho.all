@@ -36,11 +36,13 @@ from wwe_game.domain.entities.career_run import CareerRun, start_run
 from wwe_game.domain.services import (
     career_end,
     championship,
+    contract_desk,
     contract_office,
     event_draw,
 )
 from wwe_game.domain.services.career_advance import settle_week
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
+from wwe_game.domain.value_objects.contract_offer import OfferChoice
 from wwe_game.domain.value_objects.game_mode import game_mode_of
 from wwe_game.domain.value_objects.wrestler_identity import (
     Gender,
@@ -96,6 +98,18 @@ def run_one(seed: int, policy: str) -> tuple[CareerRun, int]:
             card = BY_CODE[run.pending_event.code]  # type: ignore[union-attr]
             run = event_draw.resolve_choice(run, choose(card, policy, rng))
             run = career_end.close_if_ended(run)
+            continue
+        # **협상에 답한다** (§3-D84). `settle_week`가 만료 주차에 협상을 열고,
+        # 답하기 전에는 계약이 그대로 멈춰 있다 — 여기서 안 답하면 주급이 첫
+        # 계약에 영원히 묶여 **수입이 실제보다 적게 측정된다.** §3-D84 이전에는
+        # `settle`이 만료 때 `renew()`로 몸값을 다시 매겼고, `ACCEPT`가 그
+        # 동작에 가장 가까워 옛 측정치와 견줄 수 있다.
+        #
+        # 정책 넷은 아직 이 선택을 가르지 않는다. 가르면 측정 방식이 바뀌어
+        # 문서의 수치(§3-D20-2·D-21-1·D-24)와 비교가 끊긴다 — 협상을 정책 축으로
+        # 넣는 것은 별도의 측정으로 다룬다.
+        if contract_desk.is_open(run):
+            run = contract_desk.answer(run, OfferChoice.ACCEPT)
             continue
         report = simulate_week(run)
         if report.injury is not None:

@@ -11,6 +11,10 @@ import {
   advanceRun,
   answerGuestOffer,
   answerOffer,
+  callOutGuestRival,
+  callOutRival,
+  cashInBriefcase,
+  cashInGuestBriefcase,
   chooseEvent,
   chooseGuestEvent,
   setGoal,
@@ -657,6 +661,27 @@ export default function CareerPage() {
     );
   }
 
+  /**
+   * 가방을 쓰기로 한다 (§3-D85).
+   *
+   * **막힌 것을 푸는 게 아니다.** 목표·협상은 답해야 진행되지만 이건 안 눌러도
+   * 그만이다 — 그래서 '다음'이 마지막에 누르는 버튼이 된다.
+   */
+  function handleCashIn() {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() => (state ? cashInGuestBriefcase(state) : cashInBriefcase(run.run.id as number)));
+  }
+
+  /** 그 사람에게 시비를 건다 (§3-D86). 가방과 같은 상시 행동이다. */
+  function handleCallOut(rival: string) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() =>
+      state ? callOutGuestRival(state, rival) : callOutRival(run.run.id as number, rival),
+    );
+  }
+
   function handleRetire() {
     if (!run?.run.id) {
       writeGuestSave(null);
@@ -1006,6 +1031,21 @@ export default function CareerPage() {
    * 화면은 목록의 길이만 본다.
    */
   const offerOptions = view.offerOptions ?? [];
+  /**
+   * 손에 든 가방 (§3-D85) — **"이번 주에 할 수 있는 것"의 첫 항목**이다.
+   *
+   * 목표·협상과 자리를 나눈다: 저 둘은 답할 때까지 진행이 막히는 **멈춤**이고,
+   * 이건 안 해도 그만인 **상시 행동**이다. 그래서 아래 패널은 답을 강요하지 않고
+   * 늘어놓기만 하며, '다음'은 그 옆에서 계속 눌린다.
+   */
+  const briefcase = view.briefcase ?? null;
+  /**
+   * 지금 시비를 걸 수 있는 자리 (§3-D86) — 가방과 나란한 **상시 행동**이다.
+   *
+   * **대립 두 갈래 중 내가 여는 쪽이다.** 상대가 걸어오는 쪽은 규칙이 굴리고,
+   * 목록에서 "상대가 걸어왔다"로 구분된다.
+   */
+  const callOut = view.callOut ?? null;
 
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
@@ -1142,6 +1182,90 @@ export default function CareerPage() {
           )}
         </div>
       </header>
+
+      {/*
+       * **이번 주에 할 수 있는 것** (§3-D85) — 멈춤이 아니라 **상시 행동**이다.
+       *
+       * 위의 협상·목표 카드와 성격이 다르다: 저 둘은 답해야 진행되지만 여기 있는
+       * 것들은 안 해도 그만이다. 그래서 이 자리는 **답을 강요하지 않고 늘어놓기만**
+       * 하고, '다음'은 그 옆에서 계속 눌린다 — 다 하고 마지막에 누르는 버튼이 되게.
+       *
+       * 지금은 가방 하나뿐이라 자리가 비면 통째로 사라진다. 항목이 늘면 여기에
+       * 카드를 더한다.
+       */}
+      {(briefcase || callOut) && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70">
+          <h2 className="font-sport text-sm text-muted-foreground">이번 주에 할 수 있는 것</h2>
+          {/*
+           * **시비 걸기** (§3-D86) — 대립 두 갈래 중 내가 여는 쪽이다.
+           * 상대가 걸어오는 쪽은 규칙이 굴리고, 대립 탭이 둘을 구분해 말한다.
+           */}
+          {callOut && (
+            <div className="mt-3 rounded-[6px] bg-background p-3">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-sport text-base">시비를 건다</span>
+                <span className="text-xs text-muted-foreground">
+                  대립 자리 {callOut.slotsLeft}칸 남음
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                고른 상대가 다음 경기의 상대가 됩니다. 급이 맞는 사람만 걸 수 있습니다.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {callOut.candidates.map((name) => (
+                  <Button
+                    key={name}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => void handleCallOut(name)}
+                  >
+                    {name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {briefcase && (
+            <div className="mt-3 rounded-[6px] bg-background p-3">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-sport text-base">머니 인 더 뱅크 가방</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {briefcase.weeksLeft > 0
+                    ? `${briefcase.weeksLeft}주 뒤 자동 소멸`
+                    : "이번 주에 사라진다"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {briefcase.title} — 지금 {briefcase.champion}
+              </p>
+              {briefcase.pending ? (
+                /* 정한 뒤에는 무를 수 없다 — 버튼을 남겨 두면 두 번 누르게 된다. */
+                <p className="mt-3 text-xs text-brand-link">
+                  다음 경기에서 뛰어듭니다. 무를 수 없습니다.
+                </p>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  disabled={busy || !briefcase.canCashIn}
+                  onClick={() => void handleCashIn()}
+                >
+                  지금 뛰어든다
+                </Button>
+              )}
+              {!briefcase.pending && !briefcase.canCashIn && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  지금은 쓸 수 없습니다 — 소속이 없거나 이미 그 벨트를 감고 있습니다.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {/*
        * **재계약 협상** (§3-D84) — 목표와 같은 자리이고, **목표보다 앞선다.**
@@ -1384,6 +1508,14 @@ export default function CareerPage() {
                       <span className="text-xs text-brand-link">
                         {RIVALRY_STAGES[r.stage] ?? r.stage}
                       </span>
+                      {/*
+                       * **누가 먼저 걸었는지** (§3-D86). 열기가 같아도 이야기가
+                       * 다르다 — 내가 지목한 상대와 나를 지목해 온 상대는 같은
+                       * 대립이 아니다. 옛 세이브에는 없어 기본이 "상대"다.
+                       */}
+                      <span className="text-xs text-muted-foreground">
+                        {r.openedBy === "player" ? "내가 걸었다" : "상대가 걸어왔다"}
+                      </span>
                       <span className="ml-auto text-xs text-muted-foreground">
                         {Math.floor((r.startedWeek - 1) / 52) + 1}년차부터
                       </span>
@@ -1465,16 +1597,47 @@ export default function CareerPage() {
                             <span className="text-xs text-muted-foreground">
                               {item.month}월 {item.weekOfMonth}주
                             </span>
+                            {/*
+                             * **기사 한 꼭지** (§3-D87). 제목·본문·댓글은 저장하지
+                             * 않고 매번 되짚는 값이라(§3-D4), 화면은 받은 것을
+                             * 그대로 그린다 — 여기서 문장을 만들지 않는다.
+                             */}
                             <div className="min-w-0">
                               <p className="text-sm">
                                 <span className="mr-1.5 text-xs text-muted-foreground">
                                   {NEWS_KINDS[item.kind] ?? item.kind}
                                 </span>
-                                {item.headline}
+                                {item.title || item.headline}
                               </p>
-                              <p className={cn("mt-0.5 text-xs", MOOD_TONE[item.mood])}>
+                              {item.outlet && (
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {item.outlet}
+                                </p>
+                              )}
+                              {item.body && (
+                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                  {item.body}
+                                </p>
+                              )}
+                              <p className={cn("mt-1 text-xs", MOOD_TONE[item.mood])}>
                                 {item.crowdLine}
                               </p>
+                              {item.comments && item.comments.length > 0 && (
+                                <ul className="mt-2 space-y-1 border-l-2 border-stone-200/60 pl-2.5 dark:border-stone-800">
+                                  {item.comments.map((c, i) => (
+                                    <li
+                                      key={`${c.author}-${i}`}
+                                      className="flex flex-wrap items-baseline gap-x-2 text-xs"
+                                    >
+                                      <span className="text-muted-foreground">{c.author}</span>
+                                      <span className="min-w-0 break-words">{c.text}</span>
+                                      <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
+                                        ▲ {c.up} · ▼ {c.down}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                           </li>
                         ))}
