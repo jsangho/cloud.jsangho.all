@@ -162,6 +162,9 @@ const MATCH_RULES: Record<string, string> = {
   lumberjack: "링 밖을 선수들이 둘러싼다. 도망갈 곳이 없다.",
 };
 
+/** 비트 하나가 지나가는 경기 시간(초) — 화면 표시 전용이다 (§3-D81-4). */
+const MATCH_SECONDS_PER_BEAT = 90;
+
 const MATCH_KINDS = new Set(["weekly_show", "ple", "special"]);
 
 const BRAND_LABELS: Record<string, string> = {
@@ -2147,6 +2150,8 @@ function LiveMatch({
   const momentum = current?.momentum ?? 50;
   const opponent = week.opponent ?? "상대";
   const won = week.result === "win";
+  // 여럿이 붙는 경기인가 — 마지막 줄이 "우승"이냐 "승리"냐를 가른다.
+  const manyIn = week.eliminationMatch === true || week.matchField > 2;
 
   /**
    * ── 입장 화면 (§3-D81-5) ──
@@ -2254,11 +2259,15 @@ function LiveMatch({
             <span className="font-sport">{player}</span>
             {/*
              * **경기 시계** (2026-08-14). 시간이 흐르지 않으면 지나간다는 느낌이
-             * 없다. 비트 하나를 40초로 환산한다 — 실제 판정과 무관한 표시다.
+             * 없다. **실제 판정과 무관한 표시다.**
+             *
+             * 비트당 40초였는데 주간 경기가 5분에 끝나 짧게 읽혔다(사용자 지적).
+             * 90초로 올리면 주간이 10~13분, 대형 대회가 20~23분이 된다 — 실제
+             * 방송의 길이에 가깝다.
              */}
             <span className="font-sport tabular-nums text-brand-link">
-              {String(Math.floor((shown * 40) / 60)).padStart(2, "0")}:
-              {String((shown * 40) % 60).padStart(2, "0")}
+              {String(Math.floor((shown * MATCH_SECONDS_PER_BEAT) / 60)).padStart(2, "0")}:
+              {String((shown * MATCH_SECONDS_PER_BEAT) % 60).padStart(2, "0")}
             </span>
             <span className="font-sport text-muted-foreground">{opponent}</span>
           </div>
@@ -2293,7 +2302,7 @@ function LiveMatch({
                     beat.kind === "nearfall" && now && "text-live",
                   )}
                 >
-                  {beatLine(beat)}
+                  {beatLine(beat, manyIn)}
                 </li>
               );
             })}
@@ -2313,9 +2322,11 @@ function LiveMatch({
                 {won ? "승리" : week.result === "draw" ? "무승부" : "패배"}
               </p>
               <p className="mt-1 text-sm">{week.narration}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-                {week.stars > 0 && <Stars value={week.stars} />}
-                {week.matchSummary && <span>{week.matchSummary}</span>}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {week.stars > 0 && <Stars value={week.stars} big />}
+                {week.matchSummary && (
+                  <span className="text-xs text-muted-foreground">{week.matchSummary}</span>
+                )}
               </div>
               <Button type="button" className="mt-4 w-full" onClick={onClose}>
                 돌아가기
@@ -2540,7 +2551,13 @@ function WeekRow({
             </button>
           )}
           {open && hasDelta && <WeekDelta week={week} />}
-          {open && week.beats && <BeatList beats={week.beats} player={player} />}
+          {open && week.beats && (
+            <BeatList
+              beats={week.beats}
+              player={player}
+              manyIn={week.eliminationMatch === true || week.matchField > 2}
+            />
+          )}
           {open && report && (
             <ShowCard
               report={report}
@@ -2833,15 +2850,27 @@ function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | 
  * 그 밤이 어디쯤인지가 형태로 먼저 온다. 골드는 액션의 색이라(DESIGN.md §7) 별에는
  * 쓰지 않는다 — 별은 상태이지 누를 것이 아니다.
  */
-function Stars({ value }: { value: number }) {
+/**
+ * 별점 (§3-D56). `big`이면 결과창에서 크게 선다 (2026-08-14 사용자 요청).
+ *
+ * **그 밤이 몇 점짜리였는지가 결과창의 결론**인데, 로그 줄과 같은 크기라 묻혔다.
+ */
+function Stars({ value, big = false }: { value: number; big?: boolean }) {
   if (value <= 0) return null;
   const full = Math.floor(value);
   const half = value - full >= 0.25;
   return (
-    <span className="tabular-nums text-muted-foreground" title={`${value.toFixed(2)}점`}>
-      {"★".repeat(full)}
-      {half && "☆"}
-      <span className="ml-1 text-[0.6875rem]">{value.toFixed(2)}</span>
+    <span
+      className={cn("tabular-nums", big ? "text-brand-link" : "text-muted-foreground")}
+      title={`${value.toFixed(2)}점`}
+    >
+      <span className={cn(big && "font-sport text-2xl leading-none")}>
+        {"★".repeat(full)}
+        {half && "☆"}
+      </span>
+      <span className={cn("ml-1", big ? "font-sport text-xl" : "text-[0.6875rem]")}>
+        {value.toFixed(2)}
+      </span>
     </span>
   );
 }
@@ -2925,7 +2954,15 @@ function MomentumBar({ value, thick = false }: { value: number; thick?: boolean 
   );
 }
 
-function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
+function BeatList({
+  beats,
+  player,
+  manyIn = false,
+}: {
+  beats: CareerBeat[];
+  player: string;
+  manyIn?: boolean;
+}) {
   const flowing = beats.some((b) => b.momentum !== undefined);
   return (
     <ol className="mt-1.5 space-y-1 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
@@ -2939,7 +2976,7 @@ function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
                 beat.kind === "finisher" && "text-brand-link",
               )}
             >
-              {beatLine(beat)}
+              {beatLine(beat, manyIn)}
             </span>
             {/* 흐름이 있는 경기(1:1)만 바를 그린다 — 럼블은 입장·탈락이 곧 흐름이다. */}
             {flowing && beat.momentum !== undefined && <MomentumBar value={beat.momentum} />}
@@ -2951,12 +2988,18 @@ function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
 }
 
 /** 비트 한 마디를 문장으로. 백엔드는 구조만 보내고 말은 여기서 만든다 (§3-D34). */
-function beatLine(beat: CareerBeat): string {
+/**
+ * 비트 한 줄의 문장.
+ *
+ * `manyIn`은 **여럿이 붙는 경기인가** — 럼블에서 마지막에 남는 것은 "우승"이지만
+ * 싱글 매치에서는 "승리"다 (2026-08-14 화면에서 싱글에 "우승"이 떴다).
+ */
+function beatLine(beat: CareerBeat, manyIn = false): string {
   if (beat.kind === "enter") {
     return `${beat.number}번 — ${beat.name} 입장`;
   }
   if (beat.kind === "win") {
-    return `${beat.name} 우승`;
+    return `${beat.name} ${manyIn ? "우승" : "승리"}`;
   }
   // ── §3-D81 모멘텀 타임라인 — 주고받는 장면들 ──
   if (beat.kind === "move") {
