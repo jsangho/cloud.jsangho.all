@@ -181,6 +181,15 @@ export type CareerRunView = {
    * 제시 주급은 따로 오지 않는다 — `money.marketValue`가 곧 그 값이다.
    */
   offerOptions?: CareerOfferOption[];
+  /**
+   * 손에 든 머니 인 더 뱅크 가방 (§3-D85). **없으면 `null`이다.**
+   *
+   * 목표·협상과 달리 **진행을 막지 않는다** — 안 쓰고 '다음'을 눌러도 된다.
+   * 화면은 이 값만 보고 "이번 주에 할 수 있는 것"에 자리를 낸다.
+   */
+  briefcase?: CareerBriefcase | null;
+  /** 지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `null`. */
+  callOut?: CareerCallOut | null;
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
@@ -247,6 +256,26 @@ export type CareerOfferOption = {
   years: number;
 };
 
+/**
+ * 손에 든 가방 (§3-D85).
+ *
+ * **챔피언의 인기도는 오지 않는다.** 그 값이 곧 승률의 힌트가 되고, 그러면
+ * "지금 쓸까"는 판단이 아니라 계산이 된다 (§11-14). 오는 것은 이름과 시계뿐이고,
+ * 긴장은 그 시계에서 나온다 — 미루면 규칙이 대신 쓴다.
+ */
+export type CareerBriefcase = {
+  /** 겨누는 벨트의 이름 — 소속 브랜드의 월드 벨트. */
+  title: string;
+  /** 지금 그 벨트를 든 사람. */
+  champion: string;
+  /** 자동 현금화까지 남은 주차. 0이면 이번 주에 규칙이 쓴다. */
+  weeksLeft: number;
+  /** 이미 "쓴다"고 정했는가. 정한 뒤에는 무를 수 없다. */
+  pending: boolean;
+  /** 지금 뛰어들 수 있는가. 무소속이거나 이미 그 벨트를 감고 있으면 거짓. */
+  canCashIn: boolean;
+};
+
 export type CareerGrandSlamGroup = { name: string; count: number };
 
 export type CareerGrandSlam = {
@@ -260,6 +289,24 @@ export type CareerRivalry = {
   stage: string;
   heat: number;
   startedWeek: number;
+  /**
+   * `player`(내가 걸었다) · `rival`(상대가 걸어왔다) — §3-D86.
+   *
+   * **열기가 같아도 이야기가 다르다.** 옛 세이브에는 없어 기본은 `rival`이다.
+   */
+  openedBy?: "player" | "rival";
+};
+
+/**
+ * 지금 시비를 걸 수 있는 자리 (§3-D86). **못 걸면 `null`이다.**
+ *
+ * 후보는 규칙이 상대를 뽑을 때 쓰는 것과 같은 풀에서 온다 — 급과 브랜드가 맞는
+ * 사람만 선다. 세이브를 다시 열어도 같은 목록이다.
+ */
+export type CareerCallOut = {
+  candidates: string[];
+  /** 남은 대립 자리. 0이면 못 건다. */
+  slotsLeft: number;
 };
 
 export type CareerChoice = { code: string; label: string };
@@ -300,6 +347,20 @@ export type GuestAdvance = CareerAdvance & { state: GuestRunState };
  */
 export type GuestRunState = Record<string, unknown>;
 
+/**
+ * 기사에 달린 댓글 한 줄 (§3-D87).
+ *
+ * **표는 반응이지 판정이 아니다** — 이 숫자로는 아무것도 계산되지 않는다.
+ */
+export type CareerNewsComment = {
+  author: string;
+  text: string;
+  /** 추천 */
+  up: number;
+  /** 비추천 */
+  down: number;
+};
+
 export type CareerNewsItem = {
   week: number;
   year: number;
@@ -309,6 +370,14 @@ export type CareerNewsItem = {
   headline: string;
   mood: "roar" | "jeer" | "split" | "hush" | "chant";
   crowdLine: string;
+  /** 기사를 낸 가상 매체 (§3-D87). 옛 응답에는 없다. */
+  outlet?: string;
+  /** 신문 제목 — `headline`에 매체 말투만 입힌 것이라 새 사실은 없다. */
+  title?: string;
+  /** 기사 본문. **이미 일어난 일만 다시 말한다** — 언제·무엇·그 자리의 소리. */
+  body?: string;
+  /** 대중의 반응 다섯. 한 명은 늘 반대편에 선다. */
+  comments?: CareerNewsComment[];
 };
 
 export type CareerNewsPage = {
@@ -489,6 +558,37 @@ export function answerOffer(runId: number, offer: string): Promise<CareerAdvance
 /** 체험판의 재계약 협상 (§3-D84). 없으면 만료 주차에서 체험판이 통째로 막힌다. */
 export function answerGuestOffer(state: GuestRunState, offer: string): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/offer", { state, offer });
+}
+
+/**
+ * 가방을 쓰기로 한다 (§3-D85).
+ *
+ * **고를 것이 없어 본문이 없다** — "지금 한다"는 사실 하나뿐이다. 목표·협상과 달리
+ * 막힌 것을 푸는 답이 아니라 **안 해도 그만인 행동**이라, 안 부르고 '다음'을 눌러도
+ * 아무 일도 일어나지 않는다.
+ */
+export function cashInBriefcase(runId: number): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/cash-in`, {});
+}
+
+/**
+ * 그 사람에게 시비를 건다 (§3-D86).
+ *
+ * **후보 목록 밖의 이름은 409다** — 급·브랜드 그림이 요청 한 줄로 무너지지 않게
+ * 도메인이 막는다.
+ */
+export function callOutRival(runId: number, rival: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/call-out`, { rival });
+}
+
+/** 체험판의 시비 걸기 (§3-D86). */
+export function callOutGuestRival(state: GuestRunState, rival: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/call-out", { state, rival });
+}
+
+/** 체험판의 가방 현금화 (§3-D85). */
+export function cashInGuestBriefcase(state: GuestRunState): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/cash-in", { state });
 }
 
 export function readLog(runId: number, offset = 0, limit = 50): Promise<CareerLogPage> {

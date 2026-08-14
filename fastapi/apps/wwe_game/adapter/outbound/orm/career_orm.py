@@ -172,6 +172,9 @@ class CareerRivalryModel(Base):
     stage: Mapped[str] = mapped_column(String(20))
     heat: Mapped[int] = mapped_column(Integer, default=0)
     started_week: Mapped[int] = mapped_column(Integer, default=0)
+    opened_by: Mapped[str] = mapped_column(String(10), default="rival")
+    """누가 먼저 걸었는가 (§3-D86). **옛 행은 전부 `rival`이다** — §3-D86 이전의
+    대립은 규칙이 열었고, 그건 상대가 지목해 온 것이다."""
 
 
 class CareerLogEntryModel(Base):

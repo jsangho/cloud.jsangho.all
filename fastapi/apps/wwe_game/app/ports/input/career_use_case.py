@@ -16,10 +16,14 @@ from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
     AdvanceResult,
     AnswerOfferCommand,
+    CallOutCommand,
     CareerLogPage,
+    CashInCommand,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
+    GuestCallOutCommand,
+    GuestCashInCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -107,6 +111,24 @@ class CareerUseCase(ABC):
         ...
 
     @abstractmethod
+    async def cash_in(self, command: CashInCommand) -> AdvanceResult:
+        """가방을 쓰기로 한다 (§3-D85). 쓸 수 없으면 `CannotCashInError`.
+
+        **진행시키지 않는다.** 표식만 서고, 다음 '다음'부터 규칙이 타이틀전을 건다 —
+        `set_goal`·`answer_offer`와 같은 자리다. 다만 저 둘과 달리 **막고 있던 것을
+        푸는 것이 아니라** 안 해도 그만인 행동이다.
+        """
+        ...
+
+    @abstractmethod
+    async def call_out(self, command: CallOutCommand) -> AdvanceResult:
+        """그 사람에게 시비를 건다 (§3-D86). 걸 수 없으면 `CannotCallOutError`.
+
+        **진행시키지 않는다.** `cash_in`과 같은 상시 행동이라, 안 불러도 그만이다.
+        """
+        ...
+
+    @abstractmethod
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -170,6 +192,16 @@ class CareerUseCase(ABC):
     @abstractmethod
     def answer_guest_offer(self, command: GuestAnswerOfferCommand) -> AdvanceResult:
         """체험판의 재계약 협상 (§3-D84). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        ...
+
+    @abstractmethod
+    def cash_in_guest(self, command: GuestCashInCommand) -> AdvanceResult:
+        """체험판의 가방 현금화 (§3-D85). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        ...
+
+    @abstractmethod
+    def call_out_guest(self, command: GuestCallOutCommand) -> AdvanceResult:
+        """체험판의 시비 걸기 (§3-D86). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
         ...
 
     @abstractmethod

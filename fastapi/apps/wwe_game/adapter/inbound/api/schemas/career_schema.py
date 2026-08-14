@@ -30,10 +30,14 @@ from wwe_game.domain.constants.ple_calendar import date_of
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.services import (
+    briefcase_desk,
     contract_desk,
     contract_office,
     match_rating,
+    news_article,
     quarter_plan,
+    rivalry_desk,
+    rivalry_engine,
     show_report,
 )
 from wwe_game.domain.services.news_feed import NewsItem
@@ -211,6 +215,11 @@ class RivalrySchema(_Camel):
     stage: str
     heat: int
     started_week: int
+    opened_by: str = "rival"
+    """`player`(내가 걸었다) · `rival`(상대가 걸어왔다) — §3-D86.
+
+    **열기가 같아도 이야기가 다르다.** 내가 지목한 상대와 나를 지목해 온 상대는
+    같은 대립이 아니고, 화면이 그걸 다르게 말해야 한다."""
 
 
 class ContractSchema(_Camel):
@@ -328,9 +337,49 @@ class OfferRequest(_Camel):
     offer: str
 
 
+class CallOutRequest(_Camel):
+    rival: str
+
+
+class GuestCallOutRequest(_Camel):
+    state: GuestRunState
+    rival: str
+
+
+class CallOutSchema(_Camel):
+    """지금 시비를 걸 수 있는 자리 (§3-D86). **못 걸면 `None`이다.**
+
+    후보는 규칙이 뽑을 때 쓰는 것과 같은 풀에서 나온다 — 급과 브랜드가 맞는 사람만
+    선다(§3-D53). 세이브를 다시 열어도 같은 목록이다(§3-D4).
+    """
+
+    candidates: list[str] = Field(default_factory=list)
+    slots_left: int = 0
+    """남은 대립 자리. 0이면 못 건다 — `MAX_ACTIVE`가 상한이다."""
+
+
 class GuestOfferRequest(_Camel):
     state: GuestRunState
     offer: str
+
+
+class BriefcaseSchema(_Camel):
+    """손에 든 머니 인 더 뱅크 가방 (§3-D85). **없으면 `None`이다.**
+
+    **챔피언의 값은 담지 않는다** — 이름뿐이다. 인기도를 함께 내면 그것이 곧 승률의
+    힌트가 되고, 그 순간 "지금 쓸까"는 판단이 아니라 계산이 된다 (§11-14).
+    """
+
+    title: str
+    """겨누는 벨트의 이름 — 소속 브랜드의 월드 벨트."""
+    champion: str
+    """지금 그 벨트를 든 사람. 내가 들고 있으면 내 이름이다."""
+    weeks_left: int
+    """자동 현금화까지 남은 주차. **미루면 규칙이 대신 쓴다** — 그 시계가 곧 긴장이다."""
+    pending: bool
+    """이미 "쓴다"고 정했는가. 정한 뒤에는 무를 수 없다."""
+    can_cash_in: bool
+    """지금 뛰어들 수 있는가. 무소속이거나 이미 그 벨트를 감고 있으면 거짓이다."""
 
 
 class OfferOptionSchema(_Camel):
@@ -395,6 +444,13 @@ class RunSchema(_Camel):
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
     NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
+    call_out: CallOutSchema | None = None
+    """지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `None`."""
+    briefcase: BriefcaseSchema | None = None
+    """손에 든 가방 (§3-D85). **없으면 `None`** — 화면은 이 값만 보고 자리를 낸다.
+
+    `flags`의 표식과 다르다: 저쪽은 "지금 나에게 붙어 있는 것"의 이름표이고, 이쪽은
+    **행동할 수 있는 자리**다. 시계와 대상이 함께 와야 고를 수 있다."""
     offer_options: list[OfferOptionSchema] = Field(default_factory=list)
     """재계약 협상의 선택지들 (§3-D84). **비어 있으면 협상 중이 아니다.**
 
@@ -501,6 +557,16 @@ class LogPageSchema(_Camel):
     has_more: bool
 
 
+class NewsCommentSchema(_Camel):
+    """댓글 한 줄과 표 (§3-D87). **표는 반응이지 판정이 아니다** — 이 숫자로는
+    아무것도 계산되지 않는다."""
+
+    author: str
+    text: str
+    up: int
+    down: int
+
+
 class NewsSchema(_Camel):
     week: int
     year: int
@@ -510,6 +576,14 @@ class NewsSchema(_Camel):
     headline: str
     mood: str
     crowd_line: str
+    outlet: str = ""
+    """기사를 낸 가상 매체 (§3-D87). **실존 매체는 쓰지 않는다** (§3-D13)."""
+    title: str = ""
+    """신문 제목 — `headline`에 매체의 말투만 입힌 것이다. 새 사실은 없다."""
+    body: str = ""
+    """기사 본문. **이미 일어난 일만 다시 말한다** — 언제·무엇·그 자리의 소리."""
+    comments: list[NewsCommentSchema] = Field(default_factory=list)
+    """대중의 반응 다섯 (§3-D87). 한 명은 늘 반대편에 선다."""
 
 
 class TitleHolderSchema(_Camel):
@@ -812,6 +886,37 @@ def to_champion_groups(run: CareerRun) -> list[ChampionGroupSchema]:
     ]
 
 
+def to_briefcase(run: CareerRun) -> BriefcaseSchema | None:
+    """손에 든 가방을 화면 모양으로 (§3-D85). 안 들고 있으면 `None`.
+
+    **챔피언은 벨트 목록과 같은 곳에서 읽는다**(`show_report.world_champions`) —
+    따로 물으면 같은 세계선의 같은 벨트에 두 이름이 뜰 수 있다.
+    """
+    title = briefcase_desk.target_title(run)
+    if not briefcase_desk.holds(run) or title is None:
+        return None
+    champion = next(
+        (c.holder for c in show_report.world_champions(run) if c.title is title), ""
+    )
+    return BriefcaseSchema(
+        title=TITLES[title].display_name,
+        champion=champion,
+        weeks_left=briefcase_desk.weeks_left(run),
+        pending=briefcase_desk.is_pending(run),
+        can_cash_in=briefcase_desk.can_cash_in(run),
+    )
+
+
+def to_call_out(run: CareerRun) -> CallOutSchema | None:
+    """지금 걸 수 있는 상대들 (§3-D86). 못 걸면 `None` — 화면이 자리를 안 낸다."""
+    if not rivalry_desk.can_call_out(run):
+        return None
+    return CallOutSchema(
+        candidates=list(rivalry_desk.candidates(run)),
+        slots_left=rivalry_engine.MAX_ACTIVE - len(run.rivalries),
+    )
+
+
 def to_offer_options(run: CareerRun) -> list[OfferOptionSchema]:
     """지금 열려 있는 협상의 선택지들 (§3-D84). 협상 중이 아니면 빈 목록이다.
 
@@ -855,6 +960,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                     stage=r.stage.value,
                     heat=r.heat,
                     started_week=r.started_week,
+                    opened_by=r.opened_by.value,
                 )
                 for r in run.rivalries
             ],
@@ -875,6 +981,8 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                     quarter_plan.options(run) if quarter_plan.needs_goal(run) else ()
                 )
             ],
+            briefcase=to_briefcase(run),
+            call_out=to_call_out(run),
             offer_options=to_offer_options(run),
             injured_parts=[
                 PARTS[BodyPart(code)].label
@@ -955,8 +1063,14 @@ def to_log(page: CareerLogPage) -> LogPageSchema:
     )
 
 
-def to_news_item(item: NewsItem) -> NewsSchema:
+def to_news_item(item: NewsItem, seed: int = 0) -> NewsSchema:
+    """뉴스 한 줄 + **그 자리에서 세운 기사** (§3-D87).
+
+    기사는 저장하지 않고 매번 되짚는다 — `title_scene`(§3-D38)·별점(§3-D56)과 같은
+    자리라, 시드만 있으면 언제든 같은 기사가 선다.
+    """
     _, month, week_of_month = date_of(item.week)
+    article = news_article.build(item, seed)
     return NewsSchema(
         week=item.week,
         year=item.year,
@@ -966,12 +1080,19 @@ def to_news_item(item: NewsItem) -> NewsSchema:
         headline=item.headline,
         mood=item.mood.value,
         crowd_line=item.crowd_line,
+        outlet=article.outlet,
+        title=article.title,
+        body=article.body,
+        comments=[
+            NewsCommentSchema(author=c.author, text=c.text, up=c.up, down=c.down)
+            for c in article.comments
+        ],
     )
 
 
 def to_news(page: NewsFeedPage) -> NewsPageSchema:
     return NewsPageSchema(
-        items=[to_news_item(i) for i in page.items],
+        items=[to_news_item(i, page.seed) for i in page.items],
         total=page.total,
         offset=page.offset,
         has_more=page.has_more,

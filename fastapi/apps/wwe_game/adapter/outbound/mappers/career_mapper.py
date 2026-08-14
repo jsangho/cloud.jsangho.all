@@ -22,6 +22,7 @@ from wwe_game.domain.entities.career_run import (
     EndReason,
     EventInstance,
     Rivalry,
+    RivalryOrigin,
     RivalryStage,
     RunStatus,
     Trophy,
@@ -102,6 +103,8 @@ class CareerMapper:
                     stage=RivalryStage(r.stage),
                     heat=r.heat,
                     started_week=r.started_week,
+                    # 옛 행에는 이 칸이 없다 — 그때의 대립은 전부 상대가 걸어왔다.
+                    opened_by=RivalryOrigin(r.opened_by or RivalryOrigin.RIVAL.value),
                 )
                 for r in rivalries
             ),

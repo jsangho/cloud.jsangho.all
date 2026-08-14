@@ -23,11 +23,15 @@ from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
     AdvanceResult,
     AnswerOfferCommand,
+    CallOutCommand,
     CareerLogPage,
+    CashInCommand,
     ChoiceView,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
+    GuestCallOutCommand,
+    GuestCashInCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -58,12 +62,14 @@ from wwe_game.domain.constants.event_deck import BY_CODE
 from wwe_game.domain.entities.career_run import CareerRun, EndReason, start_run
 from wwe_game.domain.exceptions import InvalidChoiceError
 from wwe_game.domain.services import (
+    briefcase_desk,
     career_advance,
     career_end,
     contract_desk,
     event_draw,
     news_feed,
     quarter_plan,
+    rivalry_desk,
     rivalry_scene,
     roster_scene,
     show_report,
@@ -166,6 +172,25 @@ class CareerInteractor(CareerUseCase):
         saved = await self._repository.save(answered)
         return self._view(saved, self._resting_reason(saved))
 
+    async def cash_in(self, command: CashInCommand) -> AdvanceResult:
+        """가방을 쓰기로 하고 그 자리에서 멈춘 채 돌려준다 (§3-D85).
+
+        **진행시키지 않는다** — `set_goal`·`answer_offer`와 같은 이유다. 다만 저
+        둘은 막힌 것을 푸는 답이고 이건 **안 해도 그만인 행동**이라, 화면이 이걸
+        하지 않고 '다음'을 눌러도 아무 일도 일어나지 않아야 한다.
+        """
+        run = await self._repository.get(command.run_id, command.user_id)
+        saved = await self._repository.save(briefcase_desk.cash_in(run))
+        return self._view(saved, self._resting_reason(saved))
+
+    async def call_out(self, command: CallOutCommand) -> AdvanceResult:
+        """시비를 걸고 그 자리에서 멈춘 채 돌려준다 (§3-D86)."""
+        run = await self._repository.get(command.run_id, command.user_id)
+        saved = await self._repository.save(
+            rivalry_desk.call_out(run, command.rival_name)
+        )
+        return self._view(saved, self._resting_reason(saved))
+
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -240,7 +265,10 @@ class CareerInteractor(CareerUseCase):
             belt_news,
         )
         return NewsFeedPage(
-            items=items[offset : offset + limit], total=len(items), offset=offset
+            items=items[offset : offset + limit],
+            total=len(items),
+            offset=offset,
+            seed=run.seed,
         )
 
     @staticmethod
@@ -326,6 +354,18 @@ class CareerInteractor(CareerUseCase):
         answered = contract_desk.answer(command.run, _offer_of(command.offer_code))
         return self._view(answered, self._resting_reason(answered))
 
+    def cash_in_guest(self, command: GuestCashInCommand) -> AdvanceResult:
+        """체험판의 가방 현금화 (§3-D85). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        self._require_guest_mode(command.run.mode.code)
+        cashed = briefcase_desk.cash_in(command.run)
+        return self._view(cashed, self._resting_reason(cashed))
+
+    def call_out_guest(self, command: GuestCallOutCommand) -> AdvanceResult:
+        """체험판의 시비 걸기 (§3-D86)."""
+        self._require_guest_mode(command.run.mode.code)
+        opened = rivalry_desk.call_out(command.run, command.rival_name)
+        return self._view(opened, self._resting_reason(opened))
+
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""
         self._require_guest_mode(command.run.mode.code)
@@ -338,7 +378,9 @@ class CareerInteractor(CareerUseCase):
             self._roster_news(command.run),
             self._belt_news(command.run),
         )
-        return NewsFeedPage(items=items, total=len(items), offset=0)
+        return NewsFeedPage(
+            items=items, total=len(items), offset=0, seed=command.run.seed
+        )
 
     def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
         """그 밤의 리포트, 체험판 (§3-D51).

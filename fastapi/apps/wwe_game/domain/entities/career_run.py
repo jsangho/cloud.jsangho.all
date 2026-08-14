@@ -80,6 +80,19 @@ class RivalryStage(StrEnum):
     NEMESIS = "nemesis"
 
 
+class RivalryOrigin(StrEnum):
+    """대립이 어느 쪽에서 시작됐는가 (§3-D86).
+
+    **둘은 같은 대립이 아니다.** 내가 지목해서 붙은 상대와 나를 지목해 온 상대는
+    열기가 같아도 이야기가 다르고, 화면과 뉴스가 다르게 말해야 한다.
+    """
+
+    PLAYER = "player"
+    """내가 시비를 걸었다."""
+    RIVAL = "rival"
+    """상대가 걸어왔다 — 규칙이 여는 대립은 전부 이쪽이다."""
+
+
 @dataclass(frozen=True)
 class Rivalry:
     """서사를 만드는 것은 여기다 (하네스 §2-D4)."""
@@ -88,6 +101,12 @@ class Rivalry:
     stage: RivalryStage
     heat: int
     started_week: int
+    opened_by: RivalryOrigin = RivalryOrigin.RIVAL
+    """**누가 먼저 걸었는가** (§3-D86). 열기가 같아도 이야기가 다르다 — 내가 지목한
+    상대와 나를 지목한 상대는 같은 대립이 아니다.
+
+    기본이 `RIVAL`인 이유: 옛 세이브에는 이 칸이 없고, §3-D86 이전의 대립은 전부
+    규칙이 열었다 — 곧 상대 쪽에서 붙은 것이다."""
 
     def __post_init__(self) -> None:
         if not HEAT_MIN <= self.heat <= HEAT_MAX:

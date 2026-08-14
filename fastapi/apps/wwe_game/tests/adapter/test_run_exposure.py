@@ -18,7 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "domain"))
 
 from _helpers import make_run  # noqa: E402, I001
 from wwe_game.adapter.inbound.api.schemas.career_schema import (  # noqa: E402
+    BriefcaseSchema,
     OfferOptionSchema,
+    to_briefcase,
     to_grand_slam,
     to_money,
     to_offer_options,
@@ -122,6 +124,34 @@ class TestTheOfferReachesTheScreen:
         fields = set(OfferOptionSchema.model_fields)
         assert "refusal" not in fields
         assert not fields & {"pay_factor", "risk", "chance"}
+
+
+# ── 가방 (§3-D85) ────────────────────────────────────────────
+
+
+class TestTheBriefcaseReachesTheScreen:
+    """**상시 행동은 보이지 않으면 없는 것과 같다.** 멈춤과 달리 게임이 물어보지
+    않으므로, 화면이 자리를 안 내주면 플레이어는 가방을 든 줄도 모른다."""
+
+    @staticmethod
+    def carrying():
+        return make_run(week=300).evolve(briefcase_week=283)
+
+    def test_it_carries_the_clock_and_the_target(self) -> None:
+        card = to_briefcase(self.carrying())
+        assert card is not None
+        assert card.weeks_left == rules.BRIEFCASE_WEEKS - 17
+        assert card.title and card.champion, "겨누는 벨트와 그 주인이 함께 와야 고른다"
+        assert card.can_cash_in is True
+        assert card.pending is False
+
+    def test_no_briefcase_no_card(self) -> None:
+        assert to_briefcase(make_run(week=300)) is None
+
+    def test_the_champions_numbers_never_leave_the_domain(self) -> None:
+        """**챔피언의 인기도는 안 나간다** (§11-14) — 나가면 승률의 힌트가 된다."""
+        fields = set(BriefcaseSchema.model_fields)
+        assert not fields & {"popularity", "champion_popularity", "odds", "chance"}
 
 
 # ── 그랜드슬램 (§3-D20) ──────────────────────────────────────
