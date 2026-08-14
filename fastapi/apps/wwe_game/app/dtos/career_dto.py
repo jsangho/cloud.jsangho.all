@@ -146,6 +146,10 @@ class ChangeFinisherCommand:
     user_id: int
     code: str = ""
     name: str = ""
+    hold: str = ""
+    """지금 것을 그대로 쓰고 **다시 묻는 날만 미룬다** — `quarter`·`year`·`forever`.
+
+    `code`·`name`보다 앞선다: 안 바꾸겠다는 선언이므로 함께 와도 이쪽이 이긴다."""
 
 
 @dataclass(frozen=True)
@@ -155,6 +159,7 @@ class GuestChangeFinisherCommand:
     run: CareerRun
     code: str = ""
     name: str = ""
+    hold: str = ""
 
 
 @dataclass(frozen=True)

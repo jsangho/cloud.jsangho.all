@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pytest
 from _helpers import make_run  # noqa: I001  (tests 트리에 __init__.py가 없다)
+from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.exceptions import (
     CannotChangeFinisherError,
@@ -89,6 +90,50 @@ class TestTheFirstQuarter:
 
         closed = rookie(week=QUARTER * 4).ended(EndReason.PLAYER)
         assert not finisher_desk.can_change(closed)
+
+
+class TestKeepingWhatYouHave:
+    """**바꾸는 것만이 선택이 아니다** (2026-08-14 사용자 요청).
+
+    분기마다 자리가 열리므로 화면이 계속 물어보게 되는데, "이대로 간다"도 한 번의
+    결정이다 — 다시 묻는 날만 미룬다.
+    """
+
+    def test_a_quarter_hold_pushes_the_question(self) -> None:
+        run = rookie(week=QUARTER)
+        held = finisher_desk.hold(run, finisher_desk.HOLD_QUARTER)
+        assert finisher_desk.current(held).code == finisher_desk.current(run).code
+        assert finisher_desk.weeks_until_change(held) == QUARTER
+
+    def test_a_year_hold_pushes_it_further(self) -> None:
+        held = finisher_desk.hold(rookie(week=QUARTER), finisher_desk.HOLD_YEAR)
+        assert finisher_desk.weeks_until_change(held) == finisher_desk.HOLD_YEAR
+
+    def test_forever_never_asks_again(self) -> None:
+        """**평생 쓰기** — 커리어 끝 너머라 다시 묻는 날이 오지 않는다."""
+        held = finisher_desk.hold(rookie(week=QUARTER), finisher_desk.HOLD_FOREVER)
+        assert finisher_desk.is_settled(held)
+        assert not finisher_desk.can_change(held)
+        # 서른 해가 지나도 그대로다.
+        assert not finisher_desk.can_change(held.evolve(week=CAREER_WEEKS - 1))
+
+    def test_holding_does_not_touch_the_finisher(self) -> None:
+        run = finisher_desk.pick(rookie(week=QUARTER), finisher_desk.options(rookie())[2].code)
+        run = run.evolve(week=QUARTER * 2)
+        before = finisher_desk.current(run)
+        held = finisher_desk.hold(run, finisher_desk.HOLD_YEAR)
+        assert finisher_desk.current(held) == before
+
+    def test_holding_before_the_first_quarter_is_refused(self) -> None:
+        with pytest.raises(CannotChangeFinisherError):
+            finisher_desk.hold(rookie(week=0), finisher_desk.HOLD_QUARTER)
+
+    def test_changing_resets_to_a_quarter(self) -> None:
+        """바꾸면 다시 분기다 — 미뤄 둔 것과 바꾼 것은 다른 결정이다."""
+        run = finisher_desk.hold(rookie(week=QUARTER), finisher_desk.HOLD_YEAR)
+        run = run.evolve(week=QUARTER + finisher_desk.HOLD_YEAR)
+        changed = finisher_desk.pick(run, finisher_desk.options(run)[3].code)
+        assert finisher_desk.weeks_until_change(changed) == QUARTER
 
 
 class TestPickingFromTheList:

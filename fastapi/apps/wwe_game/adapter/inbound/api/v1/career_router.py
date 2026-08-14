@@ -361,7 +361,11 @@ async def change_finisher(
     쿨다운 중이면 409, 이름이 규칙에 안 맞으면 400이다.
     """
     command = ChangeFinisherCommand(
-        run_id=run_id, user_id=_user_id(claims), code=body.code, name=body.name
+        run_id=run_id,
+        user_id=_user_id(claims),
+        code=body.code,
+        name=body.name,
+        hold=body.hold,
     )
     return to_advance(await _guard(lambda: use_case.change_finisher(command)))
 
@@ -564,6 +568,7 @@ def change_guest_finisher(
         run=_restore(body.state),  # type: ignore[arg-type]
         code=body.code,
         name=body.name,
+        hold=body.hold,
     )
     return to_guest(_sync(lambda: use_case.change_guest_finisher(command)))
 

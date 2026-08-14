@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.exceptions import CannotChangeFinisherError
 from wwe_game.domain.value_objects.finisher import (
@@ -55,10 +56,47 @@ def options(run: CareerRun) -> tuple[Finisher, ...]:
     return options_for(run.identity.play_style)
 
 
+HOLD_QUARTER = COOLDOWN_WEEKS
+HOLD_YEAR = 52
+"""다시 묻기까지의 간격 — 한 분기 · 한 해 (2026-08-14 사용자 요청)."""
+
+HOLD_FOREVER = CAREER_WEEKS + 1
+"""**평생 쓴다.** 커리어 끝 너머의 주차라 다시 묻는 날이 오지 않는다.
+
+따로 불리언을 두지 않는 이유: "언제 다시 물을 것인가" 하나로 셋이 전부 표현되고,
+칸이 늘면 그 둘을 영원히 맞춰 줘야 한다(§3-D29가 파생값을 안 저장한 것과 같은 결).
+"""
+
+
 def weeks_until_change(run: CareerRun) -> int:
-    """다시 바꿀 수 있을 때까지 남은 주차. 0이면 지금 바꿀 수 있다."""
-    # `finisher_week`가 0이면 한 번도 안 바꾼 것이고, 그러면 데뷔(0주차)부터 센다.
-    return max(0, COOLDOWN_WEEKS - (run.week - run.finisher_week))
+    """다시 바꿀 수 있을 때까지 남은 주차. 0이면 지금 바꿀 수 있다.
+
+    **아직 아무것도 안 정했으면 첫 분기 규칙이다** — 데뷔(0주차)부터 센다.
+    """
+    if run.finisher_ask_week <= 0:
+        return max(0, COOLDOWN_WEEKS - run.week)
+    return max(0, run.finisher_ask_week - run.week)
+
+
+def is_settled(run: CareerRun) -> bool:
+    """평생 쓰기로 못 박았는가. **화면이 '바꾸기'를 아예 안 낸다.**"""
+    return run.finisher_ask_week > CAREER_WEEKS
+
+
+def hold(run: CareerRun, weeks: int) -> CareerRun:
+    """지금 것을 그대로 쓰고 **다시 묻는 날만 미룬다** (2026-08-14 사용자 요청).
+
+    **바꾸는 것만이 선택이 아니다.** 분기마다 자리가 열리므로 화면이 계속 물어보게
+    되는데, "이대로 간다"도 한 번의 결정이다.
+
+    `pick`이 같은 코드를 거절하는 것과 어긋나지 않는다: 저쪽은 **바꾸려다 같은 것을
+    고른 실수**이고 이쪽은 **안 바꾸겠다는 선언**이다.
+    """
+    _require_changeable(run)
+    return run.evolve(
+        finisher_week=run.week,
+        finisher_ask_week=min(HOLD_FOREVER, run.week + max(1, weeks)),
+    )
 
 
 def can_change(run: CareerRun) -> bool:
@@ -76,7 +114,12 @@ def pick(run: CareerRun, code: str) -> CareerRun:
         raise CannotChangeFinisherError(f"고를 수 없는 피니셔입니다: {code}")
     if chosen.code == current(run).code:
         raise CannotChangeFinisherError("이미 그 피니셔를 쓰고 있습니다.")
-    return run.evolve(finisher=chosen.code, finisher_name="", finisher_week=run.week)
+    return run.evolve(
+        finisher=chosen.code,
+        finisher_name="",
+        finisher_week=run.week,
+        finisher_ask_week=run.week + HOLD_QUARTER,
+    )
 
 
 def name_it(run: CareerRun, name: str) -> CareerRun:
@@ -89,7 +132,10 @@ def name_it(run: CareerRun, name: str) -> CareerRun:
     if named.name == current(run).name:
         raise CannotChangeFinisherError("이미 그 이름을 쓰고 있습니다.")
     return run.evolve(
-        finisher=CUSTOM_CODE, finisher_name=named.name, finisher_week=run.week
+        finisher=CUSTOM_CODE,
+        finisher_name=named.name,
+        finisher_week=run.week,
+        finisher_ask_week=run.week + HOLD_QUARTER,
     )
 
 
