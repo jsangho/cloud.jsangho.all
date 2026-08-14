@@ -117,6 +117,13 @@ const PLAY_STYLES = [
 ] as const;
 
 /** 브랜드 코드 → 화면 이름. 시작 화면과 프로필이 함께 읽는다. */
+/**
+ * 경기가 서는 주차의 종류 (§3-D81-3).
+ *
+ * 이 셋이면 '다음' 버튼이 '경기 시작'으로 바뀐다 — 프로모·결장은 링에 서지 않는다.
+ */
+const MATCH_KINDS = new Set(["weekly_show", "ple", "special"]);
+
 const BRAND_LABELS: Record<string, string> = {
   raw: "RAW",
   smackdown: "스맥다운",
@@ -657,19 +664,35 @@ export default function CareerPage() {
         // 진행하지 않아 비어서 온다. 일정은 이 응답이 아니라 누적된 타임라인이 세운다.
         setHistory((prev) => mergeWeeks(prev, next.weeks));
         setScreen({ phase: "play", advance: next, state, busy: false });
+        return next;
       } catch {
         setScreen((s) => (s.phase === "play" ? { ...s, busy: false } : s));
+        return null;
       }
     },
     [],
   );
 
+  /**
+   * '다음' — 그리고 **경기 밤이면 '경기 시작'** (§3-D81-3, 2026-08-14 사용자 요청).
+   *
+   * FM은 경기 앞에서 멈추고, 누르면 경기를 보여 주고, 끝나면 결과를 보여 준 뒤
+   * 원래 화면으로 돌아온다. 여기서도 같다 — 진행한 주차 중 **비트를 들고 온
+   * 경기**가 있으면 그 자리에서 라이브를 연다. 로그에서 다시 여는 것과 다른 점은
+   * **그 순간에 열린다**는 것이다.
+   */
   function handleNext() {
     if (!run) return;
     const state = screen.phase === "play" ? screen.state : null;
     void act(() =>
       state ? advanceGuestRun(state, "auto") : advanceRun(run.run.id as number, "auto"),
-    );
+    ).then((next) => {
+      if (!next) return;
+      // 여러 주차가 한 번에 올 수 있다(§3-D17 auto). **마지막 경기**를 연다 —
+      // 그 밤이 이 '다음'이 데려온 자리이기 때문이다.
+      const match = [...next.weeks].reverse().find((w) => (w.beats?.length ?? 0) > 0);
+      if (match) setLive(match);
+    });
   }
 
   function handleChoose(code: string) {
@@ -1251,7 +1274,15 @@ export default function CareerPage() {
                 onClick={handleNext}
                 className="min-w-28"
               >
-                {busy ? "진행 중…" : ended ? "종료됨" : "다음 ▶"}
+                {busy
+                  ? "진행 중…"
+                  : ended
+                    ? "종료됨"
+                    : // **경기 밤이면 버튼이 바뀐다** (§3-D81-3). 다음 한 걸음이
+                      // 무엇인지가 버튼에 적혀 있어야 누르기 전에 안다.
+                      MATCH_KINDS.has(view.nextKind ?? "")
+                      ? `${view.nextShow ?? "경기"} 시작 ▶`
+                      : "다음 ▶"}
               </Button>
             )}
             <Button
@@ -2022,52 +2053,74 @@ function LiveMatch({
   const beats = week.beats ?? [];
   const [shown, setShown] = useState(1);
   const [speed, setSpeed] = useState(1);
-  const done = shown >= beats.length;
+  const played = shown >= beats.length;
+  /**
+   * **결과창은 따로 선다** (2026-08-14 사용자 요청). 마지막 비트가 지나갔다고
+   * 바로 닫으면 무슨 일이 있었는지 읽을 새가 없다 — FM도 경기 뒤에 한 화면을 준다.
+   */
+  const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
-    if (done) return;
+    if (played) return;
     const timer = setTimeout(() => setShown((n) => n + 1), 1100 / speed);
     return () => clearTimeout(timer);
-  }, [shown, speed, done]);
+  }, [shown, speed, played]);
 
-  // 흐름은 마지막으로 열린 비트가 정한다. 아직 안 열린 비트는 안 본다 —
-  // 그러면 결말이 먼저 새어 나간다.
+  // 다 지나가면 잠깐 뒤 결과창으로 넘어간다. 바로 바꾸면 마지막 장면이 안 보인다.
+  useEffect(() => {
+    if (!played || showResult) return;
+    const timer = setTimeout(() => setShowResult(true), 900 / speed);
+    return () => clearTimeout(timer);
+  }, [played, showResult, speed]);
+
+  // 흐름은 마지막으로 열린 비트가 정한다 — 아직 안 열린 비트를 보면 결말이 샌다.
   const current = beats[Math.min(shown, beats.length) - 1];
   const momentum = current?.momentum ?? 50;
   const opponent = week.opponent ?? "상대";
+  const won = week.result === "win";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-card p-4 ring-1 ring-brand-400/40 ring-inset">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="font-sport text-lg">{week.show ?? "그날의 경기"}</span>
-          <span className="text-xs text-muted-foreground">
-            {week.year}년차 {week.month}월 {week.weekOfMonth}주
-          </span>
-          {week.titleAtStake && (
-            <span className="text-xs text-brand-link">{week.titleAtStake}</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-card ring-1 ring-brand-400/40 ring-inset">
+        {/* ── 머리: 그 밤이 무엇인가 ── */}
+        <div className="border-b border-stone-300/40 px-5 py-4 dark:border-stone-700/60">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="font-sport text-xl">{week.show ?? "그날의 경기"}</span>
+            <span className="text-xs text-muted-foreground">
+              {week.year}년차 {week.month}월 {week.weekOfMonth}주
+            </span>
+            {week.titleAtStake && (
+              <span className="ml-auto rounded-[3px] bg-brand-400/15 px-2 py-0.5 text-xs text-brand-link">
+                타이틀전
+              </span>
+            )}
+          </div>
+          {week.matchLabel && (
+            <p className="mt-1 text-xs text-muted-foreground">{week.matchLabel}</p>
           )}
         </div>
 
-        {/* 흐름 바 — 왼쪽이 나, 오른쪽이 상대. */}
-        <div className="mt-3">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold">{player}</span>
-            <span className="text-muted-foreground">{opponent}</span>
+        {/* ── 흐름 바: 이 화면의 주인공 ── */}
+        <div className="px-5 pt-4">
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="font-sport">{player}</span>
+            <span className="font-sport text-muted-foreground">{opponent}</span>
           </div>
           <MomentumBar value={momentum} thick />
         </div>
 
-        <ol className="mt-3 space-y-1">
+        {/* ── 비트가 하나씩 열린다 ── */}
+        <ol className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-5 py-4">
           {beats.slice(0, shown).map((beat, i) => (
             <li
               key={i}
               className={cn(
                 "text-sm leading-relaxed",
                 beat.name === player || beat.by === player
-                  ? "font-semibold text-foreground"
+                  ? "text-foreground"
                   : "text-muted-foreground",
-                beat.kind === "finisher" && "text-brand-link",
+                beat.kind === "finisher" && "font-sport text-base text-brand-link",
+                beat.kind === "nearfall" && "font-semibold",
               )}
             >
               {beatLine(beat)}
@@ -2075,9 +2128,29 @@ function LiveMatch({
           ))}
         </ol>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {!done && (
-            <>
+        {/* ── 발: 재생 조작, 그리고 끝나면 결과 ── */}
+        <div className="border-t border-stone-300/40 px-5 py-4 dark:border-stone-700/60">
+          {showResult ? (
+            <div>
+              <p
+                className={cn(
+                  "font-sport text-2xl",
+                  won ? "text-brand-link" : "text-muted-foreground",
+                )}
+              >
+                {won ? "승리" : week.result === "draw" ? "무승부" : "패배"}
+              </p>
+              <p className="mt-1 text-sm">{week.narration}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                {week.stars > 0 && <Stars value={week.stars} />}
+                {week.matchSummary && <span>{week.matchSummary}</span>}
+              </div>
+              <Button type="button" className="mt-4 w-full" onClick={onClose}>
+                돌아가기
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -2090,16 +2163,24 @@ function LiveMatch({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setShown(beats.length)}
+                onClick={() => {
+                  setShown(beats.length);
+                  setShowResult(true);
+                }}
               >
                 건너뛰기
               </Button>
-            </>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                onClick={onClose}
+              >
+                그만 보기
+              </Button>
+            </div>
           )}
-          {done && <span className="text-xs text-muted-foreground">{week.matchSummary}</span>}
-          <Button type="button" size="sm" className="ml-auto" onClick={onClose}>
-            {done ? "돌아가기" : "그만 보기"}
-          </Button>
         </div>
       </div>
     </div>

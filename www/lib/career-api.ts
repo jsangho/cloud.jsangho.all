@@ -216,6 +216,15 @@ export type CareerRunView = {
   callOut?: CareerCallOut | null;
   /** 지금 쓰는 피니셔 (§3-D88). **늘 온다** — 안 골랐으면 수플렉스다. */
   finisher?: CareerFinisher | null;
+  /**
+   * **다음 주에 무엇이 서는가** (§3-D81-3).
+   *
+   * `weekly_show` · `ple` · `special`이면 경기 밤이고, 그때 '다음' 버튼이
+   * '경기 시작'으로 바뀐다 — FM이 경기 앞에서 멈추는 자리다.
+   */
+  nextKind?: string;
+  /** 다음 주가 대회면 그 이름. */
+  nextShow?: string | null;
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
