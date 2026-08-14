@@ -89,10 +89,14 @@ class TestRoundTrip:
             events_fired=42,
             release_weeks=3,
             decline_weeks=5,
+            # **협상은 반드시 살아남아야 한다** (§3-D84). 답할 때까지 진행이 막히므로,
+            # 이 칸이 안 남으면 새로고침 한 번에 협상이 사라지고 계약 없이 뛴다.
+            offer_week=400,
         )
         stored = await repo.save(run)
         loaded = await repo.get(stored.id, USER)
         assert loaded == stored
+        assert loaded.offer_week == 400
 
     @pytest.mark.asyncio
     async def test_a_pending_event_survives(self, repo: CareerPgRepository) -> None:

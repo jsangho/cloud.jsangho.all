@@ -35,11 +35,13 @@ from wwe_game.domain.constants.ple_calendar import (
     PleShow,
     calendar_for,
 )
+from wwe_game.domain.constants.teams import TeamKind
 from wwe_game.domain.entities.career_run import CareerRun, Trophy
 from wwe_game.domain.services import (
     championship,
     elimination,
     event_draw,
+    quarter_plan,
     rivalry_engine,
     seeded_roll,
     team_engine,
@@ -59,7 +61,13 @@ from wwe_game.domain.value_objects.match_kind import (
 )
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.match_sequence import MatchSequence
-from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
+from wwe_game.domain.value_objects.title import (
+    SPEED_TITLES,
+    TITLES,
+    Brand,
+    Title,
+    TitleTier,
+)
 from wwe_game.domain.value_objects.week_report import (
     CallUpReason,
     OutcomeKind,
@@ -135,7 +143,7 @@ def week_kind_of(run: CareerRun) -> WeekKind:
             if roll.chance(rules.INDIE_MATCH_CHANCE)
             else WeekKind.PROMO
         )
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     if calendar.is_show_week(upcoming):
         # 특별 방송은 대회가 아니다 — 경기는 보장되지만 위상이 한 단계 아래다 (§3-D21-2).
         return (
@@ -152,22 +160,21 @@ def week_kind_of(run: CareerRun) -> WeekKind:
 
 
 def tournament_round_at(run: CareerRun, week: int) -> int:
-    """그 주차가 킹 앤 퀸 오브 더 링의 몇 회전인지. 0이면 토너먼트 주차가 아니다.
+    """그 주차가 그 해 토너먼트의 몇 회전인지. 0이면 토너먼트 주차가 아니다.
 
     **결승은 대회 밤이고 예선은 그 앞 두 주다** (§3-D33) — 한 주에 안 끝나는 유일한
     형식이라, 어느 주차가 몇 회전인지를 달력에서 되짚는다. 상태(`tournament_round`)는
     "이겨서 올라왔는가"만 들고 있고 일정은 여기가 안다.
+
+    **결승이 서는 달은 해마다 바뀐다** (§3-D71) — 그래서 선언이 아니라 그 해의
+    달력에게 묻는다(`week_of`).
 
     **NXT에는 이 대회가 없다.** 육성 브랜드 달력에 없는 이름이라 자동으로 0이 된다.
     **무소속에도 없다** — 단체의 대회다 (§3-D50).
     """
     if not run.is_signed:
         return 0
-    calendar = calendar_for(run.brand)
-    final = next(
-        (s.week_of_year for s in calendar.shows if s.name == NIGHT_OF_CHAMPIONS),
-        None,
-    )
+    final = calendar_for(run.brand, run.seed).week_of(NIGHT_OF_CHAMPIONS, week)
     if final is None:
         return 0
     offset = final - (week - 1) % WEEKS_PER_YEAR - 1
@@ -185,7 +192,7 @@ def is_ple_stop_week(run: CareerRun) -> bool:
     if run.mode.weeks_per_tick > rules.PLE_STOP_MAX_TICK_WEEKS:
         return False
     upcoming = run.week + 1
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     if week_kind_of(run) is not WeekKind.PLE:
         return False
     return calendar.show_for(upcoming).is_major
@@ -208,6 +215,8 @@ def injury_chance(run: CareerRun, kind: WeekKind, *, major: bool = False) -> flo
         chance *= rules.INJURY_PLE_MULTIPLIER
         if major:
             chance *= rules.MAJOR_INJURY_MULTIPLIER
+    # 이번 분기에 건 것 (§3-D80) — 벨트를 노리면 더 다치고 몸을 만들면 덜 다친다.
+    chance *= quarter_plan.plan_of(run).injury
     return min(1.0, chance)
 
 
@@ -261,7 +270,10 @@ def simulate_week(run: CareerRun) -> WeekReport:
             week=week,
             kind=kind,
             stat_delta=_decay_only(run, week),
-            wear_delta=-rules.WEAR_RECOVERY_PER_OFF_WEEK,
+            wear_delta=-round(
+                rules.WEAR_RECOVERY_PER_OFF_WEEK
+                * quarter_plan.plan_of(run).wear_recovery
+            ),
             draft_night=draft_night,
             pay=pay,
         )
@@ -279,7 +291,11 @@ def simulate_week(run: CareerRun) -> WeekReport:
             pay=pay,
         )
 
-    show = calendar_for(run.brand).show_for(week) if kind is WeekKind.PLE else None
+    show = (
+        calendar_for(run.brand, run.seed).show_for(week)
+        if kind is WeekKind.PLE
+        else None
+    )
     match_roll = SeededRoll(run.seed, week, seeded_roll.MATCH)
     score = performance_score(run.stats, run.condition, run.age)
 
@@ -482,9 +498,12 @@ def _opponent_for(run: CareerRun, week: int, title: Title | None) -> str | None:
     )
 
 
-def _is_show(brand: Brand, week: int, name: str) -> bool:
-    """그 주차가 이 브랜드의 `name` 대회 주차인지. NXT 달력에는 없는 이름이면 늘 거짓."""
-    calendar = calendar_for(brand)
+def _is_show(brand: Brand, week: int, name: str, seed: int) -> bool:
+    """그 주차가 이 브랜드의 `name` 대회 주차인지. NXT 달력에는 없는 이름이면 늘 거짓.
+
+    **시드를 받는다** — 달력이 해마다 다시 뽑히므로 판마다 답이 다르다 (§3-D71).
+    """
+    calendar = calendar_for(brand, seed)
     return calendar.is_show_week(week) and calendar.show_for(week).name == name
 
 
@@ -514,7 +533,7 @@ def _spoils(
         # 이미 들고 있었다면 시계가 새로 간다 — 새 계약이다.
         briefcase_week = report.week
 
-    if _is_show(run.brand, report.week, WRESTLEMANIA):
+    if _is_show(run.brand, report.week, WRESTLEMANIA, run.seed):
         # **달력으로 지운다, 리포트로 지우지 않는다.** 그 주에 부상으로 결장하면
         # `report.show`가 비어 도전권이 이듬해로 넘어간다 — 그 해 레슬매니아에서
         # 쓰는 것이 도전권이고(2026-08-11 사용자 확인), 못 쓴 것은 사라진다.
@@ -548,11 +567,32 @@ def _match_kind_of(
         # 예선에 쓸 수 있는 형식은 셋뿐이다 (§3-D33 · 2026-08-10 사용자 스펙) —
         # 대진표가 도는 밤에 30인 럼블이 열릴 수는 없다.
         return SeededRoll(run.seed, week, seeded_roll.STIPULATION).pick(QUALIFIER_KINDS)
+    if title is not None and title in SPEED_TITLES:
+        return _speed_or_sudden_death(run, week)
     if show is not None and show.name in SIGNATURE_MATCHES:
         return SIGNATURE_MATCHES[show.name]
     if title is not None and TITLES[title].tier is TitleTier.TAG:
         return MatchKind.TAG
     return _stipulation_of(run, week, kind)
+
+
+def _speed_or_sudden_death(run: CareerRun, week: int) -> MatchKind:
+    """스피드 벨트가 걸린 밤 — **3분 안에 끝났는가** (§3-D72, 2026-08-13 사용자 스펙).
+
+    시계를 만들지 않았다. 이 게임에 경기 시간이라는 값이 없고, 3분을 재려고 값을
+    하나 들이면 다른 모든 경기가 그 값을 들고 다녀야 한다. 대신 **결과로만 남는
+    것**을 남긴다 — 3분을 넘겼으면 그 밤의 경기는 서든 데스가 되고, 화면에 서는
+    형식도 그것이다.
+
+    **시그니처보다 먼저 본다.** 럼블 주차에 스피드 벨트가 걸리면 30인 배틀로열로
+    3분 방어전을 치르는 그림이 되는데, 그건 두 규칙 다 아니다.
+    """
+    roll = SeededRoll(run.seed, week, seeded_roll.STIPULATION)
+    return (
+        MatchKind.SUDDEN_DEATH
+        if roll.chance(rules.SPEED_TIME_UP_CHANCE)
+        else MatchKind.SPEED
+    )
 
 
 def _stipulation_of(run: CareerRun, week: int, kind: WeekKind) -> MatchKind:
@@ -621,16 +661,41 @@ def _draw_title_match(
     if kind not in (WeekKind.PLE, WeekKind.SPECIAL, WeekKind.WEEKLY_SHOW):
         return None, None
     roll = SeededRoll(run.seed, week, seeded_roll.TITLE)
-    chance = championship.title_shot_chance(
-        run.stats.popularity,
-        on_tv=kind is WeekKind.WEEKLY_SHOW,
-        major=show is not None and show.is_major,
-        special=kind is WeekKind.SPECIAL,
-        standing=run.stats.backstage,
-    )
-    if not roll.chance(chance):
+    # **대상을 먼저 고르고 그 벨트의 관문으로 확률을 잰다** (§3-D75). 순서를 뒤집으면
+    # 월드 벨트와 스피드 벨트가 같은 확률로 자리를 받는다 — 경쟁의 세기는 벨트마다
+    # 다르다는 것이 이 규칙의 전부다.
+    target = championship.target_title(run, roll)
+    if target is None:
         return None, None
-    return championship.target_title(run, roll), None
+    # **1선에서 밀리면 아래를 본다** (§3-D76). 예전에는 사다리 맨 위 하나만 굴리고
+    # 떨어지면 그 주차에 타이틀전이 아예 없었다 — 인기도 85짜리가 월드에서 밀렸다고
+    # 2선 자리까지 못 받는 것은 그림이 아니다. 정상권 선수가 월드 그림 밖일 때
+    # 인터컨티넨탈을 감는 것이 실제 모습이고, §3-D20-3이 이미 그 결을 잡아 뒀다.
+    for rung, candidate in enumerate(championship.shot_ladder(run, target)):
+        chance = championship.title_shot_chance(
+            run.stats.popularity,
+            on_tv=kind is WeekKind.WEEKLY_SHOW,
+            major=show is not None and show.is_major,
+            special=kind is WeekKind.SPECIAL,
+            standing=run.stats.backstage,
+            required=TITLES[candidate].popularity_required,
+            rung=rung,
+            proven=candidate in run.titles_won,
+        )
+        chance *= quarter_plan.plan_of(run).title_shot
+        if roll.chance(chance):
+            return candidate, None
+    return None, None
+
+
+def promo_hit_chance_of(run: CareerRun) -> float:
+    """그 선수의 프로모 성공률 — **분기 목표를 함께 본다** (§3-D80).
+
+    `promo_hit_chance`는 마이크웍만 받는 순수 함수로 남긴다. 목표는 상태이지
+    스탯이 아니라, 섞으면 "마이크웍 얼마면 몇 %"를 더는 말할 수 없다.
+    """
+    base = promo_hit_chance(run.stats.mic_work)
+    return min(1.0, base * quarter_plan.plan_of(run).promo)
 
 
 def promo_hit_chance(mic_work: int) -> float:
@@ -646,7 +711,7 @@ def _promo_gain(run: CareerRun, week: int) -> tuple[dict[str, int], bool]:
     """
     roll = SeededRoll(run.seed, week, seeded_roll.GROWTH)
     delta: dict[str, int] = {}
-    hit = roll.chance(promo_hit_chance(run.stats.mic_work))
+    hit = roll.chance(promo_hit_chance_of(run))
     headroom = _headroom(run.stats.mic_work)
     if roll.chance(min(1.0, rules.PROMO_MIC_GAIN_CHANCE * headroom)):
         delta["mic_work"] = 1
@@ -774,7 +839,25 @@ def _growth(run: CareerRun, week: int, result: OutcomeKind) -> dict[str, int]:
     if roll.chance(backstage_chance):
         delta["backstage"] = delta.get("backstage", 0) + 1
 
-    return delta
+    return _by_goal(run, delta)
+
+
+def _by_goal(run: CareerRun, delta: dict[str, int]) -> dict[str, int]:
+    """분기 목표가 성장분을 키우거나 줄인다 (§3-D80).
+
+    **오른 것에만 곱한다.** 내려간 값에 배수를 걸면 "대립을 키운다"가 인기도 하락을
+    1.35배로 만든다 — 목표는 미는 방향이지 흔드는 방향이 아니다.
+
+    **0으로 죽지 않게 올림한다.** 1점이 오를 자리에 0.75를 곱하면 그냥 사라지는데,
+    그러면 "돈을 번다"가 성장을 늦추는 게 아니라 없앤다.
+    """
+    out: dict[str, int] = {}
+    for stat, value in delta.items():
+        factor = quarter_plan.growth_factor(run, stat)
+        out[stat] = (
+            max(1, round(value * factor)) if value > 0 and factor != 1.0 else value
+        )
+    return out
 
 
 def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
@@ -796,12 +879,16 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
     for vacated in report.vacated:
         # 길게 빠지는 챔피언은 자리를 비운다 (§3-D40). 이력은 남는다.
         moved = championship.strip(moved, vacated)
+    lost_tag = False
     if report.title_at_stake is not None:
         if report.result is OutcomeKind.WIN:
             moved = championship.award(run, report.title_at_stake)
         elif report.title_defended:
             moved = championship.strip(run, report.title_at_stake)
+            lost_tag = TITLES[report.title_at_stake].tier is TitleTier.TAG
 
+    # 분기 목표가 히트를 키운다 (§3-D80). 식은 그대로 두고 결과에만 곱한다.
+    heat_factor = quarter_plan.plan_of(run).heat
     heat_gain = {
         WeekKind.PLE: rivalry_engine.HEAT_PER_PLE,
         WeekKind.SPECIAL: rivalry_engine.HEAT_PER_MATCH,
@@ -813,6 +900,9 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         ),
         WeekKind.OFF: -rivalry_engine.COOL_PER_QUIET_WEEK,
     }[report.kind]
+    # 식히는 쪽은 안 건드린다 — 목표는 "키운다"이지 "안 식는다"가 아니다.
+    if heat_gain > 0:
+        heat_gain = round(heat_gain * heat_factor)
     # 저주는 경기 하나를 먹고 사라진다 — 경기 없는 주차는 그냥 지나간다.
     flags = moved.flags - {CURSED} if report.cursed else moved.flags
 
@@ -829,6 +919,12 @@ def apply_week(run: CareerRun, report: WeekReport) -> CareerRun:
         if formed is not None:
             team = formed
             flags = flags - {TEAM_PENDING}
+
+    # **벨트를 잃으면 팀이 흩어진다 — 스테이블이 아니라면** (§3-D75, 2026-08-13
+    # 사용자 규칙). 둘이 벨트 하나로 묶여 있던 사이라 이유가 사라지면 남을 것이
+    # 없다. 스테이블은 벨트보다 큰 무리라 그대로 간다.
+    if lost_tag and team is not None and team.kind is TeamKind.TAG_TEAM:
+        team = None
 
     title_shot, briefcase_week, flags = _spoils(moved, report, flags)
     tournament_round, crown = _tournament_after(moved, report)

@@ -130,7 +130,7 @@ def build_night(
     내가 도전한 벨트. 카드가 그 둘을 다시 쓰지 않게 하려고 받는다(§3-D52). 없으면 카드가
     조금 어긋날 뿐 리포트는 선다.
     """
-    calendar = calendar_for(run.brand)
+    calendar = calendar_for(run.brand, run.seed)
     # **주간 방송에는 대회 이름이 없다** — 브랜드가 그 밤의 이름이다 (§3-D60).
     show = calendar.show_for(week) if calendar.is_show_week(week) else None
     player = str(run.identity.name)
@@ -258,3 +258,40 @@ def is_reportable(run: CareerRun, week: int) -> bool:
     0주차는 아직 아무것도 없었던 자리라 연다고 할 것이 없다.
     """
     return week > 0
+
+
+@dataclass(frozen=True)
+class WorldChampion:
+    """세계선의 벨트 한 줄. **코드를 함께 든다** — 화면이 브랜드로 묶으려면 필요하다."""
+
+    title: Title
+    holder: str
+    mine: bool
+
+
+def world_champions(run: CareerRun) -> tuple[WorldChampion, ...]:
+    """**지금 이 세계선의 모든 벨트와 그 주인** (2026-08-13 사용자 요청).
+
+    `_champions`는 그 밤의 리포트용이라 **내 브랜드·내 성별만** 뽑는다 — 그 밤의
+    카드에 설 사람들이기 때문이다. 이쪽은 반대로 열여덟 벨트를 전부 본다: 내가 못
+    보는 브랜드에서 누가 벨트를 들고 있는지가 "세계가 돌고 있다"의 증거다(§3-D38).
+
+    **내가 든 벨트는 내 이름으로 덮는다** — `_champions`와 같은 이유다.
+    """
+    player = str(run.identity.name)
+    holders: list[WorldChampion] = []
+    for title in sorted(TITLES, key=lambda t: t.value):
+        mine = title in run.titles_held
+        holder = (
+            player
+            if mine
+            else title_scene.holder_label(
+                title_scene.champion_at(run.seed, run.week, title, exclude=player)
+                or "",
+                run.seed,
+            )
+        )
+        if holder is None:
+            continue
+        holders.append(WorldChampion(title=title, holder=holder, mine=mine))
+    return tuple(holders)

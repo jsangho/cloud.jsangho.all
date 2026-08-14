@@ -47,3 +47,15 @@ class InvalidCareerRunError(ValueError):
 
 class RunNotActiveError(Exception):
     """이미 끝난 커리어를 조작하려 할 때. 검증 실패가 아니라 상태 위반이라 409다."""
+
+
+class NoGoalNeededError(Exception):
+    """분기 목표를 고를 때가 아닌데 골랐다 (§3-D80)."""
+
+
+class CannotAffordGoalError(ValueError):
+    """잔액이 모자란 목표를 골랐다 (§3-D80·D48)."""
+
+
+class NoOfferOpenError(Exception):
+    """재계약 협상 중이 아닌데 답했다 (§3-D84)."""

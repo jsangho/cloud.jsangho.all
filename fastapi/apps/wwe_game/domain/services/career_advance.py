@@ -29,7 +29,13 @@ from __future__ import annotations
 
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import career_end, contract_office, seeded_roll
+from wwe_game.domain.services import (
+    career_end,
+    contract_desk,
+    contract_office,
+    quarter_plan,
+    seeded_roll,
+)
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.advance_outcome import (
@@ -76,6 +82,20 @@ def advance(
     run.require_active()
     if run.is_blocked:
         return AdvanceOutcome(run=run, stop_reason=StopReason.EVENT)
+    # **목표를 고르기 전에는 한 주도 안 간다** (§3-D80, 2026-08-13 사용자 결정).
+    #
+    # 이것이 §11-1을 고쳐 쓴 자리다. 옛 기준은 *"'다음'만 눌러도 커리어가 끝까지
+    # 진행된다"*였고, 그 기준대로면 목표는 안 골라도 그만인 장식이 된다. 사용자가
+    # 기준 쪽을 바꿨다 — **자주적인 선택이 있어야 게임답다**는 판단이고, 그러면
+    # 진행이 그 선택을 기다리는 것이 맞다.
+    #
+    # 새 기준은 §11-1에 적어 뒀다: *'다음'과 **선택**만으로 끝까지 간다.*
+    # **협상이 목표보다 앞선다** (§3-D84). 계약이 없으면 다음 분기에 무엇을 걸지가
+    # 성립하지 않는다 — 무소속에는 목표를 묻지 않는다는 §3-D80과 같은 이유다.
+    if contract_desk.is_open(run):
+        return AdvanceOutcome(run=run, stop_reason=StopReason.OFFER)
+    if quarter_plan.needs_goal(run):
+        return AdvanceOutcome(run=run, stop_reason=StopReason.GOAL)
     if max_weeks < 1:
         raise ValueError(f"최대 주차는 1 이상이어야 합니다: {max_weeks}")
 
@@ -87,6 +107,12 @@ def advance(
         reports.append(report)
 
         stop = _stop_reason(run, report, step, len(reports), limit)
+        if stop is None and contract_desk.is_open(run):
+            stop = StopReason.OFFER
+        if stop is None and quarter_plan.needs_goal(run):
+            # 분기가 넘어갔다 — 여기서 한 번 끊어 묻는다. 답하지 않고 다시
+            # '다음'을 누르면 위에서 `drift`가 흘려보낸다.
+            stop = StopReason.GOAL
         if stop is not None:
             return AdvanceOutcome(run=run, reports=tuple(reports), stop_reason=stop)
 

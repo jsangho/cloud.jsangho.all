@@ -18,6 +18,9 @@ from wwe_game.domain.services import title_scene
 from wwe_game.domain.value_objects.title import TITLES, Title, TitleTier
 
 SEEDS = (42, 7777, 1234)
+
+INHERIT_SEEDS = tuple(range(1, 41))
+"""이어받기(§3-D58)만 쓰는 넓은 표본. 40판이면 열일곱 번쯤 나온다 — 실측."""
 TAG_TITLES = tuple(
     sorted(
         (t for t, spec in TITLES.items() if spec.tier is TitleTier.TAG),
@@ -87,16 +90,25 @@ class TestTagBeltsAreHeldByTwo:
 
 class TestWhenSomeoneDropsOut:
     def test_a_stable_can_inherit(self) -> None:
-        """**규칙 2** — 남은 사람 옆에 같은 스테이블의 선수가 선다."""
+        """**규칙 2** — 남은 사람 옆에 같은 스테이블의 선수가 선다.
+
+        **시드를 따로 넓게 잡는다** (2026-08-13). 이어받기는 태그 챔피언이 링 밖의
+        일로 빠져야 열리는 문이라 한 판에 0.4번쯤 나온다 — 시드 셋으로는 "규칙이
+        도는가"가 아니라 "그 셋이 운이 좋았는가"를 재게 된다. 실제로 공석 확률을
+        0.10에서 0.05로 내렸을 때(현실 대조) 이 테스트만 시드 운으로 깨졌다.
+        """
         found = 0
-        for seed in SEEDS:
+        for seed in INHERIT_SEEDS:
             for title in TAG_TITLES:
                 for reign in title_scene._reigns(seed, 1560, title, ""):
                     if not reign.inherited:
                         continue
                     found += 1
+                    # **`stable_at()`으로 읽는다** — `.stable`은 원본 CSV의 칸이라
+                    # 가상 선수는 늘 비어 있다(§3-D64는 판마다 다시 묶는다). 시드
+                    # 셋만 볼 때는 가상 스테이블의 이어받기가 안 걸려 가려져 있었다.
                     stables = {
-                        member.stable
+                        roster.stable_at(member, seed)
                         for name in title_scene.members_of(reign.holder)
                         if (member := roster.member_of(name, seed)) is not None
                     }
@@ -104,18 +116,18 @@ class TestWhenSomeoneDropsOut:
                         "독립 선수에게는 이어받을 스테이블이 없다"
                     )
                     assert len(stables) == 1
-        assert found > 0, "30년 세 판에 이어받기가 한 번도 없었다"
+        assert found > 0, "30년 마흔 판에 이어받기가 한 번도 없었다"
 
     def test_an_independent_pair_vacates(self) -> None:
         """**규칙 3의 짝** — 스테이블이 없으면 이어받지 못하고 벨트가 빈다."""
-        for seed in SEEDS:
+        for seed in INHERIT_SEEDS:
             for title in TAG_TITLES:
                 for reign in title_scene._reigns(seed, 1560, title, ""):
                     if not reign.inherited:
                         continue
                     for name in title_scene.members_of(reign.holder):
                         member = roster.member_of(name, seed)
-                        assert member is not None and member.stable
+                        assert member is not None and roster.stable_at(member, seed)
 
     def test_a_vacated_belt_is_never_held_by_a_lone_wrestler(self) -> None:
         """**규칙 3** — 둘을 못 채우면 반납이다. 한 명이 든 태그 벨트는 없다."""

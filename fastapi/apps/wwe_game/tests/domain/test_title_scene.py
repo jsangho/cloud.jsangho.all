@@ -57,7 +57,15 @@ class TestTheBeltIsAlwaysSomeones:
         assert mine != yours
 
     def test_the_belt_changes_hands_but_not_every_week(self) -> None:
-        """재위가 짧으면 30년에 챔피언이 예순 명 지나가 **다시 흐려진다.**"""
+        """**밴드를 45~90으로 넓혔다** (2026-08-13 사용자 지시 · §3-D74).
+
+        옛 밴드는 15~45였고 그 근거는 "재위가 짧으면 30년에 챔피언이 예순 명 지나가
+        누구의 벨트인가가 흐려진다"였다. 사용자가 1선 재위를 **평균 5~6개월**로
+        정하면서 그 걱정보다 현실을 택했다 — 5.2개월이면 30년에 일흔 명 남짓이다.
+
+        **여전히 상·하한은 필요하다.** 위가 없으면 매주 바뀌는 벨트를 못 잡고,
+        아래가 없으면 한 사람이 30년을 드는 것도 통과한다.
+        """
         reigns = []
         prev = None
         for week in range(0, 1560):
@@ -65,7 +73,7 @@ class TestTheBeltIsAlwaysSomeones:
             if now != prev:
                 reigns.append(week)
                 prev = now
-        assert 15 <= len(reigns) <= 45, f"30년간 챔피언 {len(reigns)}명"
+        assert 45 <= len(reigns) <= 90, f"30년간 챔피언 {len(reigns)}명"
 
     def test_the_player_never_holds_it_in_the_background(self) -> None:
         """실존 선수를 바탕으로 만들면 **내 이름이 명부에 그대로 있다** (§3-D10-1).

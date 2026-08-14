@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BeltList } from "@/components/career-belt";
+import { BeltBanner, BeltList, BrandLogo, beltName } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -9,8 +9,12 @@ import {
   CareerApiError,
   advanceGuestRun,
   advanceRun,
+  answerGuestOffer,
+  answerOffer,
   chooseEvent,
   chooseGuestEvent,
+  setGoal,
+  setGuestGoal,
   readCurrentRun,
   readGuestReport,
   readLog,
@@ -29,6 +33,10 @@ import {
   type CareerBeat,
   type CareerCardMatch,
   type CareerPreset,
+  type CareerChampionGroup,
+  type CareerGrandSlam,
+  type CareerRunView,
+  type CareerMoney,
   type CareerShowReport,
   type CareerNewsItem,
   type CareerNewsPage,
@@ -131,6 +139,10 @@ const PANELS = [
   { key: "schedule", label: "일정" },
   { key: "rivalries", label: "대립" },
   { key: "belts", label: "벨트" },
+  // 3차 평가에서 통째로 빠져 있던 축이다 (§3-D73). 도메인은 2026-08-11에 다 만들어
+  // 뒀는데 응답에 한 필드도 안 나가서, 커리어의 3분의 1이 겪는 무소속 구간을
+  // 화면이 한 번도 안 보여줬다.
+  { key: "money", label: "계약" },
   { key: "inbox", label: "인박스" },
 ] as const;
 
@@ -189,6 +201,16 @@ const END_REASONS: Record<string, string> = {
   player: "스스로 은퇴",
   injury: "중대 부상",
   released: "방출",
+  faded: "잊혔다",
+};
+
+/** 결산 머리에 거는 한 줄 — **어떻게 끝났는가가 곧 그 커리어의 마지막 문장이다.** */
+const END_LINES: Record<string, string> = {
+  age_50: "서른 해를 다 채우고 링을 떠났다.",
+  player: "스스로 마지막 밤을 골랐다.",
+  injury: "몸이 먼저 그만두자고 했다.",
+  released: "계약이 끝난 자리에서 멈췄다.",
+  faded: "두 해 동안 아무도 부르지 않았다.",
 };
 
 /**
@@ -223,6 +245,31 @@ const SHOT_LABELS: Record<string, string> = {
   gate: "타이틀전",
   earned: "도전권 · 타이틀전",
   briefcase: "가방 · 타이틀전",
+};
+
+/** 분기 목표 코드 → 짧은 이름 (§3-D80). 머리에 걸어 두는 용도라 서술은 뺀다. */
+const GOAL_SHORT: Record<string, string> = {
+  title: "벨트",
+  rivalry: "대립",
+  body: "몸",
+  mic: "마이크",
+  money: "돈",
+  drift: "그냥 뛴다",
+};
+
+/** 스탯 코드 → 화면 이름. 백엔드 `stat_delta`의 키와 같은 표다. */
+const STAT_LABELS: Record<string, string> = {
+  popularity: "인기도",
+  in_ring: "경기력",
+  mic_work: "마이크웍",
+  backstage: "평판",
+  alignment: "성향",
+};
+
+/** 훈장 코드 → 이름 (§3-D33). 모르는 코드는 원문 그대로 나간다. */
+const TROPHIES: Record<string, string> = {
+  king_of_the_ring: "킹 오브 더 링",
+  queen_of_the_ring: "퀸 오브 더 링",
 };
 
 /** 킹 앤 퀸 오브 더 링의 회전 이름 (§3-D33). 백엔드 `TOURNAMENT_ROUNDS`와 같은 수다. */
@@ -347,6 +394,16 @@ export default function CareerPage() {
   const [presets, setPresets] = useState<CareerPreset[]>([]);
   const [metaFailed, setMetaFailed] = useState(false);
   const [tab, setTab] = useState<PanelKey>("schedule");
+  /**
+   * **이어할 커리어가 있는데 못 읽었다** (2026-08-13 사용자 신고).
+   *
+   * 지금까지 재개가 실패하면 조용히 생성 화면으로 갔고, 체험판은 **세이브를 지웠다** —
+   * 백엔드가 잠깐 안 뜨거나 스키마가 바뀐 것만으로 서른 해가 사라졌다. 실패를
+   * 화면에 남기고 세이브는 그대로 둔다: 못 읽는 것과 없는 것은 다르다.
+   */
+  const [resumeFailed, setResumeFailed] = useState(false);
+  /** 재시도 카운터. effect의 의존성에 넣어야 "다시 시도"가 실제로 다시 돈다. */
+  const [retry, setRetry] = useState(0);
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
@@ -390,7 +447,11 @@ export default function CareerPage() {
               : { phase: "create" },
           );
         })
-        .catch(() => alive && setScreen({ phase: "create" }));
+        .catch(() => {
+          if (!alive) return;
+          setResumeFailed(true);
+          setScreen({ phase: "create" });
+        });
       return () => {
         alive = false;
       };
@@ -412,15 +473,17 @@ export default function CareerPage() {
         setScreen({ phase: "play", advance: next, state: next.state, busy: false });
       })
       .catch(() => {
-        // 읽을 수 없는 세이브(포맷 변경·조작)는 버리고 새로 시작하게 둔다.
-        writeGuestSave(null);
-        writeGuestLog([]);
-        if (alive) setScreen({ phase: "create" });
+        // **세이브를 지우지 않는다** (2026-08-13). 예전에는 여기서 버렸는데,
+        // 백엔드가 잠깐 안 뜬 것과 세이브가 깨진 것을 구별하지 못한 채 지웠다 —
+        // 새로고침 한 번이 곧 커리어 소멸이었다. 화면에 알리고 남겨 둔다.
+        if (!alive) return;
+        setResumeFailed(true);
+        setScreen({ phase: "create" });
       });
     return () => {
       alive = false;
     };
-  }, [isReady, user]);
+  }, [isReady, user, retry]);
 
   const allowedModes = user ? modes : modes.filter((m) => m.guestAllowed);
 
@@ -575,6 +638,25 @@ export default function CareerPage() {
     );
   }
 
+  /** 이번 분기에 걸 것을 정한다 (§3-D80). 진행은 안 시킨다 — 고른 것을 먼저 본다. */
+  function handleGoal(code: string) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() => (state ? setGuestGoal(state, code) : setGoal(run.run.id as number, code)));
+  }
+
+  /**
+   * 재계약 협상에 답한다 (§3-D84). 목표와 같은 모양이다 — **진행은 안 시킨다.**
+   * 도장을 찍었는지 나갔는지를 먼저 보고, 다음 '다음'부터 그 계약으로 흘러간다.
+   */
+  function handleOffer(code: string) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() =>
+      state ? answerGuestOffer(state, code) : answerOffer(run.run.id as number, code),
+    );
+  }
+
   function handleRetire() {
     if (!run?.run.id) {
       writeGuestSave(null);
@@ -600,7 +682,17 @@ export default function CareerPage() {
     const ready = nameOk && (draft.origin === "custom" || draft.basedOn !== "");
 
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      /*
+       * **시작 화면도 카드로 나눴다** (2026-08-13, 매니저 게임 화면 참조).
+       *
+       * 저쪽은 화면을 "구단 현황" · "다음 경기" · "구단 소식" 같은 **카드**로 끊고
+       * 카드마다 골드 소제목을 단다. 한 줄로 죽 흐르던 폼이 그 구조를 받으면
+       * "무엇을 정하는 중인가"가 단계로 읽힌다.
+       *
+       * **데스크톱은 2열이다.** 레퍼런스는 세로 스택인데 그건 폰 폭이라서고,
+       * 넓은 화면에서 폼을 한 줄로 세우면 오른쪽이 통째로 빈다.
+       */
+      <main className="mx-auto w-full max-w-5xl px-4 py-10">
         <p className="font-sport text-xs tracking-[0.3em] text-brand-link">CAREER MODE</p>
         <h1 className="font-sport mt-1 text-4xl leading-none font-semibold sm:text-5xl">
           커리어 시뮬레이터
@@ -609,128 +701,163 @@ export default function CareerPage() {
           스무 살에 데뷔해 서른 해. 멈추는 건 사건이 생겼을 때뿐이다.
         </p>
 
+        {/*
+         * **이어하기** (2026-08-13 사용자 신고: "시작 페이지에 이어하기 칸이 없어").
+         *
+         * 재개는 지금까지 자동이었다 — 되면 바로 플레이 화면으로 갔고, 안 되면
+         * 아무 말 없이 생성 화면이 떴다. 실패가 조용하면 사용자는 커리어가
+         * 사라졌다고 읽는다. **세이브는 그대로 두고** 다시 시도할 자리를 준다.
+         */}
+        {resumeFailed && (
+          <div className="mt-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+            <p className="font-sport text-sm">이어할 커리어를 불러오지 못했습니다</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              세이브는 지우지 않았습니다. 백엔드가 켜져 있는지 확인한 뒤 다시 시도해 주세요 —
+              아래에서 새로 시작하면 이 커리어는 덮어씁니다.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setResumeFailed(false);
+                setScreen({ phase: "loading" });
+                setRetry((n) => n + 1);
+              }}
+            >
+              다시 시도
+            </Button>
+          </div>
+        )}
+
         {metaFailed && (
           <p className="mt-6 rounded-lg bg-card p-3 text-sm text-live">
             선수 목록과 진행 단위를 불러오지 못했습니다. 백엔드가 켜져 있는지 확인해 주세요.
           </p>
         )}
 
-        {/* ① 두 갈래 — 실존 선수를 반드시 골라야 하는 것처럼 보이지 않게 나눈다. */}
-        <div className="mt-8 grid grid-cols-2 gap-2">
-          {(
-            [
-              { key: "custom", title: "나만의 선수", desc: "이름부터 새로 짓는다" },
-              { key: "real", title: "실존 선수", desc: "그 선수의 커리어를 다시 쓴다" },
-            ] as const
-          ).map((option) => {
-            const on = draft.origin === option.key;
-            return (
-              <button
-                key={option.key}
-                type="button"
-                aria-pressed={on}
-                onClick={() =>
-                  setDraft((d) => ({
-                    ...d,
-                    origin: option.key,
-                    basedOn: option.key === "custom" ? "" : d.basedOn,
-                    name: option.key === "custom" ? "" : d.name,
-                  }))
-                }
-                className={cn(
-                  "rounded-lg bg-card p-4 text-left transition-colors duration-[120ms]",
-                  "ring-1 ring-inset ring-stone-300/70 dark:ring-stone-700/70",
-                  on
-                    ? "ring-2 ring-brand-400 dark:ring-brand-400"
-                    : "hover:ring-stone-400 dark:hover:ring-stone-500",
-                )}
-              >
-                <span className="font-sport block text-lg">{option.title}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{option.desc}</span>
-              </button>
-            );
-          })}
-        </div>
+        <div className="mt-8 grid gap-4 lg:grid-cols-2 lg:items-start">
+          <section className="rounded-lg bg-card p-4 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+            <h2 className="font-sport text-sm text-brand-link">누가 될까요</h2>
+            {/* ① 두 갈래 — 실존 선수를 반드시 골라야 하는 것처럼 보이지 않게 나눈다. */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {(
+                [
+                  { key: "custom", title: "나만의 선수", desc: "이름부터 새로 짓는다" },
+                  { key: "real", title: "실존 선수", desc: "그 선수의 커리어를 다시 쓴다" },
+                ] as const
+              ).map((option) => {
+                const on = draft.origin === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        origin: option.key,
+                        basedOn: option.key === "custom" ? "" : d.basedOn,
+                        name: option.key === "custom" ? "" : d.name,
+                      }))
+                    }
+                    className={cn(
+                      "rounded-lg bg-background p-4 text-left transition-colors duration-[120ms]",
+                      "ring-1 ring-inset ring-stone-300/70 dark:ring-stone-700/70",
+                      on
+                        ? "ring-2 ring-brand-400 dark:ring-brand-400"
+                        : "hover:ring-stone-400 dark:hover:ring-stone-500",
+                    )}
+                  >
+                    <span className="font-sport block text-lg">{option.title}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{option.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-        {draft.origin === "real" && (
-          <section className="mt-4 space-y-2">
-            <label htmlFor="based-on" className="text-sm">
-              누가 될까요
-            </label>
-            <select
-              id="based-on"
-              value={draft.basedOn}
-              onChange={(e) => {
-                const source = e.target.value;
-                // 고른 순간 이름까지 그 선수의 것이 된다 (§3-D10-1 개정).
-                setDraft((d) => ({ ...d, basedOn: source, name: source }));
-              }}
-              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
-            >
-              <option value="">선수를 고르세요</option>
-              {presets.map((preset) => (
-                <option key={preset.source} value={preset.source}>
-                  {preset.source} · {preset.playStyleLabel}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">
-              성별·국적·경기 유형을 그대로 씁니다. 스무 살 데뷔 시점부터 다시 시작합니다.
-            </p>
-          </section>
-        )}
-
-        <section className="mt-4 space-y-2">
-          <label htmlFor="ring-name" className="text-sm">
-            링 네임
             {draft.origin === "real" && (
-              <span className="text-muted-foreground"> (고쳐도 됩니다)</span>
-            )}
-          </label>
-          <input
-            id="ring-name"
-            value={draft.name}
-            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-            maxLength={20}
-            placeholder="2~20자"
-            className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none focus:ring-brand-400 dark:ring-stone-700/70"
-          />
-        </section>
-
-        {/* ② 모드는 갈래 선택 아래로 (사용자 요청). */}
-        <section className="mt-6 space-y-2">
-          <p className="text-sm">진행 단위</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {allowedModes.map((mode) => {
-              const on = draft.mode === mode.code;
-              return (
-                <button
-                  key={mode.code}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => setDraft((d) => ({ ...d, mode: mode.code }))}
-                  className={cn(
-                    "rounded-lg bg-card px-3 py-2 text-center transition-colors duration-[120ms]",
-                    "ring-1 ring-inset ring-stone-300/70 dark:ring-stone-700/70",
-                    on
-                      ? "ring-2 ring-brand-400 dark:ring-brand-400"
-                      : "hover:ring-stone-400 dark:hover:ring-stone-500",
-                  )}
+              <div className="mt-4 space-y-2">
+                <label htmlFor="based-on" className="text-sm">
+                  실존 선수
+                </label>
+                <select
+                  id="based-on"
+                  value={draft.basedOn}
+                  onChange={(e) => {
+                    const source = e.target.value;
+                    // 고른 순간 이름까지 그 선수의 것이 된다 (§3-D10-1 개정).
+                    setDraft((d) => ({ ...d, basedOn: source, name: source }));
+                  }}
+                  className="h-10 w-full rounded-lg bg-background px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
                 >
-                  <span className="font-sport block text-base">{MODE_LABELS[mode.code]}</span>
-                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                    {mode.ticks}턴
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {!user && (
-            <p className="text-xs text-muted-foreground">
-              긴 모드는 로그인 후 플레이할 수 있습니다. 체험판 진행은 이 브라우저에 저장됩니다.
-            </p>
-          )}
-        </section>
+                  <option value="">선수를 고르세요</option>
+                  {presets.map((preset) => (
+                    <option key={preset.source} value={preset.source}>
+                      {preset.source} · {preset.playStyleLabel}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  성별·국적·경기 유형을 그대로 씁니다. 스무 살 데뷔 시점부터 다시 시작합니다.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 space-y-2">
+              <label htmlFor="ring-name" className="text-sm">
+                링 네임
+                {draft.origin === "real" && (
+                  <span className="text-muted-foreground"> (고쳐도 됩니다)</span>
+                )}
+              </label>
+              <input
+                id="ring-name"
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                maxLength={20}
+                placeholder="2~20자"
+                className="h-10 w-full rounded-lg bg-background px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none focus:ring-brand-400 dark:ring-stone-700/70"
+              />
+            </div>
+          </section>
+
+          {/* ② 모드는 갈래 선택 아래로 (사용자 요청). */}
+          <section className="rounded-lg bg-card p-4 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+            <h2 className="font-sport text-sm text-brand-link">진행 단위</h2>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {allowedModes.map((mode) => {
+                const on = draft.mode === mode.code;
+                return (
+                  <button
+                    key={mode.code}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setDraft((d) => ({ ...d, mode: mode.code }))}
+                    className={cn(
+                      "rounded-lg bg-background px-3 py-2 text-center transition-colors duration-[120ms]",
+                      "ring-1 ring-inset ring-stone-300/70 dark:ring-stone-700/70",
+                      on
+                        ? "ring-2 ring-brand-400 dark:ring-brand-400"
+                        : "hover:ring-stone-400 dark:hover:ring-stone-500",
+                    )}
+                  >
+                    <span className="font-sport block text-base">{MODE_LABELS[mode.code]}</span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {mode.ticks}턴
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {!user && (
+              <p className="text-xs text-muted-foreground">
+                긴 모드는 로그인 후 플레이할 수 있습니다. 체험판 진행은 이 브라우저에 저장됩니다.
+              </p>
+            )}
+          </section>
+        </div>
 
         {screen.error && <p className="mt-6 text-sm text-live">{screen.error}</p>}
 
@@ -774,7 +901,7 @@ export default function CareerPage() {
               onChange={(e) =>
                 setDraft((d) => ({ ...d, gender: e.target.value as "male" | "female" }))
               }
-              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+              className="h-10 w-full rounded-lg bg-background px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
             >
               {GENDERS.map((g) => (
                 <option key={g.value} value={g.value}>
@@ -791,7 +918,7 @@ export default function CareerPage() {
               id="country"
               value={draft.country}
               onChange={(e) => setDraft((d) => ({ ...d, country: e.target.value }))}
-              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+              className="h-10 w-full rounded-lg bg-background px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
             >
               {COUNTRIES.map(([code, label]) => (
                 <option key={code} value={code}>
@@ -808,7 +935,7 @@ export default function CareerPage() {
               id="play-style"
               value={draft.playStyle}
               onChange={(e) => setDraft((d) => ({ ...d, playStyle: e.target.value }))}
-              className="h-10 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
+              className="h-10 w-full rounded-lg bg-background px-3 text-sm ring-1 ring-stone-300/70 ring-inset outline-none dark:ring-stone-700/70"
             >
               {PLAY_STYLES.map(([code, label]) => (
                 <option key={code} value={code}>
@@ -850,38 +977,89 @@ export default function CareerPage() {
   const ended = advance.stopReason === "ended";
   const blocked = pendingEvent !== null;
 
+  /**
+   * 지금이 몇 월 몇째 주인가 — 머리 3층이 읽는다.
+   *
+   * **서버가 되읽은 값을 쓴다.** 달력은 도메인의 것이고(§3-D21-1) 화면이 주차를
+   * 다시 나누면 반올림 한 번에 대회 날짜와 표시가 어긋난다. 진행한 주차가 아직
+   * 없으면(0주차) 달을 말할 근거가 없으므로 비운다.
+   */
+  const clock = shownWeeks.length > 0 ? shownWeeks[shownWeeks.length - 1] : null;
+
+  /**
+   * 탭 위의 알림 점 — **그 탭에 볼 것이 생겼는가**.
+   *
+   * 숫자가 아니라 있다/없다인 이유: 몇 개인지는 들어가서 보면 되고, 머리에서
+   * 필요한 것은 "들어가 볼 이유가 있는가" 하나다.
+   */
+  /**
+   * 지금 고를 수 있는 분기 목표 (§3-D80).
+   *
+   * **비어 있으면 고를 때가 아니다** — NXT·무소속 구간이거나 이미 이번 분기를
+   * 걸었다. 백엔드가 그 판단을 하고 화면은 목록의 길이만 본다.
+   */
+  const goalOptions = view.goalOptions ?? [];
+  /**
+   * 지금 열려 있는 재계약 협상 (§3-D84).
+   *
+   * **비어 있으면 협상 중이 아니다.** 목표와 마찬가지로 판단은 백엔드가 하고
+   * 화면은 목록의 길이만 본다.
+   */
+  const offerOptions = view.offerOptions ?? [];
+
+  const alerts: Record<PanelKey, boolean> = {
+    profile: false,
+    schedule: advance.weeks.length > 0,
+    rivalries: view.rivalries.length > 0,
+    belts: view.titlesHeld.length > 0,
+    // 무소속은 시계가 돌고 있다는 뜻이라(§3-D50) 들어가 볼 이유가 된다.
+    money: view.money?.contract === null,
+    inbox: (inbox?.items.length ?? 0) > 0,
+  };
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6">
-      {/* Continue 바 — 화면이 무엇이든 '다음'은 늘 같은 자리에 있다. FM의 구조에서
-          가장 먼저 가져올 것이 이것이다: 진행이 메뉴에 묻히지 않는다. */}
-      <div className="sticky top-16 z-30 -mx-4 mb-4 border-b border-stone-200/70 bg-background/95 px-4 py-3 backdrop-blur dark:border-white/10">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="font-sport text-lg leading-none">
-            {view.year}년차 <span className="text-muted-foreground">·</span> {view.age}세
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {view.brand.toUpperCase()}
-            {view.team && ` · ${view.team.label}`}
-            {view.condition !== "healthy" && " · 부상"}
-          </span>
-          {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
-              방금 지나간 결장 열두 주가 로그 안에서만 조용히 흘러간다. */}
-          {advance.stopReason === "recovered" && (
-            <span className="text-xs text-brand-link">부상에서 복귀했습니다</span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
+    <main className="mx-auto w-full max-w-6xl px-4 pb-12">
+      {/*
+       * **머리를 세 층으로 나눴다** (2026-08-13, 매니저 게임 화면 참조).
+       *
+       * 한 줄에 전부 담고 있었더니 "내가 누구인가"(링네임·소속)와 "지금 언제인가"
+       * (연차·주차)와 "어디를 보는가"(탭)가 같은 무게로 섞였다. 셋은 성격이 다르다 —
+       * 정체성은 안 바뀌고, 시점은 매 진행마다 바뀌고, 탭은 내가 고른다.
+       *
+       * **팔레트는 레퍼런스를 따르지 않는다.** 저쪽은 초록 CTA·파란 칩을 쓰는데
+       * DESIGN.md §7은 골드 하나를 액션 색으로 두고 레드는 LIVE 전용이라고 못 박았다.
+       * 가져온 것은 구조지 색이 아니다.
+       */}
+      <header className="sticky top-16 z-30 -mx-4 mb-4 border-b border-stone-200/70 bg-background/95 backdrop-blur dark:border-white/10">
+        {/* 1층 — 내가 누구인가. 진행해도 안 바뀌는 것만 여기 둔다. */}
+        <div className="flex items-center gap-3 px-4 pt-3">
+          <span className="truncate font-sport text-xl leading-none">{view.name}</span>
+          <BrandLogo brand={view.brand} width={72} />
+          {/*
+           * **진행 버튼은 머리 오른쪽이다** (2026-08-13).
+           *
+           * 레퍼런스는 화면 하단에 고정된 큰 버튼을 쓰는데 그건 엄지가 닿는
+           * 자리를 노린 **모바일 패턴**이다. 넓은 화면에서는 시선이 아래로 가지
+           * 않아 같은 자리가 오히려 멀다 — 데스크톱에서는 머리에 두는 쪽이
+           * "다음"과 "지금 언제인가"를 한눈에 붙여 준다.
+           *
+           * 골드 채움은 DESIGN.md §4의 기본 CTA다. 이 화면에서 그 색을 쓰는
+           * 버튼은 이것 하나여야 한다.
+           */}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {blocked ? (
-              <span className="text-xs text-brand-link">선택을 기다리는 중</span>
+              <span className="rounded-full bg-brand-400/15 px-3 py-1.5 text-xs text-brand-link ring-1 ring-brand-400/50 ring-inset">
+                선택을 기다리는 중
+              </span>
             ) : (
               <Button
                 type="button"
-                variant="outline"
                 size="sm"
                 disabled={busy || ended}
                 onClick={handleNext}
-                className="min-w-24"
+                className="min-w-28"
               >
-                {busy ? "진행 중…" : ended ? "종료됨" : "다음"}
+                {busy ? "진행 중…" : ended ? "종료됨" : "다음 ▶"}
               </Button>
             )}
             <Button
@@ -895,7 +1073,161 @@ export default function CareerPage() {
             </Button>
           </div>
         </div>
-      </div>
+
+        {/* 2층 — 어디를 보는가. 가로 스크롤이라 탭이 늘어도 줄이 안 접힌다. */}
+        <nav
+          aria-label="커리어 메뉴"
+          className="mt-3 flex gap-1 overflow-x-auto px-4 pb-0.5 sm:overflow-x-visible"
+        >
+          {PANELS.map((panel) => (
+            <button
+              key={panel.key}
+              type="button"
+              aria-current={tab === panel.key ? "page" : undefined}
+              onClick={() => setTab(panel.key)}
+              className={cn(
+                "relative shrink-0 rounded-[4px] px-4 py-2 text-sm transition-colors duration-[120ms]",
+                tab === panel.key
+                  ? "bg-card text-foreground ring-1 ring-brand-400/60 ring-inset"
+                  : "text-muted-foreground hover:bg-card hover:text-foreground",
+              )}
+            >
+              {panel.label}
+              {/* 알림 점 — 그 탭에 볼 것이 생겼다는 신호다. 숫자를 쓰지 않는 이유는
+                  "몇 개"가 아니라 "있다/없다"가 결정을 바꾸기 때문이다. */}
+              {alerts[panel.key] && (
+                <span
+                  aria-label="새 소식"
+                  className="absolute right-1 top-1 size-1.5 rounded-full bg-brand-400"
+                />
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {/* 3층 — 지금 언제인가. 진행할 때마다 바뀌는 것만 모았다. */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-4 pb-2.5 pt-2 text-xs text-muted-foreground">
+          <span className="font-sport text-sm text-brand-link">
+            {view.year}년차 {clock ? `${clock.month}월 ${clock.weekOfMonth}주` : ""}
+          </span>
+          <span>{view.age}세</span>
+          <span className="text-muted-foreground/60">·</span>
+          <span>{view.week}주차</span>
+          {view.team && (
+            <>
+              <span className="text-muted-foreground/60">·</span>
+              <span>{view.team.label}</span>
+            </>
+          )}
+          {view.goal && view.goal !== "drift" && (
+            <>
+              <span className="text-muted-foreground/60">·</span>
+              <span className="text-brand-link">{GOAL_SHORT[view.goal] ?? view.goal}</span>
+            </>
+          )}
+          {view.condition !== "healthy" && <span className="text-brand-link">부상</span>}
+          {/*
+           * **저장 버튼이 없는 이유를 화면이 말한다** (2026-08-13 사용자 신고:
+           * "세이브 버튼이 없어"). 진행할 때마다 저장되므로 누를 버튼이 없는 것이
+           * 맞는데, 그 사실이 어디에도 없으면 "저장이 안 되는 게임"으로 읽힌다.
+           */}
+          <span className="ml-auto text-muted-foreground/70">
+            {busy ? "저장 중…" : runId === null ? "이 브라우저에 저장됨" : "자동 저장됨"}
+          </span>
+          {view.money?.contract === null && <span className="text-brand-link">무소속</span>}
+          {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
+              방금 지나간 결장 열두 주가 로그 안에서만 조용히 흘러간다. */}
+          {advance.stopReason === "recovered" && (
+            <span className="text-brand-link">부상에서 복귀했습니다</span>
+          )}
+        </div>
+      </header>
+
+      {/*
+       * **재계약 협상** (§3-D84) — 목표와 같은 자리이고, **목표보다 앞선다.**
+       *
+       * 순서를 화면에서도 지킨다: 협상이 열려 있으면 목표는 안 띄운다. 계약이
+       * 없을 수도 있는데 다음 석 달에 무엇을 걸지부터 물으면 순서가 뒤집힌다 —
+       * `career_advance.advance`가 백엔드에서 하는 판단과 같은 것이다.
+       */}
+      {offerOptions.length > 0 && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+          <h2 className="font-sport text-lg">계약이 끝났다 — 다시 앉는다</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {view.money && (
+              <>
+                지금까지 주 ${view.money.contract?.weeklyPay.toLocaleString("en-US") ?? 0}, 단체가
+                매긴 몸값 주 ${view.money.marketValue.toLocaleString("en-US")}.{" "}
+              </>
+            )}
+            답하기 전에는 다음 주로 가지 않습니다.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {offerOptions.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                disabled={busy}
+                onClick={() => void handleOffer(option.code)}
+                className={cn(
+                  "rounded-[6px] bg-background p-3 text-left transition-colors duration-[120ms]",
+                  "ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70",
+                  "hover:ring-brand-400 disabled:opacity-50",
+                )}
+              >
+                <span className="flex items-baseline gap-2">
+                  <span className="font-sport text-base">{option.label}</span>
+                  {option.years > 0 && (
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      ${option.weeklyPay.toLocaleString("en-US")}/주 · {option.years}년
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">{option.blurb}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/*
+       * **분기 목표** (§3-D80) — 이벤트와 같은 자리를 쓰되 성격이 반대다.
+       * 이벤트는 벌어진 일에 답하는 것이고 이쪽은 **먼저 거는 것**이라, 문구도
+       * "무슨 일이 있었다"가 아니라 "무엇에 걸까"로 연다.
+       */}
+      {goalOptions.length > 0 && offerOptions.length === 0 && (
+        <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+          <h2 className="font-sport text-lg">{view.year}년차 — 무엇에 걸까</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            고른 것이 이번 석 달의 규칙을 바꿉니다. 잔액이 모자란 것은 목록에 없습니다.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {goalOptions.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                disabled={busy}
+                onClick={() => void handleGoal(option.code)}
+                className={cn(
+                  "rounded-[6px] bg-background p-3 text-left transition-colors duration-[120ms]",
+                  "ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70",
+                  "hover:ring-brand-400 disabled:opacity-50",
+                )}
+              >
+                <span className="flex items-baseline gap-2">
+                  <span className="font-sport text-base">{option.label}</span>
+                  {option.cost > 0 && (
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      ${option.cost.toLocaleString("en-US")}
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">{option.blurb}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 대기 이벤트는 어느 화면에 있든 위로 올라온다 — 답하기 전에는 진행이 막힌다. */}
       {pendingEvent && (
@@ -920,41 +1252,82 @@ export default function CareerPage() {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[10rem_1fr]">
-        <nav aria-label="커리어 메뉴" className="flex gap-1.5 overflow-x-auto lg:flex-col">
-          {PANELS.map((panel) => (
-            <button
-              key={panel.key}
-              type="button"
-              aria-current={tab === panel.key ? "page" : undefined}
-              onClick={() => setTab(panel.key)}
-              className={cn(
-                "shrink-0 rounded-[4px] px-3 py-2 text-left text-sm transition-colors duration-[120ms]",
-                tab === panel.key
-                  ? "bg-card text-foreground ring-1 ring-brand-400/60 ring-inset"
-                  : "text-muted-foreground hover:bg-card hover:text-foreground",
-              )}
-            >
-              {panel.label}
-            </button>
-          ))}
-        </nav>
-
+      <div>
         <div className="min-w-0">
-          {tab === "profile" && (
-            <section className="space-y-4">
+          {/*
+           * **나에 관한 것은 전부 여기 모은다** (2026-08-13 사용자 요청).
+           *
+           * 스탯만 있던 칸이다. 몸이 기억하는 부상(§3-D43) · 지금 붙어 있는 상태
+           * 표식 · 훈장(§3-D33)이 전부 응답에도 없었고(§3-D73 평가), 있어도 갈 곳이
+           * 없었다. 벨트는 따로 칸이 있으니 남기고, 그 밖의 "나"는 여기다.
+           */}
+          {tab === "profile" && ended && <CareerSummary view={view} />}
+
+          {tab === "profile" && !ended && (
+            <section className="space-y-5">
               <StatGrid stats={view.stats} />
+
+              {/* 지금 붙어 있는 것 — 저주·진통제·매니저 같은 상태 표식. */}
+              {(view.flags?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">지금 붙어 있는 것</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {view.flags?.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-[4px] bg-card px-2 py-1 text-xs ring-1 ring-brand-400/40 ring-inset"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* **몸은 기억한다** (§3-D43) — 다음 부상이 여기로 돌아온다. */}
+              {(view.injuredParts?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    다쳤던 곳 <span className="text-muted-foreground/70">— 다시 다치기 쉽다</span>
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {view.injuredParts?.map((part) => (
+                      <span
+                        key={part}
+                        className="rounded-[4px] bg-card px-2 py-1 text-xs text-muted-foreground"
+                      >
+                        {part}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 훈장 — 벨트가 아니라서 벨트 칸에 못 서던 것들 (§3-D33). */}
+              {(view.trophies?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">훈장</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {view.trophies?.map((t) => (
+                      <span
+                        key={`${t.code}-${t.week}`}
+                        className="rounded-[4px] bg-card px-2 py-1 text-xs ring-1 ring-brand-400/40 ring-inset"
+                      >
+                        {TROPHIES[t.code] ?? t.code}
+                        <span className="ml-1.5 text-muted-foreground">
+                          {Math.floor((t.week - 1) / 52) + 1}년차
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {view.team && (
                 <p className="text-sm">
                   <span className="text-muted-foreground">소속 팀 </span>
                   {view.team.label}
                   <span className="text-muted-foreground"> · {view.team.members.join(" · ")}</span>
-                </p>
-              )}
-              {ended && (
-                <p className="text-sm">
-                  커리어가 끝났습니다
-                  {view.endReason ? ` · ${END_REASONS[view.endReason] ?? view.endReason}` : ""}.
                 </p>
               )}
             </section>
@@ -1033,9 +1406,17 @@ export default function CareerPage() {
                       쌓입니다.
                     </p>
                   )}
+                  {/*
+                   * **칩에 개수를 붙였다** (2026-08-13, 매니저 게임 화면 참조).
+                   *
+                   * 저쪽은 "전체 26 · 이적 4 · 루머 1"처럼 세어서 보여 준다. 켜고
+                   * 끄는 스위치인데 뒤에 무엇이 몇 줄 있는지 모르면 눌러 보기 전에는
+                   * 판단할 수가 없다 — 0인 칩과 20인 칩이 같은 모양이었다.
+                   */}
                   <div className="flex flex-wrap gap-1.5">
                     {BACKGROUND_KINDS.map((kind) => {
                       const off = hidden.includes(kind);
+                      const count = inbox.items.filter((item) => item.kind === kind).length;
                       return (
                         <button
                           key={kind}
@@ -1054,6 +1435,16 @@ export default function CareerPage() {
                           )}
                         >
                           {NEWS_KINDS[kind] ?? kind}
+                          {count > 0 && (
+                            <span
+                              className={cn(
+                                "ml-1.5 tabular-nums",
+                                off ? "text-muted-foreground/60" : "text-muted-foreground",
+                              )}
+                            >
+                              {count}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -1096,11 +1487,28 @@ export default function CareerPage() {
           )}
 
           {tab === "belts" && (
+            <section className="space-y-5">
+              {view.grandSlam && <GrandSlamPanel slam={view.grandSlam} />}
+              <div>
+                <p className="font-sport text-sm">내가 감은 벨트</p>
+                <div className="mt-2">
+                  {view.titlesWon.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
+                  ) : (
+                    <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+                  )}
+                </div>
+              </div>
+              {(view.champions?.length ?? 0) > 0 && <ChampionScene groups={view.champions ?? []} />}
+            </section>
+          )}
+
+          {tab === "money" && (
             <section>
-              {view.titlesWon.length === 0 ? (
-                <p className="text-sm text-muted-foreground">아직 감은 벨트가 없습니다.</p>
+              {view.money ? (
+                <MoneyPanel money={view.money} week={view.week} />
               ) : (
-                <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+                <p className="text-sm text-muted-foreground">계약 정보가 없습니다.</p>
               )}
             </section>
           )}
@@ -1138,6 +1546,11 @@ function WeekRow({
   // 주간 방송도 연다: 밤이 작을 뿐 그날도 카드가 섰다. 프로모·결장은 링에 서지
   // 않은 주차라 열지 않는다.
   const showNight = week.kind === "ple" || week.kind === "special" || week.kind === "weekly_show";
+  // 링에 서지 않은 주차에도 남는 것이 있다 — 프로모의 성패와 그 주의 성장 (§3-D79).
+  const hasDelta =
+    Object.values(week.statDelta ?? {}).some((v) => v !== 0) ||
+    (week.wearDelta ?? 0) > 0 ||
+    (week.promoHit !== null && week.promoHit !== undefined);
   return (
     <div className="border-b border-stone-200/40 dark:border-stone-800/60">
       <div className="grid grid-cols-[4.5rem_2.5rem_1fr] items-baseline gap-x-2 gap-y-0.5 py-1.5 sm:grid-cols-[5rem_2.5rem_9rem_1fr]">
@@ -1151,6 +1564,10 @@ function WeekRow({
           <WeekOpponent week={week} />
         </span>
         <div className="col-span-3 sm:col-span-1">
+          {/* **벨트가 문장보다 먼저다** (2026-08-13 사용자 요청). 챔피언십 기회를
+              얻은 밤은 30년에 몇 번 없고, 그 사실이 서술 한 줄에 섞이면 지나간다.
+              `titleAtStake`는 표시 이름이 아니라 벨트 코드라 사진을 바로 집는다. */}
+          {week.titleAtStake && <BeltBanner code={week.titleAtStake} won={week.result === "win"} />}
           <p className={cn("text-sm leading-relaxed", week.cursed && "text-muted-foreground")}>
             {/* 토너먼트는 한 주에 안 끝난다 — 몇 회전인지가 그 밤의 뜻이다 (§3-D33). */}
             {week.tournamentRound > 0 && (
@@ -1163,11 +1580,31 @@ function WeekRow({
             )}
             {week.titleAtStake && (
               <span className="mr-1.5 text-xs text-brand-link">
-                {SHOT_LABELS[week.titleShotFrom ?? "gate"]}
+                {week.titleDefended ? "방어 성공" : SHOT_LABELS[week.titleShotFrom ?? "gate"]}
               </span>
             )}
             {week.narration}
           </p>
+          {/* **만드는데 안 나가던 사건들** (§3-D73, 3차 평가). 셋 다 커리어의 장이
+              바뀌는 자리인데 지금까지 서술 한 줄에만 암시되거나 그마저도 없었다. */}
+          {(week.vacated?.length ?? 0) > 0 && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              부상으로 반납:{" "}
+              <span className="text-foreground">
+                {week.vacated?.map((code) => beltName(code)).join(" · ")}
+              </span>
+            </p>
+          )}
+          {week.injuryPart && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              다친 곳 <span className="text-foreground">{week.injuryPart}</span>
+            </p>
+          )}
+          {week.callUp && (
+            <p className="mt-0.5 text-xs text-brand-link">
+              {week.callUp === "emergency" ? "긴급 콜업 — 공백을 메우러" : "콜업 — 메인 로스터로"}
+            </p>
+          )}
           {week.stars > 0 && (
             <p className="mt-0.5 text-xs">
               <Stars value={week.stars} />
@@ -1198,6 +1635,19 @@ function WeekRow({
               그날의 리포트<span className="ml-1">{open ? "▾" : "▸"}</span>
             </button>
           )}
+          {/* 프로모·결장 주차에는 리포트가 없어 펼칠 자리도 없었다 — 남긴 것이
+              있으면 그 주차도 연다. */}
+          {!showNight && hasDelta && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={open}
+              className="mt-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              그 주가 남긴 것<span className="ml-1">{open ? "▾" : "▸"}</span>
+            </button>
+          )}
+          {open && hasDelta && <WeekDelta week={week} />}
           {open && week.beats && <BeatList beats={week.beats} player={player} />}
           {open && report && (
             <ShowCard
@@ -1235,21 +1685,168 @@ type MyMatch = {
   stars: number;
 };
 
+/** 달러 표기 — 자릿수가 화면에서 흔들리지 않게 한 곳에서만 만든다. */
+const usd = (value: number) => `$${value.toLocaleString("en-US")}`;
+
+/** 주차를 "3년 2개월"처럼 읽는다. 만료까지 남은 시간은 주차보다 이쪽이 와닿는다. */
+function span(weeks: number): string {
+  if (weeks <= 0) return "만료";
+  const years = Math.floor(weeks / 52);
+  const months = Math.round((weeks % 52) / 4.33);
+  if (years === 0) return `${Math.max(1, months)}개월`;
+  return months === 0 ? `${years}년` : `${years}년 ${months}개월`;
+}
+
+/**
+ * 계약 패널 (§3-D73) — 3차 평가에서 통째로 빠져 있던 축.
+ *
+ * **주급과 몸값을 나란히 세운다.** 잔액만 보여주면 숫자 하나가 늘기만 하는 화면이
+ * 되고, 그건 §3-D48이 아직 안 푼 문제("돈의 소비처가 없다")를 화면에서 되풀이하는
+ * 것이다. 둘이 갈리는 폭이 곧 재계약의 긴장이다.
+ */
+function MoneyPanel({ money, week }: { money: CareerMoney; week: number }) {
+  const { contract, marketValue } = money;
+  const gap = contract ? marketValue - contract.weeklyPay : 0;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Figure label="누적 잔액" value={usd(money.balance)} />
+        <Figure
+          label="주급"
+          value={contract ? usd(contract.weeklyPay) : "—"}
+          note={contract ? `연 ${usd(contract.annualPay)}` : "무소속"}
+        />
+        <Figure
+          label="지금 몸값"
+          value={usd(marketValue)}
+          note={
+            contract
+              ? gap > 0
+                ? `주급보다 ${usd(gap)} 높다`
+                : gap < 0
+                  ? `주급보다 ${usd(-gap)} 낮다`
+                  : "주급과 같다"
+              : "부를 값"
+          }
+          tone={contract && gap > 0 ? "up" : undefined}
+        />
+      </div>
+
+      {contract ? (
+        <div className="rounded-[6px] bg-card px-3 py-2.5 text-sm ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+          <p className="font-sport">{contract.years}년 계약</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {Math.floor(contract.signedWeek / 52) + 1}년차에 맺어 만료까지{" "}
+            <span className="text-foreground">{span(contract.weeksLeft)}</span> 남았습니다.
+          </p>
+        </div>
+      ) : (
+        // **무소속 구간의 유일한 시계다** (§3-D50). 이게 없으면 2년 반을
+        // "왜 대회가 없지" 하며 보낸다.
+        <div className="rounded-[6px] bg-card px-3 py-2.5 text-sm ring-1 ring-brand-400/50 ring-inset">
+          <p className="font-sport">무소속 — 인디 서킷</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            계약 없이 {span(money.unsignedWeeks)}를 보냈습니다.
+            {money.fadeInWeeks !== null && (
+              <>
+                {" "}
+                오퍼가 없으면 <span className="text-brand-link">{span(money.fadeInWeeks)}</span> 뒤
+                잊힙니다.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">{week}주차 기준입니다.</p>
+    </div>
+  );
+}
+
+function Figure({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: "up";
+}) {
+  return (
+    <div className="rounded-[6px] bg-card px-3 py-2.5 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("font-sport text-lg leading-tight", tone === "up" && "text-brand-link")}>
+        {value}
+      </p>
+      {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * 그랜드슬램 네 칸 (§3-D73).
+ *
+ * **등급은 가장 적게 채운 그룹이 정한다** — 월드를 다섯 번 감아도 US가 없으면 0이다.
+ * 그래서 빈 칸을 숨기지 않고 같은 크기로 세운다: 비어 있는 것이 정보다.
+ */
+function GrandSlamPanel({ slam }: { slam: CareerGrandSlam }) {
+  return (
+    <div>
+      <p className="flex items-baseline gap-2">
+        <span className="font-sport text-sm">그랜드슬램</span>
+        <span
+          className={cn("text-xs", slam.level > 0 ? "text-brand-link" : "text-muted-foreground")}
+        >
+          {slam.level === 0 ? "미달" : slam.level === 1 ? "달성" : `${slam.level}회 달성`}
+        </span>
+      </p>
+      <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+        {slam.groups.map((group) => (
+          <div
+            key={group.name}
+            className={cn(
+              "rounded-[4px] px-2 py-1.5 text-center",
+              group.count > 0
+                ? "bg-brand-400/10 ring-1 ring-brand-400/50 ring-inset"
+                : "bg-card ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50",
+            )}
+          >
+            <p className="truncate text-xs text-muted-foreground">{group.name}</p>
+            <p
+              className={cn(
+                "font-sport text-base leading-tight",
+                group.count === 0 && "text-muted-foreground/50",
+              )}
+            >
+              {group.count > 0 ? `×${group.count}` : "—"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ShowCard({ report, mine }: { report: CareerShowReport; mine: MyMatch | null }) {
   return (
     <div className="mt-2 space-y-2 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
-      <div className="flex items-start gap-2.5">
-        {/* 그 밤의 로고 (§3-D71). 대회마다 얼굴이 다르다는 것이 카드보다 먼저 읽힌다.
-            없는 밤(주간 방송)은 자리도 안 잡는다. */}
-        {report.logo && (
-          // eslint-disable-next-line @next/next/no-img-element -- public 정적 파일
+      {/* **그 밤의 로고를 크게 세운다** (2026-08-13 사용자: "PLE 이럴 때는 화면에
+          크게 보여야 하는데"). 36px 아이콘일 때는 대회 이름의 장식이었는데, 이 크기가
+          되면 로고가 그 밤을 여는 자리가 된다 (§3-D71). 없는 밤(주간 방송)은 자리도
+          안 잡는다 — 브랜드가 그 밤의 이름이다 (§3-D60). */}
+      {report.logo && (
+        <div className="flex justify-center py-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- public 정적 파일 */}
           <img
-            src={`/ple/${report.logo}.png`}
+            src={`/ple/hero/${report.logo}.webp`}
             alt=""
-            className="mt-0.5 h-9 w-9 shrink-0 object-contain"
+            className="h-24 max-w-full object-contain"
             loading="lazy"
           />
-        )}
+        </div>
+      )}
+      <div className="flex items-start gap-2.5">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-1.5 font-sport text-sm">
             {report.show}
@@ -1531,6 +2128,187 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
 }
 
 /** FM의 속성 격자. 값이 아니라 **관계**가 읽혀야 해서 라벨과 숫자를 붙여 둔다. */
+/**
+ * **지금 이 세계선의 챔피언들** (2026-08-13 사용자 요청).
+ *
+ * §3-D38이 "벨트는 늘 누군가의 것이다"를 잠갔고 §3-D65가 그 교체를 인박스로
+ * 흘렸는데, **한자리에 모아 보는 화면은 없었다** — 지금 이 세계에서 누가 무엇을
+ * 들고 있는지가 커리어 밖 세계의 상태 전부인데도.
+ *
+ * 내 벨트를 골드로 짚는다. 계보는 플레이어가 없는 세계를 그리므로, 겹쳐 주지
+ * 않으면 내가 챔피언인데 목록에는 남이 적힌다.
+ */
+function ChampionScene({ groups }: { groups: CareerChampionGroup[] }) {
+  const total = groups.reduce((sum, g) => sum + g.champions.length, 0);
+  return (
+    <div>
+      <p className="font-sport text-sm">
+        지금 세계의 챔피언
+        <span className="ml-2 text-xs font-normal text-muted-foreground">{total}개 벨트</span>
+      </p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        {groups.map((group) => (
+          <div
+            key={group.brand}
+            className="rounded-[6px] bg-card p-3 ring-1 ring-stone-300/50 ring-inset dark:ring-stone-700/50"
+          >
+            {/* 브랜드는 로고로 (§3-D79) — 통합은 로고가 없으니 이름으로 선다. */}
+            <div className="flex items-center gap-2">
+              {group.brand === "unified" ? (
+                <span className="font-sport text-sm text-muted-foreground">{group.label}</span>
+              ) : (
+                <BrandLogo brand={group.brand} width={64} />
+              )}
+            </div>
+            <div className="mt-2 divide-y divide-stone-300/40 dark:divide-stone-700/40">
+              {group.champions.map((c) => (
+                <div key={c.title} className="py-1.5">
+                  <p
+                    className={cn(
+                      "truncate text-xs",
+                      c.mine ? "text-brand-link" : "text-muted-foreground",
+                    )}
+                  >
+                    {c.title}
+                  </p>
+                  <p className={cn("text-sm", c.mine && "font-semibold text-brand-link")}>
+                    {c.holder}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * **최종 결산** (2026-08-13 사용자 요청).
+ *
+ * 지금까지 커리어가 끝나면 프로필 칸에 한 줄이 붙는 게 전부였다 — 서른 해가
+ * "커리어가 끝났습니다 · 50세 만기"로 닫혔다. 30년을 되짚어 주는 자리가 있어야
+ * 그 시간이 무엇이었는지가 남는다.
+ *
+ * **새로 계산하지 않는다.** 세이브가 이미 들고 있는 것만 모은다 — 대관·훈장·
+ * 그랜드슬램·잔액·다친 곳·최종 스탯. 따로 집계를 만들면 그 수치가 화면에서만
+ * 참인 값이 되고, 되짚기가 결정적이라는 §3-D4가 그 자리에서 끊긴다.
+ */
+function CareerSummary({ view }: { view: CareerRunView }) {
+  const reason = view.endReason ?? "";
+  const belts = view.titlesWon.length;
+  const distinct = new Set(view.titlesWon).size;
+  const slam = view.grandSlam;
+  return (
+    <section className="rounded-lg bg-card p-5 ring-1 ring-brand-400/50 ring-inset">
+      <p className="font-sport text-xs tracking-[0.3em] text-brand-link">CAREER OVER</p>
+      <h2 className="font-sport mt-1 text-3xl leading-none">{view.name}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {END_LINES[reason] ?? "커리어가 끝났다."}
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Figure label="뛴 기간" value={`${view.year}년`} note={`${view.age}세에 끝`} />
+        <Figure
+          label="감은 벨트"
+          value={`${belts}회`}
+          note={distinct > 0 ? `${distinct}종` : "없음"}
+          tone={belts > 0 ? "up" : undefined}
+        />
+        <Figure
+          label="그랜드슬램"
+          value={slam && slam.level > 0 ? `${slam.level}회` : "미달"}
+          note={
+            slam
+              ? slam.groups
+                  .filter((g) => g.count === 0)
+                  .map((g) => g.name)
+                  .join(" · ") || "네 칸 모두"
+              : undefined
+          }
+          tone={slam && slam.level > 0 ? "up" : undefined}
+        />
+        <Figure
+          label="누적 수입"
+          value={view.money ? usd(view.money.balance) : "—"}
+          note={END_REASONS[reason] ?? reason}
+        />
+      </div>
+
+      {/* 무엇을 감았는가 — 결산의 본문이다. */}
+      {view.titlesWon.length > 0 && (
+        <div className="mt-5">
+          <p className="text-xs text-muted-foreground">감은 벨트</p>
+          <div className="mt-2">
+            <BeltList codes={view.titlesWon} held={view.titlesHeld} />
+          </div>
+        </div>
+      )}
+
+      {(view.trophies?.length ?? 0) > 0 && (
+        <p className="mt-4 text-sm">
+          <span className="text-muted-foreground">훈장 </span>
+          {view.trophies?.map((t) => TROPHIES[t.code] ?? t.code).join(" · ")}
+        </p>
+      )}
+
+      {/* 몸이 기억하는 것 (§3-D43) — 끝나고 보면 이게 그 커리어의 값이다. */}
+      {(view.injuredParts?.length ?? 0) > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="text-muted-foreground">다쳤던 곳 </span>
+          {view.injuredParts?.join(" · ")}
+        </p>
+      )}
+
+      <div className="mt-5 border-t border-stone-300/50 pt-4 dark:border-stone-700/50">
+        <p className="text-xs text-muted-foreground">마지막 스탯</p>
+        <div className="mt-2">
+          <StatGrid stats={view.stats} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * 그 주가 남긴 것 — 스탯 변화·마모·프로모 성패 (§3-D79).
+ *
+ * **접어 둔다.** 30년이면 1560줄이라 매 줄에 펼쳐 두면 일정 탭이 숫자밭이 된다.
+ * 로그가 "이겼다"만 말하고 그 승리가 무엇을 남겼는지는 프로필의 숫자가 조용히
+ * 올라갈 뿐이었는데, 그 연결을 여기서 잇는다.
+ */
+function WeekDelta({ week }: { week: CareerWeek }) {
+  const moves = Object.entries(week.statDelta ?? {}).filter(([, v]) => v !== 0);
+  const wear = week.wearDelta ?? 0;
+  return (
+    <p className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-xs">
+      {moves.map(([key, value]) => (
+        <span key={key}>
+          <span className="text-muted-foreground">{STAT_LABELS[key] ?? key} </span>
+          <span
+            className={cn("tabular-nums", value > 0 ? "text-brand-link" : "text-muted-foreground")}
+          >
+            {value > 0 ? `+${value}` : value}
+          </span>
+        </span>
+      ))}
+      {wear > 0 && (
+        <span>
+          <span className="text-muted-foreground">마모 </span>
+          <span className="tabular-nums text-muted-foreground">+{wear}</span>
+        </span>
+      )}
+      {/* 경기 없는 주차의 유일한 성패다 (§3-D41) — 마이크웍이 그 결과를 정한다. */}
+      {week.promoHit !== null && week.promoHit !== undefined && (
+        <span className={week.promoHit ? "text-brand-link" : "text-muted-foreground"}>
+          {week.promoHit ? "프로모가 먹혔다" : "프로모가 겉돌았다"}
+        </span>
+      )}
+    </p>
+  );
+}
+
 function StatGrid({ stats }: { stats: CareerStats }) {
   return (
     <div className="space-y-4">

@@ -69,6 +69,42 @@ class ChooseCommand:
 
 
 @dataclass(frozen=True)
+class SetGoalCommand:
+    """이번 분기에 걸 것을 정한다 (§3-D80). `ChooseCommand`와 따로 둔다 —
+    이벤트 응답과 목표 선언은 성격이 반대라 한 명령으로 합치면 그 구분이 사라진다."""
+
+    run_id: int
+    user_id: int
+    goal_code: str
+
+
+@dataclass(frozen=True)
+class GuestSetGoalCommand:
+    """체험판의 분기 목표 (§3-D80·D8). 세이브를 통째로 받아 통째로 돌려준다."""
+
+    run: CareerRun
+    goal_code: str
+
+
+@dataclass(frozen=True)
+class AnswerOfferCommand:
+    """재계약 협상에 답한다 (§3-D84). `SetGoalCommand`와 나란한 자리다 —
+    둘 다 **먼저 정하는 것**이고, 둘 다 답하기 전에는 진행이 막힌다."""
+
+    run_id: int
+    user_id: int
+    offer_code: str
+
+
+@dataclass(frozen=True)
+class GuestAnswerOfferCommand:
+    """체험판의 재계약 협상 (§3-D84·D8)."""
+
+    run: CareerRun
+    offer_code: str
+
+
+@dataclass(frozen=True)
 class GuestStartCommand:
     """체험판 시작. `user_id`가 없다 — 저장은 브라우저가 한다(§3-D8)."""
 

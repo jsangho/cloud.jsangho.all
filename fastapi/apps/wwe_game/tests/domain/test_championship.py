@@ -74,10 +74,13 @@ RAW_SWEEP = (
 
 
 class TestBrandStructure:
-    def test_nine_belts_across_three_brands(self) -> None:
-        assert len(TITLES) == 17
+    def test_eighteen_belts_across_three_brands(self) -> None:
+        # 열일곱이었다 — NXT 위민스 태그팀이 빠지고 남녀 스피드가 들어왔다 (§3-D72).
+        assert len(TITLES) == 18
         for brand in Brand:
-            assert len(titles_of(brand, Gender.MALE)) == 3
+            # 셋에 스피드가 더해져 넷이다. 스피드는 브랜드가 아니라 급이 정하는
+            # 벨트라 세 브랜드 목록에 모두 들어간다.
+            assert len(titles_of(brand, Gender.MALE)) == 4
 
     def test_each_brand_has_one_of_every_tier(self) -> None:
         for brand in Brand:
@@ -112,7 +115,10 @@ class TestTierLadder:
         ("popularity", "expected"),
         [
             (0, None),
-            (29, None),
+            (14, None),
+            # 스피드가 사다리의 새 밑칸이다 (§3-D72) — 관문 15, 상한 50.
+            (15, Title.WWE_SPEED_CHAMPIONSHIP),
+            (29, Title.WWE_SPEED_CHAMPIONSHIP),
             (30, Title.WORLD_TAG_TEAM_CHAMPIONSHIP),
             (50, Title.INTERCONTINENTAL_CHAMPIONSHIP),
             (80, Title.WORLD_HEAVYWEIGHT_CHAMPIONSHIP),
@@ -539,20 +545,26 @@ class TestSlamHelpers:
 
 
 class TestWomensDivision:
-    def test_nine_mens_belts_and_eight_womens(self) -> None:
-        # 여성부 태그팀이 브랜드 통합이라 하나뿐이다 (스펙).
+    def test_ten_mens_belts_and_eight_womens(self) -> None:
+        # 여성부 태그팀이 브랜드 통합이라 하나뿐이다 (스펙). 남녀 각각 스피드가
+        # 하나씩 붙었고, 여성부는 NXT 태그팀이 빠져 수가 그대로다 (§3-D72).
         male = [s for s in TITLES.values() if s.gender is Gender.MALE]
         female = [s for s in TITLES.values() if s.gender is Gender.FEMALE]
-        assert (len(male), len(female)) == (9, 8)
+        assert (len(male), len(female)) == (10, 8)
 
     def test_every_belt_has_a_distinct_display_name(self) -> None:
         names = [s.display_name for s in TITLES.values()]
         assert len(set(names)) == len(names)
         assert all(names)
 
-    def test_womens_tag_team_is_unified_across_both_shows(self) -> None:
+    def test_womens_tag_team_is_unified_across_all_three_brands(self) -> None:
+        """RAW·SD·NXT 공용이다 (2026-08-13 사용자 확인). NXT 전용 벨트는 없다."""
         spec = TITLES[Title.WWE_WOMENS_TAG_TEAM_CHAMPIONSHIP]
-        assert spec.brands == {Brand.RAW, Brand.SMACKDOWN}
+        assert spec.brands == {Brand.RAW, Brand.SMACKDOWN, Brand.NXT}
+        assert all(
+            "위민스 태그팀" not in s.display_name or s.brands == spec.brands
+            for s in TITLES.values()
+        )
 
     def test_mens_tag_team_belts_are_brand_specific(self) -> None:
         assert TITLES[Title.WORLD_TAG_TEAM_CHAMPIONSHIP].brands == {Brand.RAW}
@@ -625,7 +637,9 @@ class TestTagBeltsNeedAPartner:
     def test_a_solo_wrestler_cannot_chase_tag_gold(self) -> None:
         solo = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=35))
         assert Title.WORLD_TAG_TEAM_CHAMPIONSHIP not in eligible_titles(solo)
-        assert target_title(solo, NEVER_CHASE) is None
+        # **혼자여도 빈손은 아니다** (§3-D72) — 스피드는 싱글 벨트라 사다리에 남는다.
+        # 스피드가 생기기 전에는 이 자리가 None이었다.
+        assert target_title(solo, NEVER_CHASE) is Title.WWE_SPEED_CHAMPIONSHIP
 
     def test_a_partner_opens_the_tag_belt(self) -> None:
         teamed = make_run(brand=Brand.RAW, stats=WrestlerStats(popularity=35)).evolve(

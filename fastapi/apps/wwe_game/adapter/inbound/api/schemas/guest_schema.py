@@ -36,6 +36,7 @@ from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
 from wwe_game.domain.value_objects.contract import Contract
 from wwe_game.domain.value_objects.game_mode import game_mode_of
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.team import Team
 from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.wrestler_identity import (
@@ -89,6 +90,11 @@ class GuestRunState(BaseModel):
     contract: dict[str, int] | None = None
     """계약 한 장 또는 무소속 (§3-D47). 옛 세이브에는 없어 None으로 읽힌다."""
     unsigned_weeks: int = 0
+    goal: str | None = None
+    """이번 분기에 건 것 (§3-D80). 옛 체험판 세이브는 없으므로 기본이 `None`이다."""
+    goal_quarter: int = -1
+    offer_week: int = 0
+    """재계약 협상이 열린 주차 (§3-D84). 옛 체험판 세이브는 0이다."""
 
 
 def to_domain(state: GuestRunState) -> CareerRun:
@@ -165,6 +171,9 @@ def to_domain(state: GuestRunState) -> CareerRun:
         ),
         money=state.money,
         unsigned_weeks=state.unsigned_weeks,
+        goal=QuarterGoal(state.goal) if state.goal else None,
+        goal_quarter=state.goal_quarter,
+        offer_week=state.offer_week,
         contract=(
             Contract(
                 weekly_pay=int(state.contract["weekly_pay"]),
@@ -255,4 +264,7 @@ def to_state(run: CareerRun) -> GuestRunState:
             if run.contract
             else None
         ),
+        goal=run.goal.value if run.goal else None,
+        goal_quarter=run.goal_quarter,
+        offer_week=run.offer_week,
     )

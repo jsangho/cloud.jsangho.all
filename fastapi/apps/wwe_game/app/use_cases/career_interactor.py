@@ -22,18 +22,22 @@ from dataclasses import replace
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
     AdvanceResult,
+    AnswerOfferCommand,
     CareerLogPage,
     ChoiceView,
     ChooseCommand,
     GuestAdvanceCommand,
+    GuestAnswerOfferCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
+    GuestSetGoalCommand,
     GuestStartCommand,
     ModeView,
     NewsFeedPage,
     PendingEventView,
     PresetView,
+    SetGoalCommand,
     StartRunCommand,
     WeekReportView,
 )
@@ -52,11 +56,14 @@ from wwe_game.domain.constants.character_presets import PRESETS
 from wwe_game.domain.constants.countries import country_of
 from wwe_game.domain.constants.event_deck import BY_CODE
 from wwe_game.domain.entities.career_run import CareerRun, EndReason, start_run
+from wwe_game.domain.exceptions import InvalidChoiceError
 from wwe_game.domain.services import (
     career_advance,
     career_end,
+    contract_desk,
     event_draw,
     news_feed,
+    quarter_plan,
     rivalry_scene,
     roster_scene,
     show_report,
@@ -70,7 +77,9 @@ from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.services.title_news import TitleNews
 from wwe_game.domain.services.week_simulation import apply_week
 from wwe_game.domain.value_objects.advance_outcome import AdvanceOutcome, StopReason
+from wwe_game.domain.value_objects.contract_offer import OfferChoice
 from wwe_game.domain.value_objects.game_mode import GAME_MODES, game_mode_of
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.week_report import WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import Gender, PlayStyle
 
@@ -133,6 +142,28 @@ class CareerInteractor(CareerUseCase):
         run = await self._repository.get(command.run_id, command.user_id)
         resolved = self._resolve(run, command.choice_code)
         saved = await self._repository.save(resolved)
+        return self._view(saved, self._resting_reason(saved))
+
+    async def set_goal(self, command: SetGoalCommand) -> AdvanceResult:
+        """분기 목표를 걸고 그 자리에서 멈춘 채 돌려준다 (§3-D80).
+
+        **진행시키지 않는다.** 고른 것을 화면이 먼저 보여 주고, 다음 '다음'부터
+        그 배수로 흘러가는 편이 "내가 이걸 걸었다"를 읽게 한다.
+        """
+        run = await self._repository.get(command.run_id, command.user_id)
+        goal = _goal_of(command.goal_code)
+        saved = await self._repository.save(quarter_plan.choose(run, goal))
+        return self._view(saved, self._resting_reason(saved))
+
+    async def answer_offer(self, command: AnswerOfferCommand) -> AdvanceResult:
+        """재계약 협상에 답하고 그 자리에서 멈춘 채 돌려준다 (§3-D84).
+
+        **진행시키지 않는다** — `set_goal`과 같은 이유다. 도장을 찍었는지 나갔는지를
+        화면이 먼저 보여 줘야 "내가 이걸 골랐다"가 읽힌다.
+        """
+        run = await self._repository.get(command.run_id, command.user_id)
+        answered = contract_desk.answer(run, _offer_of(command.offer_code))
+        saved = await self._repository.save(answered)
         return self._view(saved, self._resting_reason(saved))
 
     async def read_log(
@@ -282,6 +313,18 @@ class CareerInteractor(CareerUseCase):
         self._require_guest_mode(command.run.mode.code)
         resolved = self._resolve(command.run, command.choice_code)
         return self._view(resolved, self._resting_reason(resolved))
+
+    def set_guest_goal(self, command: GuestSetGoalCommand) -> AdvanceResult:
+        """체험판의 분기 목표 (§3-D80). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        self._require_guest_mode(command.run.mode.code)
+        chosen = quarter_plan.choose(command.run, _goal_of(command.goal_code))
+        return self._view(chosen, self._resting_reason(chosen))
+
+    def answer_guest_offer(self, command: GuestAnswerOfferCommand) -> AdvanceResult:
+        """체험판의 재계약 협상 (§3-D84). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        self._require_guest_mode(command.run.mode.code)
+        answered = contract_desk.answer(command.run, _offer_of(command.offer_code))
+        return self._view(answered, self._resting_reason(answered))
 
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""
@@ -458,4 +501,27 @@ class CareerInteractor(CareerUseCase):
         """진행하지 않은 응답의 상태값. 끝났는지 · 막혔는지 · 그냥 서 있는지."""
         if not run.is_active:
             return StopReason.ENDED
-        return StopReason.EVENT if run.is_blocked else StopReason.READY
+        if run.is_blocked:
+            return StopReason.EVENT
+        # 협상이 열려 있으면 그것부터다 (§3-D84) — `advance`의 우선순위와 같아야 한다.
+        # 여기서 순서가 갈리면 재개 화면과 진행 화면이 서로 다른 것을 물어본다.
+        if contract_desk.is_open(run):
+            return StopReason.OFFER
+        # 목표를 아직 안 걸었으면 화면이 그 사실을 알아야 한다 (§3-D80).
+        return StopReason.GOAL if quarter_plan.needs_goal(run) else StopReason.READY
+
+
+def _goal_of(code: str) -> QuarterGoal:
+    """코드 → 목표. 모르는 코드는 400이 되도록 도메인 예외로 바꾼다."""
+    try:
+        return QuarterGoal(code)
+    except ValueError as exc:
+        raise InvalidChoiceError(f"선택할 수 없는 목표입니다: {code}") from exc
+
+
+def _offer_of(code: str) -> OfferChoice:
+    """코드 → 협상 선택지 (§3-D84). `_goal_of`와 같은 모양이다."""
+    try:
+        return OfferChoice(code)
+    except ValueError as exc:
+        raise InvalidChoiceError(f"선택할 수 없는 항목입니다: {code}") from exc

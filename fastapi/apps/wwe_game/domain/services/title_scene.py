@@ -61,25 +61,60 @@ PARTNER_JOIN: Final = " & "
 """두 사람을 한 챔피언으로 부르는 이음말. `Team.label`이 이름 없는 팀에 쓰는 것과 같다."""
 
 REIGN_WEEKS: Final[dict[TitleTier, tuple[int, int]]] = {
-    TitleTier.WORLD: (26, 78),
-    TitleTier.SECONDARY: (13, 45),
-    TitleTier.TAG: (13, 40),
+    TitleTier.WORLD: (12, 32),
+    TitleTier.SECONDARY: (6, 17),
+    TitleTier.TAG: (6, 17),
 }
-"""계층별 재위 기간(주). **위로 갈수록 길다.**
+"""계층별 **평상시** 재위 기간(주). 드물게 `LONG_REIGN_WEEKS`로 넘어간다.
 
-월드 벨트가 6개월~1년 반이라는 것은 실제 평균에 맞춘 값이다. 짧게 두면 30년 커리어에
-챔피언이 60명 지나가 "누구의 벨트인가"가 다시 흐려진다 — 이 모듈을 만든 이유가 그것이다.
+**월드를 (26,78)에서 좁혔다** (2026-08-13, 현실 대조). 옛 주석은 "실제 평균에 맞춘
+값"이라고 했는데, 그 평균은 로만 레인즈의 1,316일 같은 이상치가 끌어올린 것이다.
+중앙값으로 보면 최근 월드 벨트 재위는 250~300일이다(세스 341일 · 군터 270일 ·
+코디 280일 · 프리스트 126일). 실측 중앙이 329일이라 20%쯤 길었다.
+
+| | 옛값 (26,78) | 지금 (20,56) |
+|---|---|---|
+| 재위 중앙 | 329일 | **약 265일** |
+| 벨트당 연 교체 | 1.1회 | **약 1.4회** |
+
+2선·태그는 건드리지 않았다 — 실측 189일·182일로 현실 그대로였다.
+
+짧게 두면 30년 커리어에 챔피언이 너무 많이 지나가 "누구의 벨트인가"가 흐려진다 —
+이 모듈을 만든 이유가 그것이라, 현실 중앙값 위쪽 끝에 맞췄다.
 """
 
 
-INJURY_CHANCE: Final = 0.10
-"""재위가 **부상으로** 끊길 확률 (2026-08-12 사용자 요청).
+LONG_REIGN_CHANCE: Final = 0.05
+LONG_REIGN_WEEKS: Final[dict[TitleTier, tuple[int, int]]] = {
+    TitleTier.WORLD: (40, 70),
+    TitleTier.SECONDARY: (30, 56),
+    TitleTier.TAG: (30, 56),
+}
+"""**스무 번에 한 번은 길게 간다** (2026-08-13 사용자 지시).
+
+균등 분포 하나로는 사용자가 말한 두 가지를 동시에 만족할 수 없다 — "평균 5~6개월"과
+"1년 넘게 갈 수도 있지만 희박하게". 균등이면 상한이 곧 최댓값이라, 1년을 넘기려면
+상한을 52주 위로 올려야 하고 그러면 평균이 따라 올라간다.
+
+그래서 밴드를 둘로 나눴다. 대부분은 평상시 밴드에서 나오고, 스무 번에 한 번 이쪽으로
+간다 — 실제로도 장기 재위는 그런 모양이다(로만 1,316일 · 군터 IC 666일이 예외이지
+평균이 아니다).
+
+결과: **1선 평균 5.4개월 · 2선 이하 3.0개월**, 1년을 넘기는 재위는 1선 3% · 2선 이하 1%.
+"""
+
+INJURY_CHANCE: Final = 0.05
+"""재위가 **부상으로** 끊길 확률 (2026-08-12 사용자 요청 · 2026-08-13 반으로).
 
 플레이어만 다치는 세계는 이상하다 — §3-D40이 "길게 빠지는 챔피언은 자리를 비운다"를
 플레이어에게 이미 적용했고, 배경 챔피언에게도 같은 일이 일어나야 한다.
 
-열에 하나로 잡은 이유: 30년이면 월드 벨트의 재위가 스무 번 남짓이라, 이 값이면 커리어
-한 판에 부상 공석이 두어 번 나온다. 더 올리면 벨트가 링 밖에서 더 자주 바뀐다.
+**0.10에서 내렸다** (현실 대조). 실측에서 재위의 9.8%가 경기가 아니라 공석으로
+끝났는데, 실제로 벨트가 반납되는 일은 그보다 훨씬 드물다 — 역사적으로 1~2% 수준이다.
+다만 최근으로 올수록 부상·장기 결장으로 비우는 일이 늘어난 것도 사실이라, 역사값까지
+내리지 않고 그 사이인 **5%**로 잡았다. 커리어 한 판에 부상 공석이 한 번쯤 나온다.
+
+공석 자체는 살려 둬야 한다 — §3-D52의 공석 결정전이 그것을 읽는다.
 """
 
 
@@ -187,7 +222,6 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
         TIER_OF[spec.tier] if home is None else roster.tier_in(home, TIER_OF[spec.tier])
     )
     holders = HOLDERS_OF[spec.tier]
-    low, high = REIGN_WEEKS[spec.tier]
     channel = f"{seeded_roll.TITLE_SCENE}:{title.value}"
 
     cursor = 0
@@ -220,7 +254,7 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
         if holder is None:
             return reigns
         length, why = _reign_of(
-            holder, cursor, roll.between(low, high), roll, home, seed
+            holder, cursor, _rolled_length(spec.tier, roll), roll, home, seed
         )
         reigns.append(
             Reign(
@@ -235,6 +269,13 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
             return reigns
         cursor += length
         inherit = _inheritor(holder, cursor, why, spec.tier, seed)
+
+
+def _rolled_length(tier: TitleTier, roll: SeededRoll) -> int:
+    """이번 재위가 몇 주짜리인지. **긴 재위 밴드를 먼저 굴린다** (§3-D74)."""
+    band = LONG_REIGN_WEEKS if roll.chance(LONG_REIGN_CHANCE) else REIGN_WEEKS
+    low, high = band[tier]
+    return roll.between(low, high)
 
 
 def _pick_holders(
@@ -295,7 +336,10 @@ def _inheritor(
     staying = [
         name
         for name in members_of(holder)
-        if (member := roster.member_of(name)) is not None and member.is_active_at(week)
+        # **시드를 넘긴다** — 가상 선수의 이름은 판마다 다르다(§3-D59). 빠뜨리면
+        # 0번 판의 명부에서 찾아 못 찾고, 남은 사람이 조용히 목록에서 빠진다.
+        if (member := roster.member_of(name, seed)) is not None
+        and member.is_active_at(week)
     ]
     if len(staying) == len(members_of(holder)) and staying:
         # 부상은 명부에 안 남는다(굴림이다) — 그때는 **앞사람이 빠진 것**으로 본다.

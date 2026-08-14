@@ -24,13 +24,15 @@ from wwe_game.domain.value_objects.title import Brand
 from wwe_game.domain.value_objects.week_report import OutcomeKind, WeekKind, WeekReport
 from wwe_game.domain.value_objects.wrestler_identity import Gender
 
-FINAL_WEEK = next(
-    s.week_of_year
-    for s in calendar_for(Brand.RAW).shows
-    if s.name == NIGHT_OF_CHAMPIONS
-)
 YEAR = 52 * 6
-"""6년차 — 메인 로스터에 올라와 있을 만한 시점."""
+"""여기서 한 해를 더 간다 — 7년차이고, 메인 로스터에 올라와 있을 만한 시점이다."""
+
+SEED = 42
+"""`make_run`의 기본 시드. **달력이 시드를 타므로**(§3-D71) 여기서도 같은 값을 쓴다."""
+
+FINAL_WEEK = calendar_for(Brand.RAW, SEED).week_of(NIGHT_OF_CHAMPIONS, YEAR + 1)
+"""그 해 결승이 서는 연중 주차. **해마다 다르다** — 나이트 오브 챔피언스는 유동 대회다."""
+assert FINAL_WEEK is not None
 
 
 def at(round_number: int) -> int:

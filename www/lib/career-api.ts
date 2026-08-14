@@ -104,6 +104,24 @@ export type CareerWeek = {
    * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
    */
   beats: CareerBeat[] | null;
+  /** 그 주 수입(달러). 무소속 주차는 인디 개런티다 (§3-D50). */
+  pay?: number;
+  /** 방어 성공. **이긴 것과 지킨 것은 다른 사건이다** (§3-D73). */
+  titleDefended?: boolean;
+  /** 그 주에 반납한 벨트 (§3-D40). 길게 다치면 내려놓는다. */
+  vacated?: string[];
+  /** 다친 곳의 이름 (§3-D43). */
+  injuryPart?: string | null;
+  /** `earned`(실력으로) · `emergency`(공백을 메우러) (§3-D22-1). */
+  callUp?: "earned" | "emergency" | null;
+  /** 그 주가 연말 드래프트였는지 (§3-D54). */
+  draftNight?: boolean;
+  /** 그 주에 오르내린 스탯. 승리가 무엇을 남겼는지 (§3-D79). */
+  statDelta?: Record<string, number>;
+  /** 그 주에 쌓인 마모. */
+  wearDelta?: number;
+  /** 프로모가 먹혔는지 (§3-D41). `null`이면 프로모 주차가 아니다. */
+  promoHit?: boolean | null;
 };
 
 /** 경기 진행 한 마디 (§3-D34). */
@@ -133,8 +151,108 @@ export type CareerRunView = {
   titlesWon: string[];
   team: CareerTeam | null;
   rivalries: CareerRivalry[];
+  /** 돈과 계약 (§3-D73). 옛 응답에는 없어 옵셔널이다. */
+  money?: CareerMoney | null;
+  /** 그랜드슬램 진행도 (§3-D73). */
+  grandSlam?: CareerGrandSlam | null;
+  /** 다쳤던 곳들의 이름 (§3-D43). **몸은 기억한다.** */
+  injuredParts?: string[];
+  /** 왕관 등 벨트가 아닌 훈장 (§3-D33). */
+  trophies?: CareerTrophy[];
+  /** 지금 붙어 있는 상태 표식의 이름. 규칙이 읽는 신호는 오지 않는다. */
+  flags?: string[];
+  /**
+   * **지금 이 세계선의 열여덟 벨트와 그 주인.**
+   *
+   * 리포트의 `champions`는 그 밤의 카드에 설 사람들이고 이쪽은 세계 전체다 —
+   * 내가 못 보는 브랜드의 벨트도 주인이 바뀐다는 것이 §3-D38의 전부다.
+   */
+  champions?: CareerChampionGroup[];
+  /** 이번 분기에 건 것 (§3-D80). 안 걸었으면 `null`. */
+  goal?: string | null;
+  /**
+   * 지금 고를 수 있는 목표들. **비어 있으면 고를 때가 아니다** — NXT·무소속
+   * 구간이거나 이미 이번 분기를 걸었다.
+   */
+  goalOptions?: CareerGoalOption[];
+  /**
+   * 재계약 협상의 선택지들 (§3-D84). **비어 있으면 협상 중이 아니다.**
+   *
+   * 제시 주급은 따로 오지 않는다 — `money.marketValue`가 곧 그 값이다.
+   */
+  offerOptions?: CareerOfferOption[];
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
+};
+
+export type CareerContract = {
+  weeklyPay: number;
+  /** 연봉. **도메인이 곱한 값이다** — 화면이 52를 곱하면 두 곳이 갈린다. */
+  annualPay: number;
+  signedWeek: number;
+  endsWeek: number;
+  years: number;
+  /** 만료까지 남은 주차. 0이면 이번이 협상 주차다. */
+  weeksLeft: number;
+};
+
+export type CareerMoney = {
+  balance: number;
+  /** 무소속이면 `null`이다 (§3-D50) — 주급 0짜리 계약을 만들지 않는다. */
+  contract: CareerContract | null;
+  /** 지금 몸값. 맺고 있는 주급과 견주라고 함께 온다 — 둘이 갈리는 것이 재계약의 긴장이다. */
+  marketValue: number;
+  unsignedWeeks: number;
+  /** 몇 주 뒤 잊히는가. 소속이 있으면 `null` — 무소속 구간의 유일한 시계다. */
+  fadeInWeeks: number | null;
+};
+
+export type CareerTrophy = { code: string; week: number };
+
+export type CareerChampionGroup = {
+  /** `raw` · `smackdown` · `nxt` · `unified`. 브랜드 로고를 집는 데 쓴다. */
+  brand: string;
+  label: string;
+  champions: CareerChampion[];
+};
+
+export type CareerChampion = {
+  title: string;
+  holder: string;
+  /** 내가 감고 있는 벨트인지 — 화면이 내 줄을 짚는다. */
+  mine: boolean;
+};
+
+export type CareerGoalOption = {
+  code: string;
+  label: string;
+  blurb: string;
+  /** 그 분기를 시작할 때 나가는 돈. 0이면 공짜다. */
+  cost: number;
+};
+
+/**
+ * 재계약 협상의 선택지 하나 (§3-D84).
+ *
+ * **거절 확률은 오지 않는다.** "등을 돌릴 수 있다"는 `blurb`가 말하고, 그 이상은
+ * 수치라 화면에 뜨면 "더 부른다"가 도박이 아니라 계산이 된다 (§11-14).
+ */
+export type CareerOfferOption = {
+  code: string;
+  label: string;
+  blurb: string;
+  /** 그 선택지로 도장을 찍었을 때의 주급. 나간다면 0이다. */
+  weeklyPay: number;
+  /** 계약 연수. 0이면 계약을 맺지 않는다. */
+  years: number;
+};
+
+export type CareerGrandSlamGroup = { name: string; count: number };
+
+export type CareerGrandSlam = {
+  /** 0 미달 · 1 그랜드슬램 · 2 더블. **가장 적게 채운 그룹**이 정한다. */
+  level: number;
+  groups: CareerGrandSlamGroup[];
 };
 
 export type CareerRivalry = {
@@ -157,7 +275,18 @@ export type CareerAdvance = {
   run: CareerRunView;
   weeks: CareerWeek[];
   /** `recovered` = 부상에서 돌아왔다 (§3-D37) — 부상 구간은 통째로 흘러가고 여기서 끊긴다. */
-  stopReason: "ready" | "event" | "ple" | "ended" | "recovered" | "tick" | "max_weeks";
+  stopReason:
+    | "ready"
+    | "event"
+    | "ple"
+    | "ended"
+    | "recovered"
+    | "tick"
+    | "max_weeks"
+    /** 새 분기가 열렸다 — 무엇에 걸지 정해야 간다 (§3-D80). */
+    | "goal"
+    /** 계약이 만료됐다 — 재계약에 답해야 간다 (§3-D84). **목표보다 앞선다.** */
+    | "offer";
   pendingEvent: CareerPendingEvent | null;
 };
 
@@ -330,6 +459,36 @@ export function advanceRun(runId: number, step: StepMode = "auto"): Promise<Care
 
 export function chooseEvent(runId: number, choice: string): Promise<CareerAdvance> {
   return post<CareerAdvance>(`/runs/${runId}/choices`, { choice });
+}
+
+/**
+ * 이번 분기에 걸 것을 정한다 (§3-D80).
+ *
+ * **`chooseEvent`와 따로 둔다.** 이벤트 응답은 벌어진 일에 답하는 것이고 이쪽은
+ * 먼저 거는 것이라, 한 함수로 합치면 그 구분이 사라진다.
+ */
+export function setGoal(runId: number, goal: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/goal`, { goal });
+}
+
+/** 체험판의 분기 목표 (§3-D80). 없으면 콜업 뒤 체험판이 통째로 막힌다. */
+export function setGuestGoal(state: GuestRunState, goal: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/goal", { state, goal });
+}
+
+/**
+ * 재계약 협상에 답한다 (§3-D84).
+ *
+ * `setGoal`과 나란한 자리다 — 둘 다 **먼저 정하는 것**이고, 답하기 전에는 진행이
+ * 막힌다. 협상 중이 아닌데 부르면 409다.
+ */
+export function answerOffer(runId: number, offer: string): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/offer`, { offer });
+}
+
+/** 체험판의 재계약 협상 (§3-D84). 없으면 만료 주차에서 체험판이 통째로 막힌다. */
+export function answerGuestOffer(state: GuestRunState, offer: string): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/offer", { state, offer });
 }
 
 export function readLog(runId: number, offset = 0, limit = 50): Promise<CareerLogPage> {

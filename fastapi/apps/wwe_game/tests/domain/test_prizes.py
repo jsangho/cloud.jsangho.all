@@ -11,7 +11,12 @@ import pytest
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.career_flags import CASH_IN_PENDING
-from wwe_game.domain.constants.ple_calendar import MITB, WRESTLEMANIA, calendar_for
+from wwe_game.domain.constants.ple_calendar import (
+    MITB,
+    WRESTLEMANIA,
+    calendar_for,
+    year_of,
+)
 from wwe_game.domain.services.week_simulation import apply_week, simulate_week
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
@@ -23,12 +28,15 @@ from wwe_game.domain.value_objects.week_report import (
 )
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
-CALENDAR = calendar_for(Brand.RAW)
+SEED = 42
+"""`make_run`의 기본 시드. **달력이 시드를 타므로**(§3-D71) 같은 값을 써야 한다."""
+
+CALENDAR = calendar_for(Brand.RAW, SEED)
 
 
 def week_of(name: str, year: int = 1) -> int:
-    """그 대회가 열리는 커리어 주차."""
-    show = next(s for s in CALENDAR.shows if s.name == name)
+    """그 대회가 열리는 커리어 주차. **해마다 다시 뽑히므로** 연차마다 묻는다 (§3-D71)."""
+    show = next(s for s in CALENDAR.shows_in(year) if s.name == name)
     return show.week_of_year + (year - 1) * 52
 
 
@@ -39,7 +47,7 @@ def won(kind: MatchKind, week: int, show_name: str | None = None) -> WeekReport:
         result=OutcomeKind.WIN,
         match_kind=kind,
         show=(
-            next(s for s in CALENDAR.shows if s.name == show_name)
+            next(s for s in CALENDAR.shows_in(year_of(week)) if s.name == show_name)
             if show_name
             else None
         ),

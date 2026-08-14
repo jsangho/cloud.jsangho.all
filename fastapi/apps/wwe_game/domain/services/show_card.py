@@ -316,12 +316,12 @@ def _title_bout(
         if champion is not None and roster.brand_at(champion, week, seed) is not brand:
             return None
     before = title_scene.champion_at(
-        seed, _last_show(brand, week), title, exclude=player
+        seed, _last_show(brand, week, seed), title, exclude=player
     )
     display = TITLES[title].display_name
 
     if before is not None and before != holder:
-        since = _last_show(brand, week)
+        since = _last_show(brand, week, seed)
         if title_scene.inherited_between(seed, since, week, title, exclude=player):
             # **스테이블이 이어받았다** (§3-D58) — 경기가 아니라 파트너가 바뀐 것이다.
             # 그 밤에 타이틀전을 세우면 있지도 않은 경기를 적는 셈이 된다.
@@ -443,7 +443,7 @@ def _stands_on(name: str, week: int, brand: Brand, seed: int) -> bool:
     )
 
 
-def _last_show(brand: Brand, week: int) -> int:
+def _last_show(brand: Brand, week: int, seed: int) -> int:
     """그 브랜드의 **직전 대회 주차**. 없으면 0(커리어 시작 전)이다.
 
     앞 주차(`week - 1`)와 견주면 안 된다 — 계보는 아무 주차에나 바뀔 수 있고(§3-D38),
@@ -451,7 +451,7 @@ def _last_show(brand: Brand, week: int) -> int:
     바뀐다**가 이 게임이 보여줘야 하는 그림이라, 지난 대회 이후의 변화를 그 밤에 몰아
     보여준다.
     """
-    calendar = calendar_for(brand)
+    calendar = calendar_for(brand, seed)
     for back in range(week - 1, max(-1, week - WEEKS_PER_YEAR - 1), -1):
         if back > 0 and calendar.is_show_week(back):
             return back

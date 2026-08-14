@@ -18,15 +18,19 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     AdvanceRequest,
     AdvanceResponse,
     ChoiceRequest,
+    GoalRequest,
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestChoiceRequest,
+    GuestGoalRequest,
+    GuestOfferRequest,
     GuestReportRequest,
     GuestResumeRequest,
     GuestStartRequest,
     LogPageSchema,
     ModeSchema,
     NewsPageSchema,
+    OfferRequest,
     PresetSchema,
     ShowReportSchema,
     StartRunRequest,
@@ -45,12 +49,16 @@ from wwe_game.adapter.inbound.api.schemas.guest_schema import (
 )
 from wwe_game.app.dtos.career_dto import (
     AdvanceCommand,
+    AnswerOfferCommand,
     ChooseCommand,
     GuestAdvanceCommand,
+    GuestAnswerOfferCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
+    GuestSetGoalCommand,
     GuestStartCommand,
+    SetGoalCommand,
     StartRunCommand,
 )
 from wwe_game.app.ports.input.career_use_case import (
@@ -67,6 +75,7 @@ from wwe_game.domain.exceptions import (
     InvalidCareerRunError,
     InvalidChoiceError,
     InvalidRingNameError,
+    NoOfferOpenError,
     RunNotActiveError,
     UnknownCountryError,
     UnknownGameModeError,
@@ -88,6 +97,7 @@ _STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
     ),
     (ChoiceRequiredError, status.HTTP_409_CONFLICT, "먼저 선택을 마쳐야 합니다."),
     (NoPendingEventError, status.HTTP_409_CONFLICT, "선택할 이벤트가 없습니다."),
+    (NoOfferOpenError, status.HTTP_409_CONFLICT, "지금은 협상 중이 아닙니다."),
     (RunNotActiveError, status.HTTP_409_CONFLICT, "이미 끝난 커리어입니다."),
     (InvalidChoiceError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
     (
@@ -240,6 +250,42 @@ async def choose(
     return to_advance(await _guard(lambda: use_case.choose(command)))
 
 
+@career_router.post("/runs/{run_id}/goal", response_model=AdvanceResponse)
+async def set_goal(
+    run_id: int,
+    body: GoalRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """이번 분기에 걸 것을 정한다 (§3-D80).
+
+    **`choices`와 따로 둔다.** 이벤트 응답과 목표 선언은 성격이 반대라(반응 대 선언)
+    한 엔드포인트로 합치면 그 구분이 URL에서 사라진다.
+    """
+    command = SetGoalCommand(
+        run_id=run_id, user_id=_user_id(claims), goal_code=body.goal
+    )
+    return to_advance(await _guard(lambda: use_case.set_goal(command)))
+
+
+@career_router.post("/runs/{run_id}/offer", response_model=AdvanceResponse)
+async def answer_offer(
+    run_id: int,
+    body: OfferRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """재계약 협상에 답한다 (§3-D84).
+
+    `/goal`과 나란한 자리다 — 둘 다 **먼저 정하는 것**이고, 답하기 전에는 진행이
+    막힌다. 협상 중이 아닌데 부르면 409다.
+    """
+    command = AnswerOfferCommand(
+        run_id=run_id, user_id=_user_id(claims), offer_code=body.offer
+    )
+    return to_advance(await _guard(lambda: use_case.answer_offer(command)))
+
+
 @career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)
 async def read_report(
     run_id: int,
@@ -377,6 +423,32 @@ def choose_guest(
         choice_code=body.choice,
     )
     return to_guest(_sync(lambda: use_case.choose_guest(command)))
+
+
+@career_router.post("/guest/goal", response_model=GuestAdvanceResponse)
+def set_guest_goal(
+    body: GuestGoalRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 분기 목표 (§3-D80). 없으면 콜업 뒤 체험판이 통째로 막힌다."""
+    command = GuestSetGoalCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        goal_code=body.goal,
+    )
+    return to_guest(_sync(lambda: use_case.set_guest_goal(command)))
+
+
+@career_router.post("/guest/offer", response_model=GuestAdvanceResponse)
+def answer_guest_offer(
+    body: GuestOfferRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 재계약 협상 (§3-D84). 없으면 만료 주차에서 체험판이 통째로 막힌다."""
+    command = GuestAnswerOfferCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        offer_code=body.offer,
+    )
+    return to_guest(_sync(lambda: use_case.answer_guest_offer(command)))
 
 
 @career_router.post("/guest/news", response_model=NewsPageSchema)

@@ -10,9 +10,17 @@ from __future__ import annotations
 from _helpers import make_run  # noqa: I001
 from wwe_game.domain.constants import career_rules as rules
 from wwe_game.domain.constants.event_deck import BY_CODE, DECK
-from wwe_game.domain.services import career_advance, event_draw
+from wwe_game.domain.services import (
+    career_advance,
+    contract_desk,
+    event_draw,
+    quarter_plan,
+)
 from wwe_game.domain.value_objects.advance_outcome import StopReason
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.contract import Contract
+from wwe_game.domain.value_objects.contract_offer import OfferChoice
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 
 INJURED = Condition(grade=InjuryGrade.SERIOUS, weeks_left=12)
 
@@ -51,12 +59,28 @@ class TestOneClickToReturn:
     @staticmethod
     def clicks_to_recover(seed: int) -> tuple[int, StopReason]:
         """복귀까지 필요한 '다음' 횟수와 마지막 멈춤 이유."""
-        run = make_run(week=300, seed=seed).evolve(condition=INJURED)
+        run = make_run(week=300, seed=seed).evolve(
+            condition=INJURED,
+            # **계약이 살아 있어야 이 측정이 성립한다** (§3-D84). `make_run`은 0주차
+            # 계약을 그대로 둔 채 시계만 300주로 미므로, 손대지 않으면 첫 '다음'이
+            # 협상에서 멈춰 **부상과 무관한 클릭 하나**가 평균에 섞인다.
+            contract=Contract(weekly_pay=3_000, signed_week=299, ends_week=400),
+        )
         clicks = 0
         while True:
             if run.is_blocked:
                 card = BY_CODE[run.pending_event.code]
                 run = event_draw.resolve_choice(run, card.choices[0].code)
+                continue
+            # **협상도 답해야 간다** (§3-D84). 목표와 같은 이유이고, 실제로 같은
+            # 사고를 두 번 냈다 — 답하지 않으면 `advance`가 0주차를 돌려준다.
+            if contract_desk.is_open(run):
+                run = contract_desk.answer(run, OfferChoice.ACCEPT)
+                continue
+            # **목표도 답해야 간다** (§3-D80·§11-1 개정). 답하지 않으면 `advance`가
+            # 0주차를 돌려주고 이 루프가 영영 안 끝난다 — 실제로 그랬다.
+            if quarter_plan.needs_goal(run):
+                run = quarter_plan.choose(run, QuarterGoal.DRIFT)
                 continue
             outcome = career_advance.advance(run)
             clicks += 1

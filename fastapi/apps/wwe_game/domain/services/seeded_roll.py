@@ -51,6 +51,10 @@ DRAFT: Final = "draft"
 TITLE_SCENE: Final = "title_scene"
 """배경 챔피언의 재위 (§3-D38). **벨트마다 따로 굴린다** — 한 채널을 나눠 쓰면
 월드 벨트의 재위가 바뀔 때 태그 벨트 계보까지 통째로 밀린다."""
+CALENDAR: Final = "calendar"
+"""그 해의 달력 (§3-D71). **주차 자리에 연차를 넣는다** — 달력은 한 주가 아니라
+한 해의 것이라, 해마다 한 번만 굴린다. 유동 대회의 달·서바이버의 얼굴·클래시의
+개최지가 전부 이 채널에서 나온다."""
 
 
 def _derive(seed: int, week: int, channel: str) -> int:
