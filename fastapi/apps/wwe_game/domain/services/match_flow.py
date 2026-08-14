@@ -39,8 +39,8 @@ from wwe_game.domain.value_objects.match_sequence import (
 OPENING_MOMENTUM = 50
 """공이 울린 순간의 흐름. 팽팽하다."""
 
-MOMENTUM_MIN = 5
-MOMENTUM_MAX = 95
+MOMENTUM_MIN = 12
+MOMENTUM_MAX = 88
 """흐름의 상·하한. **0과 100을 쓰지 않는다** — 완전히 한쪽이면 그 뒤가 없고, 실제
 경기도 마지막 순간까지 반대편이 한 번은 일어선다."""
 
@@ -57,17 +57,21 @@ BEATS_MAJOR = 13
 NEARFALL_AT = 0.62
 """이 지점을 지나면 니어폴이 섞이기 시작한다. 경기 후반이라는 뜻이다."""
 
-MOMENTUM_PULL = 0.5
+MOMENTUM_PULL = 0.35
 """흐름이 **다음 한 수를 누가 낼지에 미치는 힘**.
 
 **1.0으로 두었더니 경기가 일방적이 됐다** (2026-08-14 실측): 흐름을 그대로 확률로
 쓰면 95까지 오른 쪽이 95%로 계속 이기고, 한 번 기운 경기는 끝까지 한 사람이 다 한다.
 16비트 전부가 한 이름으로 찬 출력이 나왔다.
 
-0.5면 95에서도 상대가 넷에 한 번은 일어선다 — **주고받는 것이 경기다.**
+0.35면 상한에서도 상대가 열 번에 네 번은 한 수를 낸다 — **주고받는 것이 경기다.**
+
+**0.5에서 한 번 더 내렸다** (2026-08-14 재실측): 흐름이 상한에 붙으면 되돌림을 먹어도
+곧바로 되차서, 열여섯 수 중 열넷이 한 사람이었다. 상한(`MOMENTUM_MAX`)도 함께 낮췄다 —
+끝까지 붙어 있으면 바가 꽉 찬 채 안 움직여 화면에서도 흐름이 안 보인다.
 """
 
-MEAN_REVERSION = 0.18
+MEAN_REVERSION = 0.3
 """매 비트 흐름이 팽팽함(50)으로 되끌리는 비율.
 
 되먹임만 있으면 흐름이 한쪽 끝에 박혀 그 뒤가 없다. 실제 경기도 몰린 쪽이 숨을
@@ -102,6 +106,7 @@ def sequence_for(
     opponent: str,
     won: bool,
     finisher: str,
+    moves: tuple[str, ...],
     major: bool,
     roll: SeededRoll,
 ) -> MatchSequence:
@@ -153,6 +158,9 @@ def sequence_for(
             MatchBeat(
                 kind=BeatKind.REVERSAL if reversal else BeatKind.MOVE,
                 name=player if mine else opponent,
+                # **무슨 기술인지가 실린다** (§3-D81-4). 없으면 "기술을 걸었다"가
+                # 다섯 번 연속 나오고, 그건 경기가 아니라 로그다.
+                by=roll.pick(moves) if moves else None,
                 momentum=momentum,
             )
         )
