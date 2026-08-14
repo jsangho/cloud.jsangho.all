@@ -481,6 +481,13 @@ export default function CareerPage() {
    * 서른 해를 다 펴 두면 일정 첫 화면이 1560줄이 된다.
    */
   const [openYears, setOpenYears] = useState<Record<number, boolean>>({});
+  /**
+   * 펼쳐 둔 기사 (2026-08-14 사용자 요청). **하나씩만 연다.**
+   *
+   * 서른 해치가 본문까지 펼쳐져 있으면 훑을 수가 없다 — 제목만 세우고 누른 것만
+   * 연다. 본문·댓글은 저장하지 않고 되짚는 값이라 접어 둬도 잃는 것이 없다(§3-D87).
+   */
+  const [openNews, setOpenNews] = useState<string | null>(null);
   /** 삭제 버튼이 한 번 눌렸는가 (2026-08-14). **두 번 눌러야 지워진다.** */
   const [wipeArmed, setWipeArmed] = useState(false);
   /**
@@ -2032,45 +2039,82 @@ export default function CareerPage() {
                               {item.month}월 {item.weekOfMonth}주
                             </span>
                             {/*
-                             * **기사 한 꼭지** (§3-D87). 제목·본문·댓글은 저장하지
-                             * 않고 매번 되짚는 값이라(§3-D4), 화면은 받은 것을
-                             * 그대로 그린다 — 여기서 문장을 만들지 않는다.
+                             * **기사 한 꼭지** (§3-D87 · 2026-08-14 접기).
+                             *
+                             * 제목만 세우고 누르면 펼친다 — 서른 해치가 본문까지
+                             * 펼쳐져 있으면 훑을 수가 없다(사용자 지적). 본문·댓글은
+                             * 저장하지 않고 되짚는 값이라 접어 둬도 잃는 것이 없다.
                              */}
                             <div className="min-w-0">
-                              <p className="text-sm">
-                                <span className="mr-1.5 text-xs text-muted-foreground">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenNews((k) =>
+                                    k === item.week + item.headline
+                                      ? null
+                                      : item.week + item.headline,
+                                  )
+                                }
+                                aria-expanded={openNews === item.week + item.headline}
+                                className="flex w-full items-baseline gap-1.5 text-left"
+                              >
+                                {/*
+                                 * **접혀 있어도 분위기는 읽힌다** — 종류 딱지에
+                                 * 군중 반응의 색을 입힌다(§3-D31). 본문을 접으면서
+                                 * `crowdLine` 줄이 사라졌으므로, 그 신호가 갈 곳이
+                                 * 여기다.
+                                 */}
+                                <span
+                                  className={cn(
+                                    "shrink-0 text-xs",
+                                    MOOD_TONE[item.mood] ?? "text-muted-foreground",
+                                  )}
+                                >
                                   {NEWS_KINDS[item.kind] ?? item.kind}
                                 </span>
-                                {item.title || item.headline}
-                              </p>
-                              {item.outlet && (
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                  {item.outlet}
-                                </p>
-                              )}
-                              {item.body && (
-                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                  {item.body}
-                                </p>
-                              )}
-                              <p className={cn("mt-1 text-xs", MOOD_TONE[item.mood])}>
-                                {item.crowdLine}
-                              </p>
-                              {item.comments && item.comments.length > 0 && (
-                                <ul className="mt-2 space-y-1 border-l-2 border-stone-200/60 pl-2.5 dark:border-stone-800">
-                                  {item.comments.map((c, i) => (
-                                    <li
-                                      key={`${c.author}-${i}`}
-                                      className="flex flex-wrap items-baseline gap-x-2 text-xs"
+                                <span className="min-w-0 text-sm hover:text-brand-link">
+                                  {item.title || item.headline}
+                                </span>
+                                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                                  {openNews === item.week + item.headline ? "▾" : "▸"}
+                                </span>
+                              </button>
+
+                              {openNews === item.week + item.headline && (
+                                <div className="mt-2 border-l-2 border-brand-400/30 pl-3">
+                                  {item.outlet && (
+                                    <p className="text-xs text-brand-link">{item.outlet}</p>
+                                  )}
+                                  {/* 본문은 빈 줄로 문단이 나뉜다 — 그대로 세운다. */}
+                                  {(item.body ?? "").split("\n\n").map((para, i) => (
+                                    <p
+                                      key={i}
+                                      className="mt-1.5 text-xs leading-relaxed text-muted-foreground"
                                     >
-                                      <span className="text-muted-foreground">{c.author}</span>
-                                      <span className="min-w-0 break-words">{c.text}</span>
-                                      <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
-                                        ▲ {c.up} · ▼ {c.down}
-                                      </span>
-                                    </li>
+                                      {para}
+                                    </p>
                                   ))}
-                                </ul>
+                                  {item.comments && item.comments.length > 0 && (
+                                    <>
+                                      <p className="mt-3 text-xs text-muted-foreground">
+                                        댓글 {item.comments.length}
+                                      </p>
+                                      <ul className="mt-1 space-y-1.5">
+                                        {item.comments.map((c, i) => (
+                                          <li key={`${c.author}-${i}`} className="text-xs">
+                                            <span className="text-muted-foreground">
+                                              {c.author}
+                                            </span>
+                                            <span className="ml-2 break-words">{c.text}</span>
+                                            <span className="ml-2 tabular-nums text-muted-foreground/70">
+                                              ▲{c.up} ▼{c.down}
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </li>

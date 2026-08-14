@@ -114,13 +114,32 @@ class TestTheComments:
         assert any(t in news_article._DISSENT for t in texts)
         assert sum(t in news_article._DISSENT for t in texts) == 1
 
-    def test_the_rest_follow_the_room(self) -> None:
-        """넷은 그 밤의 소리를 따른다 — `CrowdMood`를 다시 읽을 뿐이다."""
-        news = item(mood=CrowdMood.HUSH)
+    def test_the_rest_come_from_a_known_pool(self) -> None:
+        """넷은 **사건을 아는 줄이 먼저**이고, 모자라면 그 밤의 소리로 채운다.
+
+        분위기만 보고 뽑던 시절에는 대관에도 부상에도 같은 말이 달렸다 —
+        그러면 댓글창이 아니라 배경 소음이다 (2026-08-14 사용자 지적).
+        """
+        news = item(kind=NewsKind.INJURY, mood=CrowdMood.HUSH)
         texts = [c.text for c in news_article.comments_for(news, SEED)]
         agreeing = [t for t in texts if t not in news_article._DISSENT]
         assert len(agreeing) == news_article.COMMENT_COUNT - 1
-        assert all(t in news_article._COMMENTS[CrowdMood.HUSH] for t in agreeing)
+        known = set(news_article._ON_TOPIC[NewsKind.INJURY]) | set(
+            news_article._COMMENTS[CrowdMood.HUSH]
+        )
+        assert all(t in known for t in agreeing)
+
+    def test_they_know_what_happened(self) -> None:
+        """**사건을 아는 줄이 대부분이다** — 그게 이 개정의 전부다."""
+        news = item(kind=NewsKind.INJURY, mood=CrowdMood.HUSH)
+        texts = [c.text for c in news_article.comments_for(news, SEED)]
+        on_topic = [t for t in texts if t in news_article._ON_TOPIC[NewsKind.INJURY]]
+        assert len(on_topic) >= 3
+
+    def test_every_covered_kind_has_enough_lines(self) -> None:
+        for kind, pool in news_article._ON_TOPIC.items():
+            assert len(pool) >= 3, f"{kind}: 사건을 아는 줄이 모자란다"
+            assert not set(pool) & set(news_article._DISSENT)
 
     def test_no_comment_repeats_inside_one_article(self) -> None:
         texts = [c.text for c in news_article.comments_for(item(), SEED)]
