@@ -19,11 +19,13 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     AdvanceResponse,
     CallOutRequest,
     ChoiceRequest,
+    FinisherRequest,
     GoalRequest,
     GuestAdvanceRequest,
     GuestAdvanceResponse,
     GuestCallOutRequest,
     GuestChoiceRequest,
+    GuestFinisherRequest,
     GuestGoalRequest,
     GuestOfferRequest,
     GuestReportRequest,
@@ -54,11 +56,13 @@ from wwe_game.app.dtos.career_dto import (
     AnswerOfferCommand,
     CallOutCommand,
     CashInCommand,
+    ChangeFinisherCommand,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
     GuestCallOutCommand,
     GuestCashInCommand,
+    GuestChangeFinisherCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -80,8 +84,10 @@ from wwe_game.dependencies.career_provider import get_career_use_case
 from wwe_game.domain.exceptions import (
     CannotCallOutError,
     CannotCashInError,
+    CannotChangeFinisherError,
     InvalidCareerRunError,
     InvalidChoiceError,
+    InvalidFinisherNameError,
     InvalidRingNameError,
     NoOfferOpenError,
     RunNotActiveError,
@@ -108,6 +114,13 @@ _STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
     (NoOfferOpenError, status.HTTP_409_CONFLICT, "지금은 협상 중이 아닙니다."),
     (CannotCashInError, status.HTTP_409_CONFLICT, "지금은 가방을 쓸 수 없습니다."),
     (CannotCallOutError, status.HTTP_409_CONFLICT, "지금은 시비를 걸 수 없습니다."),
+    (
+        CannotChangeFinisherError,
+        status.HTTP_409_CONFLICT,
+        "지금은 피니셔를 바꿀 수 없습니다.",
+    ),
+    # **문구를 덮지 않는다.** 길이·제어문자 중 무엇이 걸렸는지를 도메인이 짚는다.
+    (InvalidFinisherNameError, status.HTTP_400_BAD_REQUEST, None),
     (RunNotActiveError, status.HTTP_409_CONFLICT, "이미 끝난 커리어입니다."),
     (InvalidChoiceError, status.HTTP_400_BAD_REQUEST, "선택할 수 없는 항목입니다."),
     (
@@ -333,6 +346,26 @@ async def call_out(
     return to_advance(await _guard(lambda: use_case.call_out(command)))
 
 
+@career_router.post("/runs/{run_id}/finisher", response_model=AdvanceResponse)
+async def change_finisher(
+    run_id: int,
+    body: FinisherRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """피니셔를 바꾼다 (§3-D88).
+
+    **두 갈래를 한 엔드포인트로 받는다** — 목록에서 고르면 `code`, 이름을 직접
+    지으면 `name`. 어느 쪽인지는 화면이 먼저 묻고 정한다.
+
+    쿨다운 중이면 409, 이름이 규칙에 안 맞으면 400이다.
+    """
+    command = ChangeFinisherCommand(
+        run_id=run_id, user_id=_user_id(claims), code=body.code, name=body.name
+    )
+    return to_advance(await _guard(lambda: use_case.change_finisher(command)))
+
+
 @career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)
 async def read_report(
     run_id: int,
@@ -519,6 +552,20 @@ def call_out_guest(
         rival_name=body.rival,
     )
     return to_guest(_sync(lambda: use_case.call_out_guest(command)))
+
+
+@career_router.post("/guest/finisher", response_model=GuestAdvanceResponse)
+def change_guest_finisher(
+    body: GuestFinisherRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 피니셔 교체 (§3-D88)."""
+    command = GuestChangeFinisherCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        code=body.code,
+        name=body.name,
+    )
+    return to_guest(_sync(lambda: use_case.change_guest_finisher(command)))
 
 
 @career_router.post("/guest/news", response_model=NewsPageSchema)

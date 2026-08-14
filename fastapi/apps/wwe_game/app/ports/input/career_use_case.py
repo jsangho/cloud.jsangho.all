@@ -19,11 +19,13 @@ from wwe_game.app.dtos.career_dto import (
     CallOutCommand,
     CareerLogPage,
     CashInCommand,
+    ChangeFinisherCommand,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
     GuestCallOutCommand,
     GuestCashInCommand,
+    GuestChangeFinisherCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -129,6 +131,11 @@ class CareerUseCase(ABC):
         ...
 
     @abstractmethod
+    async def change_finisher(self, command: ChangeFinisherCommand) -> AdvanceResult:
+        """피니셔를 바꾼다 (§3-D88). 못 바꾸면 `CannotChangeFinisherError`."""
+        ...
+
+    @abstractmethod
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -202,6 +209,13 @@ class CareerUseCase(ABC):
     @abstractmethod
     def call_out_guest(self, command: GuestCallOutCommand) -> AdvanceResult:
         """체험판의 시비 걸기 (§3-D86). 로그인 쪽과 **같은 도메인 동작**을 쓴다."""
+        ...
+
+    @abstractmethod
+    def change_guest_finisher(
+        self, command: GuestChangeFinisherCommand
+    ) -> AdvanceResult:
+        """체험판의 피니셔 교체 (§3-D88)."""
         ...
 
     @abstractmethod

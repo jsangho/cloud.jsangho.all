@@ -33,7 +33,7 @@ from wwe_game.app.ports.output.narration_port import NarrationPort
 from wwe_game.domain.constants.countries import Region
 from wwe_game.domain.constants.ple_calendar import PleShow, calendar_for
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.services import rivalry_engine, seeded_roll
+from wwe_game.domain.services import finisher_desk, rivalry_engine, seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.body_part import PARTS
 from wwe_game.domain.value_objects.josa import JOSA, josa_for
@@ -299,6 +299,11 @@ class RuleNarrator(NarrationPort):
             "venue": venue,
             "crowd": roll.pick(CROWDS[stage]),
             "move": roll.pick(MOVES[run.identity.play_style]),
+            # **피니셔는 `move`를 덮지 않는다** (§3-D88). `move`는 변주 슬롯이라
+            # (`VARYING_SLOTS`) 승리마다 같은 이름이 들어가면 조합이 무너지고
+            # §11-6(다양성)이 먼저 깨진다 — 실제로 30주 ple-win에서 같은 줄이 4회
+            # 나왔다. 전용 슬롯을 따로 두고, 그 슬롯을 쓰는 문장은 몇 줄만 둔다.
+            "finisher": finisher_desk.current(run).name,
             "reaction": roll.pick(self._reactions(run.stats.popularity)),
             "show": report.show.name if report.show is not None else None,
             "rival": rival.rival_name if rival is not None else None,

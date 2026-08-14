@@ -26,12 +26,14 @@ from wwe_game.app.dtos.career_dto import (
     CallOutCommand,
     CareerLogPage,
     CashInCommand,
+    ChangeFinisherCommand,
     ChoiceView,
     ChooseCommand,
     GuestAdvanceCommand,
     GuestAnswerOfferCommand,
     GuestCallOutCommand,
     GuestCashInCommand,
+    GuestChangeFinisherCommand,
     GuestChooseCommand,
     GuestReportCommand,
     GuestResumeCommand,
@@ -67,6 +69,7 @@ from wwe_game.domain.services import (
     career_end,
     contract_desk,
     event_draw,
+    finisher_desk,
     news_feed,
     quarter_plan,
     rivalry_desk,
@@ -189,6 +192,12 @@ class CareerInteractor(CareerUseCase):
         saved = await self._repository.save(
             rivalry_desk.call_out(run, command.rival_name)
         )
+        return self._view(saved, self._resting_reason(saved))
+
+    async def change_finisher(self, command: ChangeFinisherCommand) -> AdvanceResult:
+        """피니셔를 바꾸고 그 자리에서 멈춘 채 돌려준다 (§3-D88)."""
+        run = await self._repository.get(command.run_id, command.user_id)
+        saved = await self._repository.save(_apply_finisher(run, command))
         return self._view(saved, self._resting_reason(saved))
 
     async def read_log(
@@ -365,6 +374,14 @@ class CareerInteractor(CareerUseCase):
         self._require_guest_mode(command.run.mode.code)
         opened = rivalry_desk.call_out(command.run, command.rival_name)
         return self._view(opened, self._resting_reason(opened))
+
+    def change_guest_finisher(
+        self, command: GuestChangeFinisherCommand
+    ) -> AdvanceResult:
+        """체험판의 피니셔 교체 (§3-D88)."""
+        self._require_guest_mode(command.run.mode.code)
+        changed = _apply_finisher(command.run, command)
+        return self._view(changed, self._resting_reason(changed))
 
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""
@@ -559,6 +576,20 @@ def _goal_of(code: str) -> QuarterGoal:
         return QuarterGoal(code)
     except ValueError as exc:
         raise InvalidChoiceError(f"선택할 수 없는 목표입니다: {code}") from exc
+
+
+def _apply_finisher(
+    run: CareerRun, command: ChangeFinisherCommand | GuestChangeFinisherCommand
+) -> CareerRun:
+    """두 갈래 중 하나를 고른다 (§3-D88).
+
+    **이름이 먼저다.** 둘 다 오면 직접 지은 쪽을 쓴다 — 화면이 갈래를 먼저 묻고
+    보내므로 둘 다 채워 보내는 것은 잘못된 요청이고, 그때 조용히 목록 쪽으로
+    떨어지면 사용자가 지은 이름이 사라진다.
+    """
+    if command.name:
+        return finisher_desk.name_it(run, command.name)
+    return finisher_desk.pick(run, command.code)
 
 
 def _offer_of(code: str) -> OfferChoice:

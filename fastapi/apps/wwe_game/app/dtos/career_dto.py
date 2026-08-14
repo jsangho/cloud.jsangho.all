@@ -134,6 +134,30 @@ class GuestCallOutCommand:
 
 
 @dataclass(frozen=True)
+class ChangeFinisherCommand:
+    """피니셔를 바꾼다 (§3-D88).
+
+    **두 갈래가 한 명령에 들어 있다** — 목록에서 고르면 `code`, 이름을 직접 지으면
+    `name`. 둘 중 하나만 채워지고, 어느 쪽인지는 유스케이스가 아니라 **화면이
+    먼저 정한다**(2026-08-14 사용자 결정).
+    """
+
+    run_id: int
+    user_id: int
+    code: str = ""
+    name: str = ""
+
+
+@dataclass(frozen=True)
+class GuestChangeFinisherCommand:
+    """체험판의 피니셔 교체 (§3-D88·D8)."""
+
+    run: CareerRun
+    code: str = ""
+    name: str = ""
+
+
+@dataclass(frozen=True)
 class GuestCashInCommand:
     """체험판의 가방 현금화 (§3-D85·D8)."""
 

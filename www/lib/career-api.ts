@@ -99,6 +99,14 @@ export type CareerWeek = {
   titleShotFrom: "earned" | "briefcase" | null;
   /** 킹 앤 퀸 오브 더 링의 회전 (§3-D33). 0이면 토너먼트 경기가 아니다. */
   tournamentRound: number;
+  /** 여럿이 붙고 **중간에 탈락자가 나오는** 경기인가 — 럼블·챔버·배틀로얄. */
+  eliminationMatch?: boolean;
+  /** 몇 번으로 입장했는가. 0이면 없다. */
+  entryNumber?: number;
+  /** 내가 떨어뜨린 사람 수. */
+  eliminations?: number;
+  /** 최종 순위. 1이면 우승 — 분모는 `matchField`다. */
+  place?: number;
   /**
    * 입장·탈락 전체. **진행 중인 응답에만 실린다** — 저장하지 않기 때문이다.
    * 문장이 아니라 구조로 오므로 문구는 화면이 만든다.
@@ -126,12 +134,28 @@ export type CareerWeek = {
 
 /** 경기 진행 한 마디 (§3-D34). */
 export type CareerBeat = {
-  kind: "enter" | "eliminate" | "win";
+  kind:
+    | "enter"
+    | "eliminate"
+    | "win"
+    /** §3-D81 모멘텀 타임라인 — 1:1 경기의 흐름. */
+    | "move"
+    | "reversal"
+    | "nearfall"
+    | "kickout"
+    | "finisher";
   name: string;
   /** 입장 순번. `enter`에만 채워진다. */
   number: number;
-  /** 누가 탈락시켰는가. `eliminate`에만 채워진다. */
+  /** 누가 탈락시켰는가(`eliminate`) · 무슨 기술로 끝냈는가(`finisher`). */
   by: string | null;
+  /**
+   * 그 순간 플레이어 쪽으로 기운 정도(0~100) — §3-D81.
+   *
+   * **레슬링은 위치가 정보가 아니다.** 두 사람이 링 한가운데 있으므로 좌표를 그려도
+   * 읽을 것이 없고, 그 자리를 이 한 값이 대신한다.
+   */
+  momentum?: number;
 };
 
 export type CareerRunView = {
@@ -190,6 +214,8 @@ export type CareerRunView = {
   briefcase?: CareerBriefcase | null;
   /** 지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `null`. */
   callOut?: CareerCallOut | null;
+  /** 지금 쓰는 피니셔 (§3-D88). **늘 온다** — 안 골랐으면 수플렉스다. */
+  finisher?: CareerFinisher | null;
   /** 로그 화면 하단에 상시 노출한다 (§3-D13). */
   disclaimer: string;
 };
@@ -274,6 +300,28 @@ export type CareerBriefcase = {
   pending: boolean;
   /** 지금 뛰어들 수 있는가. 무소속이거나 이미 그 벨트를 감고 있으면 거짓. */
   canCashIn: boolean;
+};
+
+/** 고를 수 있는 피니셔 하나 (§3-D88). **수치가 없다** — 판정에 안 닿는다. */
+export type CareerFinisherOption = { code: string; label: string; blurb: string };
+
+/**
+ * 지금 쓰는 피니셔와 바꿀 수 있는 자리 (§3-D88).
+ *
+ * **모두 수플렉스에서 시작한다.** 첫 분기가 지나야 바꿀 수 있고, 바꾼 뒤에도 한
+ * 분기를 기다린다 — `weeksUntilChange`가 그 시계다.
+ */
+export type CareerFinisher = {
+  code: string;
+  name: string;
+  blurb: string;
+  /** 직접 지은 이름인지. */
+  custom: boolean;
+  canChange: boolean;
+  weeksUntilChange: number;
+  options: CareerFinisherOption[];
+  nameMin: number;
+  nameMax: number;
 };
 
 export type CareerGrandSlamGroup = { name: string; count: number };
@@ -584,6 +632,34 @@ export function callOutRival(runId: number, rival: string): Promise<CareerAdvanc
 /** 체험판의 시비 걸기 (§3-D86). */
 export function callOutGuestRival(state: GuestRunState, rival: string): Promise<GuestAdvance> {
   return post<GuestAdvance>("/guest/call-out", { state, rival });
+}
+
+/**
+ * 피니셔를 바꾼다 (§3-D88).
+ *
+ * **두 갈래를 한 함수로 받는다** — 목록에서 고르면 `code`, 이름을 직접 지으면
+ * `name`. 어느 쪽인지는 화면이 먼저 묻고 정한다.
+ */
+export function changeFinisher(
+  runId: number,
+  pick: { code?: string; name?: string },
+): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/finisher`, {
+    code: pick.code ?? "",
+    name: pick.name ?? "",
+  });
+}
+
+/** 체험판의 피니셔 교체 (§3-D88). */
+export function changeGuestFinisher(
+  state: GuestRunState,
+  pick: { code?: string; name?: string },
+): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/finisher", {
+    state,
+    code: pick.code ?? "",
+    name: pick.name ?? "",
+  });
 }
 
 /** 체험판의 가방 현금화 (§3-D85). */

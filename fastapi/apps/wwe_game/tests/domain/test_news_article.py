@@ -67,7 +67,9 @@ class TestTheTitleInventsNothing:
         assert "인터컨티넨탈을 가져왔다" in title
 
     def test_big_events_get_a_prefix(self) -> None:
-        assert news_article.title_for(item(kind=NewsKind.TITLE_WON)).startswith("[속보]")
+        assert news_article.title_for(item(kind=NewsKind.TITLE_WON)).startswith(
+            "[속보]"
+        )
         assert news_article.title_for(item(kind=NewsKind.INJURY)).startswith("[현장]")
 
     def test_background_news_gets_none(self) -> None:
@@ -97,7 +99,9 @@ class TestTheBodySaysOnlyWhatHappened:
 
 class TestTheComments:
     def test_there_are_five(self) -> None:
-        assert len(news_article.comments_for(item(), SEED)) == news_article.COMMENT_COUNT
+        assert (
+            len(news_article.comments_for(item(), SEED)) == news_article.COMMENT_COUNT
+        )
 
     def test_every_comment_carries_votes(self) -> None:
         for c in news_article.comments_for(item(), SEED):

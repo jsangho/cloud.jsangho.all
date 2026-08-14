@@ -134,6 +134,12 @@ class CareerRunModel(Base):
     goal: Mapped[str | None] = mapped_column(String(16), nullable=True, default=None)
     """이번 분기에 건 것 (§3-D80). 옛 세이브는 `NULL`이라 처음 이어 갈 때 묻는다."""
     goal_quarter: Mapped[int] = mapped_column(Integer, default=-1)
+    finisher: Mapped[str] = mapped_column(String(30), default="")
+    """지금 쓰는 피니셔 (§3-D88). **빈 문자열이 곧 기본값이다** — 옛 행이 그 상태다."""
+    finisher_name: Mapped[str] = mapped_column(String(40), default="")
+    """직접 지은 기술 이름 (§3-D88). 코드 칸과 나눠 둔다."""
+    finisher_week: Mapped[int] = mapped_column(Integer, default=0)
+    """마지막으로 바꾼 주차. 쿨다운 전용이다."""
     offer_week: Mapped[int] = mapped_column(Integer, default=0)
     """재계약 협상이 열린 주차 (§3-D84). 0이면 열려 있지 않다.
 

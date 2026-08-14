@@ -19,6 +19,17 @@ class BeatKind(StrEnum):
     ENTER = "enter"
     ELIMINATE = "eliminate"
     WIN = "win"
+    # ── 여기부터 §3-D81 (모멘텀 타임라인) ──
+    MOVE = "move"
+    """기술 하나가 들어갔다. 흐름이 그쪽으로 기운다."""
+    REVERSAL = "reversal"
+    """받아넘겼다 — **흐름이 뒤집히는 자리**다."""
+    NEARFALL = "nearfall"
+    """투 카운트. 니어폴이 몇 번 나왔는지가 그 밤의 별점을 읽는 근거가 된다(§3-D56)."""
+    KICKOUT = "kickout"
+    """킥아웃. 니어폴 뒤에만 온다."""
+    FINISHER = "finisher"
+    """피니셔가 들어갔다 (§3-D88). **내 기술의 이름이 여기 실린다.**"""
 
 
 @dataclass(frozen=True)
@@ -29,6 +40,15 @@ class MatchBeat:
     """입장 순번. `ENTER`에만 채워진다 — 럼블의 번호이자 챔버의 포드 순서다."""
     by: str | None = None
     """누가 탈락시켰는가. `ELIMINATE`에만 채워진다."""
+    momentum: int = 50
+    """그 순간 **플레이어 쪽으로 기운 정도**(0~100) — §3-D81.
+
+    50이 팽팽함이고 100이 완전한 우세다. 레슬링에서 위치는 정보가 아니라 흐름이
+    정보이므로(§3-D81), 이 한 값이 2D 링을 대신한다.
+
+    **판정이 아니다.** 승패는 이미 정해진 뒤에 이 줄이 그려진다 — 흐름이 승패를
+    만들면 같은 시드가 다른 결과를 내게 된다(§3-D4).
+    """
 
 
 @dataclass(frozen=True)

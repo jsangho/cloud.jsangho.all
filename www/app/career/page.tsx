@@ -13,6 +13,8 @@ import {
   answerOffer,
   callOutGuestRival,
   callOutRival,
+  changeFinisher,
+  changeGuestFinisher,
   cashInBriefcase,
   cashInGuestBriefcase,
   chooseEvent,
@@ -397,7 +399,22 @@ export default function CareerPage() {
   const [modes, setModes] = useState<CareerMode[]>([]);
   const [presets, setPresets] = useState<CareerPreset[]>([]);
   const [metaFailed, setMetaFailed] = useState(false);
-  const [tab, setTab] = useState<PanelKey>("schedule");
+  /**
+   * 처음 보이는 탭 (2026-08-14 사용자 요청).
+   *
+   * **일정이 아니다.** 일정은 서른 해가 줄줄이 쌓이는 자리라 첫 화면으로는 읽기
+   * 어렵다 — 지금 내가 누구인지(프로필)가 먼저이고, 그 밤을 보고 싶으면 §3-D81-2의
+   * 라이브가 따로 열린다.
+   */
+  const [tab, setTab] = useState<PanelKey>("profile");
+  /** 라이브로 보고 있는 경기 (§3-D81-2). `null`이면 안 보는 중이다. */
+  const [live, setLive] = useState<CareerWeek | null>(null);
+  /**
+   * 펼쳐 둔 연도 (2026-08-14 사용자 요청). 키에 없으면 **최근 해만 열려 있다.**
+   *
+   * 서른 해를 다 펴 두면 일정 첫 화면이 1560줄이 된다.
+   */
+  const [openYears, setOpenYears] = useState<Record<number, boolean>>({});
   /**
    * **이어할 커리어가 있는데 못 읽었다** (2026-08-13 사용자 신고).
    *
@@ -408,6 +425,14 @@ export default function CareerPage() {
   const [resumeFailed, setResumeFailed] = useState(false);
   /** 재시도 카운터. effect의 의존성에 넣어야 "다시 시도"가 실제로 다시 돈다. */
   const [retry, setRetry] = useState(0);
+  /**
+   * 피니셔를 바꾸는 중이라면 어느 갈래인가 (§3-D88).
+   *
+   * **먼저 정하는 것은 "무엇을"이 아니라 "어느 쪽으로"다** (2026-08-14 사용자 결정) —
+   * 기존 선수들이 쓰는 기술을 가져올지, 이름을 직접 지을지. `null`이면 아직 안 열었다.
+   */
+  const [finisherMode, setFinisherMode] = useState<"list" | "custom" | null>(null);
+  const [finisherName, setFinisherName] = useState("");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
@@ -671,6 +696,18 @@ export default function CareerPage() {
     if (!run) return;
     const state = screen.phase === "play" ? screen.state : null;
     void act(() => (state ? cashInGuestBriefcase(state) : cashInBriefcase(run.run.id as number)));
+  }
+
+  /** 피니셔를 바꾼다 (§3-D88). 두 갈래 중 하나를 실어 보낸다. */
+  function handleFinisher(pick: { code?: string; name?: string }) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    // **성공해도 여기서 닫지 않는다.** `act`는 실패를 삼키고 void를 돌려주므로
+    // 여기서 닫으면 이름이 규칙에 안 맞아 400이 났을 때도 입력이 사라진다.
+    // 성공하면 쿨다운이 걸려 `canChange`가 거짓이 되고, 그때 화면이 저절로 접힌다.
+    void act(() =>
+      state ? changeGuestFinisher(state, pick) : changeFinisher(run.run.id as number, pick),
+    );
   }
 
   /** 그 사람에게 시비를 건다 (§3-D86). 가방과 같은 상시 행동이다. */
@@ -1046,6 +1083,8 @@ export default function CareerPage() {
    * 목록에서 "상대가 걸어왔다"로 구분된다.
    */
   const callOut = view.callOut ?? null;
+  /** 지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다. */
+  const finisher = view.finisher ?? null;
 
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
@@ -1059,6 +1098,11 @@ export default function CareerPage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-12">
+      {/*
+       * **라이브 경기** (§3-D81-2) — 그 밤을 지나가는 화면. 끝나면 닫히고 원래
+       * 자리로 돌아온다. 화면 위에 얹으므로 뒤의 탭 상태는 그대로 남는다.
+       */}
+      {live && <LiveMatch week={live} player={view.name} onClose={() => setLive(null)} />}
       {/*
        * **머리를 세 층으로 나눴다** (2026-08-13, 매니저 게임 화면 참조).
        *
@@ -1193,9 +1237,108 @@ export default function CareerPage() {
        * 지금은 가방 하나뿐이라 자리가 비면 통째로 사라진다. 항목이 늘면 여기에
        * 카드를 더한다.
        */}
-      {(briefcase || callOut) && (
+      {(briefcase || callOut || finisher) && (
         <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70">
           <h2 className="font-sport text-sm text-muted-foreground">이번 주에 할 수 있는 것</h2>
+          {/*
+           * **피니셔** (§3-D88). 바꿀 수 있을 때만 고르는 자리가 열리고, 그 전에는
+           * 지금 쓰는 기술과 남은 주차만 보인다.
+           *
+           * **먼저 정하는 것은 "무엇을"이 아니라 "어느 쪽으로"다** (2026-08-14
+           * 사용자 결정) — 기존 선수들이 쓰는 기술을 가져올지, 이름을 직접 지을지.
+           */}
+          {finisher && (
+            <div className="mt-3 rounded-[6px] bg-background p-3">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-sport text-base">피니셔 — {finisher.name}</span>
+                {!finisher.canChange && (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {finisher.weeksUntilChange}주 뒤 변경 가능
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{finisher.blurb}</p>
+
+              {finisher.canChange && finisherMode === null && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setFinisherMode("list")}
+                  >
+                    기존 선수의 기술에서 고른다
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setFinisherMode("custom")}
+                  >
+                    이름을 직접 짓는다
+                  </Button>
+                </div>
+              )}
+
+              {finisher.canChange && finisherMode === "list" && (
+                <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
+                  {finisher.options
+                    .filter((o) => o.code !== finisher.code)
+                    .map((o) => (
+                      <button
+                        key={o.code}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleFinisher({ code: o.code })}
+                        className={cn(
+                          "rounded-[6px] p-2 text-left transition-colors duration-[120ms]",
+                          "ring-1 ring-stone-300/70 ring-inset dark:ring-stone-700/70",
+                          "hover:ring-brand-400 disabled:opacity-50",
+                        )}
+                      >
+                        <span className="block text-sm">{o.label}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {o.blurb}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )}
+
+              {finisher.canChange && finisherMode === "custom" && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={finisherName}
+                    maxLength={finisher.nameMax}
+                    placeholder={`${finisher.nameMin}~${finisher.nameMax}자`}
+                    onChange={(e) => setFinisherName(e.target.value)}
+                    className="h-9 min-w-0 flex-1 rounded-[8px] bg-card px-3 text-sm ring-1 ring-brand-400/35 ring-inset outline-none"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy || finisherName.trim().length < finisher.nameMin}
+                    onClick={() => handleFinisher({ name: finisherName })}
+                  >
+                    이 이름으로
+                  </Button>
+                </div>
+              )}
+
+              {finisher.canChange && finisherMode !== null && (
+                <button
+                  type="button"
+                  className="mt-2 text-xs text-muted-foreground underline"
+                  onClick={() => setFinisherMode(null)}
+                >
+                  그만두기
+                </button>
+              )}
+            </div>
+          )}
           {/*
            * **시비 걸기** (§3-D86) — 대립 두 갈래 중 내가 여는 쪽이다.
            * 상대가 걸어오는 쪽은 규칙이 굴리고, 대립 탭이 둘을 구분해 말한다.
@@ -1464,31 +1607,70 @@ export default function CareerPage() {
                   아직 진행한 주차가 없습니다. 위의 &lsquo;다음&rsquo;을 누르세요.
                 </p>
               ) : (
-                groupByTick(shownWeeks, view.year).map((chunk) => (
-                  <div key={chunk.from}>
-                    <div className="flex items-baseline gap-2 border-b border-stone-300/60 pb-1 dark:border-stone-700/60">
-                      <span className="font-sport text-sm">{chunk.label}</span>
-                      <span className="text-xs text-muted-foreground">{chunk.weeks.length}주</span>
-                      {chunk.record && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {chunk.record}
+                groupByTick(shownWeeks, view.year).map((chunk) => {
+                  // **기본은 접힘, 최근 해만 펴 둔다** (2026-08-14 사용자 요청).
+                  // 서른 해를 다 펴 두면 첫 화면이 1560줄이 된다.
+                  const opened = openYears[chunk.year] ?? chunk.year === view.year;
+                  return (
+                    <div key={chunk.from}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenYears((y) => ({ ...y, [chunk.year]: !opened }))}
+                        aria-expanded={opened}
+                        className={cn(
+                          "flex w-full items-baseline gap-2 rounded-[4px] px-2 py-1.5 text-left",
+                          "transition-colors duration-[120ms] hover:bg-card",
+                          opened && "bg-card",
+                        )}
+                      >
+                        <span className="text-xs text-muted-foreground">{opened ? "▾" : "▸"}</span>
+                        <span className="font-sport text-sm">{chunk.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {chunk.weeks.length}주
                         </span>
+                        {chunk.record && (
+                          <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                            {chunk.record}
+                          </span>
+                        )}
+                      </button>
+                      {opened && (
+                        <div className="mt-2 space-y-4">
+                          {chunk.quarters.map((quarter) => (
+                            <div key={quarter.label}>
+                              {/* 분기 머리 — 13주가 한 마디다 (§3-D80). */}
+                              <div className="flex items-baseline gap-2 border-b border-stone-200/60 pb-1 pl-2 dark:border-stone-800">
+                                <span className="text-xs text-muted-foreground">
+                                  {quarter.label}
+                                </span>
+                                {quarter.record && (
+                                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                                    {quarter.record}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1">
+                                {quarter.weeks.map((week) => (
+                                  <WeekRow
+                                    key={week.week}
+                                    week={week}
+                                    player={view.name}
+                                    open={openWeek === week.week}
+                                    report={openWeek === week.week ? report : null}
+                                    onToggle={() =>
+                                      setOpenWeek((w) => (w === week.week ? null : week.week))
+                                    }
+                                    onLive={() => setLive(week)}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="mt-2">
-                      {chunk.weeks.map((week) => (
-                        <WeekRow
-                          key={week.week}
-                          week={week}
-                          player={view.name}
-                          open={openWeek === week.week}
-                          report={openWeek === week.week ? report : null}
-                          onToggle={() => setOpenWeek((w) => (w === week.week ? null : week.week))}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </section>
           )}
@@ -1685,11 +1867,116 @@ export default function CareerPage() {
 }
 
 /**
+ * 라이브 경기 보기 (하네스 §3-D81-2, 2026-08-14 사용자 요청).
+ *
+ * **결과만 보는 화면이 아니라 그 밤을 지나가는 화면이다.** 비트를 하나씩 열고,
+ * 흐름 바가 그때마다 움직인다 — 끝나면 닫고 원래 자리로 돌아온다.
+ *
+ * **판정은 이미 끝났다.** 여기서 재생하는 것은 `match_flow`가 세운 줄이고(§3-D81),
+ * 빨리 감아도 건너뛰어도 결과는 같다 — 되짚기가 결정적이라는 §3-D4 그대로다.
+ */
+function LiveMatch({
+  week,
+  player,
+  onClose,
+}: {
+  week: CareerWeek;
+  player: string;
+  onClose: () => void;
+}) {
+  const beats = week.beats ?? [];
+  const [shown, setShown] = useState(1);
+  const [speed, setSpeed] = useState(1);
+  const done = shown >= beats.length;
+
+  useEffect(() => {
+    if (done) return;
+    const timer = setTimeout(() => setShown((n) => n + 1), 1100 / speed);
+    return () => clearTimeout(timer);
+  }, [shown, speed, done]);
+
+  // 흐름은 마지막으로 열린 비트가 정한다. 아직 안 열린 비트는 안 본다 —
+  // 그러면 결말이 먼저 새어 나간다.
+  const current = beats[Math.min(shown, beats.length) - 1];
+  const momentum = current?.momentum ?? 50;
+  const opponent = week.opponent ?? "상대";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-card p-4 ring-1 ring-brand-400/40 ring-inset">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-sport text-lg">{week.show ?? "그날의 경기"}</span>
+          <span className="text-xs text-muted-foreground">
+            {week.year}년차 {week.month}월 {week.weekOfMonth}주
+          </span>
+          {week.titleAtStake && (
+            <span className="text-xs text-brand-link">{week.titleAtStake}</span>
+          )}
+        </div>
+
+        {/* 흐름 바 — 왼쪽이 나, 오른쪽이 상대. */}
+        <div className="mt-3">
+          <div className="flex justify-between text-xs">
+            <span className="font-semibold">{player}</span>
+            <span className="text-muted-foreground">{opponent}</span>
+          </div>
+          <MomentumBar value={momentum} thick />
+        </div>
+
+        <ol className="mt-3 space-y-1">
+          {beats.slice(0, shown).map((beat, i) => (
+            <li
+              key={i}
+              className={cn(
+                "text-sm leading-relaxed",
+                beat.name === player || beat.by === player
+                  ? "font-semibold text-foreground"
+                  : "text-muted-foreground",
+                beat.kind === "finisher" && "text-brand-link",
+              )}
+            >
+              {beatLine(beat)}
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {!done && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSpeed(speed === 1 ? 3 : 1)}
+              >
+                {speed === 1 ? "빠르게" : "보통 속도"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShown(beats.length)}
+              >
+                건너뛰기
+              </Button>
+            </>
+          )}
+          {done && <span className="text-xs text-muted-foreground">{week.matchSummary}</span>}
+          <Button type="button" size="sm" className="ml-auto" onClick={onClose}>
+            {done ? "돌아가기" : "그만 보기"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * 주차 로그 한 줄.
  *
  * 럼블·챔버처럼 단계가 있는 밤은 **접힌 채로 요약 한 줄**을 보여주고, 누르면 입장과
  * 탈락이 순서대로 펼쳐진다 — 30인 럼블이 59줄이라 늘 펼쳐 두면 일정 탭이 그 한 밤으로
- * 가득 찬다 (2026-08-11 사용자 결정).
+ * 가득 찬다 (2026-08-11 사용자 결정). §3-D81 뒤로는 **모든 경기**가 흐름을 들고 온다.
  */
 function WeekRow({
   week,
@@ -1697,14 +1984,27 @@ function WeekRow({
   open,
   report,
   onToggle,
+  onLive,
 }: {
   week: CareerWeek;
   player: string;
   open: boolean;
   report: CareerShowReport | null;
   onToggle: () => void;
+  /** 그 경기를 라이브로 본다 (§3-D81-2). 비트가 있는 주차에만 선다. */
+  onLive: () => void;
 }) {
+  // **경기가 선 밤은 전부 펼칠 것이 있다** (§3-D81). 예전에는 럼블·챔버만
+  // 진행이 있었고(전체의 9.4%) 1:1은 결과 한 줄이 전부였다 — 이제 모든 경기가
+  // 주고받는 흐름을 들고 온다.
   const stagedNight = week.matchSummary !== null;
+  /**
+   * **여럿이 붙고 중간에 탈락자가 나오는 경기** (2026-08-14 사용자 요청).
+   *
+   * 럼블·챔버가 그렇다. 등장 순서와 탈락 수는 그 밤에만 있는 정보라, 문장
+   * (`matchSummary`)에 묻어 두지 않고 따로 세운다.
+   */
+  const elimination = week.eliminationMatch === true;
   // 경기가 선 밤은 펼칠 것이 하나 더 있다 — 그날의 리포트다 (§3-D45·D60).
   // 주간 방송도 연다: 밤이 작을 뿐 그날도 카드가 섰다. 프로모·결장은 링에 서지
   // 않은 주차라 열지 않는다.
@@ -1773,17 +2073,58 @@ function WeekRow({
               <Stars value={week.stars} />
             </p>
           )}
+          {/*
+           * 럼블·챔버의 자리 — 몇 번으로 들어와 몇 명을 떨어뜨렸는가.
+           *
+           * **칩으로 세운다** (2026-08-14 가시성 정리). 아래 서술·요약과 같은 작은
+           * 회색 글씨로 두면 줄이 넷 겹쳐, 무엇이 데이터이고 무엇이 문장인지가
+           * 구분되지 않았다.
+           */}
+          {elimination && (
+            <p className="mt-1 flex flex-wrap items-center gap-1">
+              {(week.entryNumber ?? 0) > 0 && (
+                <span className="rounded-[3px] bg-brand-400/15 px-1.5 py-0.5 text-xs tabular-nums text-brand-link">
+                  {week.entryNumber}번 입장
+                </span>
+              )}
+              <span className="rounded-[3px] bg-card px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+                {week.eliminations ?? 0}명 탈락
+              </span>
+              {(week.place ?? 0) > 0 && (
+                <span className="rounded-[3px] bg-card px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+                  {week.place === 1 ? "우승" : `${week.place}위`} · {week.matchField}명
+                </span>
+              )}
+            </p>
+          )}
           {stagedNight &&
             (week.beats && week.beats.length > 0 ? (
-              <button
-                type="button"
-                onClick={onToggle}
-                aria-expanded={open}
-                className="mt-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {week.matchSummary}
-                <span className="ml-1">{open ? "▾" : "▸"}</span>
-              </button>
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2">
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  aria-expanded={open}
+                  className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {week.matchSummary}
+                  <span className="ml-1">{open ? "▾" : "▸"}</span>
+                </button>
+                {/*
+                 * **경기 보기** (§3-D81-2, 2026-08-14 사용자 요청) — 결과만 보는
+                 * 화면이 아니라 그 밤을 지나가는 화면이다. 끝나면 닫히고 원래
+                 * 자리로 돌아온다.
+                 */}
+                <button
+                  type="button"
+                  onClick={onLive}
+                  className={cn(
+                    "rounded-[3px] px-1.5 py-0.5 text-xs transition-colors duration-[120ms]",
+                    "bg-brand-400/15 text-brand-link hover:bg-brand-400/25",
+                  )}
+                >
+                  ▶ 경기 보기
+                </button>
+              </span>
             ) : (
               // 다시 연 로그에는 요약만 남아 있다 — 펼칠 것이 없으니 여는 시늉도 안 한다.
               <p className="mt-0.5 text-xs text-muted-foreground">{week.matchSummary}</p>
@@ -2157,20 +2498,53 @@ function Side({ name, won }: { name: string; won: boolean }) {
 }
 
 /** 입장과 탈락을 순서대로. **내 줄만 굵다** — 서른 줄에서 나를 찾는 것이 이 화면의 일이다. */
-function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
+/**
+ * 흐름 한 칸 (§3-D81) — **줄다리기 바**다.
+ *
+ * 레슬링은 위치가 정보가 아니라 흐름이 정보다. 좌표 대신 이 한 줄이 "지금 누가
+ * 우세한가"를 말한다 — 왼쪽이 나, 오른쪽이 상대.
+ */
+function MomentumBar({ value, thick = false }: { value: number; thick?: boolean }) {
+  const mine = Math.max(0, Math.min(100, value));
   return (
-    <ol className="mt-1.5 space-y-0.5 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
+    <span
+      className={cn(
+        "relative mt-1 flex w-full overflow-hidden rounded-full",
+        // **양쪽이 다른 색이어야 한다.** 한 색만 차면 "얼마나 찼나"로 읽히고,
+        // 누구 쪽으로 기운 것인지가 안 보인다 (2026-08-14 사용자 지적).
+        "bg-stone-400/45 dark:bg-stone-600/50",
+        thick ? "h-2.5" : "h-1.5",
+      )}
+      aria-hidden
+    >
+      <span
+        className="bg-brand-400 transition-all duration-[200ms]"
+        style={{ width: `${mine}%` }}
+      />
+      {/* 팽팽함(50)의 자리. 기준선이 없으면 기울었는지를 눈으로 못 잰다. */}
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-background/70" />
+    </span>
+  );
+}
+
+function BeatList({ beats, player }: { beats: CareerBeat[]; player: string }) {
+  const flowing = beats.some((b) => b.momentum !== undefined);
+  return (
+    <ol className="mt-1.5 space-y-1 border-l border-stone-300/60 pl-3 dark:border-stone-700/60">
       {beats.map((beat, i) => {
         const mine = beat.name === player || beat.by === player;
         return (
-          <li
-            key={i}
-            className={cn(
-              "text-xs leading-relaxed",
-              mine ? "font-semibold text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {beatLine(beat)}
+          <li key={i} className="text-xs leading-relaxed">
+            <span
+              className={cn(
+                mine ? "font-semibold text-foreground" : "text-muted-foreground",
+                beat.kind === "finisher" && "text-brand-link",
+              )}
+            >
+              {beatLine(beat)}
+            </span>
+            {/* 흐름이 있는 경기(1:1)만 바를 그린다 — 럼블은 입장·탈락이 곧 흐름이다. */}
+            {flowing && beat.momentum !== undefined && <MomentumBar value={beat.momentum} />}
           </li>
         );
       })}
@@ -2185,6 +2559,25 @@ function beatLine(beat: CareerBeat): string {
   }
   if (beat.kind === "win") {
     return `${beat.name} 우승`;
+  }
+  // ── §3-D81 모멘텀 타임라인 — 주고받는 장면들 ──
+  if (beat.kind === "move") {
+    return `${beat.name}${josa(beat.name, "이", "가")} 기술을 걸었다`;
+  }
+  if (beat.kind === "reversal") {
+    return `${beat.name}${josa(beat.name, "이", "가")} 받아넘겼다 — 흐름이 뒤집혔다`;
+  }
+  if (beat.kind === "nearfall") {
+    return `${beat.name}${josa(beat.name, "이", "가")} 커버 — 투 카운트!`;
+  }
+  if (beat.kind === "kickout") {
+    return `${beat.name}${josa(beat.name, "이", "가")} 킥아웃`;
+  }
+  if (beat.kind === "finisher") {
+    // 내 피니셔는 이긴 밤에만 이름을 갖는다 (§3-D88).
+    return beat.by
+      ? `${beat.name} — ${beat.by}!`
+      : `${beat.name}${josa(beat.name, "이", "가")} 피니셔로 끝냈다`;
   }
   if (beat.by === null) {
     return `${beat.name} 탈락`;
@@ -2251,12 +2644,21 @@ function groupNewsByYear(items: CareerNewsItem[]): [number, CareerNewsItem[]][] 
   return [...years.entries()].sort((a, b) => a[0] - b[0]);
 }
 
+type QuarterChunk = {
+  label: string;
+  record: string;
+  weeks: CareerWeek[];
+};
+
 type Chunk = {
+  year: number;
   from: number;
   to: number;
   label: string;
   record: string;
   weeks: CareerWeek[];
+  /** 그 해를 분기로 나눈 것 (2026-08-14 사용자 요청). 13주가 한 분기다 (§3-D80). */
+  quarters: QuarterChunk[];
 };
 
 /**
@@ -2267,6 +2669,22 @@ type Chunk = {
  * 이유: 틱 크기는 모드마다 1~52주로 달라 `weekly`에서는 묶음이 한 줄짜리가 되고,
  * 사람이 커리어를 기억하는 단위는 어차피 해다.
  */
+/** 한 묶음의 전적 한 줄. 경기가 없었으면 빈 문자열이다. */
+function recordOf(rows: CareerWeek[]): string {
+  const wins = rows.filter((w) => w.result === "win").length;
+  const losses = rows.filter((w) => w.result === "loss").length;
+  const draws = rows.filter((w) => w.result === "draw").length;
+  if (wins + losses + draws === 0) return "";
+  return `${wins}승 ${losses}패${draws > 0 ? ` ${draws}무` : ""}`;
+}
+
+/**
+ * 주차를 **연도 → 분기**로 접는다 (2026-08-14 사용자 요청).
+ *
+ * 서른 해가 한 줄로 늘어서면 읽을 수가 없다. 연도로 접고, 편 해는 분기로 나눈다 —
+ * 13주가 한 분기이고(§3-D80) 목표를 거는 단위도 그것이라, 화면의 마디가 규칙의
+ * 마디와 같아진다.
+ */
 function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
   const chunks = new Map<number, CareerWeek[]>();
   for (const week of weeks) {
@@ -2276,16 +2694,28 @@ function groupByTick(weeks: CareerWeek[], _year: number): Chunk[] {
     else chunks.set(year, [week]);
   }
   return [...chunks.entries()].map(([year, rows]) => {
-    const wins = rows.filter((w) => w.result === "win").length;
-    const losses = rows.filter((w) => w.result === "loss").length;
-    const draws = rows.filter((w) => w.result === "draw").length;
-    const played = wins + losses + draws;
+    const buckets = new Map<number, CareerWeek[]>();
+    for (const week of rows) {
+      // 그 해 안에서 몇 번째 분기인가 — 0~3.
+      const q = Math.min(3, Math.floor(((week.week - 1) % 52) / 13));
+      const bucket = buckets.get(q);
+      if (bucket) bucket.push(week);
+      else buckets.set(q, [week]);
+    }
     return {
+      year,
       from: rows[0].week,
       to: rows[rows.length - 1].week,
       label: `${year}년차`,
-      record: played > 0 ? `${wins}승 ${losses}패${draws > 0 ? ` ${draws}무` : ""}` : "",
+      record: recordOf(rows),
       weeks: rows,
+      quarters: [...buckets.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([q, qRows]) => ({
+          label: `${q + 1}분기`,
+          record: recordOf(qRows),
+          weeks: qRows,
+        })),
     };
   });
 }

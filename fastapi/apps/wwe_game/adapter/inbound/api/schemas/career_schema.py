@@ -33,6 +33,8 @@ from wwe_game.domain.services import (
     briefcase_desk,
     contract_desk,
     contract_office,
+    elimination,
+    finisher_desk,
     match_rating,
     news_article,
     quarter_plan,
@@ -43,6 +45,11 @@ from wwe_game.domain.services import (
 from wwe_game.domain.services.news_feed import NewsItem
 from wwe_game.domain.services.show_report import ShowReport
 from wwe_game.domain.value_objects.body_part import PARTS, BodyPart
+from wwe_game.domain.value_objects.finisher import (
+    CUSTOM_CODE,
+    NAME_MAX_LEN,
+    NAME_MIN_LEN,
+)
 from wwe_game.domain.value_objects.match_kind import MatchKind
 from wwe_game.domain.value_objects.match_kind import format_of as match_format_of
 from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
@@ -115,7 +122,9 @@ class BeatSchema(_Camel):
     number: int = 0
     """입장 순번. `enter`에만 채워진다."""
     by: str | None = None
-    """누가 탈락시켰는가. `eliminate`에만 채워진다."""
+    """누가 탈락시켰는가(`eliminate`) · 무슨 기술로 끝냈는가(`finisher`, §3-D81)."""
+    momentum: int = 50
+    """그 순간 플레이어 쪽으로 기운 정도(0~100) — §3-D81. 50이 팽팽함이다."""
 
 
 class WeekSchema(_Camel):
@@ -144,6 +153,17 @@ class WeekSchema(_Camel):
     """탈락 경기의 한 줄 요약 (§3-D34). **다시 연 로그에도 이것만은 남는다.**"""
     tournament_round: int = 0
     """킹 앤 퀸 오브 더 링의 회전 (§3-D33). 0이면 토너먼트 경기가 아니다."""
+    elimination_match: bool = False
+    """**여럿이 붙고 중간에 탈락자가 나오는 경기인가** (2026-08-14 사용자 요청).
+
+    럼블·챔버·배틀로얄이 그렇다. 참자만 많은 경기(트리플 스렛)와 나눠 두는 이유:
+    화면이 등장 순서와 탈락 수를 세울지 말지를 이 값 하나로 정한다."""
+    entry_number: int = 0
+    """**몇 번으로 입장했는가** — 럼블의 번호이자 챔버의 포드 순서다. 0이면 없다."""
+    eliminations: int = 0
+    """내가 떨어뜨린 사람 수."""
+    place: int = 0
+    """최종 순위. 1이면 우승 — 분모는 `match_field`다."""
     title_shot_from: str | None = None
     """`earned`(럼블·챔버 도전권) · `briefcase`(가방) — 자격이 아니라 **권리로** 선 자리 (§3-D36)."""
     beats: list[BeatSchema] | None = None
@@ -341,6 +361,47 @@ class CallOutRequest(_Camel):
     rival: str
 
 
+class FinisherRequest(_Camel):
+    """피니셔 교체 (§3-D88). **둘 중 하나만 채운다** — 목록에서 고르면 `code`,
+    이름을 직접 지으면 `name`. 어느 갈래인지는 화면이 먼저 정한다."""
+
+    code: str = ""
+    name: str = ""
+
+
+class GuestFinisherRequest(_Camel):
+    state: GuestRunState
+    code: str = ""
+    name: str = ""
+
+
+class FinisherOptionSchema(_Camel):
+    code: str
+    label: str
+    blurb: str
+
+
+class FinisherSchema(_Camel):
+    """지금 쓰는 피니셔와 바꿀 수 있는 자리 (§3-D88).
+
+    **수치가 없다** — 피니셔는 판정에 한 톨도 안 닿는다.
+    """
+
+    code: str
+    name: str
+    blurb: str
+    custom: bool
+    """직접 지은 이름인지."""
+    can_change: bool
+    weeks_until_change: int
+    """다시 바꿀 수 있을 때까지 남은 주차. **첫 분기에는 여기가 0이 아니다.**"""
+    options: list[FinisherOptionSchema] = Field(default_factory=list)
+    """목록에서 고르는 갈래의 선택지 — 기본기 + 내 계열."""
+    name_min: int = 2
+    name_max: int = 20
+    """직접 짓는 갈래의 길이 제한. 링네임과 같다(§3-D12)."""
+
+
 class GuestCallOutRequest(_Camel):
     state: GuestRunState
     rival: str
@@ -444,6 +505,8 @@ class RunSchema(_Camel):
     goal_options: list[GoalOptionSchema] = Field(default_factory=list)
     """지금 고를 수 있는 목표들. **비어 있으면 지금은 고를 때가 아니다** —
     NXT·무소속 구간이거나 이미 이번 분기를 걸었다."""
+    finisher: FinisherSchema | None = None
+    """지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다."""
     call_out: CallOutSchema | None = None
     """지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `None`."""
     briefcase: BriefcaseSchema | None = None
@@ -715,6 +778,15 @@ def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
             report.title_shot_from.value if report.title_shot_from else None
         ),
         match_summary=view.match_summary,
+        # **여럿이 붙는 경기의 자리** (2026-08-14 사용자 요청). 시퀀스가 이미 들고
+        # 있던 값을 문장(`match_summary`)뿐 아니라 구조로도 내보낸다 — 화면이 숫자를
+        # 문장에서 다시 파싱하지 않게.
+        elimination_match=(
+            report.match_kind in elimination.ELIMINATES if report.match_kind else False
+        ),
+        entry_number=report.sequence.entry_number if report.sequence else 0,
+        eliminations=report.sequence.eliminated_by_player if report.sequence else 0,
+        place=report.sequence.place if report.sequence else 0,
         pay=report.pay,
         title_defended=report.title_defended,
         vacated=[t.value for t in report.vacated],
@@ -727,7 +799,11 @@ def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
         beats=(
             [
                 BeatSchema(
-                    kind=beat.kind.value, name=beat.name, number=beat.number, by=beat.by
+                    kind=beat.kind.value,
+                    name=beat.name,
+                    number=beat.number,
+                    by=beat.by,
+                    momentum=beat.momentum,
                 )
                 for beat in report.sequence.beats
             ]
@@ -907,6 +983,25 @@ def to_briefcase(run: CareerRun) -> BriefcaseSchema | None:
     )
 
 
+def to_finisher(run: CareerRun) -> FinisherSchema:
+    """지금 쓰는 피니셔와 고를 수 있는 것들 (§3-D88). **늘 채운다.**"""
+    now = finisher_desk.current(run)
+    return FinisherSchema(
+        code=now.code,
+        name=now.name,
+        blurb=now.blurb,
+        custom=now.code == CUSTOM_CODE,
+        can_change=finisher_desk.can_change(run),
+        weeks_until_change=finisher_desk.weeks_until_change(run),
+        options=[
+            FinisherOptionSchema(code=f.code, label=f.name, blurb=f.blurb)
+            for f in finisher_desk.options(run)
+        ],
+        name_min=NAME_MIN_LEN,
+        name_max=NAME_MAX_LEN,
+    )
+
+
 def to_call_out(run: CareerRun) -> CallOutSchema | None:
     """지금 걸 수 있는 상대들 (§3-D86). 못 걸면 `None` — 화면이 자리를 안 낸다."""
     if not rivalry_desk.can_call_out(run):
@@ -982,6 +1077,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 )
             ],
             briefcase=to_briefcase(run),
+            finisher=to_finisher(run),
             call_out=to_call_out(run),
             offer_options=to_offer_options(run),
             injured_parts=[
