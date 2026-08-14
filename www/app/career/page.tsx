@@ -394,6 +394,16 @@ export default function CareerPage() {
   const [presets, setPresets] = useState<CareerPreset[]>([]);
   const [metaFailed, setMetaFailed] = useState(false);
   const [tab, setTab] = useState<PanelKey>("schedule");
+  /**
+   * **이어할 커리어가 있는데 못 읽었다** (2026-08-13 사용자 신고).
+   *
+   * 지금까지 재개가 실패하면 조용히 생성 화면으로 갔고, 체험판은 **세이브를 지웠다** —
+   * 백엔드가 잠깐 안 뜨거나 스키마가 바뀐 것만으로 서른 해가 사라졌다. 실패를
+   * 화면에 남기고 세이브는 그대로 둔다: 못 읽는 것과 없는 것은 다르다.
+   */
+  const [resumeFailed, setResumeFailed] = useState(false);
+  /** 재시도 카운터. effect의 의존성에 넣어야 "다시 시도"가 실제로 다시 돈다. */
+  const [retry, setRetry] = useState(0);
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
@@ -437,7 +447,11 @@ export default function CareerPage() {
               : { phase: "create" },
           );
         })
-        .catch(() => alive && setScreen({ phase: "create" }));
+        .catch(() => {
+          if (!alive) return;
+          setResumeFailed(true);
+          setScreen({ phase: "create" });
+        });
       return () => {
         alive = false;
       };
@@ -459,15 +473,17 @@ export default function CareerPage() {
         setScreen({ phase: "play", advance: next, state: next.state, busy: false });
       })
       .catch(() => {
-        // 읽을 수 없는 세이브(포맷 변경·조작)는 버리고 새로 시작하게 둔다.
-        writeGuestSave(null);
-        writeGuestLog([]);
-        if (alive) setScreen({ phase: "create" });
+        // **세이브를 지우지 않는다** (2026-08-13). 예전에는 여기서 버렸는데,
+        // 백엔드가 잠깐 안 뜬 것과 세이브가 깨진 것을 구별하지 못한 채 지웠다 —
+        // 새로고침 한 번이 곧 커리어 소멸이었다. 화면에 알리고 남겨 둔다.
+        if (!alive) return;
+        setResumeFailed(true);
+        setScreen({ phase: "create" });
       });
     return () => {
       alive = false;
     };
-  }, [isReady, user]);
+  }, [isReady, user, retry]);
 
   const allowedModes = user ? modes : modes.filter((m) => m.guestAllowed);
 
@@ -684,6 +700,36 @@ export default function CareerPage() {
         <p className="mt-3 text-sm text-muted-foreground">
           스무 살에 데뷔해 서른 해. 멈추는 건 사건이 생겼을 때뿐이다.
         </p>
+
+        {/*
+         * **이어하기** (2026-08-13 사용자 신고: "시작 페이지에 이어하기 칸이 없어").
+         *
+         * 재개는 지금까지 자동이었다 — 되면 바로 플레이 화면으로 갔고, 안 되면
+         * 아무 말 없이 생성 화면이 떴다. 실패가 조용하면 사용자는 커리어가
+         * 사라졌다고 읽는다. **세이브는 그대로 두고** 다시 시도할 자리를 준다.
+         */}
+        {resumeFailed && (
+          <div className="mt-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
+            <p className="font-sport text-sm">이어할 커리어를 불러오지 못했습니다</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              세이브는 지우지 않았습니다. 백엔드가 켜져 있는지 확인한 뒤 다시 시도해 주세요 —
+              아래에서 새로 시작하면 이 커리어는 덮어씁니다.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setResumeFailed(false);
+                setScreen({ phase: "loading" });
+                setRetry((n) => n + 1);
+              }}
+            >
+              다시 시도
+            </Button>
+          </div>
+        )}
 
         {metaFailed && (
           <p className="mt-6 rounded-lg bg-card p-3 text-sm text-live">
@@ -1080,6 +1126,14 @@ export default function CareerPage() {
             </>
           )}
           {view.condition !== "healthy" && <span className="text-brand-link">부상</span>}
+          {/*
+           * **저장 버튼이 없는 이유를 화면이 말한다** (2026-08-13 사용자 신고:
+           * "세이브 버튼이 없어"). 진행할 때마다 저장되므로 누를 버튼이 없는 것이
+           * 맞는데, 그 사실이 어디에도 없으면 "저장이 안 되는 게임"으로 읽힌다.
+           */}
+          <span className="ml-auto text-muted-foreground/70">
+            {busy ? "저장 중…" : runId === null ? "이 브라우저에 저장됨" : "자동 저장됨"}
+          </span>
           {view.money?.contract === null && <span className="text-brand-link">무소속</span>}
           {/* 부상 구간은 통째로 흘러가고 복귀 주차에서 끊긴다 (§3-D37). 안 알리면
               방금 지나간 결장 열두 주가 로그 안에서만 조용히 흘러간다. */}
