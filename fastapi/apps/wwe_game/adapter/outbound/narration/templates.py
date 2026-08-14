@@ -510,6 +510,7 @@ REACTION_BANDS: tuple[tuple[int, tuple[str, ...]], ...] = (
 
 TEMPLATES: dict[Beat, tuple[str, ...]] = {
     Beat.SHOW_WIN: (
+        "{finisher:으로} 접었다. {crowd:은} 그 이름을 안다.",
         "{venue}에서 {move:으로} 매듭지었다. {reaction}.",
         "주간 방송 중반 경기. {move:이} 깨끗하게 들어갔다.",
         "{crowd:이} 카운트를 세는 사이 {player:이} 어깨를 눌렀다.",
@@ -592,6 +593,7 @@ TEMPLATES: dict[Beat, tuple[str, ...]] = {
         "{move:으로} 끝낼 수 있었는데 시간이 없었다.",
     ),
     Beat.PLE_WIN: (
+        "{finisher:이} 들어갔고, 그걸로 끝이었다. {reaction}.",
         "{show} 메인 카드. {move:으로} 끝냈고, {reaction}.",
         "{show}에서 이겼다. {crowd:은} 목이 쉴 때까지 소리쳤다.",
         "{show} 포스터의 얼굴이 결국 맞았다. {reaction}.",
@@ -723,6 +725,7 @@ TEMPLATES: dict[Beat, tuple[str, ...]] = {
         "카드 발표에서 이름을 찾다가 그만뒀다. {reaction}.",
     ),
     Beat.TITLE_WON: (
+        "{finisher:이} 마지막이었다. {title:을} 들고 링 위에 섰다. {reaction}.",
         "{show}에서 {title:을} 감았다. {venue:이} 흔들렸다.",
         "{show} 메인이벤트가 끝나고 {title:이} 허리에 채워졌다. {reaction}.",
         "{title:을} 감았다. {venue:이} 흔들렸다.",
@@ -741,6 +744,7 @@ TEMPLATES: dict[Beat, tuple[str, ...]] = {
         "{title:이} 허리에 맞지 않아 조정하는 데 시간이 걸렸다. {reaction}.",
     ),
     Beat.TITLE_DEFENDED: (
+        "{finisher:으로} 막아냈다. {title:은} 그대로다. {reaction}.",
         "{venue}에서 {title:을} 지켰다. 쉽지 않은 방어전이었다.",
         "{move:이} 마지막에 통했다. {title:은} 그대로다.",
         "도전자를 {move:으로} 눕히고 {title:을} 다시 들었다.",

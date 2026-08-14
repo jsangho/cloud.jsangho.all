@@ -61,6 +61,20 @@ class NoOfferOpenError(Exception):
     """재계약 협상 중이 아닌데 답했다 (§3-D84)."""
 
 
+class InvalidFinisherNameError(ValueError):
+    """직접 지은 기술 이름이 규칙에 안 맞는다 (§3-D88).
+
+    링네임과 같은 규칙이다(§3-D12) — 이 이름이 서술 슬롯으로 들어가기 때문이다.
+    """
+
+
+class CannotChangeFinisherError(Exception):
+    """지금 바꿀 수 없는 피니셔를 바꾸려 했다 (§3-D88).
+
+    쿨다운 중이거나 · 계열 밖 코드거나 · 이미 그것을 쓰고 있다.
+    """
+
+
 class CannotCallOutError(Exception):
     """걸 수 없는 상대에게 시비를 걸었다 (§3-D86).
 

@@ -96,6 +96,10 @@ class GuestRunState(BaseModel):
     goal_quarter: int = -1
     offer_week: int = 0
     """재계약 협상이 열린 주차 (§3-D84). 옛 체험판 세이브는 0이다."""
+    finisher: str = ""
+    """지금 쓰는 피니셔 (§3-D88). 옛 체험판 세이브는 비어 있고, 그게 곧 기본값이다."""
+    finisher_name: str = ""
+    finisher_week: int = 0
 
 
 def to_domain(state: GuestRunState) -> CareerRun:
@@ -179,6 +183,9 @@ def to_domain(state: GuestRunState) -> CareerRun:
         goal=QuarterGoal(state.goal) if state.goal else None,
         goal_quarter=state.goal_quarter,
         offer_week=state.offer_week,
+        finisher=state.finisher,
+        finisher_name=state.finisher_name,
+        finisher_week=state.finisher_week,
         contract=(
             Contract(
                 weekly_pay=int(state.contract["weekly_pay"]),
@@ -273,4 +280,7 @@ def to_state(run: CareerRun) -> GuestRunState:
         goal=run.goal.value if run.goal else None,
         goal_quarter=run.goal_quarter,
         offer_week=run.offer_week,
+        finisher=run.finisher,
+        finisher_name=run.finisher_name,
+        finisher_week=run.finisher_week,
     )

@@ -41,6 +41,8 @@ from wwe_game.domain.services import (
     championship,
     elimination,
     event_draw,
+    finisher_desk,
+    match_flow,
     quarter_plan,
     rivalry_engine,
     seeded_roll,
@@ -397,7 +399,14 @@ def simulate_week(run: CareerRun) -> WeekReport:
         match_kind=match_kind,
         opponent=_opponent_for(run, week, title),
         # **판정이 끝난 뒤에 짠다** — 순서는 결과를 만들지 않고 결과를 설명한다 (§3-D34).
-        sequence=_sequence_for(run, week, match_kind, result),
+        sequence=_sequence_for(
+            run,
+            week,
+            match_kind,
+            result,
+            opponent=_opponent_for(run, week, title),
+            major=show is not None and show.is_major,
+        ),
         cursed=cursed,
         vacated=_vacated_by(run, injury_weeks),
         pay=pay,
@@ -405,15 +414,36 @@ def simulate_week(run: CareerRun) -> WeekReport:
 
 
 def _sequence_for(
-    run: CareerRun, week: int, match_kind: MatchKind, result: OutcomeKind
+    run: CareerRun,
+    week: int,
+    match_kind: MatchKind | None,
+    result: OutcomeKind | None,
+    *,
+    opponent: str | None,
+    major: bool,
 ) -> MatchSequence | None:
-    """럼블·챔버처럼 단계가 있는 경기의 진행 순서 (§3-D34).
+    """그 경기의 진행 순서.
+
+    **두 갈래다.** 단계가 있는 경기(럼블·챔버)는 입장·탈락으로 세우고(§3-D34),
+    나머지 전부는 모멘텀 타임라인으로 세운다(§3-D81) — 예전에는 뒤쪽이 통째로
+    비어서 22,398경기 중 9.4%에만 진행이 있었다.
 
     **출전 후보는 등급을 가리지 않는다.** 대립 상대는 급이 맞아야 하지만(§3-D13),
     럼블은 정상급과 유망주가 한 링에 서는 자리다 — 급으로 거르면 30명이 안 찬다.
     """
     if match_kind not in elimination.STAGED:
-        return None
+        # **경기가 없는 주차는 흐름도 없다** — 프로모·결장에는 링이 서지 않는다.
+        if match_kind is None or result is None:
+            return None
+        return match_flow.sequence_for(
+            match_kind,
+            player=str(run.identity.name),
+            opponent=opponent or "상대",
+            won=result is OutcomeKind.WIN,
+            finisher=finisher_desk.current(run).name,
+            major=major,
+            roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
+        )
     pool = tuple(
         m.name
         for m in roster.active_at(week)

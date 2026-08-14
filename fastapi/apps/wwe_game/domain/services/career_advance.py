@@ -33,6 +33,7 @@ from wwe_game.domain.services import (
     career_end,
     contract_desk,
     contract_office,
+    expenses,
     quarter_plan,
     seeded_roll,
 )
@@ -123,13 +124,16 @@ def settle_week(run: CareerRun, week: int) -> CareerRun:
     1. 누적을 먼저 갱신한다. 계약 정산이 `release_weeks`를 읽으므로, 이 주차의
        결장·패배가 반영되기 전에 정산하면 유예가 한 주씩 길어진다.
     2. 계약을 정산한다. 방출·재계약·복귀가 전부 여기서 일어난다 (§3-D50).
-    3. 종료를 판정한다. 무소속 누적(`unsigned_weeks`)이 여기서 읽히므로 2번 뒤다.
+    3. **생활비가 나간다** (§3-D89). 계약 정산 뒤인 이유: 그 주에 잘렸으면 이미
+       무소속이고, 그래도 씀씀이는 그대로라는 것이 이 규칙의 전부다.
+    4. 종료를 판정한다. 무소속 누적(`unsigned_weeks`)이 여기서 읽히므로 2번 뒤다.
 
     **한 함수로 묶어 둔 이유**는 부르는 곳이 둘이라서다 — 진행 루프와
     `scripts/measure_balance.py`. 밖에서 이 순서를 다시 적으면 언젠가 갈린다.
     """
     run = career_end.track_decline(career_end.track_release(run))
     run = contract_office.settle(run, SeededRoll(run.seed, week, seeded_roll.CONTRACT))
+    run = expenses.settle(run)
     return career_end.close_if_ended(run)
 
 

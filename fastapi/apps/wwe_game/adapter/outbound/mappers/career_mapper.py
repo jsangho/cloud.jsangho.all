@@ -132,6 +132,9 @@ class CareerMapper:
             goal=QuarterGoal(row.goal) if row.goal else None,
             goal_quarter=row.goal_quarter if row.goal_quarter is not None else -1,
             offer_week=row.offer_week or 0,
+            finisher=row.finisher or "",
+            finisher_name=row.finisher_name or "",
+            finisher_week=row.finisher_week or 0,
         )
 
     @staticmethod
@@ -185,6 +188,9 @@ class CareerMapper:
         row.goal = run.goal.value if run.goal else None
         row.goal_quarter = run.goal_quarter
         row.offer_week = run.offer_week
+        row.finisher = run.finisher
+        row.finisher_name = run.finisher_name
+        row.finisher_week = run.finisher_week
 
     @staticmethod
     def log_row(run_id: int, view: WeekReportView) -> CareerLogEntryModel:
