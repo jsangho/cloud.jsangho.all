@@ -24,6 +24,7 @@ from wwe_game.domain.value_objects.match_sequence import BeatKind
 PLAYER = "장상호"
 RIVAL = "건서"
 FINISHER = "붉은 낙인"
+MOVES = ("암바", "저먼 수플렉스", "테이크다운", "헤드록", "레그록")
 
 
 def flow(*, won: bool = True, major: bool = True, seed: int = 42):
@@ -33,6 +34,7 @@ def flow(*, won: bool = True, major: bool = True, seed: int = 42):
         opponent=RIVAL,
         won=won,
         finisher=FINISHER,
+        moves=MOVES,
         major=major,
         roll=SeededRoll(seed, 300, seeded_roll.ELIMINATION),
     )
@@ -93,6 +95,20 @@ class TestTheMomentum:
         """한 방향으로만 흐르면 그건 흐름이 아니라 카운터다."""
         values = [b.momentum for b in flow(seed=11).beats]
         assert len(set(values)) > 3
+
+
+class TestTheMoveNames:
+    """**"기술을 걸었다"만 반복하면 로그지 경기가 아니다** (§3-D81-4)."""
+
+    def test_every_move_carries_a_name(self) -> None:
+        for beat in flow().beats:
+            if beat.kind in (BeatKind.MOVE, BeatKind.REVERSAL):
+                assert beat.by in MOVES, "무슨 기술인지가 실려야 한다"
+
+    def test_the_names_vary(self) -> None:
+        """다섯 수가 전부 같은 이름이면 고친 뜻이 없다."""
+        names = [b.by for b in flow(seed=5).beats if b.kind is BeatKind.MOVE]
+        assert len(set(names)) > 1
 
 
 class TestTheShape:

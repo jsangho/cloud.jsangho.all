@@ -2060,11 +2060,18 @@ function LiveMatch({
    */
   const [showResult, setShowResult] = useState(false);
 
+  /**
+   * **완급이 있어야 경기다** (2026-08-14). 평범한 한 수는 빠르게 지나가고,
+   * 니어폴과 피니셔는 오래 머문다 — 전부 같은 간격이면 슬라이드쇼가 된다.
+   */
   useEffect(() => {
     if (played) return;
-    const timer = setTimeout(() => setShown((n) => n + 1), 1100 / speed);
+    const kind = beats[shown - 1]?.kind;
+    const hold =
+      kind === "finisher" ? 2000 : kind === "nearfall" ? 1500 : kind === "reversal" ? 1200 : 800;
+    const timer = setTimeout(() => setShown((n) => n + 1), hold / speed);
     return () => clearTimeout(timer);
-  }, [shown, speed, played]);
+  }, [shown, speed, played, beats]);
 
   // 다 지나가면 잠깐 뒤 결과창으로 넘어간다. 바로 바꾸면 마지막 장면이 안 보인다.
   useEffect(() => {
@@ -2104,29 +2111,53 @@ function LiveMatch({
         <div className="px-5 pt-4">
           <div className="flex items-baseline justify-between text-sm">
             <span className="font-sport">{player}</span>
+            {/*
+             * **경기 시계** (2026-08-14). 시간이 흐르지 않으면 지나간다는 느낌이
+             * 없다. 비트 하나를 40초로 환산한다 — 실제 판정과 무관한 표시다.
+             */}
+            <span className="font-sport tabular-nums text-brand-link">
+              {String(Math.floor((shown * 40) / 60)).padStart(2, "0")}:
+              {String((shown * 40) % 60).padStart(2, "0")}
+            </span>
             <span className="font-sport text-muted-foreground">{opponent}</span>
           </div>
           <MomentumBar value={momentum} thick />
         </div>
 
-        {/* ── 비트가 하나씩 열린다 ── */}
-        <ol className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-5 py-4">
-          {beats.slice(0, shown).map((beat, i) => (
-            <li
-              key={i}
-              className={cn(
-                "text-sm leading-relaxed",
-                beat.name === player || beat.by === player
-                  ? "text-foreground"
-                  : "text-muted-foreground",
-                beat.kind === "finisher" && "font-sport text-base text-brand-link",
-                beat.kind === "nearfall" && "font-semibold",
-              )}
-            >
-              {beatLine(beat)}
-            </li>
-          ))}
-        </ol>
+        {/*
+         * ── 지금 이 순간 ──
+         *
+         * **쌓인 목록이 아니라 지금 벌어지는 한 수를 본다** (2026-08-14 사용자
+         * 지적: "크기는 키웠는데 경기를 보는 느낌이 안 든다"). 예전에는 비트가
+         * 전부 같은 크기로 쌓여서, 보는 화면이 아니라 읽는 화면이 됐다.
+         *
+         * 지금 수는 크게, 지나간 수는 작고 흐리게 — 눈이 갈 곳이 하나다.
+         */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {/* **최신이 위다.** 아래로 쌓이면 볼 때마다 스크롤해야 한다. */}
+          <ol className="flex flex-col-reverse gap-1.5">
+            {beats.slice(0, shown).map((beat, i) => {
+              const now = i === shown - 1;
+              const mine = beat.name === player;
+              return (
+                <li
+                  key={i}
+                  className={cn(
+                    "transition-all duration-[200ms]",
+                    now ? "text-lg leading-snug" : "text-sm leading-relaxed opacity-45",
+                    mine ? "text-foreground" : "text-muted-foreground",
+                    now && mine && "font-semibold",
+                    beat.kind === "finisher" && "font-sport text-brand-link",
+                    beat.kind === "finisher" && now && "text-2xl",
+                    beat.kind === "nearfall" && now && "text-live",
+                  )}
+                >
+                  {beatLine(beat)}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
 
         {/* ── 발: 재생 조작, 그리고 끝나면 결과 ── */}
         <div className="border-t border-stone-300/40 px-5 py-4 dark:border-stone-700/60">
@@ -2788,10 +2819,15 @@ function beatLine(beat: CareerBeat): string {
   }
   // ── §3-D81 모멘텀 타임라인 — 주고받는 장면들 ──
   if (beat.kind === "move") {
-    return `${beat.name}${josa(beat.name, "이", "가")} 기술을 걸었다`;
+    // **무슨 기술인지가 문장을 만든다** (§3-D81-4). 없으면 같은 줄이 반복된다.
+    return beat.by
+      ? `${beat.name}${josa(beat.name, "의", "의")} ${beat.by}`
+      : `${beat.name}${josa(beat.name, "이", "가")} 기술을 걸었다`;
   }
   if (beat.kind === "reversal") {
-    return `${beat.name}${josa(beat.name, "이", "가")} 받아넘겼다 — 흐름이 뒤집혔다`;
+    return beat.by
+      ? `${beat.name}${josa(beat.name, "이", "가")} ${beat.by}로 받아넘겼다!`
+      : `${beat.name}${josa(beat.name, "이", "가")} 받아넘겼다 — 흐름이 뒤집혔다`;
   }
   if (beat.kind === "nearfall") {
     return `${beat.name}${josa(beat.name, "이", "가")} 커버 — 투 카운트!`;

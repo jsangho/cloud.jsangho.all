@@ -53,6 +53,7 @@ from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects import body_part
 from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.finisher import moves_for
 from wwe_game.domain.value_objects.match_kind import (
     QUALIFIER_KINDS,
     SIGNATURE_MATCHES,
@@ -441,6 +442,7 @@ def _sequence_for(
             opponent=opponent or "상대",
             won=result is OutcomeKind.WIN,
             finisher=finisher_desk.current(run).name,
+            moves=moves_for(run.identity.play_style),
             major=major,
             roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
         )
