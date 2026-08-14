@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { BeltBanner, BeltList, BrandLogo, beltName } from "@/components/career-belt";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BeltBanner, BeltList, BeltPhoto, BrandLogo, beltName } from "@/components/career-belt";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
@@ -122,6 +122,46 @@ const PLAY_STYLES = [
  *
  * 이 셋이면 '다음' 버튼이 '경기 시작'으로 바뀐다 — 프로모·결장은 링에 서지 않는다.
  */
+/**
+ * 경기 규칙 한 줄 (§3-D81-5, 2026-08-14 사용자 요청).
+ *
+ * **도메인이 아니라 여기 둔다.** 백엔드가 가진 것은 `label`(이름)과 `field`(인원)이고
+ * 그 둘은 판정에 쓰인다 — 규칙 설명은 읽을 사람을 위한 문장이라 `RESULT_LABELS`·
+ * `NEWS_KINDS`와 같은 자리다.
+ *
+ * 표에 없는 종류는 설명이 안 뜬다. 새 경기가 생겨도 화면이 비지 않는다.
+ */
+const MATCH_RULES: Record<string, string> = {
+  singles: "핀폴 또는 서브미션으로 승부가 난다.",
+  triple_threat: "셋이 동시에 싸운다. 누구를 눕히든 이긴 사람이 임자다.",
+  fatal_four_way: "넷이 동시에. 태그도 순서도 없다.",
+  tag: "두 명씩 팀을 이룬다. 링 안에는 한 명씩만.",
+  battle_royal: "로프 너머로 두 발이 바닥에 닿으면 탈락이다.",
+  chamber: "쇠창살 안, 포드가 하나씩 열린다. 마지막 한 명이 이긴다.",
+  ladder: "사다리를 세워 위에 걸린 것을 먼저 잡는 쪽이 가져간다.",
+  wargames: "두 링을 감싼 철창. 한 명씩 들어와 마지막에 승부를 낸다.",
+  survivor_elimination: "5 대 5. 탈락으로만 줄어들고, 남은 팀이 이긴다.",
+  speed: "3분. 시간이 다하면 그대로 끝난다.",
+  sudden_death: "먼저 한 번 잡는 쪽이 끝낸다.",
+  street_fight: "링 밖도 경기장이다. 반칙이 없다.",
+  steel_cage: "철창을 넘거나 문으로 나가도 이긴다.",
+  no_dq: "실격이 없다. 무엇을 들고 와도 된다.",
+  no_holds_barred: "금지된 기술이 없다.",
+  extreme_rules: "규칙 자체가 없다. 링 안팎이 전부 무대다.",
+  unsanctioned: "단체가 승인하지 않은 경기. 아무도 말리지 않는다.",
+  hell_in_a_cell: "링과 바깥을 통째로 덮는 철창. 나갈 곳이 없다.",
+  tlc: "테이블·사다리·의자가 링에 놓인 채 시작한다.",
+  tables: "상대를 테이블에 꽂아야 끝난다.",
+  last_man_standing: "쓰러진 뒤 열을 셀 때까지 못 일어나면 진다.",
+  submission_match: "항복을 받아야만 끝난다. 핀폴은 없다.",
+  iron_man: "정해진 시간 동안 더 많이 잡은 쪽이 이긴다.",
+  two_out_of_three_falls: "먼저 두 번을 잡아야 한다.",
+  i_quit: '상대가 "그만"이라고 말해야 끝난다.',
+  handicap: "수가 맞지 않는다. 혼자 여럿을 상대한다.",
+  gauntlet: "한 명을 이기면 다음 사람이 들어온다.",
+  lumberjack: "링 밖을 선수들이 둘러싼다. 도망갈 곳이 없다.",
+};
+
 const MATCH_KINDS = new Set(["weekly_show", "ple", "special"]);
 
 const BRAND_LABELS: Record<string, string> = {
@@ -1233,7 +1273,14 @@ export default function CareerPage() {
        * **라이브 경기** (§3-D81-2) — 그 밤을 지나가는 화면. 끝나면 닫히고 원래
        * 자리로 돌아온다. 화면 위에 얹으므로 뒤의 탭 상태는 그대로 남는다.
        */}
-      {live && <LiveMatch week={live} player={view.name} onClose={() => setLive(null)} />}
+      {live && (
+        <LiveMatch
+          week={live}
+          player={view.name}
+          brand={view.brand}
+          onClose={() => setLive(null)}
+        />
+      )}
       {/*
        * **머리를 세 층으로 나눴다** (2026-08-13, 매니저 게임 화면 참조).
        *
@@ -2044,13 +2091,28 @@ export default function CareerPage() {
 function LiveMatch({
   week,
   player,
+  brand,
   onClose,
 }: {
   week: CareerWeek;
   player: string;
+  /** 내 소속 — 주간 경기의 입장 화면이 대회 이름 대신 이걸 세운다 (§3-D81-5). */
+  brand: string;
   onClose: () => void;
 }) {
-  const beats = week.beats ?? [];
+  /**
+   * **`useMemo`로 고정한다.** `week.beats ?? []`는 매 렌더 새 배열이라 아래 타이머
+   * effect의 의존성이 매번 바뀐다 — 그러면 비트가 열릴 때마다 타이머가 새로 걸려
+   * 완급(§3-D81-4)이 어긋난다.
+   */
+  const beats = useMemo(() => week.beats ?? [], [week.beats]);
+  /**
+   * **공이 울리기 전에 한 화면이 있다** (§3-D81-5, 2026-08-14 사용자 요청).
+   *
+   * 누르자마자 경기가 시작되면 누가 누구와 왜 붙는지가 지나간다. 입장 →
+   * 소개 → 링 더 벨 순서를 밟아야 그 밤이 시작되는 느낌이 난다.
+   */
+  const [rung, setRung] = useState(false);
   const [shown, setShown] = useState(1);
   const [speed, setSpeed] = useState(1);
   const played = shown >= beats.length;
@@ -2065,26 +2127,105 @@ function LiveMatch({
    * 니어폴과 피니셔는 오래 머문다 — 전부 같은 간격이면 슬라이드쇼가 된다.
    */
   useEffect(() => {
-    if (played) return;
+    if (!rung || played) return;
     const kind = beats[shown - 1]?.kind;
     const hold =
       kind === "finisher" ? 2000 : kind === "nearfall" ? 1500 : kind === "reversal" ? 1200 : 800;
     const timer = setTimeout(() => setShown((n) => n + 1), hold / speed);
     return () => clearTimeout(timer);
-  }, [shown, speed, played, beats]);
+  }, [rung, shown, speed, played, beats]);
 
   // 다 지나가면 잠깐 뒤 결과창으로 넘어간다. 바로 바꾸면 마지막 장면이 안 보인다.
   useEffect(() => {
-    if (!played || showResult) return;
+    if (!rung || !played || showResult) return;
     const timer = setTimeout(() => setShowResult(true), 900 / speed);
     return () => clearTimeout(timer);
-  }, [played, showResult, speed]);
+  }, [rung, played, showResult, speed]);
 
   // 흐름은 마지막으로 열린 비트가 정한다 — 아직 안 열린 비트를 보면 결말이 샌다.
   const current = beats[Math.min(shown, beats.length) - 1];
   const momentum = current?.momentum ?? 50;
   const opponent = week.opponent ?? "상대";
   const won = week.result === "win";
+
+  /**
+   * ── 입장 화면 (§3-D81-5) ──
+   *
+   * 양쪽에서 한 명씩 등장하고, 가운데에 걸린 것(벨트 또는 브랜드)이 뜨고, 언제
+   * 어디인지와 규칙을 읽은 뒤 **링 더 벨**로 시작한다.
+   */
+  if (!rung) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
+        <div className="w-full max-w-2xl overflow-hidden rounded-lg bg-card p-6 ring-1 ring-brand-400/40 ring-inset">
+          {/* 가운데 걸린 것 — 타이틀전이면 벨트, 아니면 브랜드다. */}
+          <div className="flex justify-center">
+            {week.titleAtStake ? (
+              <BeltPhoto code={week.titleAtStake} width={220} />
+            ) : (
+              <BrandLogo brand={brand} width={120} />
+            )}
+          </div>
+
+          {/* 언제·어디 — 대회면 이름, 주간이면 브랜드다. */}
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            {week.year}년차 {week.month}월 {week.weekOfMonth}주 ·{" "}
+            <span className="text-brand-link">{week.show ?? BRAND_LABELS[brand] ?? brand}</span>
+          </p>
+
+          {/* 양쪽에서 한 명씩 — 등장 연출은 좌우에서 밀려 들어온다. */}
+          <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <p className="career-enter-left text-right font-sport text-xl sm:text-2xl">{player}</p>
+            <p className="font-sport text-lg text-muted-foreground">VS</p>
+            <p className="career-enter-right font-sport text-xl text-muted-foreground sm:text-2xl">
+              {opponent}
+            </p>
+          </div>
+
+          {/* 규칙 — 무슨 경기인지 알고 들어가야 한다. */}
+          <div className="mt-6 rounded-[6px] bg-background p-3 text-center">
+            <p className="font-sport text-sm">
+              {week.matchLabel ?? "싱글 매치"}
+              {week.matchField > 2 && (
+                <span className="ml-2 text-xs text-muted-foreground">{week.matchField}인</span>
+              )}
+            </p>
+            {week.matchKind && MATCH_RULES[week.matchKind] && (
+              <p className="mt-1 text-xs text-muted-foreground">{MATCH_RULES[week.matchKind]}</p>
+            )}
+          </div>
+
+          <Button type="button" className="mt-6 w-full" onClick={() => setRung(true)}>
+            링 더 벨
+          </Button>
+          {/*
+           * **즉시 결과 보기** (2026-08-14 사용자 요청). 서른 해를 도는 게임이라
+           * 매 경기를 다 볼 수는 없다 — 벨을 울리지 않고 결과만 받는 길을 둔다.
+           * 판정은 이미 끝나 있으므로(§3-D4) 건너뛰어도 결과가 같다.
+           */}
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 w-full"
+            onClick={() => {
+              setRung(true);
+              setShown(beats.length);
+              setShowResult(true);
+            }}
+          >
+            즉시 결과 보기
+          </Button>
+          <button
+            type="button"
+            className="mt-2 w-full text-xs text-muted-foreground underline"
+            onClick={onClose}
+          >
+            그만 보기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
