@@ -607,6 +607,46 @@
     animation: wwe-live-pulse 1.6s ease-in-out infinite;
   }
 
+  /* 입장 연출 (§3-D81-5) — 경기 전 화면에서 두 선수가 양쪽에서 들어온다.
+     DESIGN.md §15의 "모션은 기능적이고 빠르게"를 지킨다: 한 번만 재생되고,
+     `prefers-reduced-motion`에서는 바로 아래 미디어 쿼리가 통째로 지운다. */
+  @media (prefers-reduced-motion: reduce) {
+    .career-enter-left,
+    .career-enter-right {
+      animation: none !important;
+    }
+  }
+
+  .career-enter-left {
+    animation: career-enter-left 600ms cubic-bezier(0.2, 0.6, 0.25, 1);
+  }
+
+  .career-enter-right {
+    animation: career-enter-right 600ms cubic-bezier(0.2, 0.6, 0.25, 1);
+  }
+
+  @keyframes career-enter-left {
+    from {
+      opacity: 0;
+      transform: translateX(-28px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes career-enter-right {
+    from {
+      opacity: 0;
+      transform: translateX(28px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   /* LIVE 맥박은 DESIGN.md §15의 유일한 모션 예외다 — 장식이 아니라 상태 정보다.
      레드는 --live 토큰 하나로 통일한다 (기존 #ef4444 → #e02020). */
   @keyframes wwe-live-pulse {
