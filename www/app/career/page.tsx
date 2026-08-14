@@ -116,6 +116,13 @@ const PLAY_STYLES = [
   ["underdog", "언더독"],
 ] as const;
 
+/** 브랜드 코드 → 화면 이름. 시작 화면과 프로필이 함께 읽는다. */
+const BRAND_LABELS: Record<string, string> = {
+  raw: "RAW",
+  smackdown: "스맥다운",
+  nxt: "NXT",
+};
+
 const RESULT_LABELS: Record<string, string> = {
   win: "승",
   loss: "패",
@@ -302,6 +309,14 @@ const NO_WEEKS: CareerWeek[] = [];
 /** 화면이 가질 수 있는 상태. 불가능한 조합을 타입에서 지운다. */
 type Screen =
   | { phase: "loading" }
+  /**
+   * **시작 화면** (2026-08-14 사용자 요청). 세이브가 있으면 바로 이어하지 않고
+   * 여기서 멈춘다 — 무엇이 저장돼 있는지 보고 **이어할지 지울지**를 고른다.
+   *
+   * 예전에는 세이브가 있으면 곧장 플레이 화면으로 갔다. 그러면 지난 커리어를
+   * 정리하고 새로 시작할 길이 화면 어디에도 없었다.
+   */
+  | { phase: "start"; advance: CareerAdvance; state: GuestRunState | null }
   | { phase: "create"; error?: string }
   | { phase: "detail"; error?: string }
   | { phase: "play"; advance: CareerAdvance; state: GuestRunState | null; busy: boolean };
@@ -415,6 +430,8 @@ export default function CareerPage() {
    * 서른 해를 다 펴 두면 일정 첫 화면이 1560줄이 된다.
    */
   const [openYears, setOpenYears] = useState<Record<number, boolean>>({});
+  /** 삭제 버튼이 한 번 눌렸는가 (2026-08-14). **두 번 눌러야 지워진다.** */
+  const [wipeArmed, setWipeArmed] = useState(false);
   /**
    * **이어할 커리어가 있는데 못 읽었다** (2026-08-13 사용자 신고).
    *
@@ -470,11 +487,7 @@ export default function CareerPage() {
       readCurrentRun()
         .then((found) => {
           if (!alive) return;
-          setScreen(
-            found
-              ? { phase: "play", advance: found, state: null, busy: false }
-              : { phase: "create" },
-          );
+          setScreen(found ? { phase: "start", advance: found, state: null } : { phase: "create" });
         })
         .catch(() => {
           if (!alive) return;
@@ -499,7 +512,7 @@ export default function CareerPage() {
         writeGuestSave(next.state);
         // 재개는 진행하지 않으므로 `weeks`가 비어서 온다 — 지나온 해는 여기서만 돌아온다.
         setHistory(readGuestLog(next.run.week));
-        setScreen({ phase: "play", advance: next, state: next.state, busy: false });
+        setScreen({ phase: "start", advance: next, state: next.state });
       })
       .catch(() => {
         // **세이브를 지우지 않는다** (2026-08-13). 예전에는 여기서 버렸는데,
@@ -734,6 +747,101 @@ export default function CareerPage() {
     return (
       <main className="mx-auto w-full max-w-3xl px-4 py-10 text-muted-foreground">
         불러오는 중…
+      </main>
+    );
+  }
+
+  /**
+   * 시작 화면 (2026-08-14 사용자 요청).
+   *
+   * **세이브가 있으면 곧장 이어하지 않는다.** 무엇이 저장돼 있는지 한 화면에 세우고
+   * 이어할지 지울지를 고르게 한다 — 예전에는 지난 커리어를 정리하고 새로 시작할
+   * 길이 화면 어디에도 없었다.
+   */
+  if (screen.phase === "start") {
+    const save = screen.advance.run;
+    const guest = screen.state !== null;
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <h1 className="font-sport text-2xl">커리어 시뮬레이터</h1>
+        <p className="mt-1 text-sm text-muted-foreground">이어할 커리어가 있습니다.</p>
+
+        <section className="mt-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/40 ring-inset">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="font-sport text-xl">{save.name}</span>
+            <span className="text-sm text-muted-foreground">{save.age}세</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {guest ? "이 브라우저에 저장됨" : "계정에 저장됨"}
+            </span>
+          </div>
+
+          {/* 저장된 것이 무엇인지 — 숫자를 늘어놓지 않고 읽을 수 있는 만큼만. */}
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+            <SaveFact label="진행" value={`${save.year}년차 ${save.week}주`} />
+            <SaveFact label="소속" value={BRAND_LABELS[save.brand] ?? save.brand} />
+            <SaveFact label="인기도" value={String(save.stats.popularity)} />
+            <SaveFact
+              label="벨트"
+              value={save.titlesWon.length > 0 ? `${save.titlesWon.length}회 대관` : "없음"}
+            />
+          </dl>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                // **이력은 손대지 않는다.** 위의 재개 효과가 이미 채워 뒀고,
+                // 여기서 비우면 로그인 세이브의 지나온 해가 통째로 사라진다.
+                setScreen({
+                  phase: "play",
+                  advance: screen.advance,
+                  state: screen.state,
+                  busy: false,
+                });
+              }}
+            >
+              이어하기
+            </Button>
+            {/*
+             * **삭제는 두 번 눌러야 한다.** 서른 해가 한 번의 오클릭으로 사라지면
+             * 안 된다 — 세이브는 하나뿐이고(§13-Q4) 되돌릴 길이 없다.
+             */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (!wipeArmed) {
+                  setWipeArmed(true);
+                  return;
+                }
+                if (guest) {
+                  writeGuestSave(null);
+                  writeGuestLog([]);
+                  setHistory([]);
+                  setWipeArmed(false);
+                  setScreen({ phase: "create" });
+                  return;
+                }
+                void retireRun(save.id as number)
+                  .then(() => {
+                    setHistory([]);
+                    setWipeArmed(false);
+                    setScreen({ phase: "create" });
+                  })
+                  .catch(() => setWipeArmed(false));
+              }}
+            >
+              {wipeArmed ? "정말 삭제합니다" : "삭제하고 새로 시작"}
+            </Button>
+          </div>
+          {wipeArmed && (
+            <p className="mt-2 text-xs text-live">
+              한 번 더 누르면 이 커리어는 사라집니다. 되돌릴 수 없습니다.
+            </p>
+          )}
+        </section>
+
+        <p className="mt-8 text-xs text-muted-foreground">이 게임의 전개는 가상입니다.</p>
       </main>
     );
   }
@@ -1532,6 +1640,33 @@ export default function CareerPage() {
 
           {tab === "profile" && !ended && (
             <section className="space-y-5">
+              {/*
+               * **지금 어디에 서 있는가** (2026-08-14 가시성 정리).
+               *
+               * 프로필이 스탯 숫자만 있어 비어 보였다. 계약·벨트·대립은 다른 탭에
+               * 있지만 **"지금 내 상태"는 프로필이 답해야 하는 질문**이라, 각 탭이
+               * 가진 것 중 한 줄짜리 답만 여기 모은다.
+               */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <SaveFact label="소속" value={BRAND_LABELS[view.brand] ?? view.brand} />
+                <SaveFact
+                  label="주급"
+                  value={
+                    view.money?.contract
+                      ? `$${view.money.contract.weeklyPay.toLocaleString("en-US")}`
+                      : "무소속"
+                  }
+                />
+                <SaveFact
+                  label="감은 벨트"
+                  value={view.titlesHeld.length > 0 ? `${view.titlesHeld.length}개` : "없음"}
+                />
+                <SaveFact
+                  label="대립"
+                  value={view.rivalries.length > 0 ? `${view.rivalries.length}건` : "없음"}
+                />
+              </div>
+
               <StatGrid stats={view.stats} />
 
               {/* 지금 붙어 있는 것 — 저주·진통제·매니저 같은 상태 표식. */}
@@ -2504,6 +2639,16 @@ function Side({ name, won }: { name: string; won: boolean }) {
  * 레슬링은 위치가 정보가 아니라 흐름이 정보다. 좌표 대신 이 한 줄이 "지금 누가
  * 우세한가"를 말한다 — 왼쪽이 나, 오른쪽이 상대.
  */
+/** 시작 화면의 세이브 정보 한 칸 (2026-08-14). 라벨 위·값 아래로 세운다. */
+function SaveFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-sport text-base">{value}</dd>
+    </div>
+  );
+}
+
 function MomentumBar({ value, thick = false }: { value: number; thick?: boolean }) {
   const mine = Math.max(0, Math.min(100, value));
   return (
@@ -2902,25 +3047,48 @@ function WeekDelta({ week }: { week: CareerWeek }) {
   );
 }
 
+/**
+ * 스탯 한 벌 (2026-08-14 가시성 정리).
+ *
+ * **카드로 묶는다.** 예전에는 라벨·숫자 쌍이 배경 없이 늘어서 있어 화면이 비어
+ * 보였고, 어디까지가 한 묶음인지도 안 읽혔다. 이제 세 덩어리다 — 이름값 · 몸 ·
+ * 경기력.
+ *
+ * **성향과 마모는 다른 축이다.** 성향은 높고 낮음이 좋고 나쁨이 아니라 방향이고
+ * (선역↔악역), 마모는 **낮을수록 좋다** — 셋을 같은 색으로 칠하면 거짓말이 된다.
+ */
 function StatGrid({ stats }: { stats: CareerStats }) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
-        <Stat label="인기도" value={stats.popularity} />
-        <Stat label="마이크웍" value={stats.micWork} />
-        <Stat label="평판" value={stats.backstage} />
-        <Stat label="성향" value={stats.alignment} />
-        <Stat label="마모" value={stats.wear} />
-      </div>
-      <div>
-        <div className="flex items-baseline justify-between border-b border-stone-300/60 pb-1 text-sm dark:border-stone-700/60">
-          <span>
-            경기력
-            <span className="ml-2 text-xs text-muted-foreground">{stats.playStyleLabel}</span>
-          </span>
-          <span className="font-sport text-lg leading-none">{stats.inRing}</span>
+    <div className="space-y-3">
+      <div className="rounded-lg bg-card p-4">
+        <p className="font-sport text-sm text-muted-foreground">이름값</p>
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+          <Stat label="인기도" value={stats.popularity} />
+          <Stat label="마이크웍" value={stats.micWork} />
+          <Stat label="평판" value={stats.backstage} />
         </div>
-        <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+      </div>
+
+      <div className="rounded-lg bg-card p-4">
+        <p className="font-sport text-sm text-muted-foreground">몸과 결</p>
+        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3">
+          {/* 성향은 방향이지 좋고 나쁨이 아니다 — 중립색으로 둔다. */}
+          <Stat label="성향" value={stats.alignment} tone="neutral" />
+          {/* 마모는 **낮을수록 좋다** — 같은 색으로 칠하면 거짓말이 된다. */}
+          <Stat label="마모" value={stats.wear} tone="bad" />
+        </div>
+      </div>
+
+      <div className="rounded-lg bg-card p-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-sport text-sm text-muted-foreground">
+            경기력
+            <span className="ml-2 text-xs">{stats.playStyleLabel}</span>
+          </p>
+          <span className="font-sport text-2xl leading-none tabular-nums">{stats.inRing}</span>
+        </div>
+        {/* 속의 네 축 — 경기력 하나를 스타일 비율로 나눈 파생값이다 (§3-D29). */}
+        <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           {stats.skills.map((skill) => (
             <Stat key={skill.name} label={skill.name} value={skill.value} />
           ))}
@@ -2930,11 +3098,41 @@ function StatGrid({ stats }: { stats: CareerStats }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+/**
+ * 스탯 한 칸 — **막대가 함께 선다** (2026-08-14 가시성 정리).
+ *
+ * 라벨과 숫자만 늘어놓으면 화면이 비어 보이고, 무엇보다 **12가 높은 값인지 낮은
+ * 값인지를 읽을 수가 없다.** 0~100 안에서 어디쯤인지가 막대 하나로 보인다.
+ *
+ * `tone`은 그 축의 성격이다 — 마모처럼 **낮을수록 좋은 축**은 색이 반대여야 한다.
+ */
+function Stat({
+  label,
+  value,
+  tone = "good",
+}: {
+  label: string;
+  value: number;
+  tone?: "good" | "bad" | "neutral";
+}) {
+  const pct = Math.max(0, Math.min(100, value));
   return (
-    <p className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
-    </p>
+    <div className="min-w-0">
+      <p className="flex items-baseline justify-between gap-2">
+        <span className="truncate text-xs text-muted-foreground">{label}</span>
+        <span className="font-sport text-sm tabular-nums">{value}</span>
+      </p>
+      <span className="mt-1 flex h-1 w-full overflow-hidden rounded-full bg-stone-400/35 dark:bg-stone-600/45">
+        <span
+          className={cn(
+            "transition-all duration-[200ms]",
+            tone === "bad" && "bg-live/70",
+            tone === "good" && "bg-brand-400",
+            tone === "neutral" && "bg-stone-400 dark:bg-stone-500",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+    </div>
   );
 }
