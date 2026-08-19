@@ -14,6 +14,8 @@ import {
   callOutGuestRival,
   callOutRival,
   changeFinisher,
+  buyGuestSignature,
+  buySignature,
   changeGuestFinisher,
   cashInBriefcase,
   cashInGuestBriefcase,
@@ -508,6 +510,9 @@ export default function CareerPage() {
    */
   const [finisherMode, setFinisherMode] = useState<"list" | "custom" | null>(null);
   const [finisherName, setFinisherName] = useState("");
+  /** 지금 이름을 새기고 있는 시그니처 칸 (§3-D92). `null`이면 닫혀 있다. */
+  const [signatureSlot, setSignatureSlot] = useState<number | null>(null);
+  const [signatureName, setSignatureName] = useState("");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
@@ -794,6 +799,20 @@ export default function CareerPage() {
     // 성공하면 쿨다운이 걸려 `canChange`가 거짓이 되고, 그때 화면이 저절로 접힌다.
     void act(() =>
       state ? changeGuestFinisher(state, pick) : changeFinisher(run.run.id as number, pick),
+    );
+  }
+
+  /**
+   * 시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+   *
+   * **여기서 입력을 닫지 않는다** — `act`가 실패를 삼키므로, 잔액이 모자라 409가
+   * 났을 때도 닫으면 사용자가 쓴 이름이 사라진다(피니셔와 같은 이유).
+   */
+  function handleSignature(what: { slot?: number; name?: string; buy?: boolean; drop?: boolean }) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() =>
+      state ? buyGuestSignature(state, what) : buySignature(run.run.id as number, what),
     );
   }
 
@@ -1267,6 +1286,8 @@ export default function CareerPage() {
   const callOut = view.callOut ?? null;
   /** 지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다. */
   const finisher = view.finisher ?? null;
+  /** 산 시그니처 칸과 값 (§3-D92). **늘 있다** — 기본 한 칸이다. */
+  const signature = view.signature ?? null;
 
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
@@ -1572,6 +1593,108 @@ export default function CareerPage() {
             </div>
           )}
           {/*
+           * **시그니처** (§3-D92) — 이름은 돈으로 산다.
+           *
+           * 칸과 이름은 다른 구매다: 칸은 자리이고 이름은 그 위의 글자다. 이름이
+           * 없는 칸도 경기에는 나오지만(계열 기술 · §3-D91) 그건 *내* 기술이 아니다.
+           */}
+          {signature && (
+            <div className="mt-3 rounded-[6px] bg-background p-3">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-sport text-base">시그니처</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {signature.slots.length}/{signature.maxSlots}칸 · 잔액 $
+                  {signature.money.toLocaleString("en-US")}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                이름을 새긴 칸은 경기에서 그 이름으로 불립니다. 칸이 많을수록 자주 나옵니다.
+              </p>
+
+              <ul className="mt-2 space-y-1.5">
+                {signature.slots.map((slot) => (
+                  <li key={slot.index} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span
+                      className={cn(
+                        "text-sm",
+                        slot.name ? "font-sport" : "text-xs text-muted-foreground",
+                      )}
+                    >
+                      {slot.index + 1}. {slot.name || "이름 없음 — 계열 기술로 나갑니다"}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy || signature.money < signature.namingCost}
+                      onClick={() => {
+                        setSignatureSlot(slot.index);
+                        setSignatureName(slot.name);
+                      }}
+                      className="rounded-[3px] bg-card px-2 py-1 text-xs transition-colors hover:bg-brand-400/15 disabled:opacity-50"
+                    >
+                      {slot.name ? "다시 짓기" : "이름 짓기"} · $
+                      {signature.namingCost.toLocaleString("en-US")}
+                    </button>
+                    {slot.name && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSignature({ slot: slot.index, drop: true })}
+                        className="text-xs text-muted-foreground underline disabled:opacity-50"
+                      >
+                        지우기
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {signatureSlot !== null && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    value={signatureName}
+                    maxLength={signature.nameMax}
+                    placeholder={`${signature.nameMin}~${signature.nameMax}자`}
+                    onChange={(event) => setSignatureName(event.target.value)}
+                    className="h-8 flex-1 rounded-[6px] bg-card px-2 text-sm outline-none ring-1 ring-brand-400/35 ring-inset"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy || signatureName.trim().length < signature.nameMin}
+                    onClick={() => handleSignature({ slot: signatureSlot, name: signatureName })}
+                  >
+                    ${signature.namingCost.toLocaleString("en-US")} 내고 새기기
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline"
+                    onClick={() => setSignatureSlot(null)}
+                  >
+                    그만두기
+                  </button>
+                </div>
+              )}
+
+              {/* 칸 늘리기 — 다 열었으면 값이 안 온다(§3-D92). */}
+              {signature.expandCost !== null && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy || signature.money < signature.expandCost}
+                    onClick={() => handleSignature({ buy: true })}
+                  >
+                    칸 늘리기 · ${signature.expandCost.toLocaleString("en-US")}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    칸이 늘면 경기에서 시그니처가 나올 확률이 오릅니다.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          {/*
            * **시비 걸기** (§3-D86) — 대립 두 갈래 중 내가 여는 쪽이다.
            * 상대가 걸어오는 쪽은 규칙이 굴리고, 대립 탭이 둘을 구분해 말한다.
            */}
@@ -1652,6 +1775,16 @@ export default function CareerPage() {
       {offerOptions.length > 0 && (
         <section className="mb-6 rounded-lg bg-card p-4 ring-1 ring-brand-400/50 ring-inset">
           <h2 className="font-sport text-lg">계약이 끝났다 — 다시 앉는다</h2>
+          {/*
+           * **누구와 마주 앉는가** (§3-D93 규칙 2, 2026-08-19 사용자 요청).
+           * 회장은 이 자리에 안 나온다 — 계약서를 사이에 두는 것은 인재 담당 쪽이다.
+           */}
+          {view.negotiator && (
+            <p className="mt-1 text-xs">
+              <span className="text-brand-link">{view.negotiator.name}</span>
+              <span className="ml-2 text-muted-foreground">{view.negotiator.title}</span>
+            </p>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">
             {view.money && (
               <>
@@ -2082,8 +2215,17 @@ export default function CareerPage() {
 
                               {openNews === item.week + item.headline && (
                                 <div className="mt-2 border-l-2 border-brand-400/30 pl-3">
-                                  {item.outlet && (
-                                    <p className="text-xs text-brand-link">{item.outlet}</p>
+                                  {(item.outlet || item.byline) && (
+                                    <p className="text-xs text-brand-link">
+                                      {item.outlet}
+                                      {/* **누가 물었는지가 남는다** (§3-D93 규칙 5) —
+                                          백스테이지 인터뷰어가 곧 기자다. */}
+                                      {item.byline && (
+                                        <span className="ml-2 text-muted-foreground">
+                                          취재 {item.byline}
+                                        </span>
+                                      )}
+                                    </p>
                                   )}
                                   {/* 본문은 빈 줄로 문단이 나뉜다 — 그대로 세운다. */}
                                   {(item.body ?? "").split("\n\n").map((para, i) => (
@@ -2094,6 +2236,12 @@ export default function CareerPage() {
                                       {para}
                                     </p>
                                   ))}
+                                  {/* 링 밖의 누군가가 그 일에 대해 한 말 (§3-D93). */}
+                                  {item.quote && (
+                                    <p className="mt-2 border-l-2 border-brand-400/40 pl-2 text-xs italic">
+                                      {item.quote}
+                                    </p>
+                                  )}
                                   {item.comments && item.comments.length > 0 && (
                                     <>
                                       <p className="mt-3 text-xs text-muted-foreground">
@@ -2196,6 +2344,17 @@ function LiveMatch({
    * 소개 → 링 더 벨 순서를 밟아야 그 밤이 시작되는 느낌이 난다.
    */
   const [rung, setRung] = useState(false);
+  /** 링 밖의 사람들 (§3-D93). 경기 주차에만 온다. */
+  const crew = week.crew ?? null;
+  /**
+   * **챔피언십은 소개가 먼저다** (§3-D93 규칙 4, 2026-08-19 사용자 요청).
+   *
+   * 링 아나운서가 도전자와 챔피언을 부르고 나서 공이 울린다. 벨트가 안 걸린 밤에는
+   * 아나운서가 오지 않으므로(백엔드가 그때만 채운다) 이 단계가 통째로 없다.
+   */
+  const announcer = week.titleAtStake ? (crew?.ringAnnouncer ?? "") : "";
+  const [called, setCalled] = useState(0);
+  const introDone = !announcer || called >= 2;
   const [shown, setShown] = useState(1);
   const [speed, setSpeed] = useState(1);
   const played = shown >= beats.length;
@@ -2210,13 +2369,29 @@ function LiveMatch({
    * 니어폴과 피니셔는 오래 머문다 — 전부 같은 간격이면 슬라이드쇼가 된다.
    */
   useEffect(() => {
-    if (!rung || played) return;
+    if (!rung || !introDone || played) return;
     const kind = beats[shown - 1]?.kind;
     const hold =
-      kind === "finisher" ? 2000 : kind === "nearfall" ? 1500 : kind === "reversal" ? 1200 : 800;
+      kind === "finisher"
+        ? 2000
+        : // 시그니처는 니어폴만큼 머문다 — 그 뒤가 고비다 (§3-D91).
+          kind === "signature"
+          ? 1500
+          : kind === "nearfall"
+            ? 1500
+            : kind === "reversal"
+              ? 1200
+              : 800;
     const timer = setTimeout(() => setShown((n) => n + 1), hold / speed);
     return () => clearTimeout(timer);
-  }, [rung, shown, speed, played, beats]);
+  }, [rung, introDone, shown, speed, played, beats]);
+
+  /** 소개는 한 줄씩 열린다 — 도전자 먼저, 챔피언 나중 (§3-D93 규칙 4). */
+  useEffect(() => {
+    if (!rung || introDone) return;
+    const timer = setTimeout(() => setCalled((n) => n + 1), 1600 / speed);
+    return () => clearTimeout(timer);
+  }, [rung, introDone, called, speed]);
 
   // 다 지나가면 잠깐 뒤 결과창으로 넘어간다. 바로 바꾸면 마지막 장면이 안 보인다.
   useEffect(() => {
@@ -2232,6 +2407,47 @@ function LiveMatch({
   const won = week.result === "win";
   // 여럿이 붙는 경기인가 — 마지막 줄이 "우승"이냐 "승리"냐를 가른다.
   const manyIn = week.eliminationMatch === true || week.matchField > 2;
+
+  /**
+   * ── 링 아나운서 소개 (§3-D93 규칙 4) ──
+   *
+   * **챔피언십에만 선다.** 공을 울린 뒤 도전자와 챔피언이 한 줄씩 불리고, 그 뒤에
+   * 경기가 이어진다 — 벨트가 걸린 밤이 다른 밤과 같은 속도로 시작하면 안 된다.
+   *
+   * 누가 챔피언인지는 `titleDefended`가 안다: 참이면 **내가 벨트를 들고 나선 경기**다
+   * (백엔드가 경기 전 상태로 정한다).
+   */
+  if (rung && !introDone) {
+    const champion = week.titleDefended ? player : opponent;
+    const challenger = week.titleDefended ? opponent : player;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+        <div className="w-full max-w-2xl rounded-lg bg-card p-6 text-center ring-1 ring-brand-400/40 ring-inset">
+          <p className="text-xs text-muted-foreground">
+            링 아나운서 <span className="text-brand-link">{announcer}</span>
+          </p>
+          <p className="mt-3 font-sport text-sm text-muted-foreground">
+            {week.titleAtStake ? beltName(week.titleAtStake) : "타이틀"} 매치
+          </p>
+          <p className="mt-6 text-xs text-muted-foreground">도전자</p>
+          <p className="font-sport text-2xl">{challenger}</p>
+          {called >= 1 && (
+            <>
+              <p className="mt-4 text-xs text-muted-foreground">그리고 챔피언</p>
+              <p className="font-sport text-2xl text-brand-link">{champion}</p>
+            </>
+          )}
+          <button
+            type="button"
+            className="mt-6 text-xs text-muted-foreground underline"
+            onClick={() => setCalled(2)}
+          >
+            소개 건너뛰기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /**
    * ── 입장 화면 (§3-D81-5) ──
@@ -2258,13 +2474,24 @@ function LiveMatch({
             <span className="text-brand-link">{week.show ?? BRAND_LABELS[brand] ?? brand}</span>
           </p>
 
-          {/* 양쪽에서 한 명씩 — 등장 연출은 좌우에서 밀려 들어온다. */}
+          {/*
+           * 양쪽에서 한 명씩 — 등장 연출은 좌우에서 밀려 들어온다.
+           * **매니저는 이름 아래 `w/`로 붙는다** (§3-D93 규칙 7).
+           */}
           <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <p className="career-enter-left text-right font-sport text-xl sm:text-2xl">{player}</p>
+            <div className="career-enter-left text-right">
+              <p className="font-sport text-xl sm:text-2xl">{player}</p>
+              {crew?.playerManager && (
+                <p className="text-xs text-muted-foreground">w/ {crew.playerManager}</p>
+              )}
+            </div>
             <p className="font-sport text-lg text-muted-foreground">VS</p>
-            <p className="career-enter-right font-sport text-xl text-muted-foreground sm:text-2xl">
-              {opponent}
-            </p>
+            <div className="career-enter-right">
+              <p className="font-sport text-xl text-muted-foreground sm:text-2xl">{opponent}</p>
+              {crew?.rivalManager && (
+                <p className="text-xs text-muted-foreground">w/ {crew.rivalManager}</p>
+              )}
+            </div>
           </div>
 
           {/* 규칙 — 무슨 경기인지 알고 들어가야 한다. */}
@@ -2279,6 +2506,33 @@ function LiveMatch({
               <p className="mt-1 text-xs text-muted-foreground">{MATCH_RULES[week.matchKind]}</p>
             )}
           </div>
+
+          {/*
+           * **링 밖의 사람들** (§3-D93). 누가 중계하고 누가 세는지는 그 밤의 정보다 —
+           * 사용자 요청대로 해설과 심판을 경기 전에 기입한다.
+           */}
+          {crew && (
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+              {crew.commentators.length > 0 && (
+                <div className="col-span-2">
+                  <dt className="text-muted-foreground">해설</dt>
+                  <dd>{crew.commentators.join(" · ")}</dd>
+                </div>
+              )}
+              {crew.referee && (
+                <div>
+                  <dt className="text-muted-foreground">심판</dt>
+                  <dd>{crew.referee}</dd>
+                </div>
+              )}
+              {crew.gm && (
+                <div>
+                  <dt className="text-muted-foreground">총괄</dt>
+                  <dd>{crew.gm}</dd>
+                </div>
+              )}
+            </dl>
+          )}
 
           <Button type="button" className="mt-6 w-full" onClick={() => setRung(true)}>
             링 더 벨
@@ -2352,6 +2606,20 @@ function LiveMatch({
             <span className="font-sport text-muted-foreground">{opponent}</span>
           </div>
           <MomentumBar value={momentum} thick />
+          {/*
+           * **해설이 그 순간을 말한다** (§3-D93 규칙 3, 2026-08-19 사용자 요청).
+           *
+           * 문장은 화면 쪽에 둔다 — 경기 규칙 설명(§3-D81-5)과 같은 자리다. 백엔드가
+           * 주는 것은 **누가 중계석에 있는가**이고, 무슨 말을 하는지는 비트가 정한다.
+           */}
+          {crew && crew.commentators.length > 0 && current && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="text-brand-link">
+                {crew.commentators[shown % crew.commentators.length]}
+              </span>{" "}
+              — {commentaryFor(current.kind, current.name === player)}
+            </p>
+          )}
         </div>
 
         {/*
@@ -2380,6 +2648,9 @@ function LiveMatch({
                     beat.kind === "finisher" && "font-sport text-brand-link",
                     beat.kind === "finisher" && now && "text-2xl",
                     beat.kind === "nearfall" && now && "text-live",
+                    // 시그니처는 피니셔 아래·평범한 수 위의 무게다 (§3-D91).
+                    beat.kind === "signature" && "font-sport",
+                    beat.kind === "signature" && now && "text-xl text-brand-link",
                   )}
                 >
                   {beatLine(beat, manyIn)}
@@ -2994,6 +3265,29 @@ function Side({ name, won }: { name: string; won: boolean }) {
   );
 }
 
+/**
+ * 해설 한 줄 (§3-D93 규칙 3).
+ *
+ * **문장은 화면의 것이다.** 백엔드가 주는 것은 중계석에 누가 앉아 있는가이고, 무슨
+ * 말을 하는지는 비트 종류가 정한다 — `MATCH_RULES`(경기 규칙 설명)와 같은 자리다.
+ *
+ * `mine`은 그 수를 낸 쪽이 나인가다. 같은 니어폴이라도 내가 덮은 것과 당한 것은
+ * 중계석에서 다른 소리로 나온다.
+ */
+function commentaryFor(kind: CareerBeat["kind"], mine: boolean): string {
+  if (kind === "signature") {
+    return mine ? "나왔습니다, 저 기술!" : "상대의 시그니처가 터졌습니다!";
+  }
+  if (kind === "nearfall") {
+    return mine ? "카운트 투! 여기서 끝나나요?" : "위험합니다, 어깨를 들어야 합니다!";
+  }
+  if (kind === "kickout") return "킥아웃! 아직 끝나지 않았습니다.";
+  if (kind === "reversal") return "받아넘겼습니다! 흐름이 뒤집힙니다.";
+  if (kind === "finisher") return "피니셔입니다! 이건 끝입니다.";
+  if (kind === "win") return "경기 끝났습니다.";
+  return mine ? "좋은 연결입니다." : "상대가 주도권을 잡습니다.";
+}
+
 /** 입장과 탈락을 순서대로. **내 줄만 굵다** — 서른 줄에서 나를 찾는 것이 이 화면의 일이다. */
 /**
  * 흐름 한 칸 (§3-D81) — **줄다리기 바**다.
@@ -3054,6 +3348,7 @@ function BeatList({
               className={cn(
                 mine ? "font-semibold text-foreground" : "text-muted-foreground",
                 beat.kind === "finisher" && "text-brand-link",
+                beat.kind === "signature" && "font-sport",
               )}
             >
               {beatLine(beat, manyIn)}
@@ -3092,6 +3387,13 @@ function beatLine(beat: CareerBeat, manyIn = false): string {
     return beat.by
       ? `${beat.name}${josa(beat.name, "이", "가")} ${beat.by}로 받아넘겼다!`
       : `${beat.name}${josa(beat.name, "이", "가")} 받아넘겼다 — 흐름이 뒤집혔다`;
+  }
+  if (beat.kind === "signature") {
+    // **시그니처는 이름을 부른다** (§3-D91). 평범한 한 수와 같은 문장으로 적으면
+    // 그 사람의 기술이 나왔다는 것이 안 읽힌다.
+    return beat.by
+      ? `${beat.name} — ${beat.by}! 시그니처가 나왔다`
+      : `${beat.name}${josa(beat.name, "이", "가")} 시그니처를 꺼냈다`;
   }
   if (beat.kind === "nearfall") {
     return `${beat.name}${josa(beat.name, "이", "가")} 커버 — 투 카운트!`;

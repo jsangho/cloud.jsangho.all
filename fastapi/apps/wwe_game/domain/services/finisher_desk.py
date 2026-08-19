@@ -22,7 +22,8 @@ from __future__ import annotations
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun
-from wwe_game.domain.exceptions import CannotChangeFinisherError
+from wwe_game.domain.exceptions import CannotChangeFinisherError, CannotNameError
+from wwe_game.domain.services import signature_desk
 from wwe_game.domain.value_objects.finisher import (
     CUSTOM_CODE,
     Finisher,
@@ -123,19 +124,26 @@ def pick(run: CareerRun, code: str) -> CareerRun:
 
 
 def name_it(run: CareerRun, name: str) -> CareerRun:
-    """이름을 직접 짓는다 (§3-D88).
+    """이름을 직접 짓는다 (§3-D88) — **값을 치른다** (§3-D92).
 
     검증은 값 객체(`finisher.custom`)가 한다 — 링네임과 같은 자리다(§3-D12).
+
+    **목록에서 고르는 `pick`은 여전히 공짜다.** 돈이 사는 것은 기술이 아니라 이름이고,
+    전부 유료로 두면 가난한 구간에 §3-D88이 연 자리가 통째로 닫힌다.
     """
     _require_changeable(run)
     named = custom(name)
     if named.name == current(run).name:
         raise CannotChangeFinisherError("이미 그 이름을 쓰고 있습니다.")
+    cost = signature_desk.FINISHER_NAMING
+    if not signature_desk.can_afford(run, cost):
+        raise CannotNameError(f"잔액이 모자랍니다 — ${cost:,}가 필요합니다.")
     return run.evolve(
         finisher=CUSTOM_CODE,
         finisher_name=named.name,
         finisher_week=run.week,
         finisher_ask_week=run.week + HOLD_QUARTER,
+        money=run.money - cost,
     )
 
 

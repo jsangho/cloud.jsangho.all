@@ -35,11 +35,13 @@ from wwe_game.app.dtos.career_dto import (
     GuestCashInCommand,
     GuestChangeFinisherCommand,
     GuestChooseCommand,
+    GuestNameSignatureCommand,
     GuestReportCommand,
     GuestResumeCommand,
     GuestSetGoalCommand,
     GuestStartCommand,
     ModeView,
+    NameSignatureCommand,
     NewsFeedPage,
     PendingEventView,
     PresetView,
@@ -76,6 +78,8 @@ from wwe_game.domain.services import (
     rivalry_scene,
     roster_scene,
     show_report,
+    signature_desk,
+    staff_scene,
     team_engine,
     title_news,
 )
@@ -200,6 +204,12 @@ class CareerInteractor(CareerUseCase):
         saved = await self._repository.save(_apply_finisher(run, command))
         return self._view(saved, self._resting_reason(saved))
 
+    async def name_signature(self, command: NameSignatureCommand) -> AdvanceResult:
+        """시그니처 칸을 사거나 이름을 새긴다 (§3-D92)."""
+        run = await self._repository.get(command.run_id, command.user_id)
+        saved = await self._repository.save(_apply_signature(run, command))
+        return self._view(saved, self._resting_reason(saved))
+
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -264,6 +274,8 @@ class CareerInteractor(CareerUseCase):
         scene_news = self._scene_news(run)
         roster_news = self._roster_news(run)
         belt_news = self._belt_news(run)
+        # **회사도 말한다** (§3-D93) — 시즌 개막과 드래프트는 이미 달력에 있는 날이다.
+        notices = staff_scene.announcements(run.seed, run.week)
         items = news_feed.compile_feed(
             pairs,
             team_news,
@@ -272,12 +284,15 @@ class CareerInteractor(CareerUseCase):
             scene_news,
             roster_news,
             belt_news,
+            notices,
         )
         return NewsFeedPage(
             items=items[offset : offset + limit],
             total=len(items),
             offset=offset,
             seed=run.seed,
+            brand=run.brand.value,
+            manager=_manager_of(run),
         )
 
     @staticmethod
@@ -383,6 +398,12 @@ class CareerInteractor(CareerUseCase):
         changed = _apply_finisher(command.run, command)
         return self._view(changed, self._resting_reason(changed))
 
+    def name_guest_signature(self, command: GuestNameSignatureCommand) -> AdvanceResult:
+        """체험판의 시그니처 구매 (§3-D92)."""
+        self._require_guest_mode(command.run.mode.code)
+        changed = _apply_signature(command.run, command)
+        return self._view(changed, self._resting_reason(changed))
+
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
         """체험판 인박스 (§3-D67). **배경만** — 내 로그가 서버에 없다."""
         self._require_guest_mode(command.run.mode.code)
@@ -394,9 +415,15 @@ class CareerInteractor(CareerUseCase):
             self._scene_news(command.run),
             self._roster_news(command.run),
             self._belt_news(command.run),
+            staff_scene.announcements(command.run.seed, command.run.week),
         )
         return NewsFeedPage(
-            items=items, total=len(items), offset=0, seed=command.run.seed
+            items=items,
+            total=len(items),
+            offset=0,
+            seed=command.run.seed,
+            brand=command.run.brand.value,
+            manager=_manager_of(command.run),
         )
 
     def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
@@ -595,6 +622,29 @@ def _apply_finisher(
     if command.name:
         return finisher_desk.name_it(run, command.name)
     return finisher_desk.pick(run, command.code)
+
+
+def _manager_of(run: CareerRun) -> str:
+    """내 옆에 서는 매니저 (§3-D93 규칙 7). 스테이블에 매니저가 붙어 있으면 그 사람이다."""
+    return staff_scene.manager_of(
+        str(run.identity.name), run.team.name if run.team else ""
+    )
+
+
+def _apply_signature(
+    run: CareerRun, command: NameSignatureCommand | GuestNameSignatureCommand
+) -> CareerRun:
+    """셋 중 하나를 고른다 (§3-D92).
+
+    **칸 사기가 가장 앞이다.** 칸이 없으면 이름을 새길 자리도 없어서, 둘이 함께 오면
+    자리를 먼저 연다. 그다음이 지우기 — 이름이 비어 있는데 지우기가 아니면 답할 것이
+    없기 때문이다.
+    """
+    if command.buy:
+        return signature_desk.expand(run)
+    if command.drop:
+        return signature_desk.drop_slot(run, command.slot)
+    return signature_desk.name_slot(run, command.slot, command.name)
 
 
 _HOLD_WEEKS: dict[str, int] = {

@@ -20,9 +20,10 @@ from wwe_game.domain.constants.career_clock import CAREER_WEEKS
 from wwe_game.domain.entities.career_run import CareerRun
 from wwe_game.domain.exceptions import (
     CannotChangeFinisherError,
+    CannotNameError,
     InvalidFinisherNameError,
 )
-from wwe_game.domain.services import finisher_desk
+from wwe_game.domain.services import finisher_desk, signature_desk
 from wwe_game.domain.value_objects.finisher import (
     CUSTOM_CODE,
     DEFAULT,
@@ -39,6 +40,11 @@ QUARTER = finisher_desk.COOLDOWN_WEEKS
 
 def rookie(week: int = 0) -> CareerRun:
     return make_run(week=week)
+
+
+def funded(week: int = 0) -> CareerRun:
+    """**이름은 돈으로 산다** (§3-D92) — 직접 짓는 갈래를 재려면 잔액이 있어야 한다."""
+    return rookie(week=week).evolve(money=signature_desk.FINISHER_NAMING * 3)
 
 
 class TestEveryoneStartsWithASuplex:
@@ -118,7 +124,9 @@ class TestKeepingWhatYouHave:
         assert not finisher_desk.can_change(held.evolve(week=CAREER_WEEKS - 1))
 
     def test_holding_does_not_touch_the_finisher(self) -> None:
-        run = finisher_desk.pick(rookie(week=QUARTER), finisher_desk.options(rookie())[2].code)
+        run = finisher_desk.pick(
+            rookie(week=QUARTER), finisher_desk.options(rookie())[2].code
+        )
         run = run.evolve(week=QUARTER * 2)
         before = finisher_desk.current(run)
         held = finisher_desk.hold(run, finisher_desk.HOLD_YEAR)
@@ -168,16 +176,35 @@ class TestPickingFromTheList:
             finisher_desk.pick(rookie(week=QUARTER), DEFAULT.code)
 
 
+class TestTheNameCostsMoney:
+    """§3-D92 — **목록에서 고르는 것은 여전히 공짜다.**"""
+
+    def test_naming_takes_the_money(self) -> None:
+        run = funded(week=QUARTER)
+        changed = finisher_desk.name_it(run, "붉은 낙인")
+        assert changed.money == run.money - signature_desk.FINISHER_NAMING
+
+    def test_an_empty_wallet_cannot_name(self) -> None:
+        with pytest.raises(CannotNameError):
+            finisher_desk.name_it(rookie(week=QUARTER).evolve(money=0), "붉은 낙인")
+
+    def test_picking_from_the_list_is_still_free(self) -> None:
+        """전부 유료면 가난한 구간에 §3-D88이 연 자리가 통째로 닫힌다."""
+        run = rookie(week=QUARTER).evolve(money=0)
+        changed = finisher_desk.pick(run, finisher_desk.options(run)[1].code)
+        assert changed.money == 0
+
+
 class TestNamingYourOwn:
     def test_a_name_becomes_the_finisher(self) -> None:
-        changed = finisher_desk.name_it(rookie(week=QUARTER), "장상호 드라이버")
+        changed = finisher_desk.name_it(funded(week=QUARTER), "장상호 드라이버")
         now = finisher_desk.current(changed)
         assert now.name == "장상호 드라이버"
         assert now.code == CUSTOM_CODE
 
     def test_it_survives_a_reload(self) -> None:
         """이름 칸에 그대로 담긴다 — 코드 칸과 나눠 둔 이유가 이것이다."""
-        changed = finisher_desk.name_it(rookie(week=QUARTER), "붉은 낙인")
+        changed = finisher_desk.name_it(funded(week=QUARTER), "붉은 낙인")
         assert changed.finisher_name == "붉은 낙인"
         assert finisher_desk.current(changed).name == "붉은 낙인"
 
@@ -195,7 +222,7 @@ class TestNamingYourOwn:
         assert custom("  마무리  ").name == "마무리"
 
     def test_naming_the_same_thing_is_refused(self) -> None:
-        run = finisher_desk.name_it(rookie(week=QUARTER), "붉은 낙인")
+        run = finisher_desk.name_it(funded(week=QUARTER), "붉은 낙인")
         run = run.evolve(week=QUARTER * 2)
         with pytest.raises(CannotChangeFinisherError):
             finisher_desk.name_it(run, "붉은 낙인")

@@ -102,6 +102,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("엘튼 프린스", Gender.MALE, PlayStyle.SHOWMAN, Country.GB),
     CharacterPreset("핀 밸러", Gender.MALE, PlayStyle.SHOOTER, Country.IE),
     CharacterPreset("군터", Gender.MALE, PlayStyle.OLD_SCHOOL, Country.OTHER),
+    CharacterPreset("히로무 타카하시", Gender.MALE, PlayStyle.STUNTMAN, Country.JP),
     CharacterPreset(
         "일리야 드라구노프", Gender.MALE, PlayStyle.HARD_HITTING, Country.RU
     ),
@@ -189,6 +190,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("토니 디안젤로", Gender.MALE, PlayStyle.BRAWLER, Country.US),
     CharacterPreset("트리스탄 앤젤스", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.GB),
     CharacterPreset("유라이어 코너스", Gender.MALE, PlayStyle.BRAWLER, Country.US),
+    CharacterPreset("질라 파투", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("애드리아나 리조", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.US),
     CharacterPreset("아리아나 그레이스", Gender.FEMALE, PlayStyle.SHOWMAN, Country.CA),
     CharacterPreset("이지 데임", Gender.FEMALE, PlayStyle.POWERHOUSE, Country.US),

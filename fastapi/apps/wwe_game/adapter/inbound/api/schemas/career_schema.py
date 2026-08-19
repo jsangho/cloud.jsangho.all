@@ -41,6 +41,8 @@ from wwe_game.domain.services import (
     rivalry_desk,
     rivalry_engine,
     show_report,
+    signature_desk,
+    staff_scene,
     week_simulation,
 )
 from wwe_game.domain.services.news_feed import NewsItem
@@ -128,6 +130,30 @@ class BeatSchema(_Camel):
     """그 순간 플레이어 쪽으로 기운 정도(0~100) — §3-D81. 50이 팽팽함이다."""
 
 
+class CrewSchema(_Camel):
+    """그 밤에 링을 둘러싼 사람들 (§3-D93).
+
+    **경기가 있는 주차에만 온다.** 프로모·결장 주차에는 링이 서지 않는다.
+    """
+
+    gm: str = ""
+    commentators: list[str] = Field(default_factory=list)
+    ring_announcer: str = ""
+    """**타이틀전에만 채워진다** — 벨트가 걸린 밤에는 소개가 먼저다."""
+    referee: str = ""
+    player_manager: str = ""
+    """내 옆에 서는 사람. 정보창에 `w/`로 붙는다."""
+    rival_manager: str = ""
+
+
+class NegotiatorSchema(_Camel):
+    """재계약 자리에 마주 앉는 사람 (§3-D93 규칙 2 · §3-D84)."""
+
+    name: str
+    title: str
+    """원본의 직함 그대로 — 누구와 이야기하는지가 그 한 줄에 있다."""
+
+
 class WeekSchema(_Camel):
     week: int
     """커리어 통산 주차(1~1560). 정렬·키에 쓴다."""
@@ -167,6 +193,8 @@ class WeekSchema(_Camel):
     """최종 순위. 1이면 우승 — 분모는 `match_field`다."""
     title_shot_from: str | None = None
     """`earned`(럼블·챔버 도전권) · `briefcase`(가방) — 자격이 아니라 **권리로** 선 자리 (§3-D36)."""
+    crew: CrewSchema | None = None
+    """링 밖의 사람들 (§3-D93). **경기 주차에만 온다.**"""
     beats: list[BeatSchema] | None = None
     """입장·탈락 전체 (§3-D34). 진행 중인 응답에만 실린다 — 저장하지 않기 때문이다.
 
@@ -408,6 +436,60 @@ class FinisherSchema(_Camel):
     """직접 짓는 갈래의 길이 제한. 링네임과 같다(§3-D12)."""
 
 
+class SignatureRequest(_Camel):
+    """시그니처 구매 (§3-D92). **셋 중 하나를 뜻한다.**
+
+    | 보낸 것 | 뜻 |
+    |---|---|
+    | `buy` | 칸을 하나 더 산다 — `slot`·`name`은 안 본다 |
+    | `drop` | 그 칸의 이름을 지운다 (돈은 안 돌아온다) |
+    | `name` | 그 칸에 이름을 새긴다 |
+    """
+
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+class GuestSignatureRequest(_Camel):
+    state: GuestRunState
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+class SignatureSlotSchema(_Camel):
+    """시그니처 칸 하나 (§3-D92)."""
+
+    index: int
+    name: str = ""
+    """새긴 이름. **비어 있으면 계열 기술에서 굴려 쓴다**(§3-D91) — 그 칸이 없는
+    것이 아니라, 아직 *내* 기술이 아닌 것이다."""
+
+
+class SignatureSchema(_Camel):
+    """산 칸과 이름들, 그리고 값 (§3-D92).
+
+    **판정에 안 닿는다** — 사는 것은 그 경기가 어떻게 적히는가뿐이다(§3-D88과 같다).
+    """
+
+    slots: list[SignatureSlotSchema] = Field(default_factory=list)
+    max_slots: int
+    expand_cost: int | None = None
+    """다음 칸의 값. **`None`이면 다 열었다** — 화면이 그 자리를 안 낸다."""
+    naming_cost: int
+    """칸 하나에 이름을 새기는 값."""
+    finisher_naming_cost: int
+    """피니셔 이름을 직접 짓는 값 (§3-D88의 그 자리가 이제 유료다)."""
+    money: int
+    """지금 잔액. **화면이 살 수 있는지를 스스로 판단하게 한다** — 서버가 `canBuy`를
+    내려보내면 값과 잔액이 어긋날 때 어느 쪽이 맞는지 알 수 없다."""
+    name_min: int = 2
+    name_max: int = 20
+
+
 class GuestCallOutRequest(_Camel):
     state: GuestRunState
     rival: str
@@ -521,6 +603,10 @@ class RunSchema(_Camel):
     """다음 주가 대회면 그 이름. 주간 방송·프로모면 `None`이다."""
     finisher: FinisherSchema | None = None
     """지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다."""
+    signature: SignatureSchema | None = None
+    """시그니처 칸과 값 (§3-D92). **늘 있다** — 기본 한 칸으로 시작한다."""
+    negotiator: NegotiatorSchema | None = None
+    """재계약 자리에 마주 앉는 사람 (§3-D93). **협상 중이 아니면 `None`이다.**"""
     call_out: CallOutSchema | None = None
     """지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `None`."""
     briefcase: BriefcaseSchema | None = None
@@ -661,6 +747,10 @@ class NewsSchema(_Camel):
     """기사 본문. **이미 일어난 일만 다시 말한다** — 언제·무엇·그 자리의 소리."""
     comments: list[NewsCommentSchema] = Field(default_factory=list)
     """대중의 반응 다섯 (§3-D87). 한 명은 늘 반대편에 선다."""
+    byline: str = ""
+    """취재한 사람 (§3-D93) — 백스테이지 인터뷰어가 곧 기자다."""
+    quote: str = ""
+    """링 밖의 누군가가 그 일에 대해 한 말. 없으면 빈 문자열이다."""
 
 
 class TitleHolderSchema(_Camel):
@@ -764,7 +854,44 @@ def _stars_of(view: WeekReportView, seed: int) -> float:
     )
 
 
-def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
+def to_crew(
+    report: WeekReport,
+    seed: int,
+    *,
+    brand: str,
+    player: str,
+    stable: str,
+) -> CrewSchema | None:
+    """그 주차의 링 밖 사람들 (§3-D93). **경기가 없으면 `None`이다.**"""
+    if report.match_kind is None or report.result is None:
+        return None
+    crew = staff_scene.crew_for(
+        brand,
+        report.week,
+        seed,
+        title_match=report.title_at_stake is not None,
+        player=player,
+        player_stable=stable,
+        opponent=report.opponent or "",
+    )
+    return CrewSchema(
+        gm=crew.gm,
+        commentators=list(crew.commentators),
+        ring_announcer=crew.ring_announcer,
+        referee=crew.referee,
+        player_manager=crew.player_manager,
+        rival_manager=crew.rival_manager,
+    )
+
+
+def to_week(
+    view: WeekReportView,
+    seed: int = 0,
+    *,
+    brand: str = "",
+    player: str = "",
+    stable: str = "",
+) -> WeekSchema:
     report = view.report
     year, month, week_of_month = date_of(report.week)
     return WeekSchema(
@@ -810,6 +937,7 @@ def to_week(view: WeekReportView, seed: int = 0) -> WeekSchema:
         stat_delta=dict(report.stat_delta),
         wear_delta=report.wear_delta,
         promo_hit=report.promo_hit,
+        crew=to_crew(report, seed, brand=brand, player=player, stable=stable),
         beats=(
             [
                 BeatSchema(
@@ -1041,6 +1169,38 @@ def to_finisher(run: CareerRun) -> FinisherSchema:
     )
 
 
+def to_negotiator(run: CareerRun) -> NegotiatorSchema | None:
+    """마주 앉는 사람 (§3-D93 규칙 2). **협상 중이 아니면 `None`** — 화면이 자리를 안 낸다."""
+    if not run.is_active or run.offer_week <= 0:
+        return None
+    person = staff_scene.negotiator_for(run.brand.value, run.offer_week, run.seed)
+    if person is None:
+        return None
+    return NegotiatorSchema(name=person.name, title=person.title)
+
+
+def to_signature(run: CareerRun) -> SignatureSchema:
+    """산 칸과 이름들 (§3-D92). **늘 채운다** — 한 칸은 처음부터 있다."""
+    opened = signature_desk.slots(run)
+    names = run.signature_names
+    return SignatureSchema(
+        slots=[
+            SignatureSlotSchema(
+                index=index,
+                name=names[index] if index < len(names) else "",
+            )
+            for index in range(opened)
+        ],
+        max_slots=signature_desk.MAX_SLOTS,
+        expand_cost=signature_desk.expand_cost(run),
+        naming_cost=signature_desk.SIGNATURE_NAMING,
+        finisher_naming_cost=signature_desk.FINISHER_NAMING,
+        money=run.money,
+        name_min=NAME_MIN_LEN,
+        name_max=NAME_MAX_LEN,
+    )
+
+
 def to_call_out(run: CareerRun) -> CallOutSchema | None:
     """지금 걸 수 있는 상대들 (§3-D86). 못 걸면 `None` — 화면이 자리를 안 낸다."""
     if not rivalry_desk.can_call_out(run):
@@ -1119,6 +1279,8 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             next_kind=_next_kind(run),
             next_show=_next_show(run),
             finisher=to_finisher(run),
+            signature=to_signature(run),
+            negotiator=to_negotiator(run),
             call_out=to_call_out(run),
             offer_options=to_offer_options(run),
             injured_parts=[
@@ -1140,7 +1302,16 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 else None
             ),
         ),
-        weeks=[to_week(w, run.seed) for w in result.weeks],
+        weeks=[
+            to_week(
+                w,
+                run.seed,
+                brand=run.brand.value,
+                player=str(run.identity.name),
+                stable=run.team.name if run.team else "",
+            )
+            for w in result.weeks
+        ],
         stop_reason=result.stop_reason.value,
         pending_event=(
             PendingEventSchema(
@@ -1200,14 +1371,16 @@ def to_log(page: CareerLogPage) -> LogPageSchema:
     )
 
 
-def to_news_item(item: NewsItem, seed: int = 0) -> NewsSchema:
+def to_news_item(
+    item: NewsItem, seed: int = 0, *, brand: str = "", manager: str = ""
+) -> NewsSchema:
     """뉴스 한 줄 + **그 자리에서 세운 기사** (§3-D87).
 
     기사는 저장하지 않고 매번 되짚는다 — `title_scene`(§3-D38)·별점(§3-D56)과 같은
     자리라, 시드만 있으면 언제든 같은 기사가 선다.
     """
     _, month, week_of_month = date_of(item.week)
-    article = news_article.build(item, seed)
+    article = news_article.build(item, seed, brand=brand, manager=manager)
     return NewsSchema(
         week=item.week,
         year=item.year,
@@ -1224,12 +1397,17 @@ def to_news_item(item: NewsItem, seed: int = 0) -> NewsSchema:
             NewsCommentSchema(author=c.author, text=c.text, up=c.up, down=c.down)
             for c in article.comments
         ],
+        byline=article.byline,
+        quote=article.quote,
     )
 
 
 def to_news(page: NewsFeedPage) -> NewsPageSchema:
     return NewsPageSchema(
-        items=[to_news_item(i, page.seed) for i in page.items],
+        items=[
+            to_news_item(i, page.seed, brand=page.brand, manager=page.manager)
+            for i in page.items
+        ],
         total=page.total,
         offset=page.offset,
         has_more=page.has_more,

@@ -75,6 +75,15 @@ class CannotChangeFinisherError(Exception):
     """
 
 
+class CannotNameError(Exception):
+    """이름을 살 수 없다 (§3-D92).
+
+    잔액이 모자라거나 · 없는 칸이거나 · 이미 그 이름을 쓰고 있다. 이름 자체가 규칙에
+    안 맞는 것은 `InvalidFinisherNameError`가 따로 잡는다 — **못 사는 것과 못 쓰는
+    이름은 다른 실패다**(전자는 409, 후자는 400).
+    """
+
+
 class CannotCallOutError(Exception):
     """걸 수 없는 상대에게 시비를 걸었다 (§3-D86).
 

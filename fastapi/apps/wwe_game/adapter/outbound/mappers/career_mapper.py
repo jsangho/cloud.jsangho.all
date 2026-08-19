@@ -136,6 +136,8 @@ class CareerMapper:
             finisher_name=row.finisher_name or "",
             finisher_week=row.finisher_week or 0,
             finisher_ask_week=row.finisher_ask_week or 0,
+            signature_slots=row.signature_slots or 0,
+            signature_names=tuple(row.signature_names or ()),
         )
 
     @staticmethod
@@ -193,6 +195,8 @@ class CareerMapper:
         row.finisher_name = run.finisher_name
         row.finisher_week = run.finisher_week
         row.finisher_ask_week = run.finisher_ask_week
+        row.signature_slots = run.signature_slots
+        row.signature_names = list(run.signature_names)
 
     @staticmethod
     def log_row(run_id: int, view: WeekReportView) -> CareerLogEntryModel:

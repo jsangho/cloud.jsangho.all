@@ -135,3 +135,96 @@ class TestTheShape:
         seq = flow(won=True)
         assert RIVAL in seq.summary
         assert "승리" in seq.summary
+
+
+# ── §3-D91 시그니처 ────────────────────────────────────────────
+
+MINE = ("헤드록", "테이크다운")
+THEIRS = ("파워밤", "라리아트", "초크슬램")
+
+
+def armed(*, won: bool = True, seed: int = 42, mine=MINE, theirs=THEIRS):
+    """양쪽이 시그니처를 들고 붙는 경기."""
+    return match_flow.sequence_for(
+        MatchKind.SINGLES,
+        player=PLAYER,
+        opponent=RIVAL,
+        won=won,
+        finisher=FINISHER,
+        moves=MOVES,
+        major=True,
+        roll=SeededRoll(seed, 300, seeded_roll.ELIMINATION),
+        signatures=mine,
+        rival_signatures=theirs,
+        rival_finisher="파워밤 홀드",
+    )
+
+
+class TestManySignaturesMeanMoreOften:
+    """**개수가 곧 빈도다** (2026-08-19 사용자 요청)."""
+
+    def test_the_chance_climbs_with_the_count(self) -> None:
+        chances = [match_flow.signature_chance(n) for n in range(0, 6)]
+        assert chances[0] == 0.0
+        assert chances == sorted(chances)
+        assert chances[3] > chances[1]
+
+    def test_it_stops_climbing_somewhere(self) -> None:
+        """절반을 넘기면 시그니처가 평범한 수가 된다."""
+        assert match_flow.signature_chance(99) == match_flow.SIGNATURE_CHANCE_MAX
+
+    def test_the_one_with_more_uses_more(self) -> None:
+        """같은 시드로 서른 판을 재면 많이 가진 쪽이 더 자주 쓴다."""
+        few = sum(
+            1
+            for seed in range(30)
+            for b in armed(seed=seed, mine=("헤드록",), theirs=()).beats
+            if b.kind is BeatKind.SIGNATURE
+        )
+        many = sum(
+            1
+            for seed in range(30)
+            for b in armed(seed=seed, mine=MOVES, theirs=()).beats
+            if b.kind is BeatKind.SIGNATURE
+        )
+        assert many > few
+
+    def test_no_signatures_no_beats(self) -> None:
+        """데이터가 없으면 예전 그대로다 — 이름 있는 수가 아예 안 나온다."""
+        beats = armed(mine=(), theirs=()).beats
+        assert not any(b.kind is BeatKind.SIGNATURE for b in beats)
+
+
+class TestTheSignatureBelongsToSomeone:
+    def test_each_side_uses_its_own(self) -> None:
+        """내 시그니처를 상대가 쓰면 그 사람의 것이라는 뜻이 사라진다."""
+        for seed in range(1, 25):
+            for beat in armed(seed=seed).beats:
+                if beat.kind is not BeatKind.SIGNATURE:
+                    continue
+                assert beat.by in (MINE if beat.name == PLAYER else THEIRS)
+
+    def test_a_nearfall_often_follows(self) -> None:
+        """*시그니처! → 니어폴* — "이제 끝나나?"가 이 절의 값이다."""
+        after, total = 0, 0
+        for seed in range(60):
+            beats = armed(seed=seed).beats
+            for index, beat in enumerate(beats[:-1]):
+                if beat.kind is not BeatKind.SIGNATURE:
+                    continue
+                total += 1
+                after += beats[index + 1].kind is BeatKind.NEARFALL
+        assert total > 0
+        assert after / total > match_flow.NEARFALL_CHANCE
+
+
+class TestTheOneWhoBeatMeHasAName:
+    def test_losing_names_the_rivals_finisher(self) -> None:
+        last = [b for b in armed(won=False).beats if b.kind is BeatKind.FINISHER][0]
+        assert last.name == RIVAL
+        assert last.by == "파워밤 홀드"
+
+    def test_winning_still_names_mine(self) -> None:
+        last = [b for b in armed(won=True).beats if b.kind is BeatKind.FINISHER][0]
+        assert last.name == PLAYER
+        assert last.by == FINISHER

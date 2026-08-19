@@ -38,6 +38,7 @@ from wwe_game.domain.constants.ple_calendar import (
 from wwe_game.domain.constants.teams import TeamKind
 from wwe_game.domain.entities.career_run import CareerRun, Trophy
 from wwe_game.domain.services import (
+    arsenal,
     championship,
     elimination,
     event_draw,
@@ -53,7 +54,7 @@ from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects import body_part
 from wwe_game.domain.value_objects.body_part import BodyPart
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
-from wwe_game.domain.value_objects.finisher import moves_for
+from wwe_game.domain.value_objects.finisher import family_of, moves_for
 from wwe_game.domain.value_objects.match_kind import (
     QUALIFIER_KINDS,
     SIGNATURE_MATCHES,
@@ -436,15 +437,25 @@ def _sequence_for(
         # **경기가 없는 주차는 흐름도 없다** — 프로모·결장에는 링이 서지 않는다.
         if match_kind is None or result is None:
             return None
+        rival = opponent or "상대"
         return match_flow.sequence_for(
             match_kind,
             player=str(run.identity.name),
-            opponent=opponent or "상대",
+            opponent=rival,
             won=result is OutcomeKind.WIN,
             finisher=finisher_desk.current(run).name,
             moves=moves_for(run.identity.play_style),
             major=major,
             roll=SeededRoll(run.seed, week, seeded_roll.ELIMINATION),
+            # **산 이름이 있으면 그것이 내 시그니처다** (§3-D92). 없으면 계열에서
+            # 굴린다(§3-D91) — 명부의 선수와 달리 나는 데이터가 없고, 대신 내
+            # 스타일을 안다.
+            signatures=run.signature_names
+            or arsenal.signatures_of(
+                str(run.identity.name), family_of(run.identity.play_style)
+            ),
+            rival_signatures=arsenal.signatures_of(rival),
+            rival_finisher=arsenal.finisher_of(rival),
         )
     pool = tuple(
         m.name

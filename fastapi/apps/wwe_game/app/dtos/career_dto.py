@@ -153,6 +153,33 @@ class ChangeFinisherCommand:
 
 
 @dataclass(frozen=True)
+class NameSignatureCommand:
+    """시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+
+    **셋이 한 명령에 들어 있다** — 칸 사기(`buy`) · 이름 새기기(`name`) · 이름 지우기
+    (`drop`). 어느 쪽인지는 화면이 먼저 정하고 보낸다(§3-D88의 두 갈래와 같은 규약).
+    """
+
+    run_id: int
+    user_id: int
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+@dataclass(frozen=True)
+class GuestNameSignatureCommand:
+    """체험판의 시그니처 구매 (§3-D92·D8)."""
+
+    run: CareerRun
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+@dataclass(frozen=True)
 class GuestChangeFinisherCommand:
     """체험판의 피니셔 교체 (§3-D88·D8)."""
 
@@ -391,6 +418,11 @@ class NewsFeedPage:
     items: tuple[NewsItem, ...] = ()
     total: int = 0
     offset: int = 0
+    brand: str = ""
+    """기사를 세울 때 링 밖 사람을 고르는 데 쓴다 (§3-D93) — 해설·GM·심판이 브랜드의
+    사람들이기 때문이다."""
+    manager: str = ""
+    """내 옆에 서는 매니저 (§3-D93 규칙 7). 있으면 내 일에 그가 대신 말한다."""
     seed: int = 0
     """그 커리어의 시드 (§3-D87). **기사를 되짚는 데 쓴다** — 매체·본문 변주·댓글은
     저장하지 않고 매번 세우므로, 뉴스를 다시 열 때도 시드가 필요하다.

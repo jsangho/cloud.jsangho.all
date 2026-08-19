@@ -44,6 +44,7 @@ import datetime
 import hashlib
 import io
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parents[1]
@@ -110,6 +111,14 @@ Evolve는 NXT 아래 육성 단계다. 오늘 명부에 넣으면 유망주가 �
 
 REQUIRED_FIELDS = ("korean_name", "gender", "tier", "play_style")
 """비어 있으면 생성기가 멈추는 칸. `birth_date`만 비워 둘 수 있다 (미공개 정보)."""
+
+ARSENAL_FIELDS = ("signature_ko", "finisher_ko")
+"""**비어도 되는** 칸 (2026-08-19 사용자 데이터). 없으면 그 선수는 이름 있는 수를 안 쓴다.
+
+한글 표기만 읽는다 — 화면·서술이 전부 한국어라 영문을 그대로 실으면 문장에 섞인다
+(§3-D88이 `korean_name`을 따로 받은 것과 같은 이유). 영문 `signature` 칸은 대조용으로
+CSV에만 남는다.
+"""
 
 # `korean_name`의 `|` 규약 (2026-08-12 사용자 결정) — **앞이 처음 활동명, 뒤가 바꾼 뒤**.
 #
@@ -277,6 +286,36 @@ ROSTER: tuple[RosterMember, ...] = (
 '''
 
 FOOTER = ''')
+
+SIGNATURES: dict[str, tuple[str, ...]] = {
+{SIGNATURES}}
+"""선수별 시그니처 — **그 사람의 무기고** (§3-D91, 2026-08-19 사용자 데이터).
+
+빈 선수는 아예 안 들어온다. 그래서 `signatures_of()`가 빈 튜플을 돌려주고, 그 선수는
+이름 있는 수를 쓰지 않는다 — 데이터가 오기 전과 같은 동작이다.
+
+**개수가 곧 빈도다**(`match_flow.signature_chance`). 아홉 개를 가진 선수는 한 개인
+선수보다 자주 자기 기술로 간다 — 실제로도 대표 기술이 많은 선수가 경기 중에 더 자주
+그것들을 꺼낸다.
+"""
+
+FINISHER_NAMES: dict[str, tuple[str, ...]] = {
+{FINISHERS}}
+"""선수별 피니셔 이름 (§3-D91). 하나 이상인 선수가 실제로 있다.
+
+플레이어의 피니셔는 여기 없다 — 그건 §3-D88이 고르게 하는 값이고, 이쪽은 **상대가
+나를 끝낼 때** 그 기술에 이름이 붙게 하는 자리다.
+"""
+
+
+def signatures_of(name: str) -> tuple[str, ...]:
+    """그 선수의 시그니처들. 데이터가 없으면 빈 튜플이다."""
+    return SIGNATURES.get(name, ())
+
+
+def finishers_of(name: str) -> tuple[str, ...]:
+    """그 선수의 피니셔들. 데이터가 없으면 빈 튜플이다."""
+    return FINISHER_NAMES.get(name, ())
 
 
 def active_at(week: int) -> tuple[RosterMember, ...]:
@@ -759,6 +798,13 @@ def read_game_data() -> dict[str, dict[str, str]]:
 GAME_DATA: dict[str, dict[str, str]] = {}
 """`main()`이 채운다. 아래 해석 함수들이 읽는다."""
 
+ARSENALS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {}
+"""한글 이름 → (시그니처들, 피니셔들). `build()`가 채우고 `render()`가 찍는다.
+
+가상 선수는 안 들어온다 — 이름이 판마다 바뀌는 자리라(§3-D59) 고정된 기술을 붙일
+수 없다. 그쪽은 계열 기술로 간다.
+"""
+
 
 def given(name: str, field: str) -> str:
     return GAME_DATA.get(name, {}).get(field, "")
@@ -773,6 +819,23 @@ def require(name: str, field: str) -> str:
             "새 선수를 kayfabe CSV에 넣었다면 이 파일에도 같은 name으로 행을 더하세요"
         )
     return value
+
+
+def arsenal_of(name: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """그 선수의 (시그니처들, 피니셔들) — 한글 표기 (2026-08-19 사용자 데이터).
+
+    **둘 다 `|`로 여러 개가 온다.** 피니셔가 하나 이상인 선수가 실제로 있고
+    (`타임 밤 | 캐나디언 디스트로이어`), 시그니처는 아홉 개인 선수까지 있다.
+
+    빈 칸은 빈 튜플이다 — **생성기가 대신 지어내지 않는다**(§3-D10-1의 원칙 그대로).
+    이름이 없는 선수는 계열 기술만 쓰고, 그건 이 데이터가 오기 전의 동작과 같다.
+    """
+    signatures, finishers = (given(name, field) for field in ARSENAL_FIELDS)
+    return _split(signatures), _split(finishers)
+
+
+def _split(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in value.split("|") if part.strip())
 
 
 def read_stables(path: Path) -> dict[str, str]:
@@ -965,10 +1028,122 @@ FICTIONAL_LAST = (
     "바이퍼",
     "리드",
 )
-"""가상 선수의 이름 조각. 앞뒤를 곱해 900가지가 나온다 — 필요한 수의 몇 배다.
+"""가상 선수의 이름 조각 — **북미 계열**. 앞뒤를 곱해 900가지가 나온다.
 
 **손으로 쓰지 않는 이유는 분량이다.** 30년을 채우려면 100명이 넘게 필요하고, 그만큼을
 직접 쓰면 뒤로 갈수록 성의가 떨어진다. 실존 이름과 겹치는 조합은 걸러 낸다.
+"""
+
+
+@dataclass(frozen=True)
+class NameOrigin:
+    """가상 선수 이름의 출신 (2026-08-19 사용자 요청).
+
+    **앞뒤를 같은 출신에서 뽑는다.** 하나의 큰 통에서 섞으면 "제이든 타나카"처럼 어느
+    쪽도 아닌 이름이 나온다 — 다채로움이 아니라 뒤죽박죽이다.
+    """
+
+    key: str
+    male: tuple[str, ...]
+    female: tuple[str, ...]
+    last: tuple[str, ...]
+    share: int
+    """뽑히는 비율. 북미가 가장 크다 — 무대가 북미이기 때문이다 (§3-D14-1)."""
+    surname_first: bool = False
+    """성이 앞에 붙고 띄어쓰기가 없는 표기 — **한국만 그렇다.**
+
+    일본 이름은 띄어 쓰고 이름을 앞에 둔다: 실존 명부가 이미 *"아키라 토자와"*·
+    *"신스케 나카무라"*로 적혀 있고, 가상 선수만 다른 규칙을 쓰면 한 화면에서 두 표기가
+    부딪힌다.
+    """
+
+
+NAME_ORIGINS: tuple[NameOrigin, ...] = (
+    NameOrigin(
+        "북미", FICTIONAL_MALE_FIRST, FICTIONAL_FEMALE_FIRST, FICTIONAL_LAST, share=5
+    ),
+    NameOrigin(
+        "유럽",
+        (
+            "마테오",
+            "루카",
+            "니클라스",
+            "세바스티안",
+            "요한",
+            "안드레아스",
+            "피오트르",
+            "빅토르",
+            "라이너",
+            "도미닉",
+            "에밀",
+            "구스타프",
+        ),
+        (
+            "엘레나",
+            "소피아",
+            "잉그리드",
+            "카밀라",
+            "아넬리",
+            "마르타",
+            "레나",
+            "비앙카",
+            "요한나",
+            "클라라",
+        ),
+        (
+            "뮐러",
+            "슈미트",
+            "로시",
+            "코바치",
+            "노박",
+            "라르손",
+            "뒤부아",
+            "베르크",
+            "얀센",
+            "모레티",
+            "카민스키",
+            "린드퀴스트",
+        ),
+        share=2,
+    ),
+    NameOrigin(
+        "일본",
+        ("하야토", "렌", "카이토", "소라", "타쿠마", "리쿠", "다이치", "슌"),
+        ("유키", "아야", "리나", "미사키", "카에데", "나오", "히카루"),
+        ("타나카", "사토", "쿠로다", "미야모토", "이시카와", "아사노", "후지타"),
+        share=1,
+    ),
+    NameOrigin(
+        "라틴아메리카",
+        (
+            "디에고",
+            "하비에르",
+            "라파엘",
+            "알레한드로",
+            "마티아스",
+            "엔리케",
+            "산티아고",
+        ),
+        ("카르멘", "이사벨", "루시아", "발렌티나", "파울라", "레지나", "다니엘라"),
+        ("라모스", "델가도", "에레라", "바르가스", "카스티요", "모랄레스", "듀란"),
+        share=1,
+    ),
+    NameOrigin(
+        "한국",
+        ("태준", "민혁", "도현", "지훈", "선우", "재현", "우진"),
+        ("하은", "서연", "다인", "예린", "채원", "소민", "지아"),
+        ("강", "서", "유", "한", "임", "노", "천"),
+        share=1,
+        surname_first=True,
+    ),
+)
+"""이름의 출신 다섯 — **게임의 권역과 같은 결이다** (§3-D14).
+
+*"가상선수명은 미국사람 이외에도 아시안, 유럽인 등 다채롭게"* (2026-08-19 사용자 요청).
+서른 해 동안 데뷔하는 220명이 전부 "카터 스톤" 같은 이름이면 그 세계엔 한 나라만 있다.
+
+**북미가 여전히 절반이다.** 무대가 북미이고(§3-D14-1) 실존 명부도 그렇게 기울어 있다 —
+비율까지 고르게 만들면 이번엔 실제 로스터와 어긋난다.
 """
 
 DEBUTS_PER_YEAR = {"_M": 3, "_F": 4}
@@ -1050,16 +1225,45 @@ def fictional_pool(taken: set[str]) -> dict[str, list[str]]:
     실존 이름과 겹치는 조합은 뺀다(같은 세계에 같은 사람이 둘 있을 수 없다).
     """
     pools: dict[str, list[str]] = {}
-    for gender, firsts in (
-        ("_M", FICTIONAL_MALE_FIRST),
-        ("_F", FICTIONAL_FEMALE_FIRST),
-    ):
-        pairs = [f"{first} {last}" for first in firsts for last in FICTIONAL_LAST]
-        combos = sorted(
-            pairs, key=lambda n: hashlib.blake2b(n.encode(), digest_size=8).digest()
-        )
-        pools[gender] = [name for name in combos if name not in taken]
+    for gender in ("_M", "_F"):
+        by_origin: list[tuple[int, list[str]]] = []
+        for origin in NAME_ORIGINS:
+            firsts = origin.male if gender == "_M" else origin.female
+            pairs = [
+                f"{last}{first}" if origin.surname_first else f"{first} {last}"
+                for first in firsts
+                for last in origin.last
+                # **같은 글자가 겹치는 조합은 뺀다** — "서서연"처럼 성과 이름 첫
+                # 글자가 같으면 읽을 때 말이 더듬는다.
+                if not (origin.surname_first and first.startswith(last))
+            ]
+            # 중첩 루프 순서대로 쓰면 "… 크로스"가 연달아 데뷔한다. 이름 해시로 섞되
+            # blake2b라 프로세스가 바뀌어도 순서가 같다 (도메인의 시드 규약과 같은 결).
+            combos = sorted(
+                pairs, key=lambda n: hashlib.blake2b(n.encode(), digest_size=8).digest()
+            )
+            by_origin.append((origin.share, [n for n in combos if n not in taken]))
+        pools[gender] = _interleave(by_origin)
     return pools
+
+
+def _interleave(groups: list[tuple[int, list[str]]]) -> list[str]:
+    """출신별 목록을 비율대로 번갈아 엮는다 (2026-08-19 사용자 요청).
+
+    **앞쪽 순서가 곧 데뷔 순서다** — `cast_for()`가 이 목록을 앞에서부터 꺼내 쓴다.
+    출신별로 이어 붙이면 처음 서른 명이 전부 북미이고 일본 이름은 20년째에야 처음
+    나온다. 한 바퀴마다 비율만큼 꺼내 **어느 구간을 잘라도 섞여 있게** 한다.
+    """
+    picked: list[str] = []
+    cursors = [0] * len(groups)
+    while True:
+        before = len(picked)
+        for index, (share, names) in enumerate(groups):
+            end = min(cursors[index] + share, len(names))
+            picked.extend(names[cursors[index] : end])
+            cursors[index] = end
+        if len(picked) == before:
+            return picked
 
 
 def build() -> list[Row]:
@@ -1069,6 +1273,7 @@ def build() -> list[Row]:
     """
     members: list[Row] = []
     stables = read_stables(CSV_PATH)
+    ARSENALS.clear()
     for section, names in read_sections(CSV_PATH).items():
         if section not in SECTION_HOME:
             raise SystemExit(f"모르는 섹션 {section!r} — SECTION_HOME에 넣으세요")
@@ -1087,6 +1292,13 @@ def build() -> list[Row]:
                 debut = (low + index % (high - low + 1)) * WEEKS_PER_YEAR
             age = age_of(name)
             korean, renamed = names_of(require(name, "korean_name"))
+            # **활동명을 바꿔도 기술은 그대로다** (§3-D54) — 두 이름이 같은 무기고를
+            # 가리킨다. 이름으로 찾는 자리라 한쪽만 넣으면 개명 뒤 조용히 비어 버린다.
+            arsenal = arsenal_of(name)
+            if any(arsenal):
+                ARSENALS[korean] = arsenal
+                if renamed:
+                    ARSENALS[renamed] = arsenal
             members.append(
                 (
                     korean,
@@ -1195,7 +1407,46 @@ def render(members: list[Row], pools: dict[str, list[str]]) -> str:
             f'    RosterMember("{escaped}", {gender}, {tier}, '
             f"{debut}, {retire_arg}, {experience}, {home}{tail}),"
         )
-    return HEADER.replace("{POOL}", pool_lines) + "\n".join(lines) + "\n" + FOOTER
+    body = HEADER.replace("{POOL}", pool_lines) + "\n".join(lines) + "\n"
+    return body + (
+        FOOTER.replace("{SIGNATURES}", _arsenal_lines(0)).replace(
+            "{FINISHERS}", _arsenal_lines(1)
+        )
+    )
+
+
+LINE_LIMIT = 88
+"""찍어 내는 줄의 길이 한도. **포매터와 같은 값이다** — 넘으면 `ruff format`이 다시
+쪼개고, 그러면 생성물이 생성기와 어긋나 다음 실행마다 diff가 난다."""
+
+
+def _literal(move: str) -> str:
+    """따옴표를 escape한 문자열 리터럴.
+
+    **`"예스!" 킥스`처럼 이름 안에 따옴표를 든 기술이 실제로 있다.** 그대로 찍으면
+    생성물이 문법 오류라 임포트조차 안 된다.
+    """
+    escaped = move.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _arsenal_lines(index: int) -> str:
+    """무기고 한 벌을 사전 리터럴로. 이름 순으로 찍어 **판마다 같은 파일**이 나온다."""
+    lines = []
+    for name in sorted(ARSENALS):
+        moves = ARSENALS[name][index]
+        if not moves:
+            continue
+        quoted = [_literal(move) for move in moves]
+        tail = "," if len(moves) == 1 else ""
+        one_line = f'    "{name}": ({", ".join(quoted)}{tail}),\n'
+        if len(one_line.rstrip("\n")) <= LINE_LIMIT:
+            lines.append(one_line)
+            continue
+        # 포매터가 쪼개는 모양 그대로 — 한 줄에 하나씩, 끝에 쉼표.
+        listed = "".join(f"        {move},\n" for move in quoted)
+        lines.append(f'    "{name}": (\n{listed}    ),\n')
+    return "".join(lines)
 
 
 # ── 캐릭터 생성 프리셋 (§3-D10-1) ─────────────────────────────
