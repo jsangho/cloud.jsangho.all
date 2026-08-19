@@ -35,11 +35,13 @@ from wwe_game.app.dtos.career_dto import (
     GuestCashInCommand,
     GuestChangeFinisherCommand,
     GuestChooseCommand,
+    GuestNameSignatureCommand,
     GuestReportCommand,
     GuestResumeCommand,
     GuestSetGoalCommand,
     GuestStartCommand,
     ModeView,
+    NameSignatureCommand,
     NewsFeedPage,
     PendingEventView,
     PresetView,
@@ -76,6 +78,7 @@ from wwe_game.domain.services import (
     rivalry_scene,
     roster_scene,
     show_report,
+    signature_desk,
     team_engine,
     title_news,
 )
@@ -198,6 +201,12 @@ class CareerInteractor(CareerUseCase):
         """피니셔를 바꾸고 그 자리에서 멈춘 채 돌려준다 (§3-D88)."""
         run = await self._repository.get(command.run_id, command.user_id)
         saved = await self._repository.save(_apply_finisher(run, command))
+        return self._view(saved, self._resting_reason(saved))
+
+    async def name_signature(self, command: NameSignatureCommand) -> AdvanceResult:
+        """시그니처 칸을 사거나 이름을 새긴다 (§3-D92)."""
+        run = await self._repository.get(command.run_id, command.user_id)
+        saved = await self._repository.save(_apply_signature(run, command))
         return self._view(saved, self._resting_reason(saved))
 
     async def read_log(
@@ -381,6 +390,12 @@ class CareerInteractor(CareerUseCase):
         """체험판의 피니셔 교체 (§3-D88)."""
         self._require_guest_mode(command.run.mode.code)
         changed = _apply_finisher(command.run, command)
+        return self._view(changed, self._resting_reason(changed))
+
+    def name_guest_signature(self, command: GuestNameSignatureCommand) -> AdvanceResult:
+        """체험판의 시그니처 구매 (§3-D92)."""
+        self._require_guest_mode(command.run.mode.code)
+        changed = _apply_signature(command.run, command)
         return self._view(changed, self._resting_reason(changed))
 
     def read_guest_news(self, command: GuestResumeCommand) -> NewsFeedPage:
@@ -595,6 +610,22 @@ def _apply_finisher(
     if command.name:
         return finisher_desk.name_it(run, command.name)
     return finisher_desk.pick(run, command.code)
+
+
+def _apply_signature(
+    run: CareerRun, command: NameSignatureCommand | GuestNameSignatureCommand
+) -> CareerRun:
+    """셋 중 하나를 고른다 (§3-D92).
+
+    **칸 사기가 가장 앞이다.** 칸이 없으면 이름을 새길 자리도 없어서, 둘이 함께 오면
+    자리를 먼저 연다. 그다음이 지우기 — 이름이 비어 있는데 지우기가 아니면 답할 것이
+    없기 때문이다.
+    """
+    if command.buy:
+        return signature_desk.expand(run)
+    if command.drop:
+        return signature_desk.drop_slot(run, command.slot)
+    return signature_desk.name_slot(run, command.slot, command.name)
 
 
 _HOLD_WEEKS: dict[str, int] = {

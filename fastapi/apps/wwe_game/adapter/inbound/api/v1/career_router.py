@@ -30,6 +30,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     GuestOfferRequest,
     GuestReportRequest,
     GuestResumeRequest,
+    GuestSignatureRequest,
     GuestStartRequest,
     LogPageSchema,
     ModeSchema,
@@ -37,6 +38,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (
     OfferRequest,
     PresetSchema,
     ShowReportSchema,
+    SignatureRequest,
     StartRunRequest,
     title_of_display,
     to_advance,
@@ -64,10 +66,12 @@ from wwe_game.app.dtos.career_dto import (
     GuestCashInCommand,
     GuestChangeFinisherCommand,
     GuestChooseCommand,
+    GuestNameSignatureCommand,
     GuestReportCommand,
     GuestResumeCommand,
     GuestSetGoalCommand,
     GuestStartCommand,
+    NameSignatureCommand,
     SetGoalCommand,
     StartRunCommand,
 )
@@ -85,6 +89,7 @@ from wwe_game.domain.exceptions import (
     CannotCallOutError,
     CannotCashInError,
     CannotChangeFinisherError,
+    CannotNameError,
     InvalidCareerRunError,
     InvalidChoiceError,
     InvalidFinisherNameError,
@@ -119,6 +124,8 @@ _STATUS: tuple[tuple[type[Exception], int, str | None], ...] = (
         status.HTTP_409_CONFLICT,
         "지금은 피니셔를 바꿀 수 없습니다.",
     ),
+    # **문구를 안 덮는다** — 잔액이 얼마 모자란지·어느 칸인지를 도메인이 짚는다 (§3-D92).
+    (CannotNameError, status.HTTP_409_CONFLICT, None),
     # **문구를 덮지 않는다.** 길이·제어문자 중 무엇이 걸렸는지를 도메인이 짚는다.
     (InvalidFinisherNameError, status.HTTP_400_BAD_REQUEST, None),
     (RunNotActiveError, status.HTTP_409_CONFLICT, "이미 끝난 커리어입니다."),
@@ -370,6 +377,29 @@ async def change_finisher(
     return to_advance(await _guard(lambda: use_case.change_finisher(command)))
 
 
+@career_router.post("/runs/{run_id}/signature", response_model=AdvanceResponse)
+async def name_signature(
+    run_id: int,
+    body: SignatureRequest,
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> AdvanceResponse:
+    """시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+
+    **셋을 한 자리에서 받는다** — 칸 사기(`buy`) · 이름 새기기(`name`) · 지우기
+    (`drop`). 잔액이 모자라거나 안 산 칸이면 409, 이름이 규칙에 안 맞으면 400이다.
+    """
+    command = NameSignatureCommand(
+        run_id=run_id,
+        user_id=_user_id(claims),
+        slot=body.slot,
+        name=body.name,
+        buy=body.buy,
+        drop=body.drop,
+    )
+    return to_advance(await _guard(lambda: use_case.name_signature(command)))
+
+
 @career_router.get("/runs/{run_id}/report", response_model=ShowReportSchema)
 async def read_report(
     run_id: int,
@@ -571,6 +601,22 @@ def change_guest_finisher(
         hold=body.hold,
     )
     return to_guest(_sync(lambda: use_case.change_guest_finisher(command)))
+
+
+@career_router.post("/guest/signature", response_model=GuestAdvanceResponse)
+def name_guest_signature(
+    body: GuestSignatureRequest,
+    use_case: CareerUseCase = Depends(get_career_use_case),
+) -> GuestAdvanceResponse:
+    """체험판의 시그니처 구매 (§3-D92·D8)."""
+    command = GuestNameSignatureCommand(
+        run=_restore(body.state),  # type: ignore[arg-type]
+        slot=body.slot,
+        name=body.name,
+        buy=body.buy,
+        drop=body.drop,
+    )
+    return to_guest(_sync(lambda: use_case.name_guest_signature(command)))
 
 
 @career_router.post("/guest/news", response_model=NewsPageSchema)

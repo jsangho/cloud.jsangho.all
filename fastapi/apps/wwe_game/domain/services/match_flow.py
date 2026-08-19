@@ -78,6 +78,37 @@ MEAN_REVERSION = 0.3
 고르고 돌아온다 — **이 값이 그 숨이다.**
 """
 
+SIGNATURE_SWING = 14
+"""시그니처가 옮기는 폭. 평범한 수(9)보다 크고 받아넘김(18)보다 작다 —
+**그 사람의 수이지만 아직 끝은 아니다.**"""
+
+SIGNATURE_PER_MOVE = 0.07
+"""시그니처 **하나당** 오르는 발동 확률 (2026-08-19 사용자 요청).
+
+*"시그니처가 많은 선수들은 시그니처를 사용하는 경우가 많아지게"* — 개수를 그대로
+빈도로 쓴다. 하나뿐인 선수는 열네 수에 한 번, 아홉을 가진 선수는 상한에 닿는다.
+
+**곱하기이지 더하기가 아닌 이유**: 목록의 길이가 곧 "그 사람 하면 떠오르는 수가 몇
+개인가"다. CM 펑크(6개)와 신인(1개)이 같은 빈도로 자기 기술을 꺼내면 목록을 받은
+뜻이 없다.
+"""
+
+SIGNATURE_CHANCE_MAX = 0.45
+"""아무리 많아도 여기서 멈춘다. **절반을 넘기면 시그니처가 평범한 수가 된다** —
+아홉 개짜리 선수의 경기가 온통 이름 있는 수로 차면 그중 무엇도 특별하지 않다.
+"""
+
+NEARFALL_CHANCE = 0.45
+"""후반에 니어폴이 섞일 확률."""
+
+AFTER_SIGNATURE_NEARFALL = 0.7
+"""**시그니처 바로 다음**의 니어폴 확률 (§3-D91).
+
+실제 경기의 리듬이 여기서 나온다 — *시그니처! → 니어폴(안 끝남) → …* 그 "이제
+끝나나?" 하는 순간이 시그니처를 넣는 진짜 이유다. 후반이 아니어도 열린다: 고조를
+만든 것은 시계가 아니라 그 수다.
+"""
+
 
 def _clamp(value: int) -> int:
     return max(MOMENTUM_MIN, min(MOMENTUM_MAX, value))
@@ -91,6 +122,14 @@ def _edge(momentum: int) -> float:
     반으로 줄여, 몰린 쪽도 넷에 한 번은 일어선다.
     """
     return 0.5 + (momentum - OPENING_MOMENTUM) / 100 * MOMENTUM_PULL
+
+
+def signature_chance(count: int) -> float:
+    """시그니처를 가진 수 → 한 수가 시그니처일 확률 (2026-08-19 사용자 요청).
+
+    **개수가 곧 빈도다.** 없으면 0이고, 많을수록 자주 나오되 상한에서 멈춘다.
+    """
+    return min(SIGNATURE_CHANCE_MAX, max(0, count) * SIGNATURE_PER_MOVE)
 
 
 def beat_count(kind: MatchKind, *, major: bool) -> int:
@@ -109,6 +148,9 @@ def sequence_for(
     moves: tuple[str, ...],
     major: bool,
     roll: SeededRoll,
+    signatures: tuple[str, ...] = (),
+    rival_signatures: tuple[str, ...] = (),
+    rival_finisher: str = "",
 ) -> MatchSequence:
     """1:1(과 소규모) 경기의 흐름 (§3-D81).
 
@@ -116,12 +158,18 @@ def sequence_for(
     결말이 그럴듯해 보이도록 흔들린다 — 판정이 아니라 **판정을 읽는 방식**이다.
 
     `finisher`는 §3-D88이 정한 내 기술의 이름이다. **진 밤에는 안 쓴다** — 못 끝낸
-    밤에 그 이름이 나오면 고른 것의 뜻이 사라진다.
+    밤에 그 이름이 나오면 고른 것의 뜻이 사라진다. 대신 그 자리에 `rival_finisher`가
+    선다(§3-D91): 나를 끝낸 기술에도 이름이 있어야 진 밤이 읽힌다.
+
+    시그니처는 **양쪽이 각자 자기 것을 쓴다.** 많이 가진 쪽이 자주 꺼내고
+    (`signature_chance`), 그 다음 비트는 니어폴로 이어지기 쉽다 — *"이제 끝나나?"*가
+    이 절의 값이다.
     """
     total = beat_count(kind, major=major)
     beats: list[MatchBeat] = []
     momentum = OPENING_MOMENTUM
     nearfalls = 0
+    after_signature = False
 
     for index in range(total - 1):
         # **팽팽함으로 되끌린다.** 안 그러면 흐름이 한쪽 끝에 박혀 그 뒤가 없다.
@@ -129,8 +177,12 @@ def sequence_for(
             round(momentum + (OPENING_MOMENTUM - momentum) * MEAN_REVERSION)
         )
         late = index / max(1, total - 1) >= NEARFALL_AT
-        # **후반에만 니어폴이 나온다.** 첫 1분에 투 카운트가 나오는 경기는 없다.
-        if late and roll.chance(0.45):
+        escalated = after_signature
+        after_signature = False
+        # **후반에만 니어폴이 나온다** — 첫 1분에 투 카운트가 나오는 경기는 없다.
+        # 다만 시그니처 뒤는 시계와 무관하게 열린다(§3-D91).
+        nearfall_at = AFTER_SIGNATURE_NEARFALL if escalated else NEARFALL_CHANCE
+        if (late or escalated) and roll.chance(nearfall_at):
             mine = roll.chance(_edge(momentum))
             momentum = _clamp(momentum + (NEARFALL_SWING if mine else -NEARFALL_SWING))
             beats.append(
@@ -152,15 +204,27 @@ def sequence_for(
         # 흐름이 기운 쪽이 다음 수를 낼 확률이 높다 — 다만 뒤집기가 늘 남아 있다.
         mine = roll.chance(_edge(momentum))
         reversal = roll.chance(0.24)
-        swing = REVERSAL_SWING if reversal else MOVE_SWING
+        # **시그니처는 받아넘김을 밀어내지 않는다** — 뒤집히는 자리는 그대로 두고,
+        # 평범한 한 수였을 자리만 그 사람의 수로 바뀐다.
+        own = signatures if mine else rival_signatures
+        signature = not reversal and roll.chance(signature_chance(len(own)))
+        if signature:
+            kind_of_beat = BeatKind.SIGNATURE
+            swing = SIGNATURE_SWING
+            after_signature = True
+        else:
+            kind_of_beat = BeatKind.REVERSAL if reversal else BeatKind.MOVE
+            swing = REVERSAL_SWING if reversal else MOVE_SWING
         momentum = _clamp(momentum + (swing if mine else -swing))
         beats.append(
             MatchBeat(
-                kind=BeatKind.REVERSAL if reversal else BeatKind.MOVE,
+                kind=kind_of_beat,
                 name=player if mine else opponent,
                 # **무슨 기술인지가 실린다** (§3-D81-4). 없으면 "기술을 걸었다"가
                 # 다섯 번 연속 나오고, 그건 경기가 아니라 로그다.
-                by=roll.pick(moves) if moves else None,
+                by=roll.pick(own)
+                if signature
+                else (roll.pick(moves) if moves else None),
                 momentum=momentum,
             )
         )
@@ -171,8 +235,9 @@ def sequence_for(
         MatchBeat(
             kind=BeatKind.FINISHER,
             name=winner,
-            # **내 피니셔는 내가 이겼을 때만 이름을 갖는다** (§3-D88).
-            by=finisher if won else None,
+            # **내 피니셔는 내가 이겼을 때만 나온다** (§3-D88). 진 밤의 그 자리는
+            # 나를 끝낸 사람의 기술이다 (§3-D91) — 이름이 없으면 그대로 빈다.
+            by=finisher if won else (rival_finisher or None),
             momentum=momentum,
         )
     )

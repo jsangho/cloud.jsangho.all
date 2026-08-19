@@ -101,6 +101,8 @@ class GuestRunState(BaseModel):
     finisher_name: str = ""
     finisher_week: int = 0
     finisher_ask_week: int = 0
+    signature_slots: int = 0
+    signature_names: tuple[str, ...] = ()
 
 
 def to_domain(state: GuestRunState) -> CareerRun:
@@ -188,6 +190,8 @@ def to_domain(state: GuestRunState) -> CareerRun:
         finisher_name=state.finisher_name,
         finisher_week=state.finisher_week,
         finisher_ask_week=state.finisher_ask_week,
+        signature_slots=state.signature_slots,
+        signature_names=tuple(state.signature_names),
         contract=(
             Contract(
                 weekly_pay=int(state.contract["weekly_pay"]),
@@ -286,4 +290,6 @@ def to_state(run: CareerRun) -> GuestRunState:
         finisher_name=run.finisher_name,
         finisher_week=run.finisher_week,
         finisher_ask_week=run.finisher_ask_week,
+        signature_slots=run.signature_slots,
+        signature_names=tuple(run.signature_names),
     )

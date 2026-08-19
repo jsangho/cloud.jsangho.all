@@ -153,6 +153,33 @@ class ChangeFinisherCommand:
 
 
 @dataclass(frozen=True)
+class NameSignatureCommand:
+    """시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+
+    **셋이 한 명령에 들어 있다** — 칸 사기(`buy`) · 이름 새기기(`name`) · 이름 지우기
+    (`drop`). 어느 쪽인지는 화면이 먼저 정하고 보낸다(§3-D88의 두 갈래와 같은 규약).
+    """
+
+    run_id: int
+    user_id: int
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+@dataclass(frozen=True)
+class GuestNameSignatureCommand:
+    """체험판의 시그니처 구매 (§3-D92·D8)."""
+
+    run: CareerRun
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+@dataclass(frozen=True)
 class GuestChangeFinisherCommand:
     """체험판의 피니셔 교체 (§3-D88·D8)."""
 

@@ -14,6 +14,8 @@ import {
   callOutGuestRival,
   callOutRival,
   changeFinisher,
+  buyGuestSignature,
+  buySignature,
   changeGuestFinisher,
   cashInBriefcase,
   cashInGuestBriefcase,
@@ -508,6 +510,9 @@ export default function CareerPage() {
    */
   const [finisherMode, setFinisherMode] = useState<"list" | "custom" | null>(null);
   const [finisherName, setFinisherName] = useState("");
+  /** 지금 이름을 새기고 있는 시그니처 칸 (§3-D92). `null`이면 닫혀 있다. */
+  const [signatureSlot, setSignatureSlot] = useState<number | null>(null);
+  const [signatureName, setSignatureName] = useState("");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
@@ -794,6 +799,20 @@ export default function CareerPage() {
     // 성공하면 쿨다운이 걸려 `canChange`가 거짓이 되고, 그때 화면이 저절로 접힌다.
     void act(() =>
       state ? changeGuestFinisher(state, pick) : changeFinisher(run.run.id as number, pick),
+    );
+  }
+
+  /**
+   * 시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+   *
+   * **여기서 입력을 닫지 않는다** — `act`가 실패를 삼키므로, 잔액이 모자라 409가
+   * 났을 때도 닫으면 사용자가 쓴 이름이 사라진다(피니셔와 같은 이유).
+   */
+  function handleSignature(what: { slot?: number; name?: string; buy?: boolean; drop?: boolean }) {
+    if (!run) return;
+    const state = screen.phase === "play" ? screen.state : null;
+    void act(() =>
+      state ? buyGuestSignature(state, what) : buySignature(run.run.id as number, what),
     );
   }
 
@@ -1267,6 +1286,8 @@ export default function CareerPage() {
   const callOut = view.callOut ?? null;
   /** 지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다. */
   const finisher = view.finisher ?? null;
+  /** 산 시그니처 칸과 값 (§3-D92). **늘 있다** — 기본 한 칸이다. */
+  const signature = view.signature ?? null;
 
   const alerts: Record<PanelKey, boolean> = {
     profile: false,
@@ -1568,6 +1589,108 @@ export default function CareerPage() {
                 >
                   그만두기
                 </button>
+              )}
+            </div>
+          )}
+          {/*
+           * **시그니처** (§3-D92) — 이름은 돈으로 산다.
+           *
+           * 칸과 이름은 다른 구매다: 칸은 자리이고 이름은 그 위의 글자다. 이름이
+           * 없는 칸도 경기에는 나오지만(계열 기술 · §3-D91) 그건 *내* 기술이 아니다.
+           */}
+          {signature && (
+            <div className="mt-3 rounded-[6px] bg-background p-3">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-sport text-base">시그니처</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {signature.slots.length}/{signature.maxSlots}칸 · 잔액 $
+                  {signature.money.toLocaleString("en-US")}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                이름을 새긴 칸은 경기에서 그 이름으로 불립니다. 칸이 많을수록 자주 나옵니다.
+              </p>
+
+              <ul className="mt-2 space-y-1.5">
+                {signature.slots.map((slot) => (
+                  <li key={slot.index} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span
+                      className={cn(
+                        "text-sm",
+                        slot.name ? "font-sport" : "text-xs text-muted-foreground",
+                      )}
+                    >
+                      {slot.index + 1}. {slot.name || "이름 없음 — 계열 기술로 나갑니다"}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy || signature.money < signature.namingCost}
+                      onClick={() => {
+                        setSignatureSlot(slot.index);
+                        setSignatureName(slot.name);
+                      }}
+                      className="rounded-[3px] bg-card px-2 py-1 text-xs transition-colors hover:bg-brand-400/15 disabled:opacity-50"
+                    >
+                      {slot.name ? "다시 짓기" : "이름 짓기"} · $
+                      {signature.namingCost.toLocaleString("en-US")}
+                    </button>
+                    {slot.name && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleSignature({ slot: slot.index, drop: true })}
+                        className="text-xs text-muted-foreground underline disabled:opacity-50"
+                      >
+                        지우기
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {signatureSlot !== null && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    value={signatureName}
+                    maxLength={signature.nameMax}
+                    placeholder={`${signature.nameMin}~${signature.nameMax}자`}
+                    onChange={(event) => setSignatureName(event.target.value)}
+                    className="h-8 flex-1 rounded-[6px] bg-card px-2 text-sm outline-none ring-1 ring-brand-400/35 ring-inset"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy || signatureName.trim().length < signature.nameMin}
+                    onClick={() => handleSignature({ slot: signatureSlot, name: signatureName })}
+                  >
+                    ${signature.namingCost.toLocaleString("en-US")} 내고 새기기
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline"
+                    onClick={() => setSignatureSlot(null)}
+                  >
+                    그만두기
+                  </button>
+                </div>
+              )}
+
+              {/* 칸 늘리기 — 다 열었으면 값이 안 온다(§3-D92). */}
+              {signature.expandCost !== null && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy || signature.money < signature.expandCost}
+                    onClick={() => handleSignature({ buy: true })}
+                  >
+                    칸 늘리기 · ${signature.expandCost.toLocaleString("en-US")}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    칸이 늘면 경기에서 시그니처가 나올 확률이 오릅니다.
+                  </span>
+                </div>
               )}
             </div>
           )}
@@ -2213,7 +2336,16 @@ function LiveMatch({
     if (!rung || played) return;
     const kind = beats[shown - 1]?.kind;
     const hold =
-      kind === "finisher" ? 2000 : kind === "nearfall" ? 1500 : kind === "reversal" ? 1200 : 800;
+      kind === "finisher"
+        ? 2000
+        : // 시그니처는 니어폴만큼 머문다 — 그 뒤가 고비다 (§3-D91).
+          kind === "signature"
+          ? 1500
+          : kind === "nearfall"
+            ? 1500
+            : kind === "reversal"
+              ? 1200
+              : 800;
     const timer = setTimeout(() => setShown((n) => n + 1), hold / speed);
     return () => clearTimeout(timer);
   }, [rung, shown, speed, played, beats]);
@@ -2380,6 +2512,9 @@ function LiveMatch({
                     beat.kind === "finisher" && "font-sport text-brand-link",
                     beat.kind === "finisher" && now && "text-2xl",
                     beat.kind === "nearfall" && now && "text-live",
+                    // 시그니처는 피니셔 아래·평범한 수 위의 무게다 (§3-D91).
+                    beat.kind === "signature" && "font-sport",
+                    beat.kind === "signature" && now && "text-xl text-brand-link",
                   )}
                 >
                   {beatLine(beat, manyIn)}
@@ -3054,6 +3189,7 @@ function BeatList({
               className={cn(
                 mine ? "font-semibold text-foreground" : "text-muted-foreground",
                 beat.kind === "finisher" && "text-brand-link",
+                beat.kind === "signature" && "font-sport",
               )}
             >
               {beatLine(beat, manyIn)}
@@ -3092,6 +3228,13 @@ function beatLine(beat: CareerBeat, manyIn = false): string {
     return beat.by
       ? `${beat.name}${josa(beat.name, "이", "가")} ${beat.by}로 받아넘겼다!`
       : `${beat.name}${josa(beat.name, "이", "가")} 받아넘겼다 — 흐름이 뒤집혔다`;
+  }
+  if (beat.kind === "signature") {
+    // **시그니처는 이름을 부른다** (§3-D91). 평범한 한 수와 같은 문장으로 적으면
+    // 그 사람의 기술이 나왔다는 것이 안 읽힌다.
+    return beat.by
+      ? `${beat.name} — ${beat.by}! 시그니처가 나왔다`
+      : `${beat.name}${josa(beat.name, "이", "가")} 시그니처를 꺼냈다`;
   }
   if (beat.kind === "nearfall") {
     return `${beat.name}${josa(beat.name, "이", "가")} 커버 — 투 카운트!`;

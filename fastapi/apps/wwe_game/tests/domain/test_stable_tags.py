@@ -43,10 +43,15 @@ def _pair(seed: int, week: int, title: Title) -> tuple[roster.RosterMember, ...]
 
 class TestTheRosterKnowsItsStables:
     def test_the_real_stables_are_there(self) -> None:
-        """원본 CSV의 `Stable&Team`이 그대로 들어와야 한다 — 지어내지 않았다."""
+        """원본 CSV의 `Stable&Team`이 그대로 들어와야 한다 — 지어내지 않았다.
+
+        **이름은 원본을 따라간다** (2026-08-19): 사용자가 새 CSV에서 통가 형제의 무리를
+        `The Tongans` → `The Tongas`로 적었다. 여기서 옛 이름을 고집하면 테스트가
+        데이터를 이기게 되고, 그러면 이 테스트가 지키려던 것("지어내지 않았다")이 뒤집힌다.
+        """
         stables = {m.stable for m in roster.ROSTER if m.stable}
         assert "Pretty Deadly" in stables
-        assert "The Tongans" in stables
+        assert "The Tongas" in stables
         assert "Bloodline" in stables
 
     def test_a_stable_is_never_split_by_the_separator(self) -> None:

@@ -41,6 +41,7 @@ from wwe_game.domain.services import (
     rivalry_desk,
     rivalry_engine,
     show_report,
+    signature_desk,
     week_simulation,
 )
 from wwe_game.domain.services.news_feed import NewsItem
@@ -408,6 +409,60 @@ class FinisherSchema(_Camel):
     """직접 짓는 갈래의 길이 제한. 링네임과 같다(§3-D12)."""
 
 
+class SignatureRequest(_Camel):
+    """시그니처 구매 (§3-D92). **셋 중 하나를 뜻한다.**
+
+    | 보낸 것 | 뜻 |
+    |---|---|
+    | `buy` | 칸을 하나 더 산다 — `slot`·`name`은 안 본다 |
+    | `drop` | 그 칸의 이름을 지운다 (돈은 안 돌아온다) |
+    | `name` | 그 칸에 이름을 새긴다 |
+    """
+
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+class GuestSignatureRequest(_Camel):
+    state: GuestRunState
+    slot: int = 0
+    name: str = ""
+    buy: bool = False
+    drop: bool = False
+
+
+class SignatureSlotSchema(_Camel):
+    """시그니처 칸 하나 (§3-D92)."""
+
+    index: int
+    name: str = ""
+    """새긴 이름. **비어 있으면 계열 기술에서 굴려 쓴다**(§3-D91) — 그 칸이 없는
+    것이 아니라, 아직 *내* 기술이 아닌 것이다."""
+
+
+class SignatureSchema(_Camel):
+    """산 칸과 이름들, 그리고 값 (§3-D92).
+
+    **판정에 안 닿는다** — 사는 것은 그 경기가 어떻게 적히는가뿐이다(§3-D88과 같다).
+    """
+
+    slots: list[SignatureSlotSchema] = Field(default_factory=list)
+    max_slots: int
+    expand_cost: int | None = None
+    """다음 칸의 값. **`None`이면 다 열었다** — 화면이 그 자리를 안 낸다."""
+    naming_cost: int
+    """칸 하나에 이름을 새기는 값."""
+    finisher_naming_cost: int
+    """피니셔 이름을 직접 짓는 값 (§3-D88의 그 자리가 이제 유료다)."""
+    money: int
+    """지금 잔액. **화면이 살 수 있는지를 스스로 판단하게 한다** — 서버가 `canBuy`를
+    내려보내면 값과 잔액이 어긋날 때 어느 쪽이 맞는지 알 수 없다."""
+    name_min: int = 2
+    name_max: int = 20
+
+
 class GuestCallOutRequest(_Camel):
     state: GuestRunState
     rival: str
@@ -521,6 +576,8 @@ class RunSchema(_Camel):
     """다음 주가 대회면 그 이름. 주간 방송·프로모면 `None`이다."""
     finisher: FinisherSchema | None = None
     """지금 쓰는 피니셔 (§3-D88). **늘 있다** — 안 골랐으면 수플렉스다."""
+    signature: SignatureSchema | None = None
+    """시그니처 칸과 값 (§3-D92). **늘 있다** — 기본 한 칸으로 시작한다."""
     call_out: CallOutSchema | None = None
     """지금 시비를 걸 수 있는 자리 (§3-D86). 자리가 없거나 상대가 없으면 `None`."""
     briefcase: BriefcaseSchema | None = None
@@ -1041,6 +1098,28 @@ def to_finisher(run: CareerRun) -> FinisherSchema:
     )
 
 
+def to_signature(run: CareerRun) -> SignatureSchema:
+    """산 칸과 이름들 (§3-D92). **늘 채운다** — 한 칸은 처음부터 있다."""
+    opened = signature_desk.slots(run)
+    names = run.signature_names
+    return SignatureSchema(
+        slots=[
+            SignatureSlotSchema(
+                index=index,
+                name=names[index] if index < len(names) else "",
+            )
+            for index in range(opened)
+        ],
+        max_slots=signature_desk.MAX_SLOTS,
+        expand_cost=signature_desk.expand_cost(run),
+        naming_cost=signature_desk.SIGNATURE_NAMING,
+        finisher_naming_cost=signature_desk.FINISHER_NAMING,
+        money=run.money,
+        name_min=NAME_MIN_LEN,
+        name_max=NAME_MAX_LEN,
+    )
+
+
 def to_call_out(run: CareerRun) -> CallOutSchema | None:
     """지금 걸 수 있는 상대들 (§3-D86). 못 걸면 `None` — 화면이 자리를 안 낸다."""
     if not rivalry_desk.can_call_out(run):
@@ -1119,6 +1198,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
             next_kind=_next_kind(run),
             next_show=_next_show(run),
             finisher=to_finisher(run),
+            signature=to_signature(run),
             call_out=to_call_out(run),
             offer_options=to_offer_options(run),
             injured_parts=[

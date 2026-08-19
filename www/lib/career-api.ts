@@ -141,6 +141,8 @@ export type CareerBeat = {
     /** §3-D81 모멘텀 타임라인 — 1:1 경기의 흐름. */
     | "move"
     | "reversal"
+    /** §3-D91 — 그 사람의 기술. 많이 가진 선수일수록 자주 나온다. */
+    | "signature"
     | "nearfall"
     | "kickout"
     | "finisher";
@@ -216,6 +218,8 @@ export type CareerRunView = {
   callOut?: CareerCallOut | null;
   /** 지금 쓰는 피니셔 (§3-D88). **늘 온다** — 안 골랐으면 수플렉스다. */
   finisher?: CareerFinisher | null;
+  /** 시그니처 칸과 값 (§3-D92). **늘 온다** — 기본 한 칸이다. */
+  signature?: CareerSignature | null;
   /**
    * **다음 주에 무엇이 서는가** (§3-D81-3).
    *
@@ -339,6 +343,30 @@ export type CareerFinisher = {
   settled?: boolean;
   weeksUntilChange: number;
   options: CareerFinisherOption[];
+  nameMin: number;
+  nameMax: number;
+};
+
+/** 시그니처 칸 하나 (§3-D92). 이름이 비어 있으면 아직 *내* 기술이 아니다. */
+export type CareerSignatureSlot = { index: number; name: string };
+
+/**
+ * 산 칸과 이름들, 그리고 값 (§3-D92).
+ *
+ * **한 칸으로 시작해 돈으로 늘린다.** 칸이 늘수록 경기에서 시그니처가 나올 확률이
+ * 오르고(§3-D91), 그래서 칸값은 살 때마다 비싸진다.
+ *
+ * `canBuy` 같은 판단은 안 온다 — 값과 잔액이 함께 오므로 화면이 스스로 셈한다.
+ */
+export type CareerSignature = {
+  slots: CareerSignatureSlot[];
+  maxSlots: number;
+  /** 다음 칸의 값. **`null`이면 다 열었다.** */
+  expandCost: number | null;
+  namingCost: number;
+  /** 피니셔 이름을 직접 짓는 값 (§3-D88의 그 자리가 이제 유료다). */
+  finisherNamingCost: number;
+  money: number;
   nameMin: number;
   nameMax: number;
 };
@@ -680,6 +708,37 @@ export function changeGuestFinisher(
     code: pick.code ?? "",
     name: pick.name ?? "",
     hold: pick.hold ?? "",
+  });
+}
+
+/**
+ * 시그니처 칸을 사거나 이름을 새긴다 (§3-D92).
+ *
+ * **셋을 한 함수로 받는다** — 칸 사기(`buy`) · 이름 새기기(`name`) · 지우기(`drop`).
+ */
+export function buySignature(
+  runId: number,
+  what: { slot?: number; name?: string; buy?: boolean; drop?: boolean },
+): Promise<CareerAdvance> {
+  return post<CareerAdvance>(`/runs/${runId}/signature`, {
+    slot: what.slot ?? 0,
+    name: what.name ?? "",
+    buy: what.buy ?? false,
+    drop: what.drop ?? false,
+  });
+}
+
+/** 체험판의 시그니처 구매 (§3-D92). */
+export function buyGuestSignature(
+  state: GuestRunState,
+  what: { slot?: number; name?: string; buy?: boolean; drop?: boolean },
+): Promise<GuestAdvance> {
+  return post<GuestAdvance>("/guest/signature", {
+    state,
+    slot: what.slot ?? 0,
+    name: what.name ?? "",
+    buy: what.buy ?? false,
+    drop: what.drop ?? false,
   });
 }
 

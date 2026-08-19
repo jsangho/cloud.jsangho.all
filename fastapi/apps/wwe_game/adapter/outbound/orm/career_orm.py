@@ -142,6 +142,13 @@ class CareerRunModel(Base):
     """마지막으로 손댄 주차. 기록용이다."""
     finisher_ask_week: Mapped[int] = mapped_column(Integer, default=0)
     """이 주차 전에는 안 묻는다 (§3-D88). 0이면 첫 분기 규칙, 커리어 끝 너머면 평생."""
+    signature_slots: Mapped[int] = mapped_column(Integer, default=0)
+    """산 시그니처 칸 수 (§3-D92). **0이면 기본 한 칸** — 옛 행이 그 상태다."""
+    signature_names: Mapped[list[str]] = mapped_column(JSON, default=list)
+    """돈 주고 이름 붙인 시그니처들 (§3-D92). **빈 목록이면 굴려 쓴다**(§3-D91).
+
+    JSON인 이유는 `titles_won`과 같다 — 칸이 넷까지 늘고, 조회 조건이 되지 않는다.
+    """
     offer_week: Mapped[int] = mapped_column(Integer, default=0)
     """재계약 협상이 열린 주차 (§3-D84). 0이면 열려 있지 않다.
 

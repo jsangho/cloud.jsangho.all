@@ -27,11 +27,13 @@ from wwe_game.app.dtos.career_dto import (
     GuestCashInCommand,
     GuestChangeFinisherCommand,
     GuestChooseCommand,
+    GuestNameSignatureCommand,
     GuestReportCommand,
     GuestResumeCommand,
     GuestSetGoalCommand,
     GuestStartCommand,
     ModeView,
+    NameSignatureCommand,
     NewsFeedPage,
     PresetView,
     SetGoalCommand,
@@ -136,6 +138,11 @@ class CareerUseCase(ABC):
         ...
 
     @abstractmethod
+    async def name_signature(self, command: NameSignatureCommand) -> AdvanceResult:
+        """시그니처 칸을 사거나 이름을 새긴다 (§3-D92). 못 사면 `CannotNameError`."""
+        ...
+
+    @abstractmethod
     async def read_log(
         self, run_id: int, user_id: int, *, offset: int = 0, limit: int = 50
     ) -> CareerLogPage:
@@ -216,6 +223,11 @@ class CareerUseCase(ABC):
         self, command: GuestChangeFinisherCommand
     ) -> AdvanceResult:
         """체험판의 피니셔 교체 (§3-D88)."""
+        ...
+
+    @abstractmethod
+    def name_guest_signature(self, command: GuestNameSignatureCommand) -> AdvanceResult:
+        """체험판의 시그니처 구매 (§3-D92)."""
         ...
 
     @abstractmethod
