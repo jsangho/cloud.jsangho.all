@@ -38,7 +38,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from wwe_game.domain.constants.ple_calendar import date_of
-from wwe_game.domain.services import seeded_roll
+from wwe_game.domain.services import seeded_roll, staff_scene
 from wwe_game.domain.services.news_feed import CrowdMood, NewsItem, NewsKind
 from wwe_game.domain.services.seeded_roll import SeededRoll
 
@@ -299,6 +299,17 @@ class NewsArticle:
     title: str
     body: str
     comments: tuple[NewsComment, ...]
+    byline: str = ""
+    """**취재한 사람** (§3-D93 규칙 5). 백스테이지 인터뷰어가 곧 기자다 — 그가 물어본
+    말이 기사가 되므로, 누가 물었는지가 남아야 한다."""
+    quote: str = ""
+    """그 사건에 대해 **링 밖의 누군가가 한 말** (§3-D93).
+
+    말하는 사람은 사건이 정한다 — 회사의 발표는 집행부가, 대진과 이적은 GM이, 판정
+    시비는 심판이, 그리고 매니저를 둔 선수의 일은 매니저가 말한다.
+
+    **새 사실을 만들지 않는다.** 인용은 이미 일어난 일에 대한 태도이지 사건이 아니다.
+    """
 
 
 def _roll(item: NewsItem, seed: int, salt: int = 0) -> SeededRoll:
@@ -439,11 +450,70 @@ def comments_for(item: NewsItem, seed: int) -> tuple[NewsComment, ...]:
     return tuple(picked)
 
 
-def build(item: NewsItem, seed: int) -> NewsArticle:
-    """뉴스 한 줄 → 기사 한 꼭지. **되짚기다** — 같은 세이브면 같은 기사다(§3-D4)."""
+_GM_KINDS: frozenset[NewsKind] = frozenset(
+    {NewsKind.CALL_UP, NewsKind.CALL_UP_SCENE, NewsKind.MOVED, NewsKind.SCENE}
+)
+"""GM이 말하는 사건들 — **대진과 자리를 정하는 사람**이기 때문이다 (§3-D93 규칙 3)."""
+
+_REFEREE_KINDS: frozenset[NewsKind] = frozenset({NewsKind.CURSED})
+"""심판이 말하는 사건 (§3-D93 규칙 6). 저주로 진 밤은 **판정이 도마에 오르는 밤**이다."""
+
+_MANAGER_KINDS: frozenset[NewsKind] = frozenset(
+    {NewsKind.TITLE_WON, NewsKind.TITLE_LOST, NewsKind.BIG_WIN, NewsKind.TURN}
+)
+"""매니저가 대신 말하는 사건 (§3-D93 규칙 7) — **매니저를 둔 선수는 말을 덜 한다.**"""
+
+_LINES: dict[str, tuple[str, ...]] = {
+    "executive": (
+        "회사가 다음 분기에 무엇을 걸었는지는 곧 알게 될 겁니다.",
+        "우리가 보는 것은 한 주가 아니라 한 해입니다.",
+    ),
+    "gm": (
+        "다음 주 대진은 이 밤이 정해 줬습니다.",
+        "제 일은 이 이야기가 어디로 갈지 자리를 잡아 주는 겁니다.",
+    ),
+    "referee": (
+        "제가 본 대로 셌습니다. 그 이상도 이하도 아닙니다.",
+        "규칙 안에서 끝난 경기입니다.",
+    ),
+    "manager": (
+        "내 선수는 대답할 필요가 없습니다. 링에서 이미 답했으니까.",
+        "이 사람 옆에 서 있는 이유가 오늘 밤에 있습니다.",
+    ),
+}
+
+
+def quote_for(item: NewsItem, seed: int, *, brand: str = "", manager: str = "") -> str:
+    """그 사건에 붙는 한 마디. **없으면 빈 문자열이다** — 억지로 말시키지 않는다."""
+    if item.kind is NewsKind.ANNOUNCEMENT:
+        # 발표는 헤드라인이 이미 말한 사람을 담고 있다 — 여기서는 태도만 더한다.
+        speaker, voice = "", "executive"
+    elif item.kind in _REFEREE_KINDS:
+        speaker, voice = staff_scene.referee_of(brand, item.week, seed), "referee"
+    elif manager and item.kind in _MANAGER_KINDS:
+        speaker, voice = manager, "manager"
+    elif item.kind in _GM_KINDS:
+        speaker, voice = staff_scene.gm_of(brand), "gm"
+    else:
+        return ""
+    lines = _LINES[voice]
+    line = lines[item.week % len(lines)]
+    return f"{speaker} — “{line}”" if speaker else f"“{line}”"
+
+
+def build(
+    item: NewsItem, seed: int, *, brand: str = "", manager: str = ""
+) -> NewsArticle:
+    """뉴스 한 줄 → 기사 한 꼭지. **되짚기다** — 같은 세이브면 같은 기사다(§3-D4).
+
+    `brand`·`manager`가 오면 링 밖의 사람들이 함께 선다 (§3-D93) — 안 와도 기사는
+    그대로 서므로 옛 호출부가 깨지지 않는다.
+    """
     return NewsArticle(
         outlet=outlet_for(item, seed),
         title=title_for(item),
         body=body_for(item),
         comments=comments_for(item, seed),
+        byline=staff_scene.interviewer_of(brand, item.week, seed),
+        quote=quote_for(item, seed, brand=brand, manager=manager),
     )

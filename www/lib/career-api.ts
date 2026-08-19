@@ -130,6 +130,24 @@ export type CareerWeek = {
   wearDelta?: number;
   /** 프로모가 먹혔는지 (§3-D41). `null`이면 프로모 주차가 아니다. */
   promoHit?: boolean | null;
+  /** 링 밖의 사람들 (§3-D93). 경기가 없는 주차는 오지 않는다. */
+  crew?: CareerCrew | null;
+};
+
+/**
+ * 그 밤에 링을 둘러싼 사람들 (§3-D93).
+ *
+ * **경기 주차에만 온다.** 링 아나운서는 그중에서도 **타이틀전에만** 채워진다 —
+ * 소개가 붙는 밤이 특별해야 소개에 뜻이 생긴다.
+ */
+export type CareerCrew = {
+  gm: string;
+  commentators: string[];
+  ringAnnouncer: string;
+  referee: string;
+  /** 내 옆에 서는 매니저. 정보창에 `w/`로 붙는다. */
+  playerManager: string;
+  rivalManager: string;
 };
 
 /** 경기 진행 한 마디 (§3-D34). */
@@ -220,6 +238,12 @@ export type CareerRunView = {
   finisher?: CareerFinisher | null;
   /** 시그니처 칸과 값 (§3-D92). **늘 온다** — 기본 한 칸이다. */
   signature?: CareerSignature | null;
+  /**
+   * 재계약 자리에 마주 앉는 사람 (§3-D93). **협상 중이 아니면 `null`이다.**
+   *
+   * 회장은 안 나온다 — 계약서를 사이에 두는 것은 인재 담당 쪽이다.
+   */
+  negotiator?: CareerNegotiator | null;
   /**
    * **다음 주에 무엇이 서는가** (§3-D81-3).
    *
@@ -371,6 +395,9 @@ export type CareerSignature = {
   nameMax: number;
 };
 
+/** 재계약 자리에 마주 앉는 사람 (§3-D93). */
+export type CareerNegotiator = { name: string; title: string };
+
 export type CareerGrandSlamGroup = { name: string; count: number };
 
 export type CareerGrandSlam = {
@@ -473,6 +500,10 @@ export type CareerNewsItem = {
   body?: string;
   /** 대중의 반응 다섯. 한 명은 늘 반대편에 선다. */
   comments?: CareerNewsComment[];
+  /** 취재한 사람 (§3-D93) — 백스테이지 인터뷰어가 곧 기자다. */
+  byline?: string;
+  /** 링 밖의 누군가가 그 일에 대해 한 말. 없으면 빈 문자열이다. */
+  quote?: string;
 };
 
 export type CareerNewsPage = {

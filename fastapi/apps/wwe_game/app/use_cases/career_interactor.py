@@ -79,6 +79,7 @@ from wwe_game.domain.services import (
     roster_scene,
     show_report,
     signature_desk,
+    staff_scene,
     team_engine,
     title_news,
 )
@@ -273,6 +274,8 @@ class CareerInteractor(CareerUseCase):
         scene_news = self._scene_news(run)
         roster_news = self._roster_news(run)
         belt_news = self._belt_news(run)
+        # **회사도 말한다** (§3-D93) — 시즌 개막과 드래프트는 이미 달력에 있는 날이다.
+        notices = staff_scene.announcements(run.seed, run.week)
         items = news_feed.compile_feed(
             pairs,
             team_news,
@@ -281,12 +284,15 @@ class CareerInteractor(CareerUseCase):
             scene_news,
             roster_news,
             belt_news,
+            notices,
         )
         return NewsFeedPage(
             items=items[offset : offset + limit],
             total=len(items),
             offset=offset,
             seed=run.seed,
+            brand=run.brand.value,
+            manager=_manager_of(run),
         )
 
     @staticmethod
@@ -409,9 +415,15 @@ class CareerInteractor(CareerUseCase):
             self._scene_news(command.run),
             self._roster_news(command.run),
             self._belt_news(command.run),
+            staff_scene.announcements(command.run.seed, command.run.week),
         )
         return NewsFeedPage(
-            items=items, total=len(items), offset=0, seed=command.run.seed
+            items=items,
+            total=len(items),
+            offset=0,
+            seed=command.run.seed,
+            brand=command.run.brand.value,
+            manager=_manager_of(command.run),
         )
 
     def read_guest_report(self, command: GuestReportCommand) -> ShowReport:
@@ -610,6 +622,13 @@ def _apply_finisher(
     if command.name:
         return finisher_desk.name_it(run, command.name)
     return finisher_desk.pick(run, command.code)
+
+
+def _manager_of(run: CareerRun) -> str:
+    """내 옆에 서는 매니저 (§3-D93 규칙 7). 스테이블에 매니저가 붙어 있으면 그 사람이다."""
+    return staff_scene.manager_of(
+        str(run.identity.name), run.team.name if run.team else ""
+    )
 
 
 def _apply_signature(
