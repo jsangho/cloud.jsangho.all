@@ -725,7 +725,12 @@ def _draw_title_match(
             rung=rung,
             proven=candidate in run.titles_won,
         )
-        chance *= quarter_plan.plan_of(run).title_shot
+        # **곱한 뒤에 자른다** (2026-08-20에 발견). `title_shot_chance`가 1.0으로
+        # 잘라서 돌려주는데 그 위에 목표 배수(*"벨트를 노린다"*는 1.6)를 곱하면 1을
+        # 넘고, `SeededRoll.chance`가 범위를 지켜 **예외로 죽는다** — 인기도 높은
+        # 선수가 그 목표를 걸면 '다음'이 500이 됐다. 옆의 `promo_hit_chance_of`는
+        # 같은 자리에서 이미 자르고 있었다.
+        chance = min(1.0, chance * quarter_plan.plan_of(run).title_shot)
         if roll.chance(chance):
             return candidate, None
     return None, None
