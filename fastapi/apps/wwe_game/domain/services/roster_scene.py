@@ -197,6 +197,6 @@ def _retires(member: RosterMember, upto: int, brand: Brand, seed: int) -> bool:
     week = member.retire_week
     if week is None or not 0 < week <= upto:
         return False
-    if roster.tier_at(member, week - 1) is not RivalTier.MAIN_EVENT:
+    if roster.tier_at(member, week - 1) is not RivalTier.UPPER_CARD:
         return False
     return roster.brand_at(member, week - 1, seed) is brand

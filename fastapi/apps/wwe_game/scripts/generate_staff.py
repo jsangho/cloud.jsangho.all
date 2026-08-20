@@ -48,6 +48,8 @@ SECTION_BRAND: dict[str, str] = {
     "NXT": "nxt",
     "NXT Referee": "nxt",
     "Evolve": "evolve",
+    "Producer (M)": "",
+    "Producer (W)": "",
 }
 """섹션 → 브랜드. **집행부는 브랜드가 없다** — 회사의 사람이지 방송의 사람이 아니다."""
 
@@ -59,6 +61,7 @@ ROLE_ALIAS: dict[str, str] = {
     "backstage inerviewer": "INTERVIEWER",  # 원본 오타
     "back interviewer": "INTERVIEWER",  # 원본 축약
     "manager": "MANAGER",
+    "producer": "PRODUCER",
 }
 """직함 → 게임이 쓰는 역할. 여기 없는 직함(프로듀서·트레이너·부사장)은 버린다."""
 
@@ -103,6 +106,8 @@ class StaffRole(StrEnum):
     INTERVIEWER = "interviewer"
     REFEREE = "referee"
     MANAGER = "manager"
+    PRODUCER = "producer"
+    """경기를 기획한 사람 (§3-D94). **리포트의 별점 뒤에 이름이 남는다.**"""
 
 
 @dataclass(frozen=True)
@@ -134,6 +139,7 @@ _ANN = StaffRole.RING_ANNOUNCER
 _INT = StaffRole.INTERVIEWER
 _REF = StaffRole.REFEREE
 _MAN = StaffRole.MANAGER
+_PRO = StaffRole.PRODUCER
 
 STAFF: tuple[StaffMember, ...] = (
 '''
@@ -154,6 +160,17 @@ def executives() -> tuple[StaffMember, ...]:
 def managers() -> tuple[StaffMember, ...]:
     """매니저 전부 — **브랜드를 안 가린다.** 담당 선수를 따라다니기 때문이다."""
     return tuple(m for m in STAFF if m.has(StaffRole.MANAGER))
+
+
+def producers(gender: Gender | None = None) -> tuple[StaffMember, ...]:
+    """프로듀서 전부 (§3-D94). **브랜드를 안 가린다** — 회사의 제작진이다.
+
+    `gender`를 주면 그쪽만 — 여성 제작진이 여성부에 더 자주 붙게 하는 자리다.
+    """
+    found = tuple(m for m in STAFF if m.has(StaffRole.PRODUCER))
+    if gender is None:
+        return found
+    return tuple(m for m in found if m.gender is gender)
 '''
 
 ROLE_CONST = {
@@ -164,6 +181,7 @@ ROLE_CONST = {
     "INTERVIEWER": "_INT",
     "REFEREE": "_REF",
     "MANAGER": "_MAN",
+    "PRODUCER": "_PRO",
 }
 
 

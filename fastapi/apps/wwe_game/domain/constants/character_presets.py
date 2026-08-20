@@ -51,7 +51,6 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("루드비히 카이저", Gender.MALE, PlayStyle.LUCHA_LIBRE, Country.DE),
     CharacterPreset("에릭", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("에단 페이지", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.CA),
-    CharacterPreset("그레이슨 월러", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.AU),
     CharacterPreset("아이바", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("제이콥 파투", Gender.MALE, PlayStyle.BRAWLER, Country.US),
     CharacterPreset("JD 맥도나", Gender.MALE, PlayStyle.TECHNICIAN, Country.IE),
@@ -82,7 +81,6 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("리브 모건", Gender.FEMALE, PlayStyle.ALL_ROUNDER, Country.US),
     CharacterPreset("라이라 발키리아", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.IE),
     CharacterPreset("맥신 듀프리", Gender.FEMALE, PlayStyle.SHOWMAN, Country.US),
-    CharacterPreset("나탈리아", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.CA),
     CharacterPreset("니키 벨라", Gender.FEMALE, PlayStyle.HEEL_STYLE, Country.US),
     CharacterPreset("라켈 로드리게스", Gender.FEMALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("록샌 페레즈", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.US),
@@ -166,7 +164,6 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("잭슨 드레이크", Gender.MALE, PlayStyle.TECHNICIAN, Country.US),
     CharacterPreset("재스퍼 트로이", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("조쉬 브릭스", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
-    CharacterPreset("케일 딕슨", Gender.MALE, PlayStyle.TECHNICIAN, Country.US),
     CharacterPreset("캠 헨드릭스", Gender.MALE, PlayStyle.BRAWLER, Country.US),
     CharacterPreset("키아누 카버", Gender.MALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("렉시스 킹", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.US),
@@ -212,6 +209,8 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("웬디 추", Gender.FEMALE, PlayStyle.HIGH_FLYER, Country.US),
     CharacterPreset("렌 싱클레어", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.US),
     CharacterPreset("자리아", Gender.FEMALE, PlayStyle.POWERHOUSE, Country.AU),
+    CharacterPreset("그레이슨 월러", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.AU),
+    CharacterPreset("나탈리아", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.CA),
     CharacterPreset("아론 루크", Gender.MALE, PlayStyle.ALL_ROUNDER, Country.US),
     CharacterPreset("브랙스턴 콜", Gender.MALE, PlayStyle.TECHNICIAN, Country.US),
     CharacterPreset("카푸치노 존스", Gender.MALE, PlayStyle.SHOWMAN, Country.US),
@@ -224,6 +223,7 @@ PRESETS: tuple[CharacterPreset, ...] = (
     CharacterPreset("샨텔 먼로", Gender.FEMALE, PlayStyle.HEEL_STYLE, Country.US),
     CharacterPreset("PJ 바사", Gender.FEMALE, PlayStyle.POWERHOUSE, Country.US),
     CharacterPreset("제나 스털링", Gender.FEMALE, PlayStyle.TECHNICIAN, Country.OTHER),
+    CharacterPreset("케일 딕슨", Gender.MALE, PlayStyle.TECHNICIAN, Country.US),
 )
 
 BY_SOURCE: dict[str, CharacterPreset] = {p.source: p for p in PRESETS}

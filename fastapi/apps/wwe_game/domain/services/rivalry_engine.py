@@ -22,7 +22,9 @@ from wwe_game.domain.entities.career_run import (
     RivalryOrigin,
     RivalryStage,
 )
+from wwe_game.domain.services import seeded_roll
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 HEAT_HEATED = 35
 HEAT_NEMESIS = 70
@@ -99,19 +101,82 @@ def candidate_pool(run: CareerRun) -> tuple[str, ...]:
     **규칙과 화면이 같은 풀을 본다** (§3-D86). 예전에는 이 계산이 `pick_rival` 안에
     있었고, 플레이어가 고르는 목록을 만들려면 밖에서 같은 식을 다시 적어야 했다 —
     그러면 "화면에 뜬 사람인데 규칙은 모르는" 상대가 생긴다.
+
+    세 층을 지난다: **브랜드·위상** → **넘봄**(`reaching_tier`) → **성향**(`_facing`).
     """
     # **같은 브랜드에서 고른다** (§3-D53). 내가 NXT에 있는데 메인 로스터와 대립하면
-    # 브랜드가 있다는 사실 자체가 화면에서 사라진다. 등급은 그 브랜드에 있는 것으로
-    # 접는다 — 육성에는 유망주만 산다.
+    # 브랜드가 있다는 사실 자체가 화면에서 사라진다.
     tier = roster.tier_in(run.brand, roster.tier_for_popularity(run.stats.popularity))
     taken = {r.rival_name for r in run.rivalries} | {str(run.identity.name)}
-    return tuple(
+    # **가끔은 한 칸 위를 본다** (§3-D95, 2026-08-19 사용자 요청) — *"미드카드가
+    # 어퍼카드 챔피언십을 노리고 (…) 대립도 같이"*. 위상이 굳어 있으면 커리어가
+    # 사다리가 아니라 계단참이 된다.
+    reach = roster.reaching_tier(tier, run.week, run.seed)
+    pool = tuple(
         n
         for n in roster.pool_for(
-            run.identity.gender, tier, run.week, run.brand, run.seed
+            run.identity.gender, reach, run.week, run.brand, run.seed
         )
         if n not in taken
     )
+    if not pool:
+        # 그 칸이 비었으면 제 위상으로 돌아온다 — **상대가 없는 주차를 만들지 않는다.**
+        pool = tuple(
+            n
+            for n in roster.pool_for(
+                run.identity.gender, tier, run.week, run.brand, run.seed
+            )
+            if n not in taken
+        )
+    return _facing(run, pool)
+
+
+FACING_CHANCE = 0.7
+"""**마주 보는 성향**으로 후보가 기우는 확률 (§3-D95).
+
+페이스가 페이스와 싸우는 밤이 없지는 않다 — 다만 드물다. 열에 일곱이면 대립 대부분이
+선악 구도로 서고, 나머지 셋에서 "둘 다 선역인데 부딪힌 이야기"가 나온다. 1.0으로 두면
+성향이 상대를 통째로 정해 버려, 같은 위상·같은 브랜드에서 볼 수 있는 얼굴이 절반으로
+줄어든다.
+
+**주차마다 한 번 굴린다** — `reaching_tier`와 같은 자리다(§3-D4). 세이브를 다시 열어도
+같은 후보가 서야 하므로 사람마다 굴리지 않는다.
+"""
+
+
+def _facing(run: CareerRun, pool: tuple[str, ...]) -> tuple[str, ...]:
+    """마주 보는 성향으로 기운 후보 (§3-D95, 2026-08-20).
+
+    **대립은 얼굴이 갈려야 이야기가 된다.** 명부에 페이스·트위너·힐이 생겼는데
+    (§3-D95) 상대를 여전히 급과 브랜드로만 뽑으면, 그 축은 화면에 적힌 글자일 뿐
+    아무것도 정하지 않는다.
+
+    **규칙과 화면이 같은 풀을 본다** (§3-D86). 그래서 여기서 좁힌다 — `pick_rival`
+    안에서만 기울이면 시비 걸 목록(`rivalry_desk`)은 여전히 성향을 모른다.
+
+    내가 어느 쪽도 아니면(관중이 갈린 구간 -19~19) 기울이지 않는다. 그 상태에서
+    "마주 본다"는 말이 성립하지 않는다.
+    """
+    want = _opposite(run.stats)
+    if want is None or not pool:
+        return pool
+    roll = SeededRoll(run.seed, run.week, seeded_roll.FACING)
+    if not roll.chance(FACING_CHANCE):
+        return pool
+    facing = tuple(
+        n for n in pool if roster.alignment_of(n, run.week, run.seed) is want
+    )
+    # 그 성향이 그 칸에 한 명도 없으면 원래 풀이다 — 여기서도 빈 주차를 만들지 않는다.
+    return facing or pool
+
+
+def _opposite(stats: WrestlerStats) -> roster.Alignment | None:
+    """내 반대쪽 성향. **어느 쪽도 아니면 None이다.**"""
+    if stats.is_face:
+        return roster.Alignment.HEEL
+    if stats.is_heel:
+        return roster.Alignment.FACE
+    return None
 
 
 def pick_rival(run: CareerRun, roll: SeededRoll) -> str | None:

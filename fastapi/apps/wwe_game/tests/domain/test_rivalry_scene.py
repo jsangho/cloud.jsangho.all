@@ -73,7 +73,7 @@ class TestItStaysBackground:
         for item in scene():
             if item.beat is not RivalryBeat.STARTED:
                 continue  # 끝은 시작할 때의 등급을 따른다
-            main = set(roster.pool_for(Gender.MALE, RivalTier.MAIN_EVENT, item.week))
+            main = set(roster.pool_for(Gender.MALE, RivalTier.UPPER_CARD, item.week))
             assert set(item.names) <= main, f"정상급이 아닌 대립: {item.names}"
 
     def test_at_most_three_run_at_once(self) -> None:

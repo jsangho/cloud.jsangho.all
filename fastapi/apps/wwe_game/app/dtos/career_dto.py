@@ -395,6 +395,18 @@ class CareerLogPage:
     entries: tuple[WeekReportView, ...] = ()
     total: int = 0
     offset: int = 0
+    board: tuple[WeekReportView, ...] = ()
+    """**커리어 전체의 경기 주차** (§3-D94). 제작진 순위를 세우는 재료다.
+
+    보이는 페이지(`entries`)와 나눠 두는 이유: 순위는 "지금까지 쌓인 것"이라 한
+    페이지로는 못 만든다. 읽기는 한 번이고(전체를 읽어 페이지를 잘라 낸다) 별점은
+    어댑터가 계산한다 — 저장하지 않는 값이라 계산 자리가 한 곳이어야 한다(§3-D56).
+    """
+    brand: str = ""
+    player_gender: str = ""
+    player: str = ""
+    stable: str = ""
+    """로그 줄에도 링 밖 사람들을 세우기 위한 문맥 (§3-D93)."""
     seed: int = 0
     """그 커리어의 시드 (§3-D56). **별점을 되짚는 데 쓴다** — 별점은 저장하지 않고
     그 밤의 재료로 매번 계산하므로, 로그를 다시 열 때도 시드가 필요하다."""

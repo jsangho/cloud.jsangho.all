@@ -215,7 +215,7 @@ def _pick_partners(
     pool = [
         ring_name_at(m.name, week)
         for m in active_at(week)
-        if m.gender is gender and tier_at(m, week) is not RivalTier.MAIN_EVENT
+        if m.gender is gender and tier_at(m, week) is not RivalTier.UPPER_CARD
     ]
     if len(pool) < 3:
         return None

@@ -35,6 +35,8 @@ class StaffRole(StrEnum):
     INTERVIEWER = "interviewer"
     REFEREE = "referee"
     MANAGER = "manager"
+    PRODUCER = "producer"
+    """경기를 기획한 사람 (§3-D94). **리포트의 별점 뒤에 이름이 남는다.**"""
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,7 @@ _ANN = StaffRole.RING_ANNOUNCER
 _INT = StaffRole.INTERVIEWER
 _REF = StaffRole.REFEREE
 _MAN = StaffRole.MANAGER
+_PRO = StaffRole.PRODUCER
 
 STAFF: tuple[StaffMember, ...] = (
     # ── Executives ──────────────────────────────
@@ -94,7 +97,7 @@ STAFF: tuple[StaffMember, ...] = (
     ),
     # ── RAW ─────────────────────────────────────
     StaffMember(
-        "애덤 피어스", (_GM,), "raw", _M, "RAW GM | Trainer | Producer", "", False
+        "애덤 피어스", (_GM, _PRO), "raw", _M, "RAW GM | Trainer | Producer", "", False
     ),
     StaffMember(
         "마이클 콜",
@@ -113,7 +116,7 @@ STAFF: tuple[StaffMember, ...] = (
     ),
     StaffMember("재키 레드몬드", (_INT,), "raw", _F, "Backstage Inerviewer", "", False),
     StaffMember(
-        "폴 헤이먼", (_MAN,), "raw", _M, "Manager | Producer", "The Vision", False
+        "폴 헤이먼", (_MAN, _PRO), "raw", _M, "Manager | Producer", "The Vision", False
     ),
     # ── Raw Referee ─────────────────────────────
     StaffMember("채드 패튼", (_REF,), "raw", _M, "Senior", "", True),
@@ -127,7 +130,7 @@ STAFF: tuple[StaffMember, ...] = (
     StaffMember("숀 베넷", (_REF,), "raw", _M, "", "", False),
     # ── Smackdown ───────────────────────────────
     StaffMember(
-        "닉 알디스", (_GM,), "smackdown", _M, "Smackdown GM | Producer", "", False
+        "닉 알디스", (_GM, _PRO), "smackdown", _M, "Smackdown GM | Producer", "", False
     ),
     StaffMember("웨이드 바렛", (_COM,), "smackdown", _M, "Commentator", "", False),
     StaffMember("조 테시토레", (_COM,), "smackdown", _M, "Commentator", "", False),
@@ -157,14 +160,16 @@ STAFF: tuple[StaffMember, ...] = (
     StaffMember("제이슨 에이어스", (_REF,), "smackdown", _M, "", "", False),
     StaffMember("라이언 트란", (_REF,), "smackdown", _M, "", "", False),
     # ── NXT ─────────────────────────────────────
-    StaffMember("로버트 스톤", (_GM,), "nxt", _M, "NXT GM | Producer", "", False),
+    StaffMember("로버트 스톤", (_GM, _PRO), "nxt", _M, "NXT GM | Producer", "", False),
     StaffMember("부커 T", (_COM,), "nxt", _M, "Commentator", "", False),
     StaffMember("빅 조셉", (_COM,), "nxt", _M, "Commentator", "", False),
     StaffMember("블레이크 하워드", (_ANN,), "nxt", _M, "Ring Announcer", "", False),
     StaffMember("마이크 롬", (_ANN,), "nxt", _M, "Ring Announcer", "", False),
     StaffMember("핀레이", (_MAN,), "nxt", _M, "Manager", "Birthright", False),
     # ── NXT Referee ─────────────────────────────
-    StaffMember("아드리안 버틀러", (_REF,), "nxt", _M, "Senior | Producer", "", True),
+    StaffMember(
+        "아드리안 버틀러", (_REF, _PRO), "nxt", _M, "Senior | Producer", "", True
+    ),
     StaffMember("칩 대닝", (_REF,), "nxt", _M, "", "", False),
     StaffMember("댈러스 어빈", (_REF,), "nxt", _M, "", "", False),
     StaffMember("데렉 샌더스", (_REF,), "nxt", _M, "", "", False),
@@ -180,8 +185,29 @@ STAFF: tuple[StaffMember, ...] = (
     ),
     StaffMember("피터 로젠버그", (_COM,), "evolve", _M, "Commentator", "", False),
     StaffMember(
-        "라이언 카츠", (_ANN,), "evolve", _M, "Ring Announcer | Producer", "", False
+        "라이언 카츠",
+        (_ANN, _PRO),
+        "evolve",
+        _M,
+        "Ring Announcer | Producer",
+        "",
+        False,
     ),
+    # ── Producer (M) ────────────────────────────
+    StaffMember("빌리 키드먼", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("바비 루드", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("크리스 파크스", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("제이미 노블", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("제이슨 조던", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("케니 다익스트라", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("마이클 헤이스", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("피티 윌리엄스", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("쉐인 헴즈", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("숀 다이바리", (_PRO,), "", _M, "Producer", "", False),
+    StaffMember("TJ 윌슨", (_PRO,), "", _M, "Producer", "", False),
+    # ── Producer (W) ────────────────────────────
+    StaffMember("몰리 할리", (_PRO,), "", _F, "Producer", "", False),
+    StaffMember("타미나", (_PRO,), "", _F, "Producer", "", False),
 )
 
 
@@ -198,3 +224,14 @@ def executives() -> tuple[StaffMember, ...]:
 def managers() -> tuple[StaffMember, ...]:
     """매니저 전부 — **브랜드를 안 가린다.** 담당 선수를 따라다니기 때문이다."""
     return tuple(m for m in STAFF if m.has(StaffRole.MANAGER))
+
+
+def producers(gender: Gender | None = None) -> tuple[StaffMember, ...]:
+    """프로듀서 전부 (§3-D94). **브랜드를 안 가린다** — 회사의 제작진이다.
+
+    `gender`를 주면 그쪽만 — 여성 제작진이 여성부에 더 자주 붙게 하는 자리다.
+    """
+    found = tuple(m for m in STAFF if m.has(StaffRole.PRODUCER))
+    if gender is None:
+        return found
+    return tuple(m for m in found if m.gender is gender)

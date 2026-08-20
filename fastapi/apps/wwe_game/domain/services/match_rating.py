@@ -54,9 +54,9 @@ TITLE_BONUS: Final = 0.35
 """벨트가 걸린 경기. 걸린 것이 있으면 경기가 달라진다."""
 
 TIER_BONUS: Final[dict[RivalTier, float]] = {
-    RivalTier.PROSPECT: 0.0,
-    RivalTier.MIDCARD: 0.18,
-    RivalTier.MAIN_EVENT: 0.35,
+    RivalTier.LOW_CARD: 0.0,
+    RivalTier.MID_CARD: 0.18,
+    RivalTier.UPPER_CARD: 0.35,
 }
 """상대의 급. 좋은 상대가 좋은 경기를 만든다 — 혼자 하는 경기는 없다."""
 
@@ -93,7 +93,7 @@ def rate(
     week: int,
     *,
     in_ring: int,
-    rival_tier: RivalTier = RivalTier.MIDCARD,
+    rival_tier: RivalTier = RivalTier.MID_CARD,
     stage: str | None = None,
     has_title: bool = False,
     has_stipulation: bool = False,

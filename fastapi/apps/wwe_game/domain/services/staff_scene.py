@@ -23,6 +23,7 @@ from wwe_game.domain.constants import staff
 from wwe_game.domain.constants.career_clock import WEEKS_PER_YEAR
 from wwe_game.domain.constants.staff import StaffMember, StaffRole
 from wwe_game.domain.services.seeded_roll import SeededRoll
+from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 CHANNEL: Final = "staff"
 """링 밖 사람을 고르는 채널. **경기 굴림과 완전히 갈라 둔다.**"""
@@ -53,6 +54,8 @@ class MatchCrew:
     ring_announcer: str = ""
     """**챔피언십 경기에만 채운다** — 벨트가 걸린 밤에는 소개가 먼저다."""
     referee: str = ""
+    producer: str = ""
+    """그 경기를 기획한 사람 (§3-D94). **리포트의 별점 뒤에 이름이 남는다.**"""
     player_manager: str = ""
     """내 옆에 서는 사람. 정보창에 `w/`로 붙는다."""
     rival_manager: str = ""
@@ -103,6 +106,35 @@ def referee_of(brand: str, week: int, seed: int, *, title_match: bool = False) -
     return _pick(people, seed, week, "ref")
 
 
+WOMEN_PRODUCER_SHARE: Final = 0.5
+"""여성부 경기를 **여성 제작진**이 맡을 확률 (2026-08-19 사용자 결정).
+
+*"프로듀서를 남녀로 가른 이유는 매우 적은 여성 프로듀서진이 여성부에 좀 더 많이 관여
+하라고 표시한 거야. 남자 프로듀서진이 여성부에 껴 있어도 돼."*
+
+**둘이 열일곱을 상대한다.** 인원대로 굴리면 여성 제작진은 여성부 경기의 10%에도 못
+낀다 — 그래서 확률로 반을 떼어 준다. 나머지 반은 남성 제작진이 맡으므로 "껴 있어도
+된다"도 함께 지켜진다.
+
+남성부는 남성 제작진만 맡는다. 사용자가 연 것은 **여성부 쪽 문 하나**이고, 반대쪽까지
+여는 것은 시키지 않은 일이다.
+"""
+
+
+def producer_of(gender: Gender, week: int, seed: int) -> str:
+    """그 경기를 기획한 사람 (§3-D94 · 규칙 3).
+
+    **디비전이 인원을 가른다** — 여성부는 반이 여성 제작진이고, 남성부는 남성이다.
+    """
+    roll = _roll(seed, week, "prod")
+    if gender is Gender.FEMALE and roll.chance(WOMEN_PRODUCER_SHARE):
+        women = staff.producers(Gender.FEMALE)
+        if women:
+            return roll.pick(women).name
+    people = staff.producers(Gender.MALE) or staff.producers()
+    return roll.pick(people).name if people else ""
+
+
 def manager_of(who: str, stable: str = "") -> str:
     """그 사람 옆에 서는 매니저 (§3-D93 규칙 7).
 
@@ -126,6 +158,7 @@ def crew_for(
     week: int,
     seed: int,
     *,
+    gender: Gender = Gender.MALE,
     title_match: bool = False,
     player: str = "",
     player_stable: str = "",
@@ -142,6 +175,7 @@ def crew_for(
         commentators=commentators_of(brand),
         ring_announcer=ring_announcer_of(brand, week, seed) if title_match else "",
         referee=referee_of(brand, week, seed, title_match=title_match),
+        producer=producer_of(gender, week, seed),
         player_manager=manager_of(player, player_stable),
         rival_manager=manager_of(opponent, opponent_stable),
     )

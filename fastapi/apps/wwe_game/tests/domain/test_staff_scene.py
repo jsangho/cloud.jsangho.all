@@ -166,3 +166,44 @@ class TestTheArticleNamesWhoSpoke:
         article = build(_item(NewsKind.BIG_WIN), 7)
         assert article.title
         assert article.byline == ""
+
+
+# ── §3-D94 제작진 ──────────────────────────────────────────────
+
+
+class TestWhoProducedTheMatch:
+    """규칙 1·3 — 경기마다 기획한 사람이 있고, 여성부에는 여성 제작진이 더 자주 붙는다."""
+
+    def test_every_match_has_one(self) -> None:
+        for week in range(1, 40):
+            assert staff_scene.producer_of(Gender.MALE, week, 7)
+            assert staff_scene.producer_of(Gender.FEMALE, week, 7)
+
+    def test_the_same_night_has_the_same_producer(self) -> None:
+        """되짚기가 결정적이다 (§3-D4) — 로그를 다시 열어도 같은 이름이다."""
+        assert staff_scene.producer_of(Gender.MALE, 300, 42) == staff_scene.producer_of(
+            Gender.MALE, 300, 42
+        )
+
+    def test_women_producers_get_the_womens_division(self) -> None:
+        """**둘이 열일곱을 상대한다** — 인원대로 굴리면 10%도 못 낀다."""
+        women = {m.name for m in staff.producers(Gender.FEMALE)}
+        picked = [staff_scene.producer_of(Gender.FEMALE, w, 7) for w in range(300)]
+        share = sum(1 for name in picked if name in women) / len(picked)
+        assert 0.4 <= share <= 0.6
+
+    def test_men_produce_the_womens_division_too(self) -> None:
+        """*"남자 프로듀서진이 여성부에 껴 있어도 돼"* (사용자 결정)."""
+        women = {m.name for m in staff.producers(Gender.FEMALE)}
+        picked = {staff_scene.producer_of(Gender.FEMALE, w, 7) for w in range(300)}
+        assert picked - women
+
+    def test_the_mens_division_stays_with_men(self) -> None:
+        """사용자가 연 것은 **여성부 쪽 문 하나**다 — 반대쪽은 시키지 않았다."""
+        women = {m.name for m in staff.producers(Gender.FEMALE)}
+        picked = {staff_scene.producer_of(Gender.MALE, w, 7) for w in range(300)}
+        assert not (picked & women)
+
+    def test_the_crew_carries_the_producer(self) -> None:
+        crew = staff_scene.crew_for("raw", 300, 7, gender=Gender.FEMALE)
+        assert crew.producer

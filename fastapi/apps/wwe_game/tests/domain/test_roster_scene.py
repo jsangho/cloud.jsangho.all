@@ -87,7 +87,7 @@ class TestEveryLineIsTrue:
                 continue
             member = roster.member_of(item.name, SEED)
             assert member is not None
-            assert roster.tier_at(member, item.week - 1) is RivalTier.MAIN_EVENT
+            assert roster.tier_at(member, item.week - 1) is RivalTier.UPPER_CARD
 
     def test_a_call_up_lands_on_the_main_roster(self) -> None:
         for item in _news():

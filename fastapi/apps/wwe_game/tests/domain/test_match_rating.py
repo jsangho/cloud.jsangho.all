@@ -17,7 +17,7 @@ SEED = 7777
 
 
 def _rate(**kwargs: object) -> float:
-    base: dict[str, object] = {"in_ring": 70, "rival_tier": RivalTier.MIDCARD}
+    base: dict[str, object] = {"in_ring": 70, "rival_tier": RivalTier.MID_CARD}
     base.update(kwargs)
     return match_rating.rate(SEED, 100, **base)  # type: ignore[arg-type]
 
@@ -56,7 +56,7 @@ class TestTheScaleMeansSomething:
                 SEED,
                 week,
                 in_ring=95,
-                rival_tier=RivalTier.MAIN_EVENT,
+                rival_tier=RivalTier.UPPER_CARD,
                 stage="major",
                 has_title=True,
                 has_stipulation=True,
@@ -72,7 +72,7 @@ class TestTheScaleMeansSomething:
                 SEED,
                 week,
                 in_ring=75,
-                rival_tier=RivalTier.MAIN_EVENT,
+                rival_tier=RivalTier.UPPER_CARD,
                 stage="ple",
                 has_title=True,
             )
@@ -109,11 +109,11 @@ class TestBetterConditionsRateHigher:
     def test_a_better_rival_rates_higher(self) -> None:
         weeks = range(1, 400)
         low = statistics.mean(
-            match_rating.rate(SEED, w, in_ring=70, rival_tier=RivalTier.PROSPECT)
+            match_rating.rate(SEED, w, in_ring=70, rival_tier=RivalTier.LOW_CARD)
             for w in weeks
         )
         high = statistics.mean(
-            match_rating.rate(SEED, w, in_ring=70, rival_tier=RivalTier.MAIN_EVENT)
+            match_rating.rate(SEED, w, in_ring=70, rival_tier=RivalTier.UPPER_CARD)
             for w in weeks
         )
         assert high > low

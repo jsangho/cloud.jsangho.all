@@ -28,7 +28,10 @@ def _placed(week: int, seed: int = 0) -> dict[str, Brand]:
     return {
         m.name: roster.brand_at(m, week, seed)
         for m in roster.active_at(week)
-        if roster.tier_at(m, week) is not RivalTier.PROSPECT
+        # **메인 로스터만 본다** (§3-D95 개정): 위상이 브랜드를 겸하던 때에는 "유망주가
+        # 아니면 메인"이었지만, 이제 NXT에도 미드·어퍼카드가 산다.
+        if roster.brand_at(m, week, seed) is not Brand.NXT
+        and roster.tier_at(m, week, seed) is not RivalTier.LOW_CARD
     }
 
 
@@ -68,7 +71,7 @@ class TestTheYearEndDraft:
             before_week = year * WEEKS_PER_YEAR + roster.DRAFT_WEEK - 1
             after_week = before_week + 2
             for gender in Gender:
-                for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT):
+                for tier in (RivalTier.MID_CARD, RivalTier.UPPER_CARD):
                     for brand in (Brand.RAW, Brand.SMACKDOWN):
                         before = len(
                             roster.pool_for(gender, tier, before_week, brand, 7777)
@@ -90,31 +93,25 @@ class TestTheYearEndDraft:
         week = 8 * WEEKS_PER_YEAR + roster.DRAFT_WEEK + 1
         assert _placed(week, seed=7777) == _placed(week, seed=7777)
 
-    def test_the_seed_only_tilts_the_pool_a_little(self) -> None:
-        """시드가 칸을 기울이되 **한쪽으로 쏠리지는 않는다.**
+    def test_the_two_brands_stay_balanced(self) -> None:
+        """드래프트가 칸을 기울이되 **한쪽으로 쏠리지는 않는다.**
 
-        드래프트 순간에는 정확히 맞바꾼다. 다만 그 표식은 사람에게 붙어서, 나중에 그가
-        승급하면 다른 등급 칸으로 따라간다 — 그 칸에서는 짝이 맞지 않는다.
-
-        절대 수가 아니라 **비율**로 잰다: 칸이 클수록 치우침도 커지는 것이 자연스럽고,
-        지켜야 하는 것은 바닥(`MIN_BRAND_POOL`)이라 그건 아래에서 따로 잰다.
-
-        **작은 칸에서는 그 비율이 과장된다** (2026-08-19): 여성부 미드카드는 열 명
-        안팎이라 드래프트가 두세 명만 옮겨도 30%가 흔들린다. 그래서 비율과 인원 중
-        느슨한 쪽을 쓴다 — 진짜 지켜야 하는 바닥은 30년·시드 넷으로 아래에서 잰다.
+        **시드 사이를 비교하지 않는다** (§3-D95 개정): 이제 위상 자체가 시드를 타므로
+        (`tier_at`) 다른 세계의 칸 크기는 원래 다르다 — 그걸로 재면 드래프트가 아니라
+        위상 굴림을 재게 된다. 한 세계 안에서 **두 브랜드가 비슷한 크기인지**를 본다.
         """
-        week = 10 * WEEKS_PER_YEAR
-        for gender in Gender:
-            for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT):
-                for brand in (Brand.RAW, Brand.SMACKDOWN):
+        for seed in (0, 7777, 1234, 99):
+            for week in range(0, CAREER_WEEKS + 1, 5 * WEEKS_PER_YEAR):
+                for gender in Gender:
                     sizes = [
-                        len(roster.pool_for(gender, tier, week, brand, seed))
-                        for seed in (0, 7777, 1234, 99)
+                        sum(
+                            len(roster.pool_for(gender, tier, week, brand, seed))
+                            for tier in RivalTier
+                        )
+                        for brand in (Brand.RAW, Brand.SMACKDOWN)
                     ]
-                    tilt = max(sizes) - min(sizes)
-                    assert tilt <= max(SMALL_POOL_SLACK, max(sizes) * 0.3), (
-                        f"{gender}/{tier}/{brand}: {sizes}"
-                    )
+                    gap = abs(sizes[0] - sizes[1]) / max(1, max(sizes))
+                    assert gap <= 0.45, f"시드 {seed} · {gender} {week}주차: {sizes}"
 
     @pytest.mark.parametrize("seed", [0, 7777, 1234])
     def test_a_champion_is_never_drafted(self, seed: int) -> None:
@@ -142,14 +139,21 @@ class TestTheYearEndDraft:
     @pytest.mark.parametrize("seed", [0, 7777, 1234, 99])
     def test_the_brand_pools_survive_thirty_years(self, seed: int) -> None:
         """**시드마다 확인한다.** 임포트 검증은 시드 0만 보는데, 드래프트가 칸을 한 명씩
-        기울일 수 있어(위 테스트) 다른 세계에서도 바닥을 지키는지는 여기서 잰다."""
+        기울일 수 있어(위 테스트) 다른 세계에서도 바닥을 지키는지는 여기서 잰다.
+
+        **바닥은 브랜드 전체로 잰다** (§3-D95): 위상 한 칸이 잠깐 비는 것은 이제
+        사고가 아니다 — 벨트도 대립도 한 칸 아래에서 상대를 찾는다.
+        """
         for gender in Gender:
             for brand in Brand:
-                tier = roster.tier_in(brand, RivalTier.MAIN_EVENT)
                 for week in range(0, CAREER_WEEKS + 1, WEEKS_PER_YEAR):
-                    pool = roster.pool_for(gender, tier, week, brand, seed)
-                    assert len(pool) >= roster.MIN_BRAND_POOL, (
-                        f"시드 {seed} · {gender}/{brand} {week // WEEKS_PER_YEAR}년차: {pool}"
+                    people = sum(
+                        len(roster.pool_for(gender, tier, week, brand, seed))
+                        for tier in RivalTier
+                    )
+                    assert people >= roster.MIN_BRAND_POOL, (
+                        f"시드 {seed} · {gender}/{brand} "
+                        f"{week // WEEKS_PER_YEAR}년차: {people}명"
                     )
 
 

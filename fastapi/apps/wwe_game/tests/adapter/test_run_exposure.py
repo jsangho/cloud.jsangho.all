@@ -28,6 +28,7 @@ from wwe_game.adapter.inbound.api.schemas.career_schema import (  # noqa: E402
 )
 from wwe_game.app.dtos.career_dto import WeekReportView  # noqa: E402
 from wwe_game.domain.constants import career_rules as rules  # noqa: E402
+from wwe_game.domain.constants import roster  # noqa: E402
 from wwe_game.domain.services.week_simulation import simulate_week  # noqa: E402
 from wwe_game.domain.value_objects.condition import InjuryGrade  # noqa: E402
 from wwe_game.domain.value_objects.body_part import BodyPart  # noqa: E402
@@ -256,3 +257,32 @@ class TestTheWeekReportsWhatItMade:
         assert row.call_up is None
         assert row.draft_night is False
         assert row.title_defended is False
+
+
+# ── 성향 (§3-D95) ─────────────────────────────────────────────
+
+
+class TestTheAlignmentReachesTheScreen:
+    """**명부가 아는 것이 화면까지 가는가** (§3-D95).
+
+    성향은 저장하지 않고 명부에서 되짚는 값이라(§3-D56과 같은 자리) 어댑터가 안 실으면
+    도메인에 있어도 아무도 못 본다 — 이 파일이 잠그는 바로 그 종류의 구멍이다.
+    """
+
+    def test_the_opponent_wears_a_side_on_the_entrance(self) -> None:
+        run = make_run(week=300)
+        rival = roster.name_at(roster.ROSTER[0], 300, run.seed)
+        report = WeekReport(week=300, kind=WeekKind.WEEKLY_SHOW, opponent=rival)
+        row = to_week(view_of(report, run), seed=run.seed)
+        assert row.opponent_alignment == roster.alignment_of(rival, 300, run.seed)
+
+    def test_a_name_off_the_roster_leaves_it_blank(self) -> None:
+        """플레이어는 명부에 없다 — 빈 문자열이지 추측이 아니다."""
+        run = make_run(week=300)
+        report = WeekReport(week=300, kind=WeekKind.WEEKLY_SHOW, opponent="없는 사람")
+        assert to_week(view_of(report, run), seed=run.seed).opponent_alignment == ""
+
+    def test_a_quiet_week_says_nothing(self) -> None:
+        run = make_run(week=300)
+        report = WeekReport(week=300, kind=WeekKind.PROMO)
+        assert to_week(view_of(report, run), seed=run.seed).opponent_alignment == ""

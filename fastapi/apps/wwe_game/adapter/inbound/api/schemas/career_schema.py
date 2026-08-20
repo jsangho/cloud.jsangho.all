@@ -64,6 +64,7 @@ from wwe_game.domain.value_objects.title import (
     group_counts,
 )
 from wwe_game.domain.value_objects.week_report import WeekKind, WeekReport
+from wwe_game.domain.value_objects.wrestler_identity import Gender
 from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
 
@@ -141,6 +142,8 @@ class CrewSchema(_Camel):
     ring_announcer: str = ""
     """**타이틀전에만 채워진다** — 벨트가 걸린 밤에는 소개가 먼저다."""
     referee: str = ""
+    producer: str = ""
+    """그 경기를 기획한 사람 (§3-D94). 리포트의 별점 뒤에 `(prod. …)`로 붙는다."""
     player_manager: str = ""
     """내 옆에 서는 사람. 정보창에 `w/`로 붙는다."""
     rival_manager: str = ""
@@ -167,6 +170,11 @@ class WeekSchema(_Camel):
     show: str | None = None
     title_at_stake: str | None = None
     opponent: str | None = None
+    opponent_alignment: str = ""
+    """상대의 그 주차 성향 — `face` · `tweener` · `heel` (§3-D95).
+
+    **입장 화면이 이름 아래에 세운다.** 누구와 붙는지만큼이나 그가 어느 쪽인지가 그
+    밤의 그림을 정한다. 명부 밖이거나 여럿이 붙는 경기면 빈 문자열이다."""
     match_kind: str | None = None
     match_label: str | None = None
     """경기 형식 — "로열럼블 매치"처럼 화면에 그대로 나간다 (§3-D32)."""
@@ -269,6 +277,11 @@ class RivalrySchema(_Camel):
 
     **열기가 같아도 이야기가 다르다.** 내가 지목한 상대와 나를 지목해 온 상대는
     같은 대립이 아니고, 화면이 그걸 다르게 말해야 한다."""
+    alignment: str = ""
+    """상대의 지금 성향 — `face` · `tweener` · `heel` (§3-D95).
+
+    **지금 것이다.** 성향은 커리어 중에 뒤집히므로(`alignment_at`) 대립이 열린 주차가
+    아니라 이 화면을 여는 주차로 묻는다. 명부 밖 이름이면 빈 문자열이다."""
 
 
 class ContractSchema(_Camel):
@@ -713,11 +726,27 @@ class PresetSchema(_Camel):
     country: str
 
 
+class ProducerStatSchema(_Camel):
+    """제작진 한 명의 성적 (§3-D94).
+
+    **누가 평점 높은 경기를 기획했는가** — 사용자가 보고 싶다고 한 그 줄이다.
+    """
+
+    name: str
+    matches: int
+    average: float
+    """평균 별점. 소수 둘째 자리까지."""
+    best: float
+    """가장 높았던 밤."""
+
+
 class LogPageSchema(_Camel):
     entries: list[WeekSchema]
     total: int
     offset: int
     has_more: bool
+    producers: list[ProducerStatSchema] = Field(default_factory=list)
+    """제작진 순위 (§3-D94). **커리어 전체를 보고 센다** — 평균이 높은 순이다."""
 
 
 class NewsCommentSchema(_Camel):
@@ -813,6 +842,14 @@ class NewsPageSchema(_Camel):
 # ── 도메인 → 스키마 ──────────────────────────────────────────
 
 
+def _alignment_of(name: str | None, week: int, seed: int) -> str:
+    """그 사람의 그 주차 성향을 화면 문자열로 (§3-D95). **명부 밖이면 빈 문자열이다.**"""
+    if not name:
+        return ""
+    alignment = roster.alignment_of(name, week, seed)
+    return alignment.value if alignment else ""
+
+
 def _rival_tier(report: WeekReport, stats: WrestlerStats, seed: int) -> RivalTier:
     """그 경기 상대의 급 (§3-D66).
 
@@ -861,6 +898,7 @@ def to_crew(
     brand: str,
     player: str,
     stable: str,
+    gender: Gender = Gender.MALE,
 ) -> CrewSchema | None:
     """그 주차의 링 밖 사람들 (§3-D93). **경기가 없으면 `None`이다.**"""
     if report.match_kind is None or report.result is None:
@@ -869,6 +907,7 @@ def to_crew(
         brand,
         report.week,
         seed,
+        gender=gender,
         title_match=report.title_at_stake is not None,
         player=player,
         player_stable=stable,
@@ -879,6 +918,7 @@ def to_crew(
         commentators=list(crew.commentators),
         ring_announcer=crew.ring_announcer,
         referee=crew.referee,
+        producer=crew.producer,
         player_manager=crew.player_manager,
         rival_manager=crew.rival_manager,
     )
@@ -891,6 +931,7 @@ def to_week(
     brand: str = "",
     player: str = "",
     stable: str = "",
+    gender: Gender = Gender.MALE,
 ) -> WeekSchema:
     report = view.report
     year, month, week_of_month = date_of(report.week)
@@ -905,6 +946,7 @@ def to_week(
         show=report.show.name if report.show else None,
         title_at_stake=report.title_at_stake.value if report.title_at_stake else None,
         opponent=report.opponent,
+        opponent_alignment=_alignment_of(report.opponent, report.week, seed),
         match_kind=report.match_kind.value if report.match_kind else None,
         match_label=(
             match_format_of(report.match_kind).label if report.match_kind else None
@@ -937,7 +979,9 @@ def to_week(
         stat_delta=dict(report.stat_delta),
         wear_delta=report.wear_delta,
         promo_hit=report.promo_hit,
-        crew=to_crew(report, seed, brand=brand, player=player, stable=stable),
+        crew=to_crew(
+            report, seed, brand=brand, player=player, stable=stable, gender=gender
+        ),
         beats=(
             [
                 BeatSchema(
@@ -1255,6 +1299,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                     heat=r.heat,
                     started_week=r.started_week,
                     opened_by=r.opened_by.value,
+                    alignment=_alignment_of(r.rival_name, run.week, run.seed),
                 )
                 for r in run.rivalries
             ],
@@ -1309,6 +1354,7 @@ def to_advance(result: AdvanceResult) -> AdvanceResponse:
                 brand=run.brand.value,
                 player=str(run.identity.name),
                 stable=run.team.name if run.team else "",
+                gender=run.identity.gender,
             )
             for w in result.weeks
         ],
@@ -1362,12 +1408,51 @@ def to_preset(view: PresetView) -> PresetSchema:
     )
 
 
+def to_producers(page: CareerLogPage) -> list[ProducerStatSchema]:
+    """커리어 전체의 제작진 순위 (§3-D94).
+
+    **별점은 여기서 계산한다** — 저장하지 않는 값이라(§3-D56) 계산 자리가 한 곳이어야
+    한다. 평균이 높은 순, 같으면 많이 맡은 순이다.
+    """
+    gender = Gender(page.player_gender) if page.player_gender else Gender.MALE
+    tally: dict[str, list[float]] = {}
+    for view in page.board:
+        who = staff_scene.producer_of(gender, view.report.week, page.seed)
+        if not who:
+            continue
+        tally.setdefault(who, []).append(_stars_of(view, page.seed))
+    stats = [
+        ProducerStatSchema(
+            name=name,
+            matches=len(stars),
+            average=round(sum(stars) / len(stars), 2),
+            best=max(stars),
+        )
+        for name, stars in tally.items()
+        if stars
+    ]
+    return sorted(stats, key=lambda s: (-s.average, -s.matches, s.name))
+
+
 def to_log(page: CareerLogPage) -> LogPageSchema:
     return LogPageSchema(
-        entries=[to_week(e, page.seed) for e in page.entries],
+        entries=[
+            to_week(
+                e,
+                page.seed,
+                brand=page.brand,
+                player=page.player,
+                stable=page.stable,
+                gender=Gender(page.player_gender)
+                if page.player_gender
+                else Gender.MALE,
+            )
+            for e in page.entries
+        ],
         total=page.total,
         offset=page.offset,
         has_more=page.has_more,
+        producers=to_producers(page),
     )
 
 
