@@ -231,9 +231,9 @@ def _named(match: CardMatch, seed: int) -> CardMatch:
 
 
 TIER_RING: Final[dict[RivalTier, int]] = {
-    RivalTier.PROSPECT: 55,
-    RivalTier.MIDCARD: 70,
-    RivalTier.MAIN_EVENT: 85,
+    RivalTier.LOW_CARD: 55,
+    RivalTier.MID_CARD: 70,
+    RivalTier.UPPER_CARD: 85,
 }
 """배경 선수의 경기력 대역 (§3-D56). 명부는 스탯을 들지 않으므로 **등급이 곧 실력**이다 —
 별점에만 쓰이는 값이고 승패 판정에는 닿지 않는다."""
@@ -252,7 +252,7 @@ def _rate(
         for label in (match.left, match.right)
         for name in title_scene.members_of(label)
         if (member := roster.member_of(name, seed)) is not None
-    ] or [RivalTier.MIDCARD]
+    ] or [RivalTier.MID_CARD]
     stars = match_rating.rate(
         seed,
         week,
@@ -491,7 +491,7 @@ def _pick_pair(
     roll: SeededRoll,
 ) -> tuple[str, str] | None:
     """카드를 채우는 한 경기. 그 브랜드의 아랫단에서 뽑는다 (§3-D53)."""
-    tier = roster.tier_in(brand, RivalTier.MIDCARD)
+    tier = roster.tier_in(brand, RivalTier.MID_CARD)
     first = _pick_one(seed, week, gender, brand, taken, tier, roll)
     if first is None:
         return None

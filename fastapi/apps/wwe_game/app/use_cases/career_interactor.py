@@ -219,10 +219,22 @@ class CareerInteractor(CareerUseCase):
         않기로 한 대가가 이 한 번이다.
         """
         run = await self._repository.get(run_id, user_id)
+        # **한 번만 읽는다.** 제작진 순위(§3-D94)가 커리어 전체를 봐야 하므로 전부
+        # 읽고 페이지는 여기서 자른다 — 뉴스 경로가 이미 같은 크기를 읽는다.
         entries, total = await self._repository.read_log(
-            run_id, user_id, offset=offset, limit=limit
+            run_id, user_id, offset=0, limit=CAREER_WEEKS
         )
-        return CareerLogPage(entries=entries, total=total, offset=offset, seed=run.seed)
+        return CareerLogPage(
+            entries=entries[offset : offset + limit],
+            total=total,
+            offset=offset,
+            board=tuple(e for e in entries if e.report.result is not None),
+            brand=run.brand.value,
+            player_gender=run.identity.gender.value,
+            player=str(run.identity.name),
+            stable=run.team.name if run.team else "",
+            seed=run.seed,
+        )
 
     async def read_report(self, run_id: int, user_id: int, week: int) -> ShowReport:
         """그 주차의 리포트 (§3-D45).

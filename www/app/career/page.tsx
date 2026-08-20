@@ -48,6 +48,7 @@ import {
   type CareerShowReport,
   type CareerNewsItem,
   type CareerNewsPage,
+  type CareerProducerStat,
   type FinisherHold,
   type CareerStats,
   type CareerWeek,
@@ -291,6 +292,19 @@ const RIVALRY_STAGES: Record<string, string> = {
   nemesis: "숙적",
 };
 
+/**
+ * 명부에 적힌 성향 → 화면 이름 (§3-D95).
+ *
+ * **내 성향과는 다른 축이다.** 내 쪽은 -100~+100 눈금이고(정보 탭의 "성향"),
+ * 이건 상대가 어느 쪽에 서 있는지 한 낱말이다. 빈 문자열이면 명부 밖이라 아무것도
+ * 쓰지 않는다.
+ */
+const ALIGNMENT_LABELS: Record<string, string> = {
+  face: "페이스",
+  tweener: "트위너",
+  heel: "힐",
+};
+
 /** 모드 코드 → 화면 이름. 백엔드는 코드를 그대로 label로 준다. */
 const MODE_LABELS: Record<CareerModeCode, string> = {
   yearly: "연 단위",
@@ -515,6 +529,11 @@ export default function CareerPage() {
   const [signatureName, setSignatureName] = useState("");
   const [inbox, setInbox] = useState<CareerNewsPage | null>(null);
   const [history, setHistory] = useState<CareerWeek[]>([]);
+  /**
+   * 제작진 순위 (§3-D94). **로그인은 서버가 커리어 전체를 보고 세어 준다** —
+   * 화면은 최근 몇 해만 들고 있어서(`HISTORY_WEEKS`) 직접 세면 앞부분이 빠진다.
+   */
+  const [producers, setProducers] = useState<CareerProducerStat[]>([]);
   const [hidden, setHidden] = useState<readonly BackgroundKind[]>([]);
   const [openWeek, setOpenWeek] = useState<number | null>(null);
   const [report, setReport] = useState<CareerShowReport | null>(null);
@@ -660,7 +679,11 @@ export default function CareerPage() {
     let alive = true;
     readLog(runId, 0, 1)
       .then((head) => readLog(runId, Math.max(0, head.total - HISTORY_WEEKS), HISTORY_WEEKS))
-      .then((page) => alive && setHistory((prev) => mergeWeeks(prev, page.entries)))
+      .then((page) => {
+        if (!alive) return;
+        setHistory((prev) => mergeWeeks(prev, page.entries));
+        setProducers(page.producers ?? []);
+      })
       // 못 받아 온 것은 "기록이 없다"가 아니다. 들고 있던 타임라인을 그대로 둔다.
       .catch(() => {});
     return () => {
@@ -1269,6 +1292,11 @@ export default function CareerPage() {
    * 화면은 목록의 길이만 본다.
    */
   const offerOptions = view.offerOptions ?? [];
+  /**
+   * 제작진 순위 (§3-D94). **서버가 세어 준 것이 먼저다** — 커리어 전체를 보기 때문이다.
+   * 체험판은 서버에 로그가 없어(§3-D8) 들고 있는 주차로 센다.
+   */
+  const producerBoard = producers.length > 0 ? producers : tallyProducers(history);
   /**
    * 손에 든 가방 (§3-D85) — **"이번 주에 할 수 있는 것"의 첫 항목**이다.
    *
@@ -1994,6 +2022,35 @@ export default function CareerPage() {
 
           {tab === "schedule" && (
             <section className="space-y-6">
+              {/*
+               * **제작진 순위** (§3-D94, 2026-08-19 사용자 요청).
+               *
+               * *"이 정보들이 쌓여 프로듀서 중 누가 평점 높은 경기를 기획했는지 볼 수
+               * 있게 해줘"* — 평균 별점이 높은 순이다. 맡은 경기 수를 함께 세우는
+               * 이유: 한 밤짜리 평균은 순위가 아니다.
+               */}
+              {producerBoard.length > 0 && (
+                <div className="rounded-lg bg-card p-4">
+                  <p className="font-sport text-sm text-muted-foreground">제작진 평점</p>
+                  <ul className="mt-2 space-y-1">
+                    {producerBoard.slice(0, 8).map((stat, index) => (
+                      <li key={stat.name} className="flex items-baseline gap-2 text-sm">
+                        <span className="w-4 tabular-nums text-muted-foreground">{index + 1}</span>
+                        <span className={cn(index === 0 && "font-sport text-brand-link")}>
+                          {stat.name}
+                        </span>
+                        <span className="ml-auto tabular-nums">{stat.average.toFixed(2)}</span>
+                        <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">
+                          {stat.matches}경기
+                        </span>
+                        <span className="w-14 text-right text-xs tabular-nums text-muted-foreground">
+                          최고 {stat.best.toFixed(2)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {shownWeeks.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   아직 진행한 주차가 없습니다. 위의 &lsquo;다음&rsquo;을 누르세요.
@@ -2079,6 +2136,15 @@ export default function CareerPage() {
                       className="flex items-baseline gap-3 rounded-[4px] bg-card px-3 py-2"
                     >
                       <span className="text-sm">{r.rival}</span>
+                      {/*
+                       * **상대가 어느 쪽인가** (§3-D95). 같은 숙적이라도 힐과
+                       * 페이스는 다른 이야기다. 명부 밖 이름이면 비어 온다.
+                       */}
+                      {r.alignment && ALIGNMENT_LABELS[r.alignment] && (
+                        <span className="text-xs text-muted-foreground">
+                          {ALIGNMENT_LABELS[r.alignment]}
+                        </span>
+                      )}
                       <span className="text-xs text-brand-link">
                         {RIVALRY_STAGES[r.stage] ?? r.stage}
                       </span>
@@ -2488,6 +2554,15 @@ function LiveMatch({
             <p className="font-sport text-lg text-muted-foreground">VS</p>
             <div className="career-enter-right">
               <p className="font-sport text-xl text-muted-foreground sm:text-2xl">{opponent}</p>
+              {/*
+               * **상대가 어느 쪽인가** (§3-D95). 누구와 붙는지만큼이나 그가 페이스인지
+               * 힐인지가 그 밤의 그림을 정한다 — 명부 밖이면 비어 온다.
+               */}
+              {week.opponentAlignment && ALIGNMENT_LABELS[week.opponentAlignment] && (
+                <p className="text-xs text-brand-link">
+                  {ALIGNMENT_LABELS[week.opponentAlignment]}
+                </p>
+              )}
               {crew?.rivalManager && (
                 <p className="text-xs text-muted-foreground">w/ {crew.rivalManager}</p>
               )}
@@ -2675,6 +2750,12 @@ function LiveMatch({
               <p className="mt-1 text-sm">{week.narration}</p>
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {week.stars > 0 && <Stars value={week.stars} big />}
+                {/* **기획한 사람** (§3-D94, 2026-08-19 사용자 요청) — 별점 바로 뒤다. */}
+                {week.crew?.producer && (
+                  <span className="text-xs text-muted-foreground">
+                    (prod. {week.crew.producer})
+                  </span>
+                )}
                 {week.matchSummary && (
                   <span className="text-xs text-muted-foreground">{week.matchSummary}</span>
                 )}
@@ -2821,6 +2902,9 @@ function WeekRow({
           {week.stars > 0 && (
             <p className="mt-0.5 text-xs">
               <Stars value={week.stars} />
+              {week.crew?.producer && (
+                <span className="ml-2 text-muted-foreground">(prod. {week.crew.producer})</span>
+              )}
             </p>
           )}
           {/*
@@ -3263,6 +3347,30 @@ function Side({ name, won }: { name: string; won: boolean }) {
   return (
     <span className={won ? "font-semibold text-foreground" : "text-muted-foreground"}>{name}</span>
   );
+}
+
+/**
+ * 제작진 순위를 화면에서 센다 (§3-D94).
+ *
+ * **체험판 전용 길이다.** 로그인 플레이는 서버가 커리어 전체를 보고 세어 주지만
+ * (`readLog`의 `producers`), 체험판은 로그가 브라우저에 있어(§3-D8) 서버가 셀 수
+ * 없다 — 그때만 들고 있는 주차로 센다.
+ */
+function tallyProducers(weeks: CareerWeek[]): CareerProducerStat[] {
+  const tally = new Map<string, number[]>();
+  for (const week of weeks) {
+    const who = week.crew?.producer;
+    if (!who || week.stars <= 0) continue;
+    tally.set(who, [...(tally.get(who) ?? []), week.stars]);
+  }
+  return [...tally.entries()]
+    .map(([name, stars]) => ({
+      name,
+      matches: stars.length,
+      average: Math.round((stars.reduce((a, b) => a + b, 0) / stars.length) * 100) / 100,
+      best: Math.max(...stars),
+    }))
+    .sort((a, b) => b.average - a.average || b.matches - a.matches || a.name.localeCompare(b.name));
 }
 
 /**

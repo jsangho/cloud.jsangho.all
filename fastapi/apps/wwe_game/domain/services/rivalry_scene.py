@@ -154,9 +154,9 @@ def _pick_pair(
     맞지만 뉴스로는 아니다. 실제로도 남의 대립이 기사가 되는 것은 그 자리가 정상일 때다.
     """
     tier = (
-        RivalTier.MAIN_EVENT
+        RivalTier.UPPER_CARD
         if brand is None
-        else roster.tier_in(brand, RivalTier.MAIN_EVENT)
+        else roster.tier_in(brand, RivalTier.UPPER_CARD)
     )
     pool = tuple(n for n in roster.pool_for(gender, tier, week, brand) if n != exclude)
     if len(pool) < 2:

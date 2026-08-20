@@ -109,8 +109,15 @@ Evolve는 NXT 아래 육성 단계다. 오늘 명부에 넣으면 유망주가 �
 **이들이 메인 무대에 오르는 건 몇 년 뒤**라는 사실과 어긋난다 (2026-08-07 사용자 요청).
 """
 
-REQUIRED_FIELDS = ("korean_name", "gender", "tier", "play_style")
-"""비어 있으면 생성기가 멈추는 칸. `birth_date`만 비워 둘 수 있다 (미공개 정보)."""
+REQUIRED_FIELDS = ("korean_name", "gender", "card", "play_style")
+"""비어 있으면 생성기가 멈추는 칸.
+
+**`tier`가 `card`로 바뀌었다** (§3-D95, 2026-08-19 사용자 표): 예전 값은 등급이자
+브랜드였고(유망주 = NXT), 새 값은 **브랜드 안에서의 위상**이다(`upper`·`mid`·`low`).
+
+`birth_date`와 `alignment`는 비워 둘 수 있다 — 앞은 미공개 정보이고, 뒤는 콜업 때
+굴려서 정한다(Evolve의 열둘이 그 상태다).
+"""
 
 ARSENAL_FIELDS = ("signature_ko", "finisher_ko")
 """**비어도 되는** 칸 (2026-08-19 사용자 데이터). 없으면 그 선수는 이름 있는 수를 안 쓴다.
@@ -134,12 +141,36 @@ RENAME_WINDOW = (2, 5)
 구간 안에 흩뿌린다 — `LATE_CAREER_WINDOW`가 은퇴에 쓰는 방식 그대로다.
 """
 
-Row = tuple[str, str, str, int, int | None, int, str | None, str | None, int, str, int]
-"""명부 한 줄 — (한글명, 성별, 등급, 데뷔, 은퇴, 경력, 메인 브랜드, 바꾼 이름,
-개명 주차, 스테이블, **가상 슬롯**). 칸이 열하나라 이름을 붙여 둔다."""
+Row = tuple[
+    str,
+    str,
+    str,
+    int,
+    int | None,
+    int,
+    str | None,
+    str | None,
+    int,
+    str,
+    int,
+    bool,
+    str,
+]
+"""명부 한 줄 — (한글명, 성별, **위상**, 데뷔, 은퇴, 경력, 메인 브랜드, 바꾼 이름,
+개명 주차, 스테이블, 가상 슬롯, **육성 출발**, **성향**). 칸이 열셋이라 이름을 붙여 둔다."""
 
 GENDER_ALIAS = {"male": "_M", "female": "_F"}
-TIER_ALIAS = {"main_event": "_ME", "midcard": "_MC", "prospect": "_P"}
+CARD_ALIAS = {"upper": "_UP", "mid": "_MID", "low": "_LOW"}
+"""CSV의 위상 표기 → 명부의 별칭 (2026-08-19 사용자 표)."""
+
+ALIGN_ALIAS = {"face": "_FACE", "tweener": "_TWEEN", "heel": "_HEEL"}
+"""성향 표기 → 별칭. **빈 칸은 `None`이다** — 콜업 때 굴린다(§3-D95)."""
+
+DEVELOPS: frozenset[str] = frozenset({"NXT", "Evolve"})
+"""**육성 브랜드에서 시작하는 섹션** (§3-D95). 여기 사람들만 콜업을 지난다.
+
+예전에는 위상(유망주)이 이 사실을 겸했다 — 그래서 NXT 안에 위상이 없었다.
+"""
 
 SECTION_HOME: dict[str, str | None] = {
     "RAW": "_RAW",
@@ -191,9 +222,10 @@ HEADER = '''"""라이벌·챔피언으로 쓸 선수 명부 — **시간에 따�
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
-from enum import IntEnum
-from functools import lru_cache
+from enum import IntEnum, StrEnum
+from functools import cache, lru_cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
 from wwe_game.domain.constants.teams import (
@@ -207,11 +239,31 @@ from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 
 class RivalTier(IntEnum):
-    """대략적 등급. 대립 상대를 고를 때 플레이어 인기도와 맞춘다."""
+    """**카드에서의 위상** (§3-D95, 2026-08-19 사용자 표).
 
-    PROSPECT = 1
-    MIDCARD = 2
-    MAIN_EVENT = 3
+    브랜드 안에서 어디쯤 서는 사람인가다 — 대립 상대와 도전할 벨트가 여기서 갈린다.
+
+    **예전에는 이 축이 브랜드를 겸했다**(유망주 = NXT). 그러면 육성 브랜드 안에 위상이
+    없어서, NXT 챔피언이 그 주의 신인과 같은 확률로 뽑혔다 — 사용자가 *"비정상적인
+    챔피언들이 속출한다"*고 짚은 자리다. 이제 브랜드는 `develops`가 따로 든다.
+    """
+
+    LOW_CARD = 1
+    MID_CARD = 2
+    UPPER_CARD = 3
+
+
+class Alignment(StrEnum):
+    """페이스 · 트위너 · 힐 (§3-D95, 2026-08-19 사용자 표).
+
+    **정해진 사람과 아직 안 정해진 사람이 있다.** Evolve의 열둘과 가상 선수는 콜업될
+    때 굴려서 정하고(사용자 결정), 그 뒤에도 바뀔 수 있다 — 실제로도 성향은 커리어
+    중에 몇 번 뒤집힌다(§3-D39가 플레이어에게 이미 그렇게 해 두었다).
+    """
+
+    FACE = "face"
+    TWEENER = "tweener"
+    HEEL = "heel"
 
 
 @dataclass(frozen=True)
@@ -230,7 +282,7 @@ class RosterMember:
     """
     home_brand: Brand = Brand.RAW
     """콜업된 뒤 설 메인 브랜드 (§3-D53). **지금 있는 브랜드가 아니다** — 그건
-    `brand_at()`이 등급에서 읽는다.
+    `brand_at()`이 답한다.
     """
     renamed_to: str | None = None
     """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
@@ -248,6 +300,19 @@ class RosterMember:
     태그 벨트는 여기서 갈린다 — 스테이블 소속은 **같은 스테이블 안에서만** 짝을 짜고,
     독립은 독립끼리 짠다.
     """
+    develops: bool = False
+    """**육성 브랜드에서 시작하는가** (§3-D95). NXT·Evolve 사람들이 참이다.
+
+    예전에는 위상(`start_tier`)이 브랜드를 겸했다 — 유망주면 NXT였다. 그러면 NXT 안에
+    위상이 없어서 신인과 챔피언이 같은 칸에 섰다. 축을 나누고 나서야 *"NXT 어퍼카드"*가
+    말이 된다.
+    """
+    alignment: Alignment | None = None
+    """페이스 · 트위너 · 힐 (§3-D95). **`None`이면 아직 안 정해졌다** — 콜업 때 굴린다.
+
+    Evolve의 열둘과 가상 선수가 그 상태다(사용자 결정). 정해진 뒤에도 `alignment_at()`이
+    커리어 중에 몇 번 뒤집는다.
+    """
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -256,12 +321,78 @@ class RosterMember:
 
 
 PROMOTION_WEEKS: tuple[int, int] = (6 * WEEKS_PER_YEAR, 14 * WEEKS_PER_YEAR)
-"""(유망주 → 미드카드, 미드카드 → 정상급) 승급에 걸리는 **누적 경력**.
+"""(로우 → 미드, 미드 → 어퍼) 위상이 오르는 데 걸리는 **누적 경력**.
 
-**등급을 고정하면 두 번 틀린다.** 오늘의 NXT 유망주가 서른 해 뒤에도 유망주로 남고,
-은퇴로 빠져나간 정상급 자리를 아무도 채우지 않는다. 데뷔 6년 · 15년을 지나면 올라간다 —
-실제 승급 서사와 크게 다르지 않고, 규칙 하나로 두 구멍을 함께 막는다.
+**위상을 고정하면 두 번 틀린다.** 오늘의 신인이 서른 해 뒤에도 신인으로 남고, 은퇴로
+빠져나간 어퍼카드 자리를 아무도 채우지 않는다. 데뷔 6년 · 15년을 지나면 올라간다 —
+사용자가 말한 *"시뮬 도중에 위상이 바뀌기도 한다"*가 이 자리다.
 """
+
+
+PROMOTION_STEP = 3 * WEEKS_PER_YEAR
+"""위상을 다시 굴리는 간격 (§3-D95). 세 해에 한 번이면 서른 해에 열 번이다."""
+
+RISE_CHANCE: dict[RivalTier, float] = {
+    RivalTier.LOW_CARD: 0.40,
+    RivalTier.MID_CARD: 0.25,
+}
+"""한 번의 굴림에서 위상이 오를 확률.
+
+**어퍼카드로 가는 문이 훨씬 좁다.** 로우 → 미드는 흔한 일이지만 미드 → 어퍼는 커리어에
+한 번 있을까 말까다 — 사용자 표에서도 어퍼는 서른 명뿐이고 미드가 백여섯이다.
+"""
+
+FALL_CHANCE: dict[RivalTier, float] = {
+    RivalTier.UPPER_CARD: 0.30,
+    RivalTier.MID_CARD: 0.10,
+}
+"""한 번의 굴림에서 위상이 **내려갈** 확률 (§3-D95).
+
+**오르기만 하면 서른 해 뒤 로스터가 통째로 어퍼카드가 된다** — 실측에서 브랜드당 어퍼가
+스물넷까지 부풀었고, 그 세계에서는 챔피언이 아무 뜻도 없다. 위에서 내려오는 사람이
+있어야 아래에서 올라오는 사람에게 자리가 생긴다.
+
+**어퍼가 미드보다 세 배 빨리 내려온다.** 정상은 붙어 있기 어려운 자리다.
+
+이 네 값(오름 둘 · 내림 둘)으로 브랜드·디비전당 어퍼 5~12명이 유지된다 — 사용자 표의
+0주차 분포(브랜드당 7~8)와 같은 크기다.
+"""
+
+DECLINE_BEFORE = 2 * WEEKS_PER_YEAR
+"""은퇴 몇 주 앞에서 한 칸 더 내려오는가 (§3-D95).
+
+굴림과 별개로 **마지막 두 해는 무조건 한 칸 아래**다. 실제로도 그 구간은 후배를 올려
+주는 자리다.
+"""
+
+NXT_RISE_CHANCE: dict[RivalTier, float] = {
+    RivalTier.LOW_CARD: 0.60,
+    RivalTier.MID_CARD: 0.45,
+}
+"""**육성 브랜드 안에서는 빨리 오른다** (§3-D95).
+
+메인 로스터의 확률로 굴리면 육성에서 정상까지 스무 해가 걸리는데, 거기 머무는 기간은
+길어야 열 해다 — 실측에서 5년차부터 **NXT 어퍼카드가 0명**이었고, 그러면 그 브랜드의
+챔피언을 뽑을 자리가 없다. 육성은 사람을 올리는 곳이라 실제로도 빠르다.
+
+**내려가는 굴림은 육성에 없다.** 거기서 내려갈 자리가 없다 — 안 되면 올라가지 못한 채
+콜업되거나 명부에서 사라진다.
+"""
+
+NXT_DWELL_YEARS: tuple[int, int] = (1, 3)
+"""육성 브랜드 정상에 오른 뒤 **머무는 기간** (§3-D95). 이름 해시로 흩뿌린다.
+
+**꼭대기에 서자마자 올려 보내면 NXT의 어퍼카드가 늘 비어 있다** — 실측에서 5년차부터
+0명이었다. 그 브랜드의 챔피언이 될 자리가 없다는 뜻이라, 사용자가 짚은 *"비정상적인
+챔피언"*이 이쪽에서 다시 생긴다.
+
+**기간을 한 값으로 두면 다 같이 올라간다.** 실측에서 5년차에 NXT 어퍼카드 열다섯이
+같은 주에 통째로 콜업돼 그 브랜드가 한 번에 비었다 — `_spread`가 은퇴·개명에 쓰는
+흩뿌리기와 같은 자리다.
+"""
+
+MAX_NXT_WEEKS = 10 * WEEKS_PER_YEAR
+"""정상에 못 올라도 이만큼 지나면 콜업된다. **육성에 눌러앉는 사람을 만들지 않는다.**"""
 
 
 MIN_PROMOTION_WEEKS = 4 * WEEKS_PER_YEAR
@@ -269,7 +400,8 @@ MIN_PROMOTION_WEEKS = 4 * WEEKS_PER_YEAR
 
 
 _M, _F = Gender.MALE, Gender.FEMALE
-_P, _MC, _ME = RivalTier.PROSPECT, RivalTier.MIDCARD, RivalTier.MAIN_EVENT
+_LOW, _MID, _UP = RivalTier.LOW_CARD, RivalTier.MID_CARD, RivalTier.UPPER_CARD
+_FACE, _TWEEN, _HEEL = Alignment.FACE, Alignment.TWEENER, Alignment.HEEL
 _RAW, _SD = Brand.RAW, Brand.SMACKDOWN
 
 FICTIONAL_NAMES: dict[Gender, tuple[str, ...]] = {
@@ -472,9 +604,13 @@ DRAFT_PAIRS = 2
 _DRAFT_CELLS: tuple[tuple[Gender, RivalTier], ...] = tuple(
     (gender, tier)
     for gender in Gender
-    for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
+    for tier in (RivalTier.MID_CARD, RivalTier.UPPER_CARD)
 )
-"""드래프트가 집을 수 있는 칸. **유망주는 없다** — 그들은 육성 브랜드에 있다(§3-D53)."""
+"""드래프트가 집을 수 있는 칸.
+
+**로우카드는 없다** — 연말 드래프트는 방송의 얼굴을 맞바꾸는 자리이지 명부 아래쪽을
+흔드는 자리가 아니다. 육성에 있는 사람도 빠진다(`_swaps`의 `develops` 조건, §3-D95).
+"""
 
 
 def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
@@ -543,7 +679,11 @@ def _swaps(
                 for m in ROSTER
                 if m.gender is gender
                 and m.is_active_at(week)
-                and tier_at(m, week) is tier
+                and tier_at(m, week, seed) is tier
+                # **육성에 있는 사람은 드래프트 대상이 아니다** (§3-D95). 위상이
+                # 브랜드를 겸하던 때에는 이 조건이 필요 없었다 — 미드카드 이상이면
+                # 곧 메인 로스터였다.
+                and not (m.develops and week < (call_up_week(m, seed) or 0))
                 and _home_at(m, state) is brand
                 and m.name not in guarded
             ]
@@ -644,14 +784,62 @@ def _home_at(member: RosterMember, flipped: frozenset[str] | set[str]) -> Brand:
     return Brand.SMACKDOWN if member.home_brand is Brand.RAW else Brand.RAW
 
 
-def tier_at(member: RosterMember, week: int) -> RivalTier:
-    """경력 연차만큼 올라간 등급. **내려가지는 않는다.**"""
+def _phase(name: str, span: int, low: int = 0) -> int:
+    """이름으로 정해지는 어긋냄 (§3-D95). `low`부터 `low + span - 1` 사이 한 값.
+
+    **명부가 한 주에 통째로 흔들리지 않게 하는 장치다.** 생성기의 `_spread`가 은퇴·개명을
+    흩뿌리는 것과 같은 자리이고, 여기서는 위상 굴림의 시점과 육성 체류 기간을 흩뿌린다.
+
+    blake2b라 프로세스가 바뀌어도 같은 값이 나온다 — 시드 규약과 같은 이유다(§3-D4).
+    """
+    digest = hashlib.blake2b(name.encode(), digest_size=8).digest()
+    return low + int.from_bytes(digest, "big") % max(1, span)
+
+
+@cache
+def tier_at(member: RosterMember, week: int, seed: int = 0) -> RivalTier:
+    """그 주차의 위상 (§3-D95). **오르기도 하고 내려가기도 한다.**
+
+    *"물론 이 선수들도 시뮬 도중에 위상이 바뀌기도 해"* (2026-08-19 사용자).
+
+    | 층 | |
+    |---|---|
+    | 오름 | `PROMOTION_STEP`마다 한 번씩 굴린다 — **자동이 아니다** |
+    | 내림 | 은퇴가 `DECLINE_BEFORE` 앞으로 다가오면 한 칸 내려온다 |
+
+    **예전에는 시계만으로 올랐다.** 그러면 서른 해 뒤 메인 로스터가 통째로 어퍼카드가
+    되고(실측: 브랜드당 36명), 그 세계에서는 챔피언이 아무 뜻도 없다 — 사용자가 짚은
+    *"비정상적인 챔피언"*의 다른 얼굴이다.
+    """
     elapsed = week - member.debut_week
+    if elapsed < 0:
+        return member.start_tier
+    # **사람마다 굴리는 주가 다르다.** 다 같이 3년마다 굴리면 명부가 한 주에 통째로
+    # 흔들린다 — 실측에서 5년차에 NXT가 한 번에 비었다.
+    elapsed -= _phase(member.name, PROMOTION_STEP)
     tier = member.start_tier
-    if tier is RivalTier.PROSPECT and elapsed >= _wait_for(member, 0):
-        tier = RivalTier.MIDCARD
-    if tier is RivalTier.MIDCARD and elapsed >= _wait_for(member, 1):
-        tier = RivalTier.MAIN_EVENT
+    for step in range(1, elapsed // PROMOTION_STEP + 1):
+        # **채널에 이름을 싣는다.** 안 그러면 같은 주차에 데뷔한 사람들이 한 번의
+        # 굴림을 나눠 가져 **다 같이 오르거나 다 같이 제자리**다 — 실측에서 0주차
+        # NXT 미드카드 서른다섯이 한 명도 안 올라갔다.
+        roll = SeededRoll(
+            seed, member.debut_week + step * PROMOTION_STEP, f"status:{member.name}"
+        )
+        # **육성에 있는 동안은 다른 표를 쓴다** (§3-D95). `call_up_week()`를 부르면
+        # 서로를 부르게 되므로, 육성에 머물 수 있는 최대 기간으로 가른다.
+        in_developmental = member.develops and step * PROMOTION_STEP <= MAX_NXT_WEEKS
+        table = NXT_RISE_CHANCE if in_developmental else RISE_CHANCE
+        rise = table.get(tier, 0.0)
+        fall = 0.0 if in_developmental else FALL_CHANCE.get(tier, 0.0)
+        # **한 번의 굴림에 한 방향만.** 오름을 먼저 묻는 이유는 이 게임이 커리어를
+        # 올라가는 이야기이기 때문이고, 내림은 그 다음 자리다.
+        if rise and roll.chance(rise):
+            tier = RivalTier(tier + 1)
+        elif fall and roll.chance(fall):
+            tier = RivalTier(tier - 1)
+    if member.retire_week is not None and week >= member.retire_week - DECLINE_BEFORE:
+        # **황혼에는 한 칸 내려온다** — 자리를 비워 줘야 아래가 올라온다.
+        tier = RivalTier(max(RivalTier.LOW_CARD, tier - 1))
     return tier
 
 
@@ -666,40 +854,114 @@ def _wait_for(member: RosterMember, step: int) -> int:
     return max(MIN_PROMOTION_WEEKS, PROMOTION_WEEKS[step] - earned)
 
 
+@cache
 def brand_at(member: RosterMember, week: int, seed: int = 0) -> Brand:
-    """그 주차에 이 사람이 선 브랜드 (§3-D53). **승급이 곧 콜업이다.**
+    """그 주차에 이 사람이 선 브랜드 (§3-D53 · §3-D95).
 
-    명부의 등급이 이미 브랜드를 말하고 있다 — 원본에서 NXT·Evolve 70명은 **전원
-    유망주**이고 RAW·SmackDown은 전원 미드카드 이상이다. 그래서 축을 새로 만들지 않고
-    있는 축을 읽는다: 유망주면 육성 브랜드, 올라갔으면 자기 메인 브랜드다.
+    **위상이 아니라 `develops`가 답한다** (2026-08-19 개정). 예전에는 유망주면 NXT였고,
+    그래서 NXT 안에 위상이 없었다 — 신인과 챔피언이 한 칸에 섰다. 이제 육성 브랜드에서
+    시작한 사람만 NXT에 있고, `call_up_week`을 지나면 자기 메인 브랜드로 올라간다.
     """
-    if tier_at(member, week) is RivalTier.PROSPECT:
+    if member.develops and week < (call_up_week(member, seed) or 0):
         return Brand.NXT
     return _home_at(member, _flips_at(seed, week))
 
 
-def call_up_week(member: RosterMember) -> int | None:
-    """육성 브랜드를 떠나는 주차 (§3-D53). **처음부터 메인 로스터면 None이다.**
+@cache
+def call_up_week(member: RosterMember, seed: int = 0) -> int | None:
+    """육성 브랜드를 떠나는 주차 (§3-D53 · §3-D95). **메인에서 시작하면 None이다.**
 
-    승급이 곧 콜업이므로(`brand_at`) 유망주가 미드카드로 올라서는 주차가 그대로
-    NXT를 떠나는 주차다. 벨트 계보가 이걸 읽는다 — 콜업된 사람은 NXT 벨트를 들고
-    갈 수 없다(§3-D38).
+    **위상이 높을수록 빨리 올라간다** (2026-08-19): NXT 어퍼카드는 이미 그 브랜드에서
+    할 일을 끝낸 사람이고, 로우카드는 몇 해를 더 쌓는다. 예전에는 위상이 곧 브랜드라
+    이 시계가 하나뿐이었다.
+
+    벨트 계보가 이걸 읽는다 — 콜업된 사람은 NXT 벨트를 들고 갈 수 없다(§3-D38).
     """
-    if member.start_tier is not RivalTier.PROSPECT:
+    if not member.develops:
         return None
-    return member.debut_week + _wait_for(member, 0)
+    low, high = NXT_DWELL_YEARS
+    dwell = _phase(f"dwell:{member.name}", high - low + 1, low) * WEEKS_PER_YEAR
+    for step in range(0, MAX_NXT_WEEKS // PROMOTION_STEP + 1):
+        week = member.debut_week + step * PROMOTION_STEP
+        if tier_at(member, week, seed) is RivalTier.UPPER_CARD:
+            # **정상에 선 뒤 한두 해를 더 있는다** — 그 사이 NXT의 꼭대기가 비지 않는다.
+            return min(week + dwell, member.debut_week + MAX_NXT_WEEKS)
+    return member.debut_week + MAX_NXT_WEEKS
+
+
+ROLLED_ALIGNMENT: tuple[Alignment, ...] = (
+    Alignment.FACE,
+    Alignment.FACE,
+    Alignment.HEEL,
+    Alignment.HEEL,
+    Alignment.TWEENER,
+)
+"""아직 안 정해진 사람이 콜업될 때 뽑는 통 (§3-D95, 2026-08-19 사용자 결정).
+
+*"Evolve는 아직 페이스·트위너·힐이 안 정해져 있는데, 얘네는 콜업될 때 랜덤으로 정해져서
+올라오게 해줘."* 가상 선수도 같다.
+
+**트위너가 드문 것은 표를 따른 것이다** — 사용자가 정해 준 179명 중 트위너는 여섯이다.
+둘 중 하나를 고르는 것이 대부분이고, 어느 쪽도 아닌 사람은 드물다.
+"""
+
+TURN_EVERY: int = 6 * WEEKS_PER_YEAR
+"""성향이 뒤집힐 수 있는 간격 (§3-D95).
+
+*"물론 계속 유지가 아니라 변경이 가능해"* (사용자). 여섯 해마다 한 번 굴려 그중
+`TURN_CHANCE`만 실제로 뒤집는다 — 커리어에 한두 번이면 사건이고, 해마다면 소음이다.
+"""
+
+TURN_CHANCE: float = 0.35
+
+
+@cache
+def alignment_at(member: RosterMember, week: int, seed: int = 0) -> Alignment:
+    """그 주차의 성향 (§3-D95).
+
+    세 층이다.
+
+    1. **표에 있으면 그것으로 시작한다** (사용자가 정해 준 179명)
+    2. **없으면 콜업 때 굴린다** — Evolve와 가상 선수
+    3. **여섯 해마다 뒤집힐 수 있다** — 정해진 사람도 예외가 아니다
+
+    시드와 주차로만 굴리므로 **같은 밤을 다시 열면 같은 성향**이다(§3-D4).
+    """
+    start = member.alignment
+    if start is None:
+        # 이름을 실어야 한 해에 올라온 신인들이 **같은 성향으로 몰리지 않는다.**
+        roll = SeededRoll(seed, member.debut_week, f"align:{member.name}")
+        start = roll.pick(ROLLED_ALIGNMENT)
+    turns = max(0, (week - member.debut_week) // TURN_EVERY)
+    now = start
+    for index in range(turns):
+        roll = SeededRoll(
+            seed, member.debut_week + index * TURN_EVERY, f"turn:{member.name}"
+        )
+        if roll.chance(TURN_CHANCE):
+            now = _turned(now, roll)
+    return now
+
+
+def _turned(now: Alignment, roll: SeededRoll) -> Alignment:
+    """뒤집힌 성향. **트위너는 양쪽 어디로든 간다** — 그게 트위너의 자리다."""
+    if now is Alignment.TWEENER:
+        return roll.pick((Alignment.FACE, Alignment.HEEL))
+    other = Alignment.HEEL if now is Alignment.FACE else Alignment.FACE
+    return roll.pick((other, other, Alignment.TWEENER))
 
 
 def tier_in(brand: Brand, tier: RivalTier) -> RivalTier:
-    """그 브랜드에 **실제로 있는** 등급으로 접는다.
+    """그 브랜드에 **실제로 있는** 위상으로 접는다.
 
-    육성 브랜드에는 유망주만 살고 메인 로스터에는 유망주가 없다(`brand_at`). 접지 않고
-    물으면 빈 명단이 돌아오고, 그러면 벨트에 주인이 사라지거나(§3-D38) 대립 상대가
-    없어진다 — **없는 칸을 묻지 않게 하는 것이 이 함수의 일이다.**
+    **이제 접을 것이 거의 없다** (§3-D95). 세 브랜드 모두 어퍼·미드·로우가 다 있으므로
+    (사용자 표) 위상을 그대로 쓴다 — 예전에는 NXT에 유망주만 살아서 모든 물음을
+    유망주로 접어야 했고, 그것이 NXT 챔피언을 신인 중에서 뽑던 원인이었다.
+
+    함수를 남겨 두는 이유: 부르는 자리가 열 곳이 넘고, 앞으로 브랜드마다 없는 칸이
+    생기면 **그 판단이 다시 여기 한 곳에 모여야** 한다.
     """
-    if brand is Brand.NXT:
-        return RivalTier.PROSPECT
-    return max(tier, RivalTier.MIDCARD)
+    return tier
 
 
 @lru_cache(maxsize=8192)
@@ -728,9 +990,32 @@ def pool_for(
         for m in ROSTER
         if m.gender is gender
         and m.is_active_at(week)
-        and tier_at(m, week) is tier
+        and tier_at(m, week, seed) is tier
         and (brand is None or brand_at(m, week, seed) is brand)
     )
+
+
+REACH_UP_CHANCE = 0.18
+"""**한 칸 위를 넘보는 확률** (§3-D95, 2026-08-19 사용자 요청).
+
+*"가끔씩 미드카드가 어퍼카드 챔피언십을 노리고, 로우카드가 미드카드 챔피언십을 노리는
+등 이런 일들이 있었으면 해. 대립도 같이."*
+
+다섯에 한 번쯤이면 **사건**이고, 절반이면 위상이 없는 것과 같다. 어퍼카드는 더 갈 곳이
+없으므로 이 굴림을 지나치고, 아래로 내려가는 굴림은 두지 않았다 — 위를 보는 이야기가
+아래를 보는 이야기보다 훨씬 자주 쓰인다.
+"""
+
+
+def reaching_tier(tier: RivalTier, week: int, seed: int = 0) -> RivalTier:
+    """그 주차에 **넘보는** 위상 (§3-D95). 대개는 제 위상 그대로다.
+
+    주차와 시드로만 굴리므로 같은 주를 다시 열면 같은 답이다(§3-D4).
+    """
+    if tier is RivalTier.UPPER_CARD:
+        return tier
+    roll = SeededRoll(seed, week, "reach")
+    return RivalTier(tier + 1) if roll.chance(REACH_UP_CHANCE) else tier
 
 
 def tier_for_popularity(popularity: int) -> RivalTier:
@@ -740,10 +1025,10 @@ def tier_for_popularity(popularity: int) -> RivalTier:
     이야기가 되지 않는다.
     """
     if popularity >= 60:
-        return RivalTier.MAIN_EVENT
+        return RivalTier.UPPER_CARD
     if popularity >= 30:
-        return RivalTier.MIDCARD
-    return RivalTier.PROSPECT
+        return RivalTier.MID_CARD
+    return RivalTier.LOW_CARD
 
 
 MIN_POOL = 6
@@ -1195,9 +1480,9 @@ def fictional_members(
             taken.add(name)
             year = 1 + made // DEBUTS_PER_YEAR[gender]
             debut = year * WEEKS_PER_YEAR
-            tier = "_MC" if made % FICTIONAL_MIDCARD_EVERY == 0 else "_P"
+            tier = "_MID" if made % FICTIONAL_MIDCARD_EVERY == 0 else "_LOW"
             retire = debut + FICTIONAL_CAREER_YEARS * WEEKS_PER_YEAR
-            experience = 6 if tier == "_MC" else 0
+            experience = 6 if tier == "_MID" else 0
             members.append(
                 (
                     name,
@@ -1211,6 +1496,13 @@ def fictional_members(
                     0,
                     "",
                     len(slots),
+                    # **가상 선수는 육성에서 올라온다** (§3-D95) — 그러지 않으면
+                    # 10년차부터 NXT가 빈다(실측: 남성부 어퍼 0명). 이적생(_MID)은
+                    # 다른 단체에서 온 즉시 전력이라 메인에서 데뷔한다(§3-D59).
+                    tier == "_LOW",
+                    # **성향은 안 정해져 있다** (§3-D95, 사용자 결정) — 데뷔할 때
+                    # 굴려서 정하고, 그 뒤에도 뒤집힐 수 있다.
+                    "None",
                 )
             )
             slots.append(name)
@@ -1282,9 +1574,14 @@ def build() -> list[Row]:
             gender = require(name, "gender")
             if gender not in GENDER_ALIAS:
                 raise SystemExit(f"{name}: 모르는 성별 {gender!r}")
-            tier = TIER_ALIAS.get(require(name, "tier"))
-            if tier is None:
-                raise SystemExit(f"{name}: 모르는 등급 {given(name, 'tier')!r}")
+            card = CARD_ALIAS.get(require(name, "card"))
+            if card is None:
+                raise SystemExit(f"{name}: 모르는 위상 {given(name, 'card')!r}")
+            # **성향은 비어도 된다** — Evolve와 명단 밖 사람은 콜업 때 굴린다(§3-D95).
+            raw_align = given(name, "alignment")
+            alignment = ALIGN_ALIAS.get(raw_align, "None") if raw_align else "None"
+            if raw_align and alignment == "None":
+                raise SystemExit(f"{name}: 모르는 성향 {raw_align!r}")
             if window is None:
                 debut = 0
             else:
@@ -1303,7 +1600,7 @@ def build() -> list[Row]:
                 (
                     korean,
                     GENDER_ALIAS[gender],
-                    tier,
+                    card,
                     debut,
                     debut + retire_week_for(name, age, gender),
                     experience_of(age),
@@ -1312,12 +1609,14 @@ def build() -> list[Row]:
                     rename_week_for(korean) if renamed else 0,
                     stables.get(name, ""),
                     -1,
+                    section in DEVELOPS,
+                    alignment,
                 )
             )
 
     members += fictional_members({m[0] for m in members})
 
-    order = {"_ME": 0, "_MC": 1, "_P": 2}
+    order = {"_UP": 0, "_MID": 1, "_LOW": 2}
     members.sort(key=lambda m: (m[1] != "_M", m[3], order[m[2]], m[0]))
     return _assign_homes(members)
 
@@ -1344,6 +1643,8 @@ def _assign_homes(
         rename_at,
         stable,
         slot,
+        develops,
+        alignment,
     ) in members:
         if home is None:
             index = turn.get(gender, 0)
@@ -1362,6 +1663,8 @@ def _assign_homes(
                 rename_at,
                 stable,
                 slot,
+                develops,
+                alignment,
             )
         )
     return filled
@@ -1388,6 +1691,8 @@ def render(members: list[Row], pools: dict[str, list[str]]) -> str:
         rename_at,
         stable,
         slot,
+        develops,
+        alignment,
     ) in members:
         mark = (gender, debut)
         if mark != seen:
@@ -1403,6 +1708,12 @@ def render(members: list[Row], pools: dict[str, list[str]]) -> str:
             tail = (tail or ", None, 0") + f", {slot}"
         elif stable:
             tail = (tail or ", None, 0") + f', -1, "{stable}"'
+        # **새 칸 둘은 키워드로 붙인다** (§3-D95). 자리 인자로 이으면 앞의 선택적
+        # 칸(개명·슬롯·스테이블)을 전부 채워야 해서, 한 줄이 두 배로 길어진다.
+        if develops:
+            tail += ", develops=True"
+        if alignment != "None":
+            tail += f", alignment={alignment}"
         lines.append(
             f'    RosterMember("{escaped}", {gender}, {tier}, '
             f"{debut}, {retire_arg}, {experience}, {home}{tail}),"
@@ -1610,7 +1921,7 @@ def main() -> int:
     members = build()
     counts: dict[tuple[str, str], int] = {}
     homes: dict[str, int] = {}
-    for _, gender, tier, _, _, _, home, _renamed, _at, _stable, _slot in members:
+    for _, gender, tier, _, _, _, home, *_rest in members:
         counts[(gender, tier)] = counts.get((gender, tier), 0) + 1
         homes[home or "?"] = homes.get(home or "?", 0) + 1
     real = sum(1 for m in members if m[3] == 0)
@@ -1620,7 +1931,7 @@ def main() -> int:
     for gender in ("_M", "_F"):
         row = " · ".join(
             f"{tier} {counts.get((gender, tier), 0):>3}"
-            for tier in ("_ME", "_MC", "_P")
+            for tier in ("_UP", "_MID", "_LOW")
         )
         print(f"  {'남성부' if gender == '_M' else '여성부'} 시작 등급: {row}")
     print(

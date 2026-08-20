@@ -25,6 +25,7 @@ from functools import lru_cache
 from typing import Final
 
 from wwe_game.domain.constants import roster
+from wwe_game.domain.constants.champions import OPENING_CHAMPIONS
 from wwe_game.domain.constants.roster import RivalTier
 from wwe_game.domain.constants.teams import KOREAN_TEAM_NAMES
 from wwe_game.domain.services import seeded_roll
@@ -32,9 +33,9 @@ from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.value_objects.title import TITLES, Brand, Title, TitleTier
 
 TIER_OF: Final[dict[TitleTier, RivalTier]] = {
-    TitleTier.WORLD: RivalTier.MAIN_EVENT,
-    TitleTier.SECONDARY: RivalTier.MIDCARD,
-    TitleTier.TAG: RivalTier.MIDCARD,
+    TitleTier.WORLD: RivalTier.UPPER_CARD,
+    TitleTier.SECONDARY: RivalTier.MID_CARD,
+    TitleTier.TAG: RivalTier.MID_CARD,
 }
 """벨트 계층 → 그 벨트를 감을 만한 선수 등급.
 
@@ -55,6 +56,17 @@ HOLDERS_OF: Final[dict[TitleTier, int]] = {
 **팀 연대기(§3-D30)를 쓰지 않는다.** 0주차 팀들은 이름만 있고 구성원이 비어 있어
 (`Team(label, (), 0)`) 성별도 브랜드도 알 수 없다. 계보가 그걸 들면 여성부 벨트를 남성부
 팀이 감는다. 그래서 여기서는 **같은 디비전·브랜드·등급의 둘**을 뽑아 짝으로 세운다.
+"""
+
+UNDERDOG_SHARE: Final = 0.18
+"""**아래 칸에서 챔피언이 나오는 비율** (§3-D95, 2026-08-19 사용자 요청).
+
+*"가끔씩 미드카드가 어퍼카드 챔피언십을 노리고, 로우카드가 미드카드 챔피언십을 노리는
+등 이런 일들이 있었으면 해."*
+
+`roster.REACH_UP_CHANCE`와 같은 값이다 — 대립에서 넘보는 빈도와 벨트에서 넘보는 빈도가
+달라야 할 이유가 없다. 다만 **여기서는 한 칸만** 내려간다: 두 칸을 열면 로우카드가 월드
+챔피언이 되고, 그게 사용자가 *"비정상적"*이라고 부른 그 장면이다.
 """
 
 PARTNER_JOIN: Final = " & "
@@ -156,7 +168,12 @@ def champion_at(seed: int, week: int, title: Title, *, exclude: str = "") -> str
     그때마다 30년 재위를 다시 걷는다(실측 1.00초 → 0.06초).
     """
     last = _walk(seed, week, title, exclude)
-    return last.holder if last is not None else None
+    if last is None or last.ends <= week:
+        # **끝난 재위는 주인이 아니다** (§3-D95에서 발견). 연대기가 그 주차 앞에서
+        # 멈추는 경우가 있다 — 뽑을 사람이 없거나 옛 주인이 링을 떠났을 때다. 그때
+        # 마지막 재위를 그대로 답하면 **은퇴한 챔피언**이 생긴다.
+        return None
+    return last.holder
 
 
 def inherited_between(
@@ -231,11 +248,37 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
     while True:
         roll = SeededRoll(seed, cursor, channel)
         held = frozenset(members_of(holder or ""))
-        pool = tuple(
-            n
-            for n in roster.pool_for(spec.gender, tier, cursor, home, seed)
-            if n not in held and n != exclude
-        )
+
+        def _pool(
+            want: RivalTier, at: int = cursor, taken: frozenset[str] = held
+        ) -> tuple[str, ...]:
+            # 기본값으로 묶는다 — 루프 변수를 그대로 닫으면 나중 회차의 값이 새어 든다.
+            return tuple(
+                n
+                for n in roster.pool_for(spec.gender, want, at, home, seed)
+                if n not in taken and n != exclude
+            )
+
+        # **가끔은 아래에서 올라온 사람이 벨트를 든다** (§3-D95, 2026-08-19 사용자
+        # 요청) — 미드카드가 월드 벨트를, 로우카드가 2선 벨트를 노리는 밤이다.
+        # 위상을 아예 안 보면 사용자가 짚은 *"비정상적인 챔피언"*으로 돌아가므로,
+        # 넘보는 것은 **한 칸**이고 그것도 다섯에 한 번쯤이다.
+        below = RivalTier(max(RivalTier.LOW_CARD, tier - 1))
+        reaching = below if below is not tier and roll.chance(UNDERDOG_SHARE) else tier
+        pool = _pool(reaching)
+        # **빈 칸으로 벨트를 비우지 않는다.** 그 칸에 사람이 없으면 위아래를 차례로
+        # 본다 — 벨트에 주인이 없는 세계가 §3-D38이 막으려던 바로 그 상태다.
+        for fallback in (tier, below, RivalTier(min(RivalTier.UPPER_CARD, tier + 1))):
+            if _pick_holders(pool, holders, roll, spec.tier, seed) is not None:
+                break
+            pool = _pool(fallback)
+        else:
+            # **태그 벨트는 짝이 없으면 못 든다**(§3-D58). 위상을 다 훑고도 짝이 안
+            # 나오면 그 브랜드·디비전 전체에서 짝을 찾는다 — 벨트를 비우는 것보다
+            # 위상을 한 번 접는 편이 낫다.
+            pool = tuple(
+                dict.fromkeys(name for want in RivalTier for name in _pool(want))
+            )
         inherited = False
         if inherit is not None:
             # **스테이블이 벨트를 이어받는다** (§3-D58) — 남은 사람 옆에 같은
@@ -248,9 +291,16 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
             else:
                 inherit = None
         if not inherited:
-            picked = _pick_holders(pool, holders, roll, spec.tier, seed)
+            picked = _opening_holder(title, cursor, exclude) or _pick_holders(
+                pool, holders, roll, spec.tier, seed
+            )
             if picked is not None:
                 holder = picked
+            elif not _all_active(holder, cursor, seed):
+                # **링을 떠난 사람에게 벨트를 다시 들리지 않는다** (§3-D95에서 발견).
+                # 새로 뽑지 못했을 때 옛 주인을 그대로 들고 가던 자리인데, 그 주인이
+                # 이미 은퇴했으면 "은퇴한 챔피언"이 된다 — §3-D38이 막으려던 상태다.
+                return reigns
         if holder is None:
             return reigns
         length, why = _reign_of(
@@ -269,6 +319,35 @@ def _reigns(seed: int, upto: int, title: Title, exclude: str) -> list[Reign]:
             return reigns
         cursor += length
         inherit = _inheritor(holder, cursor, why, spec.tier, seed)
+
+
+def _opening_holder(title: Title, cursor: int, exclude: str) -> str | None:
+    """0주차의 주인 (§3-D94, 2026-08-19 사용자 명단). 그 밖의 주차는 `None`이다.
+
+    **첫 재위만 못 박는다.** 사용자가 준 것은 *지금* 누가 들고 있는가이고, 그 뒤의
+    계보까지 정해 두면 그건 계보가 아니라 각본이다 — 2년차부터는 그대로 굴린다.
+
+    **내 이름과 겹치면 굴림으로 돌아간다.** §3-D10-1이 실존 선수를 바탕으로 삼게
+    해 두었으므로 플레이어가 챔피언과 같은 이름을 쓸 수 있는데, 그러면 계보가 내
+    벨트를 남에게 준 것처럼 그린다.
+    """
+    if cursor != 0:
+        return None
+    opening = OPENING_CHAMPIONS.get(title)
+    if opening is None or exclude and exclude in opening.split(PARTNER_JOIN):
+        return None
+    return opening
+
+
+def _all_active(holder: str | None, week: int, seed: int) -> bool:
+    """그 주차에 **전원 현역인가.** 아무도 안 뽑혔을 때 옛 주인을 이어도 되는지의 조건이다."""
+    if not holder:
+        return False
+    for name in members_of(holder):
+        member = roster.member_of(name, seed)
+        if member is not None and not member.is_active_at(week):
+            return False
+    return True
 
 
 def _rolled_length(tier: TitleTier, roll: SeededRoll) -> int:
@@ -416,9 +495,10 @@ def _reign_of(
         if member.retire_week is not None:
             ends.append(member.retire_week)
         if home is Brand.NXT:
-            leaving = roster.call_up_week(member)
+            leaving = roster.call_up_week(member, seed)
             if leaving is not None:
                 ends.append(leaving)
+
     # **한 사람만 빠져도 팀은 그 벨트를 그대로 들 수 없다** — 둘이 들던 것을 하나가
     # 들 수는 없다. 스테이블이 있으면 이어받고(§3-D58), 없으면 공석이 된다.
     leave = min(ends) if ends else None

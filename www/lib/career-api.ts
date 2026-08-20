@@ -78,6 +78,12 @@ export type CareerWeek = {
   titleAtStake: string | null;
   /** 그 주차에 붙은 상대. 경기 없는 주차는 null. */
   opponent: string | null;
+  /**
+   * 상대의 그 주차 성향 — `face` · `tweener` · `heel` (§3-D95).
+   *
+   * **입장 화면이 이름 아래에 세운다.** 명부 밖이거나 옛 로그면 빈 문자열이다.
+   */
+  opponentAlignment?: string;
   /** 경기 형식 — "로열럼블 매치"처럼 화면에 그대로 쓴다. */
   matchKind: string | null;
   matchLabel: string | null;
@@ -145,6 +151,8 @@ export type CareerCrew = {
   commentators: string[];
   ringAnnouncer: string;
   referee: string;
+  /** 그 경기를 기획한 사람 (§3-D94). 별점 뒤에 `(prod. …)`로 붙는다. */
+  producer: string;
   /** 내 옆에 서는 매니저. 정보창에 `w/`로 붙는다. */
   playerManager: string;
   rivalManager: string;
@@ -417,6 +425,13 @@ export type CareerRivalry = {
    * **열기가 같아도 이야기가 다르다.** 옛 세이브에는 없어 기본은 `rival`이다.
    */
   openedBy?: "player" | "rival";
+  /**
+   * 상대의 **지금** 성향 — `face` · `tweener` · `heel` (§3-D95).
+   *
+   * 성향은 커리어 중에 뒤집히므로 대립이 열린 주차가 아니라 지금 주차의 것이다.
+   * 명부 밖 이름이면 빈 문자열이다.
+   */
+  alignment?: string;
 };
 
 /**
@@ -513,11 +528,25 @@ export type CareerNewsPage = {
   hasMore: boolean;
 };
 
+/**
+ * 제작진 한 명의 성적 (§3-D94).
+ *
+ * **누가 평점 높은 경기를 기획했는가** — 커리어 전체를 보고 센다.
+ */
+export type CareerProducerStat = {
+  name: string;
+  matches: number;
+  average: number;
+  best: number;
+};
+
 export type CareerLogPage = {
   entries: CareerWeek[];
   total: number;
   offset: number;
   hasMore: boolean;
+  /** 제작진 순위 (§3-D94). 평균 별점이 높은 순이다. */
+  producers?: CareerProducerStat[];
 };
 
 /**

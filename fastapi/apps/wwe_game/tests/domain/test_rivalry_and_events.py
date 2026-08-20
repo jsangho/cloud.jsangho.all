@@ -113,9 +113,9 @@ class TestRivalPool:
                 assert all(m.gender is gender for m in roster.ROSTER if m.name in names)
 
     def test_opponent_tier_follows_popularity(self) -> None:
-        assert roster.tier_for_popularity(10) is roster.RivalTier.PROSPECT
-        assert roster.tier_for_popularity(40) is roster.RivalTier.MIDCARD
-        assert roster.tier_for_popularity(80) is roster.RivalTier.MAIN_EVENT
+        assert roster.tier_for_popularity(10) is roster.RivalTier.LOW_CARD
+        assert roster.tier_for_popularity(40) is roster.RivalTier.MID_CARD
+        assert roster.tier_for_popularity(80) is roster.RivalTier.UPPER_CARD
 
     def test_a_woman_never_feuds_with_a_man(self) -> None:
         run = make_run(gender=Gender.FEMALE, stats=WrestlerStats(popularity=70))
@@ -142,25 +142,41 @@ class TestRivalPool:
         assert not (evolve & at_start), "Evolve가 0주차 명부에 섞였다"
         by_five = {m.name for m in roster.active_at(5 * WEEKS_PER_YEAR)}
         assert evolve <= by_five, "Evolve가 5년 안에 데뷔하지 않았다"
+        # **위상 표(§3-D95)가 Evolve로 적은 사람들만 로우카드다.** 아론 루크는 원본
+        # CSV에서 Evolve지만 사용자 표에서는 NXT 미드카드다 — 그 어긋남은 사용자에게
+        # 보고했고, 데이터는 각자의 원본을 따른다(브랜드는 CSV · 위상은 표).
+        listed_as_evolve = {"제나 스털링", "스타보이 찰리", "아리아 베넷"}
         assert all(
-            m.start_tier is roster.RivalTier.PROSPECT
+            m.start_tier is roster.RivalTier.LOW_CARD
             for m in roster.ROSTER
-            if m.name in evolve
+            if m.name in listed_as_evolve
         )
 
     def test_a_prospect_climbs_with_experience(self) -> None:
         rookie = next(
             m
             for m in roster.ROSTER
-            if m.start_tier is roster.RivalTier.PROSPECT and m.debut_week == 0
+            if m.start_tier is roster.RivalTier.LOW_CARD and m.debut_week == 0
         )
-        assert roster.tier_at(rookie, 0) is roster.RivalTier.PROSPECT
-        assert roster.tier_at(rookie, 12 * WEEKS_PER_YEAR) > roster.RivalTier.PROSPECT
+        assert roster.tier_at(rookie, 0) is roster.RivalTier.LOW_CARD
+        assert roster.tier_at(rookie, 12 * WEEKS_PER_YEAR) > roster.RivalTier.LOW_CARD
 
-    def test_experience_never_promotes_on_day_one(self) -> None:
-        # 경력은 기다림을 줄일 뿐 0으로 만들지 않는다 — 0주차 등급은 오늘의 분류가 이긴다.
+    def test_the_table_wins_on_day_one(self) -> None:
+        """0주차 위상은 **사용자 표가 이긴다** (§3-D95).
+
+        예외는 하나다 — 은퇴가 코앞인 사람은 한 칸 내려온 채로 시작한다(`DECLINE_BEFORE`).
+        R-트루스처럼 오늘 쉰넷인 선수가 그렇다: 표의 미드카드로 시작하되 마지막 두 해는
+        아래에서 후배를 올려 준다.
+        """
         for member in roster.active_at(0):
-            assert roster.tier_at(member, 0) is member.start_tier
+            fading = (
+                member.retire_week is not None
+                and member.retire_week <= roster.DECLINE_BEFORE
+            )
+            if fading:
+                assert roster.tier_at(member, 0) <= member.start_tier
+            else:
+                assert roster.tier_at(member, 0) is member.start_tier
 
     def test_every_pool_stays_stocked_for_thirty_years(self) -> None:
         for year in range(0, 31):
@@ -180,7 +196,7 @@ class TestRivalPool:
             assert name in active
 
     def test_an_existing_rival_is_not_picked_again(self) -> None:
-        taken = roster.pool_for(Gender.MALE, roster.RivalTier.PROSPECT)[0]
+        taken = roster.pool_for(Gender.MALE, roster.RivalTier.LOW_CARD)[0]
         run = make_run(rivalries=(rival(taken, 50),))
         for seed in range(30):
             assert rivalry_engine.pick_rival(run, SeededRoll(seed, 1, "riv")) != taken
@@ -442,7 +458,7 @@ class TestNobodyFightsThemselves:
         from wwe_game.domain.value_objects.wrestler_stats import WrestlerStats
 
         base = make_run(seed=1, stats=WrestlerStats(popularity=70))
-        mine = roster.pool_for(base.identity.gender, roster.RivalTier.MAIN_EVENT, 0)[0]
+        mine = roster.pool_for(base.identity.gender, roster.RivalTier.UPPER_CARD, 0)[0]
         run = base.evolve(
             identity=base.identity.__class__(
                 name=RingName(mine),

@@ -32,9 +32,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
-from enum import IntEnum
-from functools import lru_cache
+from enum import IntEnum, StrEnum
+from functools import cache, lru_cache
 
 from wwe_game.domain.constants.career_clock import CAREER_WEEKS, WEEKS_PER_YEAR
 from wwe_game.domain.constants.teams import (
@@ -48,11 +49,31 @@ from wwe_game.domain.value_objects.wrestler_identity import Gender
 
 
 class RivalTier(IntEnum):
-    """대략적 등급. 대립 상대를 고를 때 플레이어 인기도와 맞춘다."""
+    """**카드에서의 위상** (§3-D95, 2026-08-19 사용자 표).
 
-    PROSPECT = 1
-    MIDCARD = 2
-    MAIN_EVENT = 3
+    브랜드 안에서 어디쯤 서는 사람인가다 — 대립 상대와 도전할 벨트가 여기서 갈린다.
+
+    **예전에는 이 축이 브랜드를 겸했다**(유망주 = NXT). 그러면 육성 브랜드 안에 위상이
+    없어서, NXT 챔피언이 그 주의 신인과 같은 확률로 뽑혔다 — 사용자가 *"비정상적인
+    챔피언들이 속출한다"*고 짚은 자리다. 이제 브랜드는 `develops`가 따로 든다.
+    """
+
+    LOW_CARD = 1
+    MID_CARD = 2
+    UPPER_CARD = 3
+
+
+class Alignment(StrEnum):
+    """페이스 · 트위너 · 힐 (§3-D95, 2026-08-19 사용자 표).
+
+    **정해진 사람과 아직 안 정해진 사람이 있다.** Evolve의 열둘과 가상 선수는 콜업될
+    때 굴려서 정하고(사용자 결정), 그 뒤에도 바뀔 수 있다 — 실제로도 성향은 커리어
+    중에 몇 번 뒤집힌다(§3-D39가 플레이어에게 이미 그렇게 해 두었다).
+    """
+
+    FACE = "face"
+    TWEENER = "tweener"
+    HEEL = "heel"
 
 
 @dataclass(frozen=True)
@@ -71,7 +92,7 @@ class RosterMember:
     """
     home_brand: Brand = Brand.RAW
     """콜업된 뒤 설 메인 브랜드 (§3-D53). **지금 있는 브랜드가 아니다** — 그건
-    `brand_at()`이 등급에서 읽는다.
+    `brand_at()`이 답한다.
     """
     renamed_to: str | None = None
     """바꾼 뒤의 활동명 (§3-D54). 안 바꾸면 None이다."""
@@ -89,6 +110,19 @@ class RosterMember:
     태그 벨트는 여기서 갈린다 — 스테이블 소속은 **같은 스테이블 안에서만** 짝을 짜고,
     독립은 독립끼리 짠다.
     """
+    develops: bool = False
+    """**육성 브랜드에서 시작하는가** (§3-D95). NXT·Evolve 사람들이 참이다.
+
+    예전에는 위상(`start_tier`)이 브랜드를 겸했다 — 유망주면 NXT였다. 그러면 NXT 안에
+    위상이 없어서 신인과 챔피언이 같은 칸에 섰다. 축을 나누고 나서야 *"NXT 어퍼카드"*가
+    말이 된다.
+    """
+    alignment: Alignment | None = None
+    """페이스 · 트위너 · 힐 (§3-D95). **`None`이면 아직 안 정해졌다** — 콜업 때 굴린다.
+
+    Evolve의 열둘과 가상 선수가 그 상태다(사용자 결정). 정해진 뒤에도 `alignment_at()`이
+    커리어 중에 몇 번 뒤집는다.
+    """
 
     def is_active_at(self, week: int) -> bool:
         if week < self.debut_week:
@@ -97,12 +131,78 @@ class RosterMember:
 
 
 PROMOTION_WEEKS: tuple[int, int] = (6 * WEEKS_PER_YEAR, 14 * WEEKS_PER_YEAR)
-"""(유망주 → 미드카드, 미드카드 → 정상급) 승급에 걸리는 **누적 경력**.
+"""(로우 → 미드, 미드 → 어퍼) 위상이 오르는 데 걸리는 **누적 경력**.
 
-**등급을 고정하면 두 번 틀린다.** 오늘의 NXT 유망주가 서른 해 뒤에도 유망주로 남고,
-은퇴로 빠져나간 정상급 자리를 아무도 채우지 않는다. 데뷔 6년 · 15년을 지나면 올라간다 —
-실제 승급 서사와 크게 다르지 않고, 규칙 하나로 두 구멍을 함께 막는다.
+**위상을 고정하면 두 번 틀린다.** 오늘의 신인이 서른 해 뒤에도 신인으로 남고, 은퇴로
+빠져나간 어퍼카드 자리를 아무도 채우지 않는다. 데뷔 6년 · 15년을 지나면 올라간다 —
+사용자가 말한 *"시뮬 도중에 위상이 바뀌기도 한다"*가 이 자리다.
 """
+
+
+PROMOTION_STEP = 3 * WEEKS_PER_YEAR
+"""위상을 다시 굴리는 간격 (§3-D95). 세 해에 한 번이면 서른 해에 열 번이다."""
+
+RISE_CHANCE: dict[RivalTier, float] = {
+    RivalTier.LOW_CARD: 0.40,
+    RivalTier.MID_CARD: 0.25,
+}
+"""한 번의 굴림에서 위상이 오를 확률.
+
+**어퍼카드로 가는 문이 훨씬 좁다.** 로우 → 미드는 흔한 일이지만 미드 → 어퍼는 커리어에
+한 번 있을까 말까다 — 사용자 표에서도 어퍼는 서른 명뿐이고 미드가 백여섯이다.
+"""
+
+FALL_CHANCE: dict[RivalTier, float] = {
+    RivalTier.UPPER_CARD: 0.30,
+    RivalTier.MID_CARD: 0.10,
+}
+"""한 번의 굴림에서 위상이 **내려갈** 확률 (§3-D95).
+
+**오르기만 하면 서른 해 뒤 로스터가 통째로 어퍼카드가 된다** — 실측에서 브랜드당 어퍼가
+스물넷까지 부풀었고, 그 세계에서는 챔피언이 아무 뜻도 없다. 위에서 내려오는 사람이
+있어야 아래에서 올라오는 사람에게 자리가 생긴다.
+
+**어퍼가 미드보다 세 배 빨리 내려온다.** 정상은 붙어 있기 어려운 자리다.
+
+이 네 값(오름 둘 · 내림 둘)으로 브랜드·디비전당 어퍼 5~12명이 유지된다 — 사용자 표의
+0주차 분포(브랜드당 7~8)와 같은 크기다.
+"""
+
+DECLINE_BEFORE = 2 * WEEKS_PER_YEAR
+"""은퇴 몇 주 앞에서 한 칸 더 내려오는가 (§3-D95).
+
+굴림과 별개로 **마지막 두 해는 무조건 한 칸 아래**다. 실제로도 그 구간은 후배를 올려
+주는 자리다.
+"""
+
+NXT_RISE_CHANCE: dict[RivalTier, float] = {
+    RivalTier.LOW_CARD: 0.60,
+    RivalTier.MID_CARD: 0.45,
+}
+"""**육성 브랜드 안에서는 빨리 오른다** (§3-D95).
+
+메인 로스터의 확률로 굴리면 육성에서 정상까지 스무 해가 걸리는데, 거기 머무는 기간은
+길어야 열 해다 — 실측에서 5년차부터 **NXT 어퍼카드가 0명**이었고, 그러면 그 브랜드의
+챔피언을 뽑을 자리가 없다. 육성은 사람을 올리는 곳이라 실제로도 빠르다.
+
+**내려가는 굴림은 육성에 없다.** 거기서 내려갈 자리가 없다 — 안 되면 올라가지 못한 채
+콜업되거나 명부에서 사라진다.
+"""
+
+NXT_DWELL_YEARS: tuple[int, int] = (1, 3)
+"""육성 브랜드 정상에 오른 뒤 **머무는 기간** (§3-D95). 이름 해시로 흩뿌린다.
+
+**꼭대기에 서자마자 올려 보내면 NXT의 어퍼카드가 늘 비어 있다** — 실측에서 5년차부터
+0명이었다. 그 브랜드의 챔피언이 될 자리가 없다는 뜻이라, 사용자가 짚은 *"비정상적인
+챔피언"*이 이쪽에서 다시 생긴다.
+
+**기간을 한 값으로 두면 다 같이 올라간다.** 실측에서 5년차에 NXT 어퍼카드 열다섯이
+같은 주에 통째로 콜업돼 그 브랜드가 한 번에 비었다 — `_spread`가 은퇴·개명에 쓰는
+흩뿌리기와 같은 자리다.
+"""
+
+MAX_NXT_WEEKS = 10 * WEEKS_PER_YEAR
+"""정상에 못 올라도 이만큼 지나면 콜업된다. **육성에 눌러앉는 사람을 만들지 않는다.**"""
 
 
 MIN_PROMOTION_WEEKS = 4 * WEEKS_PER_YEAR
@@ -110,7 +210,8 @@ MIN_PROMOTION_WEEKS = 4 * WEEKS_PER_YEAR
 
 
 _M, _F = Gender.MALE, Gender.FEMALE
-_P, _MC, _ME = RivalTier.PROSPECT, RivalTier.MIDCARD, RivalTier.MAIN_EVENT
+_LOW, _MID, _UP = RivalTier.LOW_CARD, RivalTier.MID_CARD, RivalTier.UPPER_CARD
+_FACE, _TWEEN, _HEEL = Alignment.FACE, Alignment.TWEENER, Alignment.HEEL
 _RAW, _SD = Brand.RAW, Brand.SMACKDOWN
 
 FICTIONAL_NAMES: dict[Gender, tuple[str, ...]] = {
@@ -2312,44 +2413,147 @@ FICTIONAL_NAMES: dict[Gender, tuple[str, ...]] = {
 
 ROSTER: tuple[RosterMember, ...] = (
     # ── 남성부 · 0주차 명부 ────────────────────────────
-    RosterMember("CM 펑크", _M, _ME, 0, 156, 25, _SD),
-    RosterMember("LA 나이트", _M, _ME, 0, 260, 21, _RAW),
-    RosterMember("군터", _M, _ME, 0, 468, 17, _SD),
-    RosterMember("데미안 프리스트", _M, _ME, 0, 260, 21, _SD),
-    RosterMember("드류 맥킨타이어", _M, _ME, 0, 364, 19, _SD),
-    RosterMember("랜디 오턴", _M, _ME, 0, 156, 24, _SD),
+    RosterMember("CM 펑크", _M, _UP, 0, 156, 25, _SD, alignment=_FACE),
+    RosterMember("LA 나이트", _M, _UP, 0, 260, 21, _RAW, alignment=_FACE),
+    RosterMember("군터", _M, _UP, 0, 468, 17, _SD, alignment=_HEEL),
     RosterMember(
-        "레이 미스테리오", _M, _ME, 0, 104, 29, _RAW, None, 0, -1, "Latino World Order"
+        "그레이슨 월러", _M, _UP, 0, 624, 14, _RAW, develops=True, alignment=_HEEL
     ),
-    RosterMember("로건 폴", _M, _ME, 0, 884, 9, _RAW, None, 0, -1, "The Vision"),
-    RosterMember("로만 레인즈", _M, _ME, 0, 364, 19, _RAW, None, 0, -1, "Bloodline"),
-    RosterMember("브록 레스너", _M, _ME, 0, 156, 27, _RAW),
-    RosterMember("브론 브레이커", _M, _ME, 0, 1040, 6, _RAW, None, 0, -1, "The Vision"),
-    RosterMember("브론슨 리드", _M, _ME, 0, 572, 15, _RAW, None, 0, -1, "The Vision"),
-    RosterMember("새미 제인", _M, _ME, 0, 312, 20, _SD),
-    RosterMember("세스 롤린스", _M, _ME, 0, 416, 18, _RAW),
-    RosterMember("솔로 시코아", _M, _ME, 0, 780, 11, _SD),
-    RosterMember("제이 우소", _M, _ME, 0, 416, 18, _RAW, None, 0, -1, "Bloodline"),
-    RosterMember("제이콥 파투", _M, _ME, 0, 728, 12, _RAW, None, 0, -1, "Bloodline"),
-    RosterMember("케빈 오웬스", _M, _ME, 0, 312, 20, _SD),
-    RosterMember("코디 로즈", _M, _ME, 0, 364, 19, _SD),
-    RosterMember("핀 밸러", _M, _ME, 0, 156, 23, _SD),
-    RosterMember("JD 맥도나", _M, _MC, 0, 624, 14, _RAW, None, 0, -1, "Judgement Day"),
-    RosterMember("R-트루스", _M, _MC, 0, 104, 32, _SD),
-    RosterMember("그레이슨 월러", _M, _MC, 0, 624, 14, _RAW),
-    RosterMember("나카무라 신스케", _M, _MC, 0, 156, 24, _SD),
-    RosterMember("네이선 프레이저", _M, _MC, 0, 1040, 6, _SD, None, 0, -1, "Fraxiom"),
-    RosterMember("댄 하우젠", _M, _MC, 0, 624, 14, _SD),
+    RosterMember("나라쿠", _M, _UP, 0, 468, 17, _SD, develops=True, alignment=_HEEL),
+    RosterMember("드류 맥킨타이어", _M, _UP, 0, 364, 19, _SD, alignment=_HEEL),
+    RosterMember("랜디 오턴", _M, _UP, 0, 156, 24, _SD, alignment=_HEEL),
     RosterMember(
-        "도미닉 미스테리오", _M, _MC, 0, 988, 7, _RAW, None, 0, -1, "Judgement Day"
+        "로건 폴", _M, _UP, 0, 884, 9, _RAW, None, 0, -1, "The Vision", alignment=_HEEL
     ),
     RosterMember(
-        "드래곤 리", _M, _MC, 0, 884, 9, _RAW, None, 0, -1, "Latino World Order"
+        "로만 레인즈",
+        _M,
+        _UP,
+        0,
+        364,
+        19,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bloodline",
+        alignment=_TWEEN,
+    ),
+    RosterMember("브록 레스너", _M, _UP, 0, 156, 27, _RAW, alignment=_HEEL),
+    RosterMember(
+        "브론슨 리드",
+        _M,
+        _UP,
+        0,
+        572,
+        15,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vision",
+        alignment=_HEEL,
+    ),
+    RosterMember("새미 제인", _M, _UP, 0, 312, 20, _SD, alignment=_TWEEN),
+    RosterMember("세스 롤린스", _M, _UP, 0, 416, 18, _RAW, alignment=_FACE),
+    RosterMember("오바 페미", _M, _UP, 0, 1040, 6, _RAW, alignment=_FACE),
+    RosterMember("질라 파투", _M, _UP, 0, 1144, 4, _SD, develops=True, alignment=_HEEL),
+    RosterMember("케빈 오웬스", _M, _UP, 0, 312, 20, _SD, alignment=_FACE),
+    RosterMember("코디 로즈", _M, _UP, 0, 364, 19, _SD, alignment=_FACE),
+    RosterMember(
+        "크루즈 몬타나", _M, _UP, 0, 676, 13, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "토니 디안젤로", _M, _UP, 0, 884, 9, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "EK 프로스퍼", _M, _MID, 0, 1196, 3, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "JD 맥도나",
+        _M,
+        _MID,
+        0,
+        624,
+        14,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Judgement Day",
+        alignment=_HEEL,
+    ),
+    RosterMember("R-트루스", _M, _MID, 0, 104, 32, _SD, alignment=_FACE),
+    RosterMember("나카무라 신스케", _M, _MID, 0, 156, 24, _SD, alignment=_FACE),
+    RosterMember(
+        "네이선 프레이저",
+        _M,
+        _MID,
+        0,
+        1040,
+        6,
+        _SD,
+        None,
+        0,
+        -1,
+        "Fraxiom",
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "노암 다르", _M, _MID, 0, 780, 11, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember("댄 하우젠", _M, _MID, 0, 624, 14, _RAW, alignment=_FACE),
+    RosterMember("데미안 프리스트", _M, _MID, 0, 260, 21, _SD, alignment=_FACE),
+    RosterMember(
+        "도리안 반 덕스", _M, _MID, 0, 936, 8, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "도미닉 미스테리오",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Judgement Day",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "드래곤 리",
+        _M,
+        _MID,
+        0,
+        884,
+        9,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Latino World Order",
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "디온 레녹스",
+        _M,
+        _MID,
+        0,
+        1040,
+        6,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Darkstate",
+        develops=True,
+        alignment=_HEEL,
     ),
     RosterMember(
         "라요 아메리카노",
         _M,
-        _MC,
+        _MID,
         0,
         832,
         10,
@@ -2358,22 +2562,99 @@ ROSTER: tuple[RosterMember, ...] = (
         156,
         -1,
         "Los Americanos",
+        alignment=_HEEL,
     ),
-    RosterMember("레이 페닉스", _M, _MC, 0, 676, 13, _SD),
-    RosterMember("로이스 키스", _M, _MC, 0, 364, 19, _SD),
-    RosterMember("루세프", _M, _MC, 0, 364, 19, _RAW),
-    RosterMember("리키 세인츠", _M, _MC, 0, 624, 14, _SD),
-    RosterMember("맷 카도나", _M, _MC, 0, 364, 19, _SD),
     RosterMember(
-        "몬테즈 포드", _M, _MC, 0, 624, 14, _RAW, None, 0, -1, "Street Profits"
+        "레이 미스테리오",
+        _M,
+        _MID,
+        0,
+        104,
+        29,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Latino World Order",
+        alignment=_FACE,
     ),
-    RosterMember("미즈", _M, _MC, 0, 156, 23, _SD),
-    RosterMember("배런 코빈", _M, _MC, 0, 364, 19, _SD),
-    RosterMember("베르토", _M, _MC, 0, 936, 8, _SD, None, 0, -1, "Los Garza"),
+    RosterMember("레이 페닉스", _M, _MID, 0, 676, 13, _SD, alignment=_FACE),
+    RosterMember(
+        "렉시스 킹",
+        _M,
+        _MID,
+        0,
+        832,
+        10,
+        _SD,
+        None,
+        0,
+        -1,
+        "Birthright",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "로메오 모레노", _M, _MID, 0, 1248, 2, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember("루세프", _M, _MID, 0, 364, 19, _RAW, alignment=_HEEL),
+    RosterMember(
+        "루시엔 프라이스",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _SD,
+        None,
+        0,
+        -1,
+        "Out The Mud",
+        develops=True,
+        alignment=_FACE,
+    ),
+    RosterMember("리키 세인츠", _M, _MID, 0, 624, 14, _SD, alignment=_HEEL),
+    RosterMember(
+        "리키 스모크스",
+        _M,
+        _MID,
+        0,
+        1144,
+        4,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vanity Project",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "마일스 본", _M, _MID, 0, 1092, 5, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "메이슨 룩", _M, _MID, 0, 988, 7, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "몬테즈 포드",
+        _M,
+        _MID,
+        0,
+        624,
+        14,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Street Profits",
+        alignment=_FACE,
+    ),
+    RosterMember("미즈", _M, _MID, 0, 156, 23, _SD, alignment=_HEEL),
+    RosterMember("배런 코빈", _M, _MID, 0, 364, 19, _SD, alignment=_HEEL),
     RosterMember(
         "브라보 아메리카노",
         _M,
-        _MC,
+        _MID,
         0,
         988,
         7,
@@ -2382,26 +2663,96 @@ ROSTER: tuple[RosterMember, ...] = (
         208,
         -1,
         "Los Americanos",
+        alignment=_FACE,
     ),
     RosterMember(
-        "브루투스 크리드", _M, _MC, 0, 936, 8, _RAW, None, 0, -1, "Creed Brothers"
+        "브래드 베일러",
+        _M,
+        _MID,
+        0,
+        1404,
+        0,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Vanity Project",
+        develops=True,
+        alignment=_HEEL,
     ),
-    RosterMember("빅 캐스", _M, _MC, 0, 416, 18, _RAW),
-    RosterMember("아이바", _M, _MC, 0, 312, 20, _RAW, None, 0, -1, "War Raiders"),
     RosterMember(
-        "아키라 토자와", _M, _MC, 0, 364, 19, _RAW, None, 0, -1, "Alpha Academy"
+        "브론 브레이커",
+        _M,
+        _MID,
+        0,
+        1040,
+        6,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vision",
+        alignment=_HEEL,
     ),
     RosterMember(
-        "안젤로 도킨스", _M, _MC, 0, 624, 14, _RAW, None, 0, -1, "Street Profits"
+        "브롱코 니마",
+        _M,
+        _MID,
+        0,
+        1248,
+        2,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Out The Mud",
+        develops=True,
+        alignment=_TWEEN,
     ),
-    RosterMember("액시옴", _M, _MC, 0, 988, 7, _SD, None, 0, -1, "Fraxiom"),
-    RosterMember("에단 페이지", _M, _MC, 0, 624, 14, _RAW),
-    RosterMember("에릭", _M, _MC, 0, 364, 19, _RAW, None, 0, -1, "War Raiders"),
-    RosterMember("엔젤", _M, _MC, 0, 780, 11, _SD, None, 0, -1, "Los Garza"),
+    RosterMember("빅 캐스", _M, _MID, 0, 416, 18, _RAW, alignment=_HEEL),
+    RosterMember(
+        "세이콴 슈거스", _M, _MID, 0, 1144, 4, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember("솔로 시코아", _M, _MID, 0, 780, 11, _SD, alignment=_FACE),
+    RosterMember(
+        "숀 레거시", _M, _MID, 0, 936, 8, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "아키라 토자와",
+        _M,
+        _MID,
+        0,
+        364,
+        19,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Alpha Academy",
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "안젤로 도킨스",
+        _M,
+        _MID,
+        0,
+        624,
+        14,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Street Profits",
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "액시옴", _M, _MID, 0, 988, 7, _SD, None, 0, -1, "Fraxiom", alignment=_FACE
+    ),
+    RosterMember("에단 페이지", _M, _MID, 0, 624, 14, _RAW, alignment=_HEEL),
     RosterMember(
         "엘 그란데 아메리카노",
         _M,
-        _MC,
+        _MID,
         0,
         676,
         13,
@@ -2410,435 +2761,1232 @@ ROSTER: tuple[RosterMember, ...] = (
         156,
         -1,
         "Los Americanos",
+        alignment=_HEEL,
     ),
-    RosterMember("엘튼 프린스", _M, _MC, 0, 988, 7, _SD, None, 0, -1, "Pretty Deadly"),
-    RosterMember("오모스", _M, _MC, 0, 832, 10, _RAW),
-    RosterMember("오바 페미", _M, _MC, 0, 1040, 6, _RAW),
-    RosterMember("오스틴 씨어리", _M, _MC, 0, 988, 7, _RAW, None, 0, -1, "The Vision"),
-    RosterMember("오티스", _M, _MC, 0, 728, 12, _RAW, None, 0, -1, "Alpha Academy"),
-    RosterMember("일리야 드라구노프", _M, _MC, 0, 832, 10, _SD),
-    RosterMember("쟈니 가르가노", _M, _MC, 0, 468, 17, _SD),
-    RosterMember("조 헨드리", _M, _MC, 0, 520, 16, _RAW),
     RosterMember(
-        "줄리우스 크리드", _M, _MC, 0, 884, 9, _RAW, None, 0, -1, "Creed Brothers"
+        "엘튼 프린스",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _SD,
+        None,
+        0,
+        -1,
+        "Pretty Deadly",
+        alignment=_TWEEN,
     ),
-    RosterMember("지미 우소", _M, _MC, 0, 416, 18, _RAW, None, 0, -1, "Bloodline"),
-    RosterMember("지본 에반스", _M, _MC, 0, 1352, 0, _RAW),
-    RosterMember("채드 게이블", _M, _MC, 0, 624, 14, _RAW),
-    RosterMember("카멜로 헤이즈", _M, _MC, 0, 832, 10, _SD),
+    RosterMember("오모스", _M, _MID, 0, 832, 10, _SD, alignment=_HEEL),
     RosterMember(
-        "크루즈 델 토로", _M, _MC, 0, 728, 12, _RAW, None, 0, -1, "Latino World Order"
+        "오스틴 씨어리",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vision",
+        alignment=_HEEL,
     ),
-    RosterMember("킷 윌슨", _M, _MC, 0, 832, 10, _SD, None, 0, -1, "Pretty Deadly"),
-    RosterMember("타마 통가", _M, _MC, 0, 260, 21, _SD, None, 0, -1, "The Tongas"),
-    RosterMember("탈라 통가", _M, _MC, 0, 676, 13, _SD, None, 0, -1, "The Tongas"),
-    RosterMember("트릭 윌리엄스", _M, _MC, 0, 832, 10, _SD),
-    RosterMember("펜타", _M, _MC, 0, 364, 19, _RAW),
     RosterMember(
-        "호아킨 와일드", _M, _MC, 0, 468, 17, _RAW, None, 0, -1, "Latino World Order"
+        "오시리스 그리핀",
+        _M,
+        _MID,
+        0,
+        1040,
+        6,
+        _RAW,
+        None,
+        0,
+        -1,
+        "DarkState",
+        develops=True,
+        alignment=_HEEL,
     ),
-    RosterMember("히로무 타카하시", _M, _MC, 0, 624, 14, _SD),
-    RosterMember("EK 프로스퍼", _M, _P, 0, 1196, 3, _SD),
-    RosterMember("나라쿠", _M, _P, 0, 468, 17, _RAW),
-    RosterMember("노암 다르", _M, _P, 0, 780, 11, _SD),
-    RosterMember("니코 밴스", _M, _P, 0, 1092, 5, _RAW, None, 0, -1, "The Culling"),
-    RosterMember("도리안 반 덕스", _M, _P, 0, 936, 8, _SD),
-    RosterMember("디온 레녹스", _M, _P, 0, 1040, 6, _RAW, None, 0, -1, "Darkstate"),
-    RosterMember("렉시스 킹", _M, _P, 0, 832, 10, _SD, None, 0, -1, "Birthright"),
-    RosterMember("로메오 모레노", _M, _P, 0, 1248, 2, _RAW),
-    RosterMember("루시엔 프라이스", _M, _P, 0, 988, 7, _SD, None, 0, -1, "Out The Mud"),
     RosterMember(
-        "리키 스모크스", _M, _P, 0, 1144, 4, _RAW, None, 0, -1, "The Vanity Project"
+        "오티스",
+        _M,
+        _MID,
+        0,
+        728,
+        12,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Alpha Academy",
+        alignment=_FACE,
     ),
-    RosterMember("린세 도라도", _M, _P, 0, 468, 17, _SD),
-    RosterMember("마일스 본", _M, _P, 0, 1092, 5, _RAW),
-    RosterMember("메이슨 룩", _M, _P, 0, 988, 7, _SD),
     RosterMember(
-        "브래드 베일러", _M, _P, 0, 1404, 0, _RAW, None, 0, -1, "The Vanity Project"
+        "유라이어 코너스",
+        _M,
+        _MID,
+        0,
+        1248,
+        2,
+        _SD,
+        None,
+        0,
+        -1,
+        "Birthright",
+        develops=True,
+        alignment=_HEEL,
     ),
-    RosterMember("브롱코 니마", _M, _P, 0, 1248, 2, _SD, None, 0, -1, "Out The Mud"),
-    RosterMember("브룩스 젠슨", _M, _P, 0, 1248, 2, _RAW),
-    RosterMember("샤일로 힐", _M, _P, 0, 1092, 5, _SD),
-    RosterMember("세이콴 슈거스", _M, _P, 0, 1144, 4, _RAW),
-    RosterMember("숀 레거시", _M, _P, 0, 936, 8, _SD),
-    RosterMember("숀 스피어스", _M, _P, 0, 156, 23, _RAW),
-    RosterMember("엘리오 르플뢰르", _M, _P, 0, 1092, 5, _SD),
-    RosterMember("오시리스 그리핀", _M, _P, 0, 1040, 6, _RAW, None, 0, -1, "DarkState"),
-    RosterMember("유라이어 코너스", _M, _P, 0, 1248, 2, _SD, None, 0, -1, "Birthright"),
-    RosterMember("재스퍼 트로이", _M, _P, 0, 1040, 6, _RAW),
+    RosterMember("일리야 드라구노프", _M, _MID, 0, 832, 10, _SD, alignment=_FACE),
     RosterMember(
-        "잭슨 드레이크", _M, _P, 0, 1352, 0, _SD, None, 0, -1, "The Vanity Project"
+        "잭슨 드레이크",
+        _M,
+        _MID,
+        0,
+        1352,
+        0,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vanity Project",
+        develops=True,
+        alignment=_HEEL,
     ),
-    RosterMember("조쉬 브릭스", _M, _P, 0, 780, 11, _RAW),
-    RosterMember("질라 파투", _M, _P, 0, 1144, 4, _SD),
-    RosterMember("찰리 뎀프시", _M, _P, 0, 988, 7, _RAW, None, 0, -1, "Birthright"),
-    RosterMember("채닝 로렌조", _M, _P, 0, 988, 7, _SD, None, 0, -1, "Birthright"),
-    RosterMember("캠 헨드릭스", _M, _P, 0, 988, 7, _RAW),
-    RosterMember("커틀러 제임스", _M, _P, 0, 1196, 3, _SD, None, 0, -1, "DarkState"),
-    RosterMember("케일 딕슨", _M, _P, 0, 1040, 6, _RAW),
-    RosterMember("크루즈 몬타나", _M, _P, 0, 676, 13, _SD),
-    RosterMember("키아누 카버", _M, _P, 0, 1092, 5, _RAW),
-    RosterMember("탱크 레저", _M, _P, 0, 1144, 4, _SD, None, 0, -1, "Hank & Tank"),
-    RosterMember("테비언 하이츠", _M, _P, 0, 988, 7, _RAW),
-    RosterMember("테이트 와일더", _M, _P, 0, 1040, 6, _SD),
-    RosterMember("토니 디안젤로", _M, _P, 0, 884, 9, _RAW),
-    RosterMember("트리스탄 앤젤스", _M, _P, 0, 1300, 1, _SD),
-    RosterMember("행크 워커", _M, _P, 0, 1040, 6, _RAW, None, 0, -1, "Hank & Tank"),
+    RosterMember(
+        "제이 우소",
+        _M,
+        _MID,
+        0,
+        416,
+        18,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bloodline",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "제이콥 파투",
+        _M,
+        _MID,
+        0,
+        728,
+        12,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bloodline",
+        alignment=_HEEL,
+    ),
+    RosterMember("조 헨드리", _M, _MID, 0, 520, 16, _RAW, alignment=_FACE),
+    RosterMember(
+        "조쉬 브릭스", _M, _MID, 0, 780, 11, _SD, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "지미 우소",
+        _M,
+        _MID,
+        0,
+        416,
+        18,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bloodline",
+        alignment=_HEEL,
+    ),
+    RosterMember("지본 에반스", _M, _MID, 0, 1352, 0, _RAW, alignment=_FACE),
+    RosterMember(
+        "찰리 뎀프시",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Birthright",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "채닝 로렌조",
+        _M,
+        _MID,
+        0,
+        988,
+        7,
+        _SD,
+        None,
+        0,
+        -1,
+        "Birthright",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember("채드 게이블", _M, _MID, 0, 624, 14, _RAW, alignment=_FACE),
+    RosterMember("카멜로 헤이즈", _M, _MID, 0, 832, 10, _SD, alignment=_FACE),
+    RosterMember(
+        "캠 헨드릭스", _M, _MID, 0, 988, 7, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "커틀러 제임스",
+        _M,
+        _MID,
+        0,
+        1196,
+        3,
+        _SD,
+        None,
+        0,
+        -1,
+        "DarkState",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "키아누 카버", _M, _MID, 0, 1092, 5, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "킷 윌슨",
+        _M,
+        _MID,
+        0,
+        832,
+        10,
+        _SD,
+        None,
+        0,
+        -1,
+        "Pretty Deadly",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "타마 통가",
+        _M,
+        _MID,
+        0,
+        260,
+        21,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Tongas",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "탈라 통가",
+        _M,
+        _MID,
+        0,
+        676,
+        13,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Tongas",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "테비언 하이츠", _M, _MID, 0, 988, 7, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "트리스탄 앤젤스", _M, _MID, 0, 1300, 1, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember("트릭 윌리엄스", _M, _MID, 0, 832, 10, _SD, alignment=_FACE),
+    RosterMember("펜타", _M, _MID, 0, 364, 19, _RAW, alignment=_FACE),
+    RosterMember("핀 밸러", _M, _MID, 0, 156, 23, _SD, alignment=_FACE),
+    RosterMember("히로무 타카하시", _M, _MID, 0, 624, 14, _SD, alignment=_FACE),
+    RosterMember(
+        "니코 밴스",
+        _M,
+        _LOW,
+        0,
+        1092,
+        5,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Culling",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember("로이스 키스", _M, _LOW, 0, 364, 19, _SD, alignment=_FACE),
+    RosterMember(
+        "린세 도라도", _M, _LOW, 0, 468, 17, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember("맷 카도나", _M, _LOW, 0, 364, 19, _SD, alignment=_FACE),
+    RosterMember(
+        "베르토", _M, _LOW, 0, 936, 8, _SD, None, 0, -1, "Los Garza", alignment=_HEEL
+    ),
+    RosterMember(
+        "브루투스 크리드",
+        _M,
+        _LOW,
+        0,
+        936,
+        8,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Creed Brothers",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "브룩스 젠슨", _M, _LOW, 0, 1248, 2, _SD, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "샤일로 힐", _M, _LOW, 0, 1092, 5, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "숀 스피어스", _M, _LOW, 0, 156, 23, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "아이바",
+        _M,
+        _LOW,
+        0,
+        312,
+        20,
+        _RAW,
+        None,
+        0,
+        -1,
+        "War Raiders",
+        alignment=_TWEEN,
+    ),
+    RosterMember(
+        "에릭", _M, _LOW, 0, 364, 19, _RAW, None, 0, -1, "War Raiders", alignment=_TWEEN
+    ),
+    RosterMember(
+        "엔젤", _M, _LOW, 0, 780, 11, _SD, None, 0, -1, "Los Garza", alignment=_HEEL
+    ),
+    RosterMember(
+        "엘리오 르플뢰르", _M, _LOW, 0, 1092, 5, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "재스퍼 트로이", _M, _LOW, 0, 1040, 6, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember("쟈니 가르가노", _M, _LOW, 0, 468, 17, _SD, alignment=_HEEL),
+    RosterMember(
+        "줄리우스 크리드",
+        _M,
+        _LOW,
+        0,
+        884,
+        9,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Creed Brothers",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "크루즈 델 토로",
+        _M,
+        _LOW,
+        0,
+        728,
+        12,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Latino World Order",
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "탱크 레저",
+        _M,
+        _LOW,
+        0,
+        1144,
+        4,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Hank & Tank",
+        develops=True,
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "테이트 와일더", _M, _LOW, 0, 1040, 6, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "행크 워커",
+        _M,
+        _LOW,
+        0,
+        1040,
+        6,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Hank & Tank",
+        develops=True,
+        alignment=_FACE,
+    ),
+    RosterMember(
+        "호아킨 와일드",
+        _M,
+        _LOW,
+        0,
+        468,
+        17,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Latino World Order",
+        alignment=_FACE,
+    ),
     # ── 남성부 · 1년차 데뷔 ────────────────────────────
-    RosterMember("디온 스파크", _M, _MC, 52, 1300, 6, _SD, None, 0, 0),
-    RosterMember("아론 루크", _M, _P, 52, 988, 8, _RAW),
-    RosterMember("카일 머서", _M, _P, 52, 1300, 0, _SD, None, 0, 1),
-    RosterMember("케이든 하트", _M, _P, 52, 1300, 0, _RAW, None, 0, 2),
-    RosterMember("할렘 루이스", _M, _P, 52, 1196, 4, _SD),
+    RosterMember("디온 스파크", _M, _MID, 52, 1300, 6, _SD, None, 0, 0),
+    RosterMember(
+        "아론 루크", _M, _MID, 52, 988, 8, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember("카일 머서", _M, _LOW, 52, 1300, 0, _SD, None, 0, 1, develops=True),
+    RosterMember("케이든 하트", _M, _LOW, 52, 1300, 0, _RAW, None, 0, 2, develops=True),
+    RosterMember("케일 딕슨", _M, _LOW, 52, 1092, 6, _SD, develops=True),
+    RosterMember("할렘 루이스", _M, _LOW, 52, 1196, 4, _RAW, develops=True),
     # ── 남성부 · 2년차 데뷔 ────────────────────────────
-    RosterMember("오스틴 파울러", _M, _MC, 104, 1352, 6, _RAW, None, 0, 4),
-    RosterMember("놀란 폭스", _M, _P, 104, 1352, 0, _SD, None, 0, 3),
-    RosterMember("브랙스턴 콜", _M, _P, 104, 1248, 4, _RAW),
-    RosterMember("브랜든 서머스", _M, _P, 104, 1352, 0, _SD, None, 0, 5),
-    RosterMember("잇츠 갤", _M, _P, 104, 1352, 2, _RAW),
+    RosterMember("오스틴 파울러", _M, _MID, 104, 1352, 6, _SD, None, 0, 4),
+    RosterMember("놀란 폭스", _M, _LOW, 104, 1352, 0, _RAW, None, 0, 3, develops=True),
+    RosterMember("브랙스턴 콜", _M, _LOW, 104, 1248, 4, _SD, develops=True),
+    RosterMember(
+        "브랜든 서머스", _M, _LOW, 104, 1352, 0, _RAW, None, 0, 5, develops=True
+    ),
+    RosterMember("잇츠 갤", _M, _LOW, 104, 1352, 2, _SD, develops=True),
     # ── 남성부 · 3년차 데뷔 ────────────────────────────
-    RosterMember("디온 프로스트", _M, _MC, 156, 1404, 6, _SD, None, 0, 8),
-    RosterMember("데본 서머스", _M, _P, 156, 1404, 0, _RAW, None, 0, 7),
-    RosterMember("자비어 리버스", _M, _P, 156, 1404, 0, _SD, None, 0, 6),
-    RosterMember("잭스 프레슬리", _M, _P, 156, 1300, 4, _RAW),
-    RosterMember("카푸치노 존스", _M, _P, 156, 1404, 2, _SD),
+    RosterMember("디온 프로스트", _M, _MID, 156, 1404, 6, _RAW, None, 0, 8),
+    RosterMember("데본 서머스", _M, _LOW, 156, 1404, 0, _SD, None, 0, 7, develops=True),
+    RosterMember(
+        "자비어 리버스", _M, _LOW, 156, 1404, 0, _RAW, None, 0, 6, develops=True
+    ),
+    RosterMember("잭스 프레슬리", _M, _LOW, 156, 1300, 4, _SD, develops=True),
+    RosterMember("카푸치노 존스", _M, _LOW, 156, 1404, 2, _RAW, develops=True),
     # ── 남성부 · 4년차 데뷔 ────────────────────────────
-    RosterMember("스타보이 찰리", _M, _P, 208, 1508, 1, _RAW),
-    RosterMember("실라스 폭스", _M, _P, 208, 1456, 0, _SD, None, 0, 11),
-    RosterMember("웨이드 헌터", _M, _P, 208, 1456, 0, _RAW, None, 0, 9),
-    RosterMember("일라이자 홀리필드", _M, _P, 208, 1248, 6, _SD),
-    RosterMember("트로이 프라이스", _M, _P, 208, 1456, 0, _RAW, None, 0, 10),
+    RosterMember("스타보이 찰리", _M, _LOW, 208, 1508, 1, _SD, develops=True),
+    RosterMember(
+        "실라스 폭스", _M, _LOW, 208, 1456, 0, _RAW, None, 0, 11, develops=True
+    ),
+    RosterMember("웨이드 헌터", _M, _LOW, 208, 1456, 0, _SD, None, 0, 9, develops=True),
+    RosterMember("일라이자 홀리필드", _M, _LOW, 208, 1248, 6, _RAW, develops=True),
+    RosterMember(
+        "트로이 프라이스", _M, _LOW, 208, 1456, 0, _SD, None, 0, 10, develops=True
+    ),
     # ── 남성부 · 5년차 데뷔 ────────────────────────────
-    RosterMember("브라이스 폭스", _M, _MC, 260, 1508, 6, _SD, None, 0, 12),
-    RosterMember("네이트 리버스", _M, _P, 260, 1508, 0, _RAW, None, 0, 13),
-    RosterMember("디온 라이커", _M, _P, 260, 1508, 0, _SD, None, 0, 14),
+    RosterMember("브라이스 폭스", _M, _MID, 260, 1508, 6, _RAW, None, 0, 12),
+    RosterMember(
+        "네이트 리버스", _M, _LOW, 260, 1508, 0, _SD, None, 0, 13, develops=True
+    ),
+    RosterMember(
+        "디온 라이커", _M, _LOW, 260, 1508, 0, _RAW, None, 0, 14, develops=True
+    ),
     # ── 남성부 · 6년차 데뷔 ────────────────────────────
-    RosterMember("케이든 벨", _M, _MC, 312, 1560, 6, _RAW, None, 0, 16),
-    RosterMember("웨이드 서머스", _M, _P, 312, 1560, 0, _SD, None, 0, 17),
-    RosterMember("카일 바이퍼", _M, _P, 312, 1560, 0, _RAW, None, 0, 15),
+    RosterMember("케이든 벨", _M, _MID, 312, 1560, 6, _SD, None, 0, 16),
+    RosterMember(
+        "웨이드 서머스", _M, _LOW, 312, 1560, 0, _RAW, None, 0, 17, develops=True
+    ),
+    RosterMember(
+        "카일 바이퍼", _M, _LOW, 312, 1560, 0, _SD, None, 0, 15, develops=True
+    ),
     # ── 남성부 · 7년차 데뷔 ────────────────────────────
-    RosterMember("마커스 블레이즈", _M, _MC, 364, 1612, 6, _SD, None, 0, 20),
-    RosterMember("오스틴 브릭스", _M, _P, 364, 1612, 0, _RAW, None, 0, 18),
-    RosterMember("트로이 폭스", _M, _P, 364, 1612, 0, _SD, None, 0, 19),
+    RosterMember("마커스 블레이즈", _M, _MID, 364, 1612, 6, _RAW, None, 0, 20),
+    RosterMember(
+        "오스틴 브릭스", _M, _LOW, 364, 1612, 0, _SD, None, 0, 18, develops=True
+    ),
+    RosterMember(
+        "트로이 폭스", _M, _LOW, 364, 1612, 0, _RAW, None, 0, 19, develops=True
+    ),
     # ── 남성부 · 8년차 데뷔 ────────────────────────────
-    RosterMember("브랜든 헤이즈", _M, _P, 416, 1664, 0, _RAW, None, 0, 21),
-    RosterMember("웨이드 스파크", _M, _P, 416, 1664, 0, _SD, None, 0, 22),
-    RosterMember("케이든 헌터", _M, _P, 416, 1664, 0, _RAW, None, 0, 23),
+    RosterMember(
+        "브랜든 헤이즈", _M, _LOW, 416, 1664, 0, _SD, None, 0, 21, develops=True
+    ),
+    RosterMember(
+        "웨이드 스파크", _M, _LOW, 416, 1664, 0, _RAW, None, 0, 22, develops=True
+    ),
+    RosterMember(
+        "케이든 헌터", _M, _LOW, 416, 1664, 0, _SD, None, 0, 23, develops=True
+    ),
     # ── 남성부 · 9년차 데뷔 ────────────────────────────
-    RosterMember("오스틴 셰이드", _M, _MC, 468, 1716, 6, _SD, None, 0, 24),
-    RosterMember("라이언 스파크", _M, _P, 468, 1716, 0, _RAW, None, 0, 26),
-    RosterMember("코너 하트", _M, _P, 468, 1716, 0, _SD, None, 0, 25),
+    RosterMember("오스틴 셰이드", _M, _MID, 468, 1716, 6, _RAW, None, 0, 24),
+    RosterMember(
+        "라이언 스파크", _M, _LOW, 468, 1716, 0, _SD, None, 0, 26, develops=True
+    ),
+    RosterMember("코너 하트", _M, _LOW, 468, 1716, 0, _RAW, None, 0, 25, develops=True),
     # ── 남성부 · 10년차 데뷔 ───────────────────────────
-    RosterMember("타이슨 윈터스", _M, _MC, 520, 1768, 6, _RAW, None, 0, 28),
-    RosterMember("데릭 바이퍼", _M, _P, 520, 1768, 0, _SD, None, 0, 29),
-    RosterMember("타이슨 서머스", _M, _P, 520, 1768, 0, _RAW, None, 0, 27),
+    RosterMember("타이슨 윈터스", _M, _MID, 520, 1768, 6, _SD, None, 0, 28),
+    RosterMember(
+        "데릭 바이퍼", _M, _LOW, 520, 1768, 0, _RAW, None, 0, 29, develops=True
+    ),
+    RosterMember(
+        "타이슨 서머스", _M, _LOW, 520, 1768, 0, _SD, None, 0, 27, develops=True
+    ),
     # ── 남성부 · 11년차 데뷔 ───────────────────────────
-    RosterMember("알렉 프로스트", _M, _MC, 572, 1820, 6, _SD, None, 0, 32),
-    RosterMember("이선 리드", _M, _P, 572, 1820, 0, _RAW, None, 0, 30),
-    RosterMember("잭슨 브릭스", _M, _P, 572, 1820, 0, _SD, None, 0, 31),
+    RosterMember("알렉 프로스트", _M, _MID, 572, 1820, 6, _RAW, None, 0, 32),
+    RosterMember("이선 리드", _M, _LOW, 572, 1820, 0, _SD, None, 0, 30, develops=True),
+    RosterMember(
+        "잭슨 브릭스", _M, _LOW, 572, 1820, 0, _RAW, None, 0, 31, develops=True
+    ),
     # ── 남성부 · 12년차 데뷔 ───────────────────────────
-    RosterMember("개럿 스톰", _M, _P, 624, 1872, 0, _RAW, None, 0, 34),
-    RosterMember("놀란 윈터스", _M, _P, 624, 1872, 0, _SD, None, 0, 35),
-    RosterMember("자비어 스틸", _M, _P, 624, 1872, 0, _RAW, None, 0, 33),
+    RosterMember("개럿 스톰", _M, _LOW, 624, 1872, 0, _SD, None, 0, 34, develops=True),
+    RosterMember(
+        "놀란 윈터스", _M, _LOW, 624, 1872, 0, _RAW, None, 0, 35, develops=True
+    ),
+    RosterMember(
+        "자비어 스틸", _M, _LOW, 624, 1872, 0, _SD, None, 0, 33, develops=True
+    ),
     # ── 남성부 · 13년차 데뷔 ───────────────────────────
-    RosterMember("타이슨 바이퍼", _M, _MC, 676, 1924, 6, _SD, None, 0, 36),
-    RosterMember("루커스 라이커", _M, _P, 676, 1924, 0, _RAW, None, 0, 37),
-    RosterMember("카일 케이지", _M, _P, 676, 1924, 0, _SD, None, 0, 38),
+    RosterMember("타이슨 바이퍼", _M, _MID, 676, 1924, 6, _RAW, None, 0, 36),
+    RosterMember(
+        "루커스 라이커", _M, _LOW, 676, 1924, 0, _SD, None, 0, 37, develops=True
+    ),
+    RosterMember(
+        "카일 케이지", _M, _LOW, 676, 1924, 0, _RAW, None, 0, 38, develops=True
+    ),
     # ── 남성부 · 14년차 데뷔 ───────────────────────────
-    RosterMember("알렉 퀸", _M, _MC, 728, 1976, 6, _RAW, None, 0, 40),
-    RosterMember("카터 윈터스", _M, _P, 728, 1976, 0, _SD, None, 0, 39),
-    RosterMember("코너 셰이드", _M, _P, 728, 1976, 0, _RAW, None, 0, 41),
+    RosterMember("알렉 퀸", _M, _MID, 728, 1976, 6, _SD, None, 0, 40),
+    RosterMember(
+        "카터 윈터스", _M, _LOW, 728, 1976, 0, _RAW, None, 0, 39, develops=True
+    ),
+    RosterMember(
+        "코너 셰이드", _M, _LOW, 728, 1976, 0, _SD, None, 0, 41, develops=True
+    ),
     # ── 남성부 · 15년차 데뷔 ───────────────────────────
-    RosterMember("메이슨 크로스", _M, _MC, 780, 2028, 6, _SD, None, 0, 44),
-    RosterMember("자비어 헌터", _M, _P, 780, 2028, 0, _RAW, None, 0, 42),
-    RosterMember("콜 스톰", _M, _P, 780, 2028, 0, _SD, None, 0, 43),
+    RosterMember("메이슨 크로스", _M, _MID, 780, 2028, 6, _RAW, None, 0, 44),
+    RosterMember(
+        "자비어 헌터", _M, _LOW, 780, 2028, 0, _SD, None, 0, 42, develops=True
+    ),
+    RosterMember("콜 스톰", _M, _LOW, 780, 2028, 0, _RAW, None, 0, 43, develops=True),
     # ── 남성부 · 16년차 데뷔 ───────────────────────────
-    RosterMember("라이언 라이커", _M, _P, 832, 2080, 0, _RAW, None, 0, 46),
-    RosterMember("카일 헌터", _M, _P, 832, 2080, 0, _SD, None, 0, 45),
-    RosterMember("트로이 라이커", _M, _P, 832, 2080, 0, _RAW, None, 0, 47),
+    RosterMember(
+        "라이언 라이커", _M, _LOW, 832, 2080, 0, _SD, None, 0, 46, develops=True
+    ),
+    RosterMember("카일 헌터", _M, _LOW, 832, 2080, 0, _RAW, None, 0, 45, develops=True),
+    RosterMember(
+        "트로이 라이커", _M, _LOW, 832, 2080, 0, _SD, None, 0, 47, develops=True
+    ),
     # ── 남성부 · 17년차 데뷔 ───────────────────────────
-    RosterMember("실라스 블레이즈", _M, _MC, 884, 2132, 6, _SD, None, 0, 48),
-    RosterMember("마커스 스톰", _M, _P, 884, 2132, 0, _RAW, None, 0, 49),
-    RosterMember("카터 바이퍼", _M, _P, 884, 2132, 0, _SD, None, 0, 50),
+    RosterMember("실라스 블레이즈", _M, _MID, 884, 2132, 6, _RAW, None, 0, 48),
+    RosterMember(
+        "마커스 스톰", _M, _LOW, 884, 2132, 0, _SD, None, 0, 49, develops=True
+    ),
+    RosterMember(
+        "카터 바이퍼", _M, _LOW, 884, 2132, 0, _RAW, None, 0, 50, develops=True
+    ),
     # ── 남성부 · 18년차 데뷔 ───────────────────────────
-    RosterMember("브레이든 스톤", _M, _MC, 936, 2184, 6, _RAW, None, 0, 52),
-    RosterMember("브레이든 리드", _M, _P, 936, 2184, 0, _SD, None, 0, 51),
-    RosterMember("오스틴 크로스", _M, _P, 936, 2184, 0, _RAW, None, 0, 53),
+    RosterMember("브레이든 스톤", _M, _MID, 936, 2184, 6, _SD, None, 0, 52),
+    RosterMember(
+        "브레이든 리드", _M, _LOW, 936, 2184, 0, _RAW, None, 0, 51, develops=True
+    ),
+    RosterMember(
+        "오스틴 크로스", _M, _LOW, 936, 2184, 0, _SD, None, 0, 53, develops=True
+    ),
     # ── 남성부 · 19년차 데뷔 ───────────────────────────
-    RosterMember("트로이 나이트", _M, _MC, 988, 2236, 6, _SD, None, 0, 56),
-    RosterMember("이선 세이지", _M, _P, 988, 2236, 0, _RAW, None, 0, 54),
-    RosterMember("이선 크로스", _M, _P, 988, 2236, 0, _SD, None, 0, 55),
+    RosterMember("트로이 나이트", _M, _MID, 988, 2236, 6, _RAW, None, 0, 56),
+    RosterMember(
+        "이선 세이지", _M, _LOW, 988, 2236, 0, _SD, None, 0, 54, develops=True
+    ),
+    RosterMember(
+        "이선 크로스", _M, _LOW, 988, 2236, 0, _RAW, None, 0, 55, develops=True
+    ),
     # ── 남성부 · 20년차 데뷔 ───────────────────────────
-    RosterMember("놀란 레인", _M, _P, 1040, 2288, 0, _RAW, None, 0, 59),
-    RosterMember("알렉 셰이드", _M, _P, 1040, 2288, 0, _SD, None, 0, 57),
-    RosterMember("콜 나이트", _M, _P, 1040, 2288, 0, _RAW, None, 0, 58),
+    RosterMember("놀란 레인", _M, _LOW, 1040, 2288, 0, _SD, None, 0, 59, develops=True),
+    RosterMember(
+        "알렉 셰이드", _M, _LOW, 1040, 2288, 0, _RAW, None, 0, 57, develops=True
+    ),
+    RosterMember("콜 나이트", _M, _LOW, 1040, 2288, 0, _SD, None, 0, 58, develops=True),
     # ── 남성부 · 21년차 데뷔 ───────────────────────────
-    RosterMember("마커스 나이트", _M, _MC, 1092, 2340, 6, _SD, None, 0, 60),
-    RosterMember("데본 파울러", _M, _P, 1092, 2340, 0, _RAW, None, 0, 62),
-    RosterMember("타이슨 리드", _M, _P, 1092, 2340, 0, _SD, None, 0, 61),
+    RosterMember("마커스 나이트", _M, _MID, 1092, 2340, 6, _RAW, None, 0, 60),
+    RosterMember(
+        "데본 파울러", _M, _LOW, 1092, 2340, 0, _SD, None, 0, 62, develops=True
+    ),
+    RosterMember(
+        "타이슨 리드", _M, _LOW, 1092, 2340, 0, _RAW, None, 0, 61, develops=True
+    ),
     # ── 남성부 · 22년차 데뷔 ───────────────────────────
-    RosterMember("브라이스 퀸", _M, _MC, 1144, 2392, 6, _RAW, None, 0, 64),
-    RosterMember("놀란 벨", _M, _P, 1144, 2392, 0, _SD, None, 0, 65),
-    RosterMember("콜 헌터", _M, _P, 1144, 2392, 0, _RAW, None, 0, 63),
+    RosterMember("브라이스 퀸", _M, _MID, 1144, 2392, 6, _SD, None, 0, 64),
+    RosterMember("놀란 벨", _M, _LOW, 1144, 2392, 0, _RAW, None, 0, 65, develops=True),
+    RosterMember("콜 헌터", _M, _LOW, 1144, 2392, 0, _SD, None, 0, 63, develops=True),
     # ── 남성부 · 23년차 데뷔 ───────────────────────────
-    RosterMember("카일 리버스", _M, _MC, 1196, 2444, 6, _SD, None, 0, 68),
-    RosterMember("제러드 하트", _M, _P, 1196, 2444, 0, _RAW, None, 0, 66),
-    RosterMember("코너 스톰", _M, _P, 1196, 2444, 0, _SD, None, 0, 67),
+    RosterMember("카일 리버스", _M, _MID, 1196, 2444, 6, _RAW, None, 0, 68),
+    RosterMember(
+        "제러드 하트", _M, _LOW, 1196, 2444, 0, _SD, None, 0, 66, develops=True
+    ),
+    RosterMember(
+        "코너 스톰", _M, _LOW, 1196, 2444, 0, _RAW, None, 0, 67, develops=True
+    ),
     # ── 남성부 · 24년차 데뷔 ───────────────────────────
-    RosterMember("개럿 레인", _M, _P, 1248, 2496, 0, _RAW, None, 0, 71),
-    RosterMember("제이든 세이지", _M, _P, 1248, 2496, 0, _SD, None, 0, 70),
-    RosterMember("카터 브릭스", _M, _P, 1248, 2496, 0, _RAW, None, 0, 69),
+    RosterMember("개럿 레인", _M, _LOW, 1248, 2496, 0, _SD, None, 0, 71, develops=True),
+    RosterMember(
+        "제이든 세이지", _M, _LOW, 1248, 2496, 0, _RAW, None, 0, 70, develops=True
+    ),
+    RosterMember(
+        "카터 브릭스", _M, _LOW, 1248, 2496, 0, _SD, None, 0, 69, develops=True
+    ),
     # ── 남성부 · 25년차 데뷔 ───────────────────────────
-    RosterMember("데본 울프", _M, _MC, 1300, 2548, 6, _SD, None, 0, 72),
-    RosterMember("브라이스 리드", _M, _P, 1300, 2548, 0, _RAW, None, 0, 73),
-    RosterMember("자비어 크로스", _M, _P, 1300, 2548, 0, _SD, None, 0, 74),
+    RosterMember("데본 울프", _M, _MID, 1300, 2548, 6, _RAW, None, 0, 72),
+    RosterMember(
+        "브라이스 리드", _M, _LOW, 1300, 2548, 0, _SD, None, 0, 73, develops=True
+    ),
+    RosterMember(
+        "자비어 크로스", _M, _LOW, 1300, 2548, 0, _RAW, None, 0, 74, develops=True
+    ),
     # ── 남성부 · 26년차 데뷔 ───────────────────────────
-    RosterMember("루커스 블레이즈", _M, _MC, 1352, 2600, 6, _RAW, None, 0, 76),
-    RosterMember("자비어 벨", _M, _P, 1352, 2600, 0, _SD, None, 0, 75),
-    RosterMember("카일 서머스", _M, _P, 1352, 2600, 0, _RAW, None, 0, 77),
+    RosterMember("루커스 블레이즈", _M, _MID, 1352, 2600, 6, _SD, None, 0, 76),
+    RosterMember(
+        "자비어 벨", _M, _LOW, 1352, 2600, 0, _RAW, None, 0, 75, develops=True
+    ),
+    RosterMember(
+        "카일 서머스", _M, _LOW, 1352, 2600, 0, _SD, None, 0, 77, develops=True
+    ),
     # ── 남성부 · 27년차 데뷔 ───────────────────────────
-    RosterMember("잭슨 밴스", _M, _MC, 1404, 2652, 6, _SD, None, 0, 80),
-    RosterMember("마커스 프로스트", _M, _P, 1404, 2652, 0, _RAW, None, 0, 79),
-    RosterMember("맥스 프라이스", _M, _P, 1404, 2652, 0, _SD, None, 0, 78),
+    RosterMember("잭슨 밴스", _M, _MID, 1404, 2652, 6, _RAW, None, 0, 80),
+    RosterMember(
+        "마커스 프로스트", _M, _LOW, 1404, 2652, 0, _SD, None, 0, 79, develops=True
+    ),
+    RosterMember(
+        "맥스 프라이스", _M, _LOW, 1404, 2652, 0, _RAW, None, 0, 78, develops=True
+    ),
     # ── 남성부 · 28년차 데뷔 ───────────────────────────
-    RosterMember("마커스 서머스", _M, _P, 1456, 2704, 0, _RAW, None, 0, 82),
-    RosterMember("실라스 헤이즈", _M, _P, 1456, 2704, 0, _SD, None, 0, 81),
-    RosterMember("제이든 스틸", _M, _P, 1456, 2704, 0, _RAW, None, 0, 83),
+    RosterMember(
+        "마커스 서머스", _M, _LOW, 1456, 2704, 0, _SD, None, 0, 82, develops=True
+    ),
+    RosterMember(
+        "실라스 헤이즈", _M, _LOW, 1456, 2704, 0, _RAW, None, 0, 81, develops=True
+    ),
+    RosterMember(
+        "제이든 스틸", _M, _LOW, 1456, 2704, 0, _SD, None, 0, 83, develops=True
+    ),
     # ── 남성부 · 29년차 데뷔 ───────────────────────────
-    RosterMember("코너 파울러", _M, _MC, 1508, 2756, 6, _SD, None, 0, 84),
-    RosterMember("개럿 헌터", _M, _P, 1508, 2756, 0, _RAW, None, 0, 85),
-    RosterMember("데본 프로스트", _M, _P, 1508, 2756, 0, _SD, None, 0, 86),
+    RosterMember("코너 파울러", _M, _MID, 1508, 2756, 6, _RAW, None, 0, 84),
+    RosterMember("개럿 헌터", _M, _LOW, 1508, 2756, 0, _SD, None, 0, 85, develops=True),
+    RosterMember(
+        "데본 프로스트", _M, _LOW, 1508, 2756, 0, _RAW, None, 0, 86, develops=True
+    ),
     # ── 남성부 · 30년차 데뷔 ───────────────────────────
-    RosterMember("자비어 프라이스", _M, _MC, 1560, 2808, 6, _RAW, None, 0, 88),
-    RosterMember("데릭 벨", _M, _P, 1560, 2808, 0, _SD, None, 0, 89),
-    RosterMember("마커스 윈터스", _M, _P, 1560, 2808, 0, _RAW, None, 0, 87),
+    RosterMember("자비어 프라이스", _M, _MID, 1560, 2808, 6, _SD, None, 0, 88),
+    RosterMember("데릭 벨", _M, _LOW, 1560, 2808, 0, _RAW, None, 0, 89, develops=True),
+    RosterMember(
+        "마커스 윈터스", _M, _LOW, 1560, 2808, 0, _SD, None, 0, 87, develops=True
+    ),
     # ── 여성부 · 0주차 명부 ────────────────────────────
-    RosterMember("나오미", _F, _ME, 0, 208, 16, _SD),
+    RosterMember("AJ 리", _F, _UP, 0, 156, 17, _RAW, alignment=_FACE),
     RosterMember(
-        "나이아 잭스", _F, _ME, 0, 156, 20, _SD, None, 0, -1, "The Irresistible Forces"
-    ),
-    RosterMember("리브 모건", _F, _ME, 0, 520, 10, _RAW, None, 0, -1, "Judgement Day"),
-    RosterMember("리아 리플리", _F, _ME, 0, 676, 7, _SD),
-    RosterMember("베일리", _F, _ME, 0, 260, 15, _RAW),
-    RosterMember("베키 린치", _F, _ME, 0, 156, 17, _RAW),
-    RosterMember("비앙카 벨레어", _F, _ME, 0, 260, 15, _SD),
-    RosterMember("샬럿 플레어", _F, _ME, 0, 156, 18, _SD),
-    RosterMember("스테파니 바케르", _F, _ME, 0, 468, 11, _RAW),
-    RosterMember("아스카", _F, _ME, 0, 156, 22, _RAW),
-    RosterMember("알렉사 블리스", _F, _ME, 0, 364, 13, _SD),
-    RosterMember("이요 스카이", _F, _ME, 0, 312, 14, _RAW),
-    RosterMember("제이드 카길", _F, _ME, 0, 416, 12, _SD),
-    RosterMember("줄리아", _F, _ME, 0, 520, 10, _SD),
-    RosterMember("티파니 스트랫턴", _F, _ME, 0, 780, 5, _SD),
-    RosterMember("AJ 리", _F, _MC, 0, 156, 17, _RAW),
-    RosterMember("B-팹", _F, _MC, 0, 364, 13, _SD),
-    RosterMember("내티", _F, _MC, 0, 156, 22, _RAW, "나탈리아", 260),
-    RosterMember("니키 벨라", _F, _MC, 0, 156, 20, _RAW, None, 0, -1, "Bella Twins"),
-    RosterMember("라이라 발키리아", _F, _MC, 0, 676, 7, _RAW),
-    RosterMember(
-        "라켈 로드리게스", _F, _MC, 0, 364, 13, _RAW, None, 0, -1, "Judgement Day"
+        "롤라 바이스", _F, _UP, 0, 728, 6, _RAW, develops=True, alignment=_FACE
     ),
     RosterMember(
-        "래쉬 레전드", _F, _MC, 0, 676, 7, _SD, None, 0, -1, "The Irresistible Forces"
+        "리브 모건",
+        _F,
+        _UP,
+        0,
+        520,
+        10,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Judgement Day",
+        alignment=_HEEL,
+    ),
+    RosterMember("리아 리플리", _F, _UP, 0, 676, 7, _SD, alignment=_FACE),
+    RosterMember("베일리", _F, _UP, 0, 260, 15, _RAW, alignment=_FACE),
+    RosterMember("베키 린치", _F, _UP, 0, 156, 17, _RAW, alignment=_FACE),
+    RosterMember("비앙카 벨레어", _F, _UP, 0, 260, 15, _SD, alignment=_FACE),
+    RosterMember("스테파니 바케르", _F, _UP, 0, 468, 11, _RAW, alignment=_FACE),
+    RosterMember("아스카", _F, _UP, 0, 156, 22, _RAW, alignment=_FACE),
+    RosterMember(
+        "켄달 그레이", _F, _UP, 0, 884, 3, _SD, develops=True, alignment=_FACE
     ),
     RosterMember(
-        "레이니 리드", _F, _MC, 0, 780, 5, _SD, None, 0, -1, "Fatal Influence"
+        "켈라니 조던", _F, _UP, 0, 780, 5, _RAW, develops=True, alignment=_HEEL
     ),
-    RosterMember("록샌 페레즈", _F, _MC, 0, 936, 2, _RAW, None, 0, -1, "Judgement Day"),
-    RosterMember("맥신 듀프리", _F, _MC, 0, 676, 7, _RAW, None, 0, -1, "The Vision"),
-    RosterMember("미친", _F, _MC, 0, 260, 15, _SD),
-    RosterMember("브리 벨라", _F, _MC, 0, 156, 20, _RAW, None, 0, -1, "Bella Twins"),
-    RosterMember("블레이크 먼로", _F, _MC, 0, 728, 6, _SD),
-    RosterMember("솔 루카", _F, _MC, 0, 832, 4, _RAW),
-    RosterMember("아이비 나일", _F, _MC, 0, 416, 12, _RAW),
+    RosterMember("B-팹", _F, _MID, 0, 364, 13, _SD, alignment=_HEEL),
+    RosterMember("나오미", _F, _MID, 0, 208, 16, _SD, alignment=_HEEL),
     RosterMember(
-        "제이시 제인", _F, _MC, 0, 624, 8, _SD, None, 0, -1, "Fatal Influence"
+        "나이아 잭스",
+        _F,
+        _MID,
+        0,
+        156,
+        20,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Irresistible Forces",
+        alignment=_HEEL,
     ),
-    RosterMember("조르딘 그레이스", _F, _MC, 0, 624, 8, _SD),
-    RosterMember("첼시 그린", _F, _MC, 0, 364, 13, _SD),
-    RosterMember("캔디스 르래", _F, _MC, 0, 156, 18, _SD),
-    RosterMember("키아나 제임스", _F, _MC, 0, 676, 7, _SD),
-    RosterMember("파이퍼 니븐", _F, _MC, 0, 364, 13, _SD),
-    RosterMember("팰런 헨리", _F, _MC, 0, 572, 9, _SD, None, 0, -1, "Fatal Influence"),
-    RosterMember("페이지", _F, _MC, 0, 416, 12, _RAW),
-    RosterMember("니키타 라이온스", _F, _P, 0, 780, 5, _SD),
-    RosterMember("레이나 볼칸", _F, _P, 0, 676, 7, _RAW),
-    RosterMember("레일라 딕스", _F, _P, 0, 780, 5, _SD),
-    RosterMember("렌 싱클레어", _F, _P, 0, 572, 9, _RAW),
-    RosterMember("롤라 바이스", _F, _P, 0, 728, 6, _SD),
-    RosterMember("리지 레인", _F, _P, 0, 728, 6, _RAW),
     RosterMember(
-        "마이카 락우드", _F, _P, 0, 884, 3, _SD, None, 0, -1, "The Vanity Project"
+        "내티",
+        _F,
+        _MID,
+        0,
+        156,
+        22,
+        _SD,
+        "나탈리아",
+        260,
+        develops=True,
+        alignment=_HEEL,
     ),
-    RosterMember("스카일라 레이", _F, _P, 0, 884, 3, _RAW),
     RosterMember(
-        "아리아나 그레이스", _F, _P, 0, 572, 9, _SD, None, 0, -1, "Birthright"
+        "니키 벨라",
+        _F,
+        _MID,
+        0,
+        156,
+        20,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bella Twins",
+        alignment=_HEEL,
     ),
-    RosterMember("애드리아나 리조", _F, _P, 0, 780, 5, _RAW),
-    RosterMember("웬디 추", _F, _P, 0, 416, 12, _SD),
-    RosterMember("이지 데임", _F, _P, 0, 780, 5, _RAW, None, 0, -1, "The Culling"),
-    RosterMember("자리아", _F, _P, 0, 780, 5, _SD),
-    RosterMember("제이다 파커", _F, _P, 0, 780, 5, _RAW, None, 0, -1, "Out The Mud"),
-    RosterMember("카르멘 페트로비치", _F, _P, 0, 624, 8, _SD),
-    RosterMember("칼리 암스트롱", _F, _P, 0, 520, 10, _RAW),
-    RosterMember("켄달 그레이", _F, _P, 0, 884, 3, _SD),
-    RosterMember("켈라니 조던", _F, _P, 0, 780, 5, _RAW),
-    RosterMember("테이텀 팩슬리", _F, _P, 0, 676, 7, _SD),
-    RosterMember("티아 헤일", _F, _P, 0, 1040, 0, _SD),
+    RosterMember(
+        "니키타 라이온스", _F, _MID, 0, 780, 5, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember("라이라 발키리아", _F, _MID, 0, 676, 7, _RAW, alignment=_HEEL),
+    RosterMember(
+        "라켈 로드리게스",
+        _F,
+        _MID,
+        0,
+        364,
+        13,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Judgement Day",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "래쉬 레전드",
+        _F,
+        _MID,
+        0,
+        676,
+        7,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Irresistible Forces",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "레이나 볼칸", _F, _MID, 0, 676, 7, _SD, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "레이니 리드",
+        _F,
+        _MID,
+        0,
+        780,
+        5,
+        _SD,
+        None,
+        0,
+        -1,
+        "Fatal Influence",
+        alignment=_HEEL,
+    ),
+    RosterMember(
+        "렌 싱클레어", _F, _MID, 0, 572, 9, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember(
+        "록샌 페레즈",
+        _F,
+        _MID,
+        0,
+        936,
+        2,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Judgement Day",
+        alignment=_HEEL,
+    ),
+    RosterMember("리지 레인", _F, _MID, 0, 728, 6, _SD, develops=True, alignment=_FACE),
+    RosterMember(
+        "맥신 듀프리",
+        _F,
+        _MID,
+        0,
+        676,
+        7,
+        _RAW,
+        None,
+        0,
+        -1,
+        "The Vision",
+        alignment=_HEEL,
+    ),
+    RosterMember("미친", _F, _MID, 0, 260, 15, _SD, alignment=_HEEL),
+    RosterMember(
+        "브리 벨라",
+        _F,
+        _MID,
+        0,
+        156,
+        20,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Bella Twins",
+        alignment=_HEEL,
+    ),
+    RosterMember("샬럿 플레어", _F, _MID, 0, 156, 18, _SD, alignment=_FACE),
+    RosterMember("솔 루카", _F, _MID, 0, 832, 4, _RAW, alignment=_FACE),
+    RosterMember(
+        "아리아나 그레이스",
+        _F,
+        _MID,
+        0,
+        572,
+        9,
+        _RAW,
+        None,
+        0,
+        -1,
+        "Birthright",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember("알렉사 블리스", _F, _MID, 0, 364, 13, _SD, alignment=_FACE),
+    RosterMember("이요 스카이", _F, _MID, 0, 312, 14, _RAW, alignment=_FACE),
+    RosterMember(
+        "이지 데임",
+        _F,
+        _MID,
+        0,
+        780,
+        5,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Culling",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember("자리아", _F, _MID, 0, 780, 5, _RAW, develops=True, alignment=_HEEL),
+    RosterMember(
+        "제이다 파커",
+        _F,
+        _MID,
+        0,
+        780,
+        5,
+        _SD,
+        None,
+        0,
+        -1,
+        "Out The Mud",
+        develops=True,
+        alignment=_FACE,
+    ),
+    RosterMember("제이드 카길", _F, _MID, 0, 416, 12, _SD, alignment=_HEEL),
+    RosterMember(
+        "제이시 제인",
+        _F,
+        _MID,
+        0,
+        624,
+        8,
+        _SD,
+        None,
+        0,
+        -1,
+        "Fatal Influence",
+        alignment=_HEEL,
+    ),
+    RosterMember("줄리아", _F, _MID, 0, 520, 10, _SD, alignment=_FACE),
+    RosterMember("첼시 그린", _F, _MID, 0, 364, 13, _SD, alignment=_FACE),
+    RosterMember(
+        "카르멘 페트로비치", _F, _MID, 0, 624, 8, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "칼리 암스트롱", _F, _MID, 0, 520, 10, _SD, develops=True, alignment=_HEEL
+    ),
+    RosterMember("테이텀 팩슬리", _F, _MID, 0, 676, 7, _SD, alignment=_FACE),
+    RosterMember(
+        "티아 헤일", _F, _MID, 0, 1040, 0, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember("티파니 스트랫턴", _F, _MID, 0, 780, 5, _SD, alignment=_FACE),
+    RosterMember("파이퍼 니븐", _F, _MID, 0, 364, 13, _SD, alignment=_HEEL),
+    RosterMember(
+        "팰런 헨리",
+        _F,
+        _MID,
+        0,
+        572,
+        9,
+        _SD,
+        None,
+        0,
+        -1,
+        "Fatal Influence",
+        alignment=_HEEL,
+    ),
+    RosterMember("페이지", _F, _MID, 0, 416, 12, _SD, alignment=_FACE),
+    RosterMember(
+        "레일라 딕스", _F, _LOW, 0, 780, 5, _RAW, develops=True, alignment=_HEEL
+    ),
+    RosterMember(
+        "마이카 락우드",
+        _F,
+        _LOW,
+        0,
+        884,
+        3,
+        _SD,
+        None,
+        0,
+        -1,
+        "The Vanity Project",
+        develops=True,
+        alignment=_HEEL,
+    ),
+    RosterMember("블레이크 먼로", _F, _LOW, 0, 728, 6, _SD, alignment=_HEEL),
+    RosterMember(
+        "스카일라 레이", _F, _LOW, 0, 884, 3, _RAW, develops=True, alignment=_FACE
+    ),
+    RosterMember("아이비 나일", _F, _LOW, 0, 416, 12, _RAW, alignment=_HEEL),
+    RosterMember(
+        "애드리아나 리조", _F, _LOW, 0, 780, 5, _SD, develops=True, alignment=_FACE
+    ),
+    RosterMember("웬디 추", _F, _LOW, 0, 416, 12, _RAW, develops=True, alignment=_FACE),
+    RosterMember("조르딘 그레이스", _F, _LOW, 0, 624, 8, _SD, alignment=_FACE),
+    RosterMember("캔디스 르래", _F, _LOW, 0, 156, 18, _SD, alignment=_HEEL),
+    RosterMember("키아나 제임스", _F, _LOW, 0, 676, 7, _SD, alignment=_HEEL),
     # ── 여성부 · 1년차 데뷔 ────────────────────────────
-    RosterMember("스칼렛 서머스", _F, _MC, 52, 1300, 6, _RAW, None, 0, 90),
-    RosterMember("아리아 베넷", _F, _P, 52, 624, 9, _SD),
-    RosterMember("엠버 바이퍼", _F, _P, 52, 1300, 0, _RAW, None, 0, 91),
-    RosterMember("이든 폭스", _F, _P, 52, 1300, 0, _SD, None, 0, 93),
-    RosterMember("이자벨 퀸", _F, _P, 52, 1300, 0, _RAW, None, 0, 92),
+    RosterMember("스칼렛 서머스", _F, _MID, 52, 1300, 6, _SD, None, 0, 90),
+    RosterMember("아리아 베넷", _F, _LOW, 52, 624, 9, _RAW, develops=True),
+    RosterMember("엠버 바이퍼", _F, _LOW, 52, 1300, 0, _SD, None, 0, 91, develops=True),
+    RosterMember("이든 폭스", _F, _LOW, 52, 1300, 0, _RAW, None, 0, 93, develops=True),
+    RosterMember("이자벨 퀸", _F, _LOW, 52, 1300, 0, _SD, None, 0, 92, develops=True),
     # ── 여성부 · 2년차 데뷔 ────────────────────────────
-    RosterMember("마야 나이트", _F, _MC, 104, 1352, 6, _SD, None, 0, 94),
-    RosterMember("델라니 스톰", _F, _P, 104, 1352, 0, _RAW, None, 0, 96),
-    RosterMember("샨텔 먼로", _F, _P, 104, 936, 4, _SD),
-    RosterMember("케일라 레인", _F, _P, 104, 1352, 0, _RAW, None, 0, 95),
-    RosterMember("케일라 하트", _F, _P, 104, 1352, 0, _SD, None, 0, 97),
+    RosterMember("마야 나이트", _F, _MID, 104, 1352, 6, _RAW, None, 0, 94),
+    RosterMember(
+        "델라니 스톰", _F, _LOW, 104, 1352, 0, _SD, None, 0, 96, develops=True
+    ),
+    RosterMember("샨텔 먼로", _F, _LOW, 104, 936, 4, _RAW, develops=True),
+    RosterMember(
+        "케일라 레인", _F, _LOW, 104, 1352, 0, _SD, None, 0, 95, develops=True
+    ),
+    RosterMember(
+        "케일라 하트", _F, _LOW, 104, 1352, 0, _RAW, None, 0, 97, develops=True
+    ),
     # ── 여성부 · 3년차 데뷔 ────────────────────────────
-    RosterMember("테사 리드", _F, _MC, 156, 1404, 6, _RAW, None, 0, 98),
-    RosterMember("PJ 바사", _F, _P, 156, 936, 5, _SD),
-    RosterMember("마야 스톰", _F, _P, 156, 1404, 0, _RAW, None, 0, 100),
-    RosterMember("스칼렛 폭스", _F, _P, 156, 1404, 0, _SD, None, 0, 101),
-    RosterMember("케일라 스파크", _F, _P, 156, 1404, 0, _RAW, None, 0, 99),
+    RosterMember("테사 리드", _F, _MID, 156, 1404, 6, _SD, None, 0, 98),
+    RosterMember("PJ 바사", _F, _LOW, 156, 936, 5, _RAW, develops=True),
+    RosterMember("마야 스톰", _F, _LOW, 156, 1404, 0, _SD, None, 0, 100, develops=True),
+    RosterMember(
+        "스칼렛 폭스", _F, _LOW, 156, 1404, 0, _RAW, None, 0, 101, develops=True
+    ),
+    RosterMember(
+        "케일라 스파크", _F, _LOW, 156, 1404, 0, _SD, None, 0, 99, develops=True
+    ),
     # ── 여성부 · 4년차 데뷔 ────────────────────────────
-    RosterMember("케일라 헤이즈", _F, _MC, 208, 1456, 6, _SD, None, 0, 102),
-    RosterMember("리아 파울러", _F, _P, 208, 1456, 0, _RAW, None, 0, 105),
-    RosterMember("이든 벨", _F, _P, 208, 1456, 0, _SD, None, 0, 103),
-    RosterMember("제나 스털링", _F, _P, 208, 1248, 0, _RAW),
-    RosterMember("조이 크로스", _F, _P, 208, 1456, 0, _SD, None, 0, 104),
+    RosterMember("케일라 헤이즈", _F, _MID, 208, 1456, 6, _RAW, None, 0, 102),
+    RosterMember(
+        "리아 파울러", _F, _LOW, 208, 1456, 0, _SD, None, 0, 105, develops=True
+    ),
+    RosterMember("이든 벨", _F, _LOW, 208, 1456, 0, _RAW, None, 0, 103, develops=True),
+    RosterMember("제나 스털링", _F, _LOW, 208, 1248, 0, _SD, develops=True),
+    RosterMember(
+        "조이 크로스", _F, _LOW, 208, 1456, 0, _RAW, None, 0, 104, develops=True
+    ),
     # ── 여성부 · 5년차 데뷔 ────────────────────────────
-    RosterMember("이자벨 블레이즈", _F, _MC, 260, 1508, 6, _RAW, None, 0, 106),
-    RosterMember("델라니 폭스", _F, _P, 260, 1508, 0, _SD, None, 0, 108),
-    RosterMember("마야 크로스", _F, _P, 260, 1508, 0, _RAW, None, 0, 107),
-    RosterMember("브룩 블레이즈", _F, _P, 260, 1508, 0, _SD, None, 0, 109),
+    RosterMember("이자벨 블레이즈", _F, _MID, 260, 1508, 6, _SD, None, 0, 106),
+    RosterMember(
+        "델라니 폭스", _F, _LOW, 260, 1508, 0, _RAW, None, 0, 108, develops=True
+    ),
+    RosterMember(
+        "마야 크로스", _F, _LOW, 260, 1508, 0, _SD, None, 0, 107, develops=True
+    ),
+    RosterMember(
+        "브룩 블레이즈", _F, _LOW, 260, 1508, 0, _RAW, None, 0, 109, develops=True
+    ),
     # ── 여성부 · 6년차 데뷔 ────────────────────────────
-    RosterMember("노바 리드", _F, _MC, 312, 1560, 6, _RAW, None, 0, 110),
-    RosterMember("시에나 나이트", _F, _P, 312, 1560, 0, _SD, None, 0, 113),
-    RosterMember("아이비 헌터", _F, _P, 312, 1560, 0, _RAW, None, 0, 111),
-    RosterMember("카일라 레인", _F, _P, 312, 1560, 0, _SD, None, 0, 112),
+    RosterMember("노바 리드", _F, _MID, 312, 1560, 6, _SD, None, 0, 110),
+    RosterMember(
+        "시에나 나이트", _F, _LOW, 312, 1560, 0, _RAW, None, 0, 113, develops=True
+    ),
+    RosterMember(
+        "아이비 헌터", _F, _LOW, 312, 1560, 0, _SD, None, 0, 111, develops=True
+    ),
+    RosterMember(
+        "카일라 레인", _F, _LOW, 312, 1560, 0, _RAW, None, 0, 112, develops=True
+    ),
     # ── 여성부 · 7년차 데뷔 ────────────────────────────
-    RosterMember("이자벨 밴스", _F, _MC, 364, 1612, 6, _RAW, None, 0, 114),
-    RosterMember("노바 프라이스", _F, _P, 364, 1612, 0, _SD, None, 0, 116),
-    RosterMember("미셸 헤이즈", _F, _P, 364, 1612, 0, _RAW, None, 0, 117),
-    RosterMember("하퍼 프로스트", _F, _P, 364, 1612, 0, _SD, None, 0, 115),
+    RosterMember("이자벨 밴스", _F, _MID, 364, 1612, 6, _SD, None, 0, 114),
+    RosterMember(
+        "노바 프라이스", _F, _LOW, 364, 1612, 0, _RAW, None, 0, 116, develops=True
+    ),
+    RosterMember(
+        "미셸 헤이즈", _F, _LOW, 364, 1612, 0, _SD, None, 0, 117, develops=True
+    ),
+    RosterMember(
+        "하퍼 프로스트", _F, _LOW, 364, 1612, 0, _RAW, None, 0, 115, develops=True
+    ),
     # ── 여성부 · 8년차 데뷔 ────────────────────────────
-    RosterMember("엠버 스틸", _F, _MC, 416, 1664, 6, _RAW, None, 0, 118),
-    RosterMember("리아 라이커", _F, _P, 416, 1664, 0, _SD, None, 0, 121),
-    RosterMember("애슐리 윈터스", _F, _P, 416, 1664, 0, _RAW, None, 0, 119),
-    RosterMember("테사 케이지", _F, _P, 416, 1664, 0, _SD, None, 0, 120),
+    RosterMember("엠버 스틸", _F, _MID, 416, 1664, 6, _SD, None, 0, 118),
+    RosterMember(
+        "리아 라이커", _F, _LOW, 416, 1664, 0, _RAW, None, 0, 121, develops=True
+    ),
+    RosterMember(
+        "애슐리 윈터스", _F, _LOW, 416, 1664, 0, _SD, None, 0, 119, develops=True
+    ),
+    RosterMember(
+        "테사 케이지", _F, _LOW, 416, 1664, 0, _RAW, None, 0, 120, develops=True
+    ),
     # ── 여성부 · 9년차 데뷔 ────────────────────────────
-    RosterMember("브리아나 레인", _F, _MC, 468, 1716, 6, _RAW, None, 0, 122),
-    RosterMember("리아 헤이즈", _F, _P, 468, 1716, 0, _SD, None, 0, 125),
-    RosterMember("이든 울프", _F, _P, 468, 1716, 0, _RAW, None, 0, 123),
-    RosterMember("조던 리드", _F, _P, 468, 1716, 0, _SD, None, 0, 124),
+    RosterMember("브리아나 레인", _F, _MID, 468, 1716, 6, _SD, None, 0, 122),
+    RosterMember(
+        "리아 헤이즈", _F, _LOW, 468, 1716, 0, _RAW, None, 0, 125, develops=True
+    ),
+    RosterMember("이든 울프", _F, _LOW, 468, 1716, 0, _SD, None, 0, 123, develops=True),
+    RosterMember(
+        "조던 리드", _F, _LOW, 468, 1716, 0, _RAW, None, 0, 124, develops=True
+    ),
     # ── 여성부 · 10년차 데뷔 ───────────────────────────
-    RosterMember("조이 브릭스", _F, _MC, 520, 1768, 6, _RAW, None, 0, 126),
-    RosterMember("조이 셰이드", _F, _P, 520, 1768, 0, _SD, None, 0, 129),
-    RosterMember("하퍼 서머스", _F, _P, 520, 1768, 0, _RAW, None, 0, 127),
-    RosterMember("하퍼 폭스", _F, _P, 520, 1768, 0, _SD, None, 0, 128),
+    RosterMember("조이 브릭스", _F, _MID, 520, 1768, 6, _SD, None, 0, 126),
+    RosterMember(
+        "조이 셰이드", _F, _LOW, 520, 1768, 0, _RAW, None, 0, 129, develops=True
+    ),
+    RosterMember(
+        "하퍼 서머스", _F, _LOW, 520, 1768, 0, _SD, None, 0, 127, develops=True
+    ),
+    RosterMember(
+        "하퍼 폭스", _F, _LOW, 520, 1768, 0, _RAW, None, 0, 128, develops=True
+    ),
     # ── 여성부 · 11년차 데뷔 ───────────────────────────
-    RosterMember("리네아 폭스", _F, _MC, 572, 1820, 6, _RAW, None, 0, 130),
-    RosterMember("마야 레인", _F, _P, 572, 1820, 0, _SD, None, 0, 133),
-    RosterMember("시에나 벨", _F, _P, 572, 1820, 0, _RAW, None, 0, 132),
-    RosterMember("페이 셰이드", _F, _P, 572, 1820, 0, _SD, None, 0, 131),
+    RosterMember("리네아 폭스", _F, _MID, 572, 1820, 6, _SD, None, 0, 130),
+    RosterMember(
+        "마야 레인", _F, _LOW, 572, 1820, 0, _RAW, None, 0, 133, develops=True
+    ),
+    RosterMember("시에나 벨", _F, _LOW, 572, 1820, 0, _SD, None, 0, 132, develops=True),
+    RosterMember(
+        "페이 셰이드", _F, _LOW, 572, 1820, 0, _RAW, None, 0, 131, develops=True
+    ),
     # ── 여성부 · 12년차 데뷔 ───────────────────────────
-    RosterMember("스칼렛 라이커", _F, _MC, 624, 1872, 6, _RAW, None, 0, 134),
-    RosterMember("리네아 나이트", _F, _P, 624, 1872, 0, _SD, None, 0, 135),
-    RosterMember("엠버 밴스", _F, _P, 624, 1872, 0, _RAW, None, 0, 137),
-    RosterMember("조이 라이커", _F, _P, 624, 1872, 0, _SD, None, 0, 136),
+    RosterMember("스칼렛 라이커", _F, _MID, 624, 1872, 6, _SD, None, 0, 134),
+    RosterMember(
+        "리네아 나이트", _F, _LOW, 624, 1872, 0, _RAW, None, 0, 135, develops=True
+    ),
+    RosterMember("엠버 밴스", _F, _LOW, 624, 1872, 0, _SD, None, 0, 137, develops=True),
+    RosterMember(
+        "조이 라이커", _F, _LOW, 624, 1872, 0, _RAW, None, 0, 136, develops=True
+    ),
     # ── 여성부 · 13년차 데뷔 ───────────────────────────
-    RosterMember("노바 프로스트", _F, _MC, 676, 1924, 6, _RAW, None, 0, 138),
-    RosterMember("스칼렛 세이지", _F, _P, 676, 1924, 0, _SD, None, 0, 139),
-    RosterMember("애슐리 스틸", _F, _P, 676, 1924, 0, _RAW, None, 0, 141),
-    RosterMember("이든 서머스", _F, _P, 676, 1924, 0, _SD, None, 0, 140),
+    RosterMember("노바 프로스트", _F, _MID, 676, 1924, 6, _SD, None, 0, 138),
+    RosterMember(
+        "스칼렛 세이지", _F, _LOW, 676, 1924, 0, _RAW, None, 0, 139, develops=True
+    ),
+    RosterMember(
+        "애슐리 스틸", _F, _LOW, 676, 1924, 0, _SD, None, 0, 141, develops=True
+    ),
+    RosterMember(
+        "이든 서머스", _F, _LOW, 676, 1924, 0, _RAW, None, 0, 140, develops=True
+    ),
     # ── 여성부 · 14년차 데뷔 ───────────────────────────
-    RosterMember("애슐리 브릭스", _F, _MC, 728, 1976, 6, _RAW, None, 0, 142),
-    RosterMember("로렌 리버스", _F, _P, 728, 1976, 0, _SD, None, 0, 144),
-    RosterMember("마야 하트", _F, _P, 728, 1976, 0, _RAW, None, 0, 145),
-    RosterMember("아이비 셰이드", _F, _P, 728, 1976, 0, _SD, None, 0, 143),
+    RosterMember("애슐리 브릭스", _F, _MID, 728, 1976, 6, _SD, None, 0, 142),
+    RosterMember(
+        "로렌 리버스", _F, _LOW, 728, 1976, 0, _RAW, None, 0, 144, develops=True
+    ),
+    RosterMember("마야 하트", _F, _LOW, 728, 1976, 0, _SD, None, 0, 145, develops=True),
+    RosterMember(
+        "아이비 셰이드", _F, _LOW, 728, 1976, 0, _RAW, None, 0, 143, develops=True
+    ),
     # ── 여성부 · 15년차 데뷔 ───────────────────────────
-    RosterMember("아이비 헤이즈", _F, _MC, 780, 2028, 6, _RAW, None, 0, 146),
-    RosterMember("미셸 벨", _F, _P, 780, 2028, 0, _SD, None, 0, 149),
-    RosterMember("카일라 셰이드", _F, _P, 780, 2028, 0, _RAW, None, 0, 148),
-    RosterMember("하퍼 브릭스", _F, _P, 780, 2028, 0, _SD, None, 0, 147),
+    RosterMember("아이비 헤이즈", _F, _MID, 780, 2028, 6, _SD, None, 0, 146),
+    RosterMember("미셸 벨", _F, _LOW, 780, 2028, 0, _RAW, None, 0, 149, develops=True),
+    RosterMember(
+        "카일라 셰이드", _F, _LOW, 780, 2028, 0, _SD, None, 0, 148, develops=True
+    ),
+    RosterMember(
+        "하퍼 브릭스", _F, _LOW, 780, 2028, 0, _RAW, None, 0, 147, develops=True
+    ),
     # ── 여성부 · 16년차 데뷔 ───────────────────────────
-    RosterMember("리아 프로스트", _F, _MC, 832, 2080, 6, _RAW, None, 0, 150),
-    RosterMember("브리아나 퀸", _F, _P, 832, 2080, 0, _SD, None, 0, 151),
-    RosterMember("세라 케이지", _F, _P, 832, 2080, 0, _RAW, None, 0, 153),
-    RosterMember("조던 스틸", _F, _P, 832, 2080, 0, _SD, None, 0, 152),
+    RosterMember("리아 프로스트", _F, _MID, 832, 2080, 6, _SD, None, 0, 150),
+    RosterMember(
+        "브리아나 퀸", _F, _LOW, 832, 2080, 0, _RAW, None, 0, 151, develops=True
+    ),
+    RosterMember(
+        "세라 케이지", _F, _LOW, 832, 2080, 0, _SD, None, 0, 153, develops=True
+    ),
+    RosterMember(
+        "조던 스틸", _F, _LOW, 832, 2080, 0, _RAW, None, 0, 152, develops=True
+    ),
     # ── 여성부 · 17년차 데뷔 ───────────────────────────
-    RosterMember("로렌 크로스", _F, _MC, 884, 2132, 6, _RAW, None, 0, 154),
-    RosterMember("델라니 벨", _F, _P, 884, 2132, 0, _SD, None, 0, 155),
-    RosterMember("미셸 스톤", _F, _P, 884, 2132, 0, _RAW, None, 0, 157),
-    RosterMember("미셸 파울러", _F, _P, 884, 2132, 0, _SD, None, 0, 156),
+    RosterMember("로렌 크로스", _F, _MID, 884, 2132, 6, _SD, None, 0, 154),
+    RosterMember(
+        "델라니 벨", _F, _LOW, 884, 2132, 0, _RAW, None, 0, 155, develops=True
+    ),
+    RosterMember("미셸 스톤", _F, _LOW, 884, 2132, 0, _SD, None, 0, 157, develops=True),
+    RosterMember(
+        "미셸 파울러", _F, _LOW, 884, 2132, 0, _RAW, None, 0, 156, develops=True
+    ),
     # ── 여성부 · 18년차 데뷔 ───────────────────────────
-    RosterMember("브리아나 나이트", _F, _MC, 936, 2184, 6, _RAW, None, 0, 158),
-    RosterMember("리아 하트", _F, _P, 936, 2184, 0, _SD, None, 0, 159),
-    RosterMember("아이비 나이트", _F, _P, 936, 2184, 0, _RAW, None, 0, 160),
-    RosterMember("테사 밴스", _F, _P, 936, 2184, 0, _SD, None, 0, 161),
+    RosterMember("브리아나 나이트", _F, _MID, 936, 2184, 6, _SD, None, 0, 158),
+    RosterMember(
+        "리아 하트", _F, _LOW, 936, 2184, 0, _RAW, None, 0, 159, develops=True
+    ),
+    RosterMember(
+        "아이비 나이트", _F, _LOW, 936, 2184, 0, _SD, None, 0, 160, develops=True
+    ),
+    RosterMember(
+        "테사 밴스", _F, _LOW, 936, 2184, 0, _RAW, None, 0, 161, develops=True
+    ),
     # ── 여성부 · 19년차 데뷔 ───────────────────────────
-    RosterMember("케일라 스톤", _F, _MC, 988, 2236, 6, _RAW, None, 0, 162),
-    RosterMember("브룩 서머스", _F, _P, 988, 2236, 0, _SD, None, 0, 163),
-    RosterMember("이든 파울러", _F, _P, 988, 2236, 0, _RAW, None, 0, 164),
-    RosterMember("하퍼 세이지", _F, _P, 988, 2236, 0, _SD, None, 0, 165),
+    RosterMember("케일라 스톤", _F, _MID, 988, 2236, 6, _SD, None, 0, 162),
+    RosterMember(
+        "브룩 서머스", _F, _LOW, 988, 2236, 0, _RAW, None, 0, 163, develops=True
+    ),
+    RosterMember(
+        "이든 파울러", _F, _LOW, 988, 2236, 0, _SD, None, 0, 164, develops=True
+    ),
+    RosterMember(
+        "하퍼 세이지", _F, _LOW, 988, 2236, 0, _RAW, None, 0, 165, develops=True
+    ),
     # ── 여성부 · 20년차 데뷔 ───────────────────────────
-    RosterMember("델라니 세이지", _F, _MC, 1040, 2288, 6, _RAW, None, 0, 166),
-    RosterMember("노바 스틸", _F, _P, 1040, 2288, 0, _SD, None, 0, 167),
-    RosterMember("델라니 스틸", _F, _P, 1040, 2288, 0, _RAW, None, 0, 169),
-    RosterMember("로렌 프라이스", _F, _P, 1040, 2288, 0, _SD, None, 0, 168),
+    RosterMember("델라니 세이지", _F, _MID, 1040, 2288, 6, _SD, None, 0, 166),
+    RosterMember(
+        "노바 스틸", _F, _LOW, 1040, 2288, 0, _RAW, None, 0, 167, develops=True
+    ),
+    RosterMember(
+        "델라니 스틸", _F, _LOW, 1040, 2288, 0, _SD, None, 0, 169, develops=True
+    ),
+    RosterMember(
+        "로렌 프라이스", _F, _LOW, 1040, 2288, 0, _RAW, None, 0, 168, develops=True
+    ),
     # ── 여성부 · 21년차 데뷔 ───────────────────────────
-    RosterMember("로렌 헌터", _F, _MC, 1092, 2340, 6, _RAW, None, 0, 170),
-    RosterMember("이자벨 스톤", _F, _P, 1092, 2340, 0, _SD, None, 0, 173),
-    RosterMember("조던 리버스", _F, _P, 1092, 2340, 0, _RAW, None, 0, 171),
-    RosterMember("케일라 블레이즈", _F, _P, 1092, 2340, 0, _SD, None, 0, 172),
+    RosterMember("로렌 헌터", _F, _MID, 1092, 2340, 6, _SD, None, 0, 170),
+    RosterMember(
+        "이자벨 스톤", _F, _LOW, 1092, 2340, 0, _RAW, None, 0, 173, develops=True
+    ),
+    RosterMember(
+        "조던 리버스", _F, _LOW, 1092, 2340, 0, _SD, None, 0, 171, develops=True
+    ),
+    RosterMember(
+        "케일라 블레이즈", _F, _LOW, 1092, 2340, 0, _RAW, None, 0, 172, develops=True
+    ),
     # ── 여성부 · 22년차 데뷔 ───────────────────────────
-    RosterMember("엠버 프라이스", _F, _MC, 1144, 2392, 6, _RAW, None, 0, 174),
-    RosterMember("마야 파울러", _F, _P, 1144, 2392, 0, _SD, None, 0, 175),
-    RosterMember("브룩 나이트", _F, _P, 1144, 2392, 0, _RAW, None, 0, 177),
-    RosterMember("시에나 프라이스", _F, _P, 1144, 2392, 0, _SD, None, 0, 176),
+    RosterMember("엠버 프라이스", _F, _MID, 1144, 2392, 6, _SD, None, 0, 174),
+    RosterMember(
+        "마야 파울러", _F, _LOW, 1144, 2392, 0, _RAW, None, 0, 175, develops=True
+    ),
+    RosterMember(
+        "브룩 나이트", _F, _LOW, 1144, 2392, 0, _SD, None, 0, 177, develops=True
+    ),
+    RosterMember(
+        "시에나 프라이스", _F, _LOW, 1144, 2392, 0, _RAW, None, 0, 176, develops=True
+    ),
     # ── 여성부 · 23년차 데뷔 ───────────────────────────
-    RosterMember("엠버 크로스", _F, _MC, 1196, 2444, 6, _RAW, None, 0, 178),
-    RosterMember("스칼렛 하트", _F, _P, 1196, 2444, 0, _SD, None, 0, 180),
-    RosterMember("아이비 프로스트", _F, _P, 1196, 2444, 0, _RAW, None, 0, 179),
-    RosterMember("애슐리 스톤", _F, _P, 1196, 2444, 0, _SD, None, 0, 181),
+    RosterMember("엠버 크로스", _F, _MID, 1196, 2444, 6, _SD, None, 0, 178),
+    RosterMember(
+        "스칼렛 하트", _F, _LOW, 1196, 2444, 0, _RAW, None, 0, 180, develops=True
+    ),
+    RosterMember(
+        "아이비 프로스트", _F, _LOW, 1196, 2444, 0, _SD, None, 0, 179, develops=True
+    ),
+    RosterMember(
+        "애슐리 스톤", _F, _LOW, 1196, 2444, 0, _RAW, None, 0, 181, develops=True
+    ),
     # ── 여성부 · 24년차 데뷔 ───────────────────────────
-    RosterMember("시에나 서머스", _F, _MC, 1248, 2496, 6, _RAW, None, 0, 182),
-    RosterMember("마야 밴스", _F, _P, 1248, 2496, 0, _SD, None, 0, 185),
-    RosterMember("세라 크로스", _F, _P, 1248, 2496, 0, _RAW, None, 0, 184),
-    RosterMember("카일라 프로스트", _F, _P, 1248, 2496, 0, _SD, None, 0, 183),
+    RosterMember("시에나 서머스", _F, _MID, 1248, 2496, 6, _SD, None, 0, 182),
+    RosterMember(
+        "마야 밴스", _F, _LOW, 1248, 2496, 0, _RAW, None, 0, 185, develops=True
+    ),
+    RosterMember(
+        "세라 크로스", _F, _LOW, 1248, 2496, 0, _SD, None, 0, 184, develops=True
+    ),
+    RosterMember(
+        "카일라 프로스트", _F, _LOW, 1248, 2496, 0, _RAW, None, 0, 183, develops=True
+    ),
     # ── 여성부 · 25년차 데뷔 ───────────────────────────
-    RosterMember("브리아나 폭스", _F, _MC, 1300, 2548, 6, _RAW, None, 0, 186),
-    RosterMember("로렌 윈터스", _F, _P, 1300, 2548, 0, _SD, None, 0, 187),
-    RosterMember("브리아나 리드", _F, _P, 1300, 2548, 0, _RAW, None, 0, 189),
-    RosterMember("페이 블레이즈", _F, _P, 1300, 2548, 0, _SD, None, 0, 188),
+    RosterMember("브리아나 폭스", _F, _MID, 1300, 2548, 6, _SD, None, 0, 186),
+    RosterMember(
+        "로렌 윈터스", _F, _LOW, 1300, 2548, 0, _RAW, None, 0, 187, develops=True
+    ),
+    RosterMember(
+        "브리아나 리드", _F, _LOW, 1300, 2548, 0, _SD, None, 0, 189, develops=True
+    ),
+    RosterMember(
+        "페이 블레이즈", _F, _LOW, 1300, 2548, 0, _RAW, None, 0, 188, develops=True
+    ),
     # ── 여성부 · 26년차 데뷔 ───────────────────────────
-    RosterMember("리아 울프", _F, _MC, 1352, 2600, 6, _RAW, None, 0, 190),
-    RosterMember("로렌 스틸", _F, _P, 1352, 2600, 0, _SD, None, 0, 193),
-    RosterMember("시에나 블레이즈", _F, _P, 1352, 2600, 0, _RAW, None, 0, 191),
-    RosterMember("애슐리 울프", _F, _P, 1352, 2600, 0, _SD, None, 0, 192),
+    RosterMember("리아 울프", _F, _MID, 1352, 2600, 6, _SD, None, 0, 190),
+    RosterMember(
+        "로렌 스틸", _F, _LOW, 1352, 2600, 0, _RAW, None, 0, 193, develops=True
+    ),
+    RosterMember(
+        "시에나 블레이즈", _F, _LOW, 1352, 2600, 0, _SD, None, 0, 191, develops=True
+    ),
+    RosterMember(
+        "애슐리 울프", _F, _LOW, 1352, 2600, 0, _RAW, None, 0, 192, develops=True
+    ),
     # ── 여성부 · 27년차 데뷔 ───────────────────────────
-    RosterMember("조이 스톰", _F, _MC, 1404, 2652, 6, _RAW, None, 0, 194),
-    RosterMember("미셸 윈터스", _F, _P, 1404, 2652, 0, _SD, None, 0, 197),
-    RosterMember("이든 퀸", _F, _P, 1404, 2652, 0, _RAW, None, 0, 195),
-    RosterMember("카일라 나이트", _F, _P, 1404, 2652, 0, _SD, None, 0, 196),
+    RosterMember("조이 스톰", _F, _MID, 1404, 2652, 6, _SD, None, 0, 194),
+    RosterMember(
+        "미셸 윈터스", _F, _LOW, 1404, 2652, 0, _RAW, None, 0, 197, develops=True
+    ),
+    RosterMember("이든 퀸", _F, _LOW, 1404, 2652, 0, _SD, None, 0, 195, develops=True),
+    RosterMember(
+        "카일라 나이트", _F, _LOW, 1404, 2652, 0, _RAW, None, 0, 196, develops=True
+    ),
     # ── 여성부 · 28년차 데뷔 ───────────────────────────
-    RosterMember("마야 블레이즈", _F, _MC, 1456, 2704, 6, _RAW, None, 0, 198),
-    RosterMember("노바 레인", _F, _P, 1456, 2704, 0, _SD, None, 0, 200),
-    RosterMember("리네아 벨", _F, _P, 1456, 2704, 0, _RAW, None, 0, 199),
-    RosterMember("시에나 프로스트", _F, _P, 1456, 2704, 0, _SD, None, 0, 201),
+    RosterMember("마야 블레이즈", _F, _MID, 1456, 2704, 6, _SD, None, 0, 198),
+    RosterMember(
+        "노바 레인", _F, _LOW, 1456, 2704, 0, _RAW, None, 0, 200, develops=True
+    ),
+    RosterMember(
+        "리네아 벨", _F, _LOW, 1456, 2704, 0, _SD, None, 0, 199, develops=True
+    ),
+    RosterMember(
+        "시에나 프로스트", _F, _LOW, 1456, 2704, 0, _RAW, None, 0, 201, develops=True
+    ),
     # ── 여성부 · 29년차 데뷔 ───────────────────────────
-    RosterMember("하퍼 프라이스", _F, _MC, 1508, 2756, 6, _RAW, None, 0, 202),
-    RosterMember("브리아나 밴스", _F, _P, 1508, 2756, 0, _SD, None, 0, 204),
-    RosterMember("시에나 퀸", _F, _P, 1508, 2756, 0, _RAW, None, 0, 203),
-    RosterMember("조이 헌터", _F, _P, 1508, 2756, 0, _SD, None, 0, 205),
+    RosterMember("하퍼 프라이스", _F, _MID, 1508, 2756, 6, _SD, None, 0, 202),
+    RosterMember(
+        "브리아나 밴스", _F, _LOW, 1508, 2756, 0, _RAW, None, 0, 204, develops=True
+    ),
+    RosterMember(
+        "시에나 퀸", _F, _LOW, 1508, 2756, 0, _SD, None, 0, 203, develops=True
+    ),
+    RosterMember(
+        "조이 헌터", _F, _LOW, 1508, 2756, 0, _RAW, None, 0, 205, develops=True
+    ),
     # ── 여성부 · 30년차 데뷔 ───────────────────────────
-    RosterMember("노바 라이커", _F, _MC, 1560, 2808, 6, _RAW, None, 0, 206),
-    RosterMember("리네아 셰이드", _F, _P, 1560, 2808, 0, _SD, None, 0, 207),
-    RosterMember("조이 폭스", _F, _P, 1560, 2808, 0, _RAW, None, 0, 209),
-    RosterMember("테사 스톤", _F, _P, 1560, 2808, 0, _SD, None, 0, 208),
+    RosterMember("노바 라이커", _F, _MID, 1560, 2808, 6, _SD, None, 0, 206),
+    RosterMember(
+        "리네아 셰이드", _F, _LOW, 1560, 2808, 0, _RAW, None, 0, 207, develops=True
+    ),
+    RosterMember(
+        "조이 폭스", _F, _LOW, 1560, 2808, 0, _SD, None, 0, 209, develops=True
+    ),
+    RosterMember(
+        "테사 스톤", _F, _LOW, 1560, 2808, 0, _RAW, None, 0, 208, develops=True
+    ),
 )
 
 SIGNATURES: dict[str, tuple[str, ...]] = {
@@ -3661,9 +4809,13 @@ DRAFT_PAIRS = 2
 _DRAFT_CELLS: tuple[tuple[Gender, RivalTier], ...] = tuple(
     (gender, tier)
     for gender in Gender
-    for tier in (RivalTier.MIDCARD, RivalTier.MAIN_EVENT)
+    for tier in (RivalTier.MID_CARD, RivalTier.UPPER_CARD)
 )
-"""드래프트가 집을 수 있는 칸. **유망주는 없다** — 그들은 육성 브랜드에 있다(§3-D53)."""
+"""드래프트가 집을 수 있는 칸.
+
+**로우카드는 없다** — 연말 드래프트는 방송의 얼굴을 맞바꾸는 자리이지 명부 아래쪽을
+흔드는 자리가 아니다. 육성에 있는 사람도 빠진다(`_swaps`의 `develops` 조건, §3-D95).
+"""
 
 
 def _champions_at(seed: int, week: int, gender: Gender) -> frozenset[str]:
@@ -3732,7 +4884,11 @@ def _swaps(
                 for m in ROSTER
                 if m.gender is gender
                 and m.is_active_at(week)
-                and tier_at(m, week) is tier
+                and tier_at(m, week, seed) is tier
+                # **육성에 있는 사람은 드래프트 대상이 아니다** (§3-D95). 위상이
+                # 브랜드를 겸하던 때에는 이 조건이 필요 없었다 — 미드카드 이상이면
+                # 곧 메인 로스터였다.
+                and not (m.develops and week < (call_up_week(m, seed) or 0))
                 and _home_at(m, state) is brand
                 and m.name not in guarded
             ]
@@ -3833,14 +4989,110 @@ def _home_at(member: RosterMember, flipped: frozenset[str] | set[str]) -> Brand:
     return Brand.SMACKDOWN if member.home_brand is Brand.RAW else Brand.RAW
 
 
-def tier_at(member: RosterMember, week: int) -> RivalTier:
-    """경력 연차만큼 올라간 등급. **내려가지는 않는다.**"""
+def _phase(name: str, span: int, low: int = 0) -> int:
+    """이름으로 정해지는 어긋냄 (§3-D95). `low`부터 `low + span - 1` 사이 한 값.
+
+    **명부가 한 주에 통째로 흔들리지 않게 하는 장치다.** 생성기의 `_spread`가 은퇴·개명을
+    흩뿌리는 것과 같은 자리이고, 여기서는 위상 굴림의 시점과 육성 체류 기간을 흩뿌린다.
+
+    blake2b라 프로세스가 바뀌어도 같은 값이 나온다 — 시드 규약과 같은 이유다(§3-D4).
+    """
+    digest = hashlib.blake2b(name.encode(), digest_size=8).digest()
+    return low + int.from_bytes(digest, "big") % max(1, span)
+
+
+def _called_up_tier(member: RosterMember, tier: RivalTier) -> RivalTier:
+    """콜업하는 주의 위상 (§3-D95, 2026-08-20). **육성의 정상은 메인의 정상이 아니다.**
+
+    NXT의 꼭대기에서 올라온 사람은 **미드카드에서 다시 시작한다.** 더 큰 물이고, 실제로도
+    육성 챔피언이 메인에 올라와 곧바로 메인이벤터가 되지는 않는다.
+
+    **왜 필요했나**: 이 규칙이 없을 때 어퍼카드가 명부의 17%(0주차 표)에서 **37%까지**
+    부풀었다. 원인을 세어 보니 어퍼카드의 **68~76%가 육성 출신**이었다 — 육성 표에는
+    내려가는 굴림이 없어(`NXT_RISE_CHANCE`) 거기서는 다들 꼭대기까지 오르고, 그 상태
+    그대로 메인에 쏟아졌다. 상승·하강 확률을 아무리 조여도 이 흐름은 안 막혔다.
+
+    **표가 적어 준 자리 밑으로는 안 내린다.** 사용자 표에 어퍼카드로 적힌 NXT 선수
+    (그레이슨 월러 등)는 올라와서도 어퍼카드다 — 그들은 육성에서 만든 위상이 아니라
+    처음부터 그 자리인 사람들이고, 그 자리까지 깎으면 여성부 정상이 네 명까지 마른다.
+
+    실측(시드 넷 · 30년): 어퍼 비중 평균 25.4% → **16.4%** · 최대 37.3% → **25.9%** ·
+    30년 곡선이 16~19%에 눕는다(0주차 표는 17%). NXT 꼭대기는 그대로다 — **이 규칙은
+    육성 안을 건드리지 않는다.**
+    """
+    return RivalTier(max(member.start_tier, min(tier, RivalTier.MID_CARD)))
+
+
+def _climb(member: RosterMember, week: int, seed: int, *, called_up: bool) -> RivalTier:
+    """굴림 사다리. `called_up`이면 콜업하는 주에 `_called_up_tier`를 지난다.
+
+    **`call_up_week()`은 `called_up=False`로 읽는다** — 그러지 않으면 위상이 콜업을
+    묻고 콜업이 위상을 물어 고리가 돈다. 그 함수가 알아야 하는 것은 *육성 안에서*
+    꼭대기에 섰는가이므로, 강등을 안 거친 사다리가 오히려 맞는 답이다.
+    """
     elapsed = week - member.debut_week
+    if elapsed < 0:
+        return member.start_tier
+    # **사람마다 굴리는 주가 다르다.** 다 같이 3년마다 굴리면 명부가 한 주에 통째로
+    # 흔들린다 — 실측에서 5년차에 NXT가 한 번에 비었다.
+    elapsed -= _phase(member.name, PROMOTION_STEP)
     tier = member.start_tier
-    if tier is RivalTier.PROSPECT and elapsed >= _wait_for(member, 0):
-        tier = RivalTier.MIDCARD
-    if tier is RivalTier.MIDCARD and elapsed >= _wait_for(member, 1):
-        tier = RivalTier.MAIN_EVENT
+    leaves = call_up_week(member, seed) if called_up and member.develops else None
+    stepped_down = False
+    for step in range(1, elapsed // PROMOTION_STEP + 1):
+        at = member.debut_week + step * PROMOTION_STEP
+        if leaves is not None and not stepped_down and at >= leaves:
+            # **올라온 뒤에도 사다리는 이어진다** — 미드에서 다시 굴려 정상에 갈 수 있다.
+            tier = _called_up_tier(member, tier)
+            stepped_down = True
+        # **채널에 이름을 싣는다.** 안 그러면 같은 주차에 데뷔한 사람들이 한 번의
+        # 굴림을 나눠 가져 **다 같이 오르거나 다 같이 제자리**다 — 실측에서 0주차
+        # NXT 미드카드 서른다섯이 한 명도 안 올라갔다.
+        roll = SeededRoll(seed, at, f"status:{member.name}")
+        # **육성에 있는 동안은 다른 표를 쓴다** (§3-D95). `call_up_week()`를 부르면
+        # 서로를 부르게 되므로, 육성에 머물 수 있는 최대 기간으로 가른다.
+        in_developmental = member.develops and step * PROMOTION_STEP <= MAX_NXT_WEEKS
+        table = NXT_RISE_CHANCE if in_developmental else RISE_CHANCE
+        rise = table.get(tier, 0.0)
+        fall = 0.0 if in_developmental else FALL_CHANCE.get(tier, 0.0)
+        # **한 번의 굴림에 한 방향만.** 오름을 먼저 묻는 이유는 이 게임이 커리어를
+        # 올라가는 이야기이기 때문이고, 내림은 그 다음 자리다.
+        if rise and roll.chance(rise):
+            tier = RivalTier(tier + 1)
+        elif fall and roll.chance(fall):
+            tier = RivalTier(tier - 1)
+    if leaves is not None and not stepped_down and week >= leaves:
+        # 굴림 사이에 올라온 주차 — 다음 굴림을 기다리지 않고 지금 내려온다.
+        tier = _called_up_tier(member, tier)
+    return tier
+
+
+@cache
+def _climbed(member: RosterMember, week: int, seed: int = 0) -> RivalTier:
+    """콜업 강등을 **거치지 않은** 사다리. `call_up_week()` 전용이다."""
+    return _climb(member, week, seed, called_up=False)
+
+
+@cache
+def tier_at(member: RosterMember, week: int, seed: int = 0) -> RivalTier:
+    """그 주차의 위상 (§3-D95). **오르기도 하고 내려가기도 한다.**
+
+    *"물론 이 선수들도 시뮬 도중에 위상이 바뀌기도 해"* (2026-08-19 사용자).
+
+    | 층 | |
+    |---|---|
+    | 오름 | `PROMOTION_STEP`마다 한 번씩 굴린다 — **자동이 아니다** |
+    | 콜업 | 육성에서 올라오면 미드카드에서 다시 시작한다 (`_called_up_tier`) |
+    | 내림 | 은퇴가 `DECLINE_BEFORE` 앞으로 다가오면 한 칸 내려온다 |
+
+    **예전에는 시계만으로 올랐다.** 그러면 서른 해 뒤 메인 로스터가 통째로 어퍼카드가
+    되고(실측: 브랜드당 36명), 그 세계에서는 챔피언이 아무 뜻도 없다 — 사용자가 짚은
+    *"비정상적인 챔피언"*의 다른 얼굴이다.
+    """
+    tier = _climb(member, week, seed, called_up=True)
+    if member.retire_week is not None and week >= member.retire_week - DECLINE_BEFORE:
+        # **황혼에는 한 칸 내려온다** — 자리를 비워 줘야 아래가 올라온다.
+        tier = RivalTier(max(RivalTier.LOW_CARD, tier - 1))
     return tier
 
 
@@ -3855,40 +5107,126 @@ def _wait_for(member: RosterMember, step: int) -> int:
     return max(MIN_PROMOTION_WEEKS, PROMOTION_WEEKS[step] - earned)
 
 
+@cache
 def brand_at(member: RosterMember, week: int, seed: int = 0) -> Brand:
-    """그 주차에 이 사람이 선 브랜드 (§3-D53). **승급이 곧 콜업이다.**
+    """그 주차에 이 사람이 선 브랜드 (§3-D53 · §3-D95).
 
-    명부의 등급이 이미 브랜드를 말하고 있다 — 원본에서 NXT·Evolve 70명은 **전원
-    유망주**이고 RAW·SmackDown은 전원 미드카드 이상이다. 그래서 축을 새로 만들지 않고
-    있는 축을 읽는다: 유망주면 육성 브랜드, 올라갔으면 자기 메인 브랜드다.
+    **위상이 아니라 `develops`가 답한다** (2026-08-19 개정). 예전에는 유망주면 NXT였고,
+    그래서 NXT 안에 위상이 없었다 — 신인과 챔피언이 한 칸에 섰다. 이제 육성 브랜드에서
+    시작한 사람만 NXT에 있고, `call_up_week`을 지나면 자기 메인 브랜드로 올라간다.
     """
-    if tier_at(member, week) is RivalTier.PROSPECT:
+    if member.develops and week < (call_up_week(member, seed) or 0):
         return Brand.NXT
     return _home_at(member, _flips_at(seed, week))
 
 
-def call_up_week(member: RosterMember) -> int | None:
-    """육성 브랜드를 떠나는 주차 (§3-D53). **처음부터 메인 로스터면 None이다.**
+@cache
+def call_up_week(member: RosterMember, seed: int = 0) -> int | None:
+    """육성 브랜드를 떠나는 주차 (§3-D53 · §3-D95). **메인에서 시작하면 None이다.**
 
-    승급이 곧 콜업이므로(`brand_at`) 유망주가 미드카드로 올라서는 주차가 그대로
-    NXT를 떠나는 주차다. 벨트 계보가 이걸 읽는다 — 콜업된 사람은 NXT 벨트를 들고
-    갈 수 없다(§3-D38).
+    **위상이 높을수록 빨리 올라간다** (2026-08-19): NXT 어퍼카드는 이미 그 브랜드에서
+    할 일을 끝낸 사람이고, 로우카드는 몇 해를 더 쌓는다. 예전에는 위상이 곧 브랜드라
+    이 시계가 하나뿐이었다.
+
+    벨트 계보가 이걸 읽는다 — 콜업된 사람은 NXT 벨트를 들고 갈 수 없다(§3-D38).
     """
-    if member.start_tier is not RivalTier.PROSPECT:
+    if not member.develops:
         return None
-    return member.debut_week + _wait_for(member, 0)
+    low, high = NXT_DWELL_YEARS
+    dwell = _phase(f"dwell:{member.name}", high - low + 1, low) * WEEKS_PER_YEAR
+    for step in range(0, MAX_NXT_WEEKS // PROMOTION_STEP + 1):
+        week = member.debut_week + step * PROMOTION_STEP
+        # **강등 없는 사다리를 읽는다** (`_climbed`) — `tier_at`을 부르면 그쪽이 다시
+        # 이 함수를 불러 고리가 돈다. 여기서 묻는 것은 *육성 안에서* 꼭대기에 섰는가다.
+        if _climbed(member, week, seed) is RivalTier.UPPER_CARD:
+            # **정상에 선 뒤 한두 해를 더 있는다** — 그 사이 NXT의 꼭대기가 비지 않는다.
+            return min(week + dwell, member.debut_week + MAX_NXT_WEEKS)
+    return member.debut_week + MAX_NXT_WEEKS
+
+
+ROLLED_ALIGNMENT: tuple[Alignment, ...] = (
+    Alignment.FACE,
+    Alignment.FACE,
+    Alignment.HEEL,
+    Alignment.HEEL,
+    Alignment.TWEENER,
+)
+"""아직 안 정해진 사람이 콜업될 때 뽑는 통 (§3-D95, 2026-08-19 사용자 결정).
+
+*"Evolve는 아직 페이스·트위너·힐이 안 정해져 있는데, 얘네는 콜업될 때 랜덤으로 정해져서
+올라오게 해줘."* 가상 선수도 같다.
+
+**트위너가 드문 것은 표를 따른 것이다** — 사용자가 정해 준 179명 중 트위너는 여섯이다.
+둘 중 하나를 고르는 것이 대부분이고, 어느 쪽도 아닌 사람은 드물다.
+"""
+
+TURN_EVERY: int = 6 * WEEKS_PER_YEAR
+"""성향이 뒤집힐 수 있는 간격 (§3-D95).
+
+*"물론 계속 유지가 아니라 변경이 가능해"* (사용자). 여섯 해마다 한 번 굴려 그중
+`TURN_CHANCE`만 실제로 뒤집는다 — 커리어에 한두 번이면 사건이고, 해마다면 소음이다.
+"""
+
+TURN_CHANCE: float = 0.35
+
+
+@cache
+def alignment_at(member: RosterMember, week: int, seed: int = 0) -> Alignment:
+    """그 주차의 성향 (§3-D95).
+
+    세 층이다.
+
+    1. **표에 있으면 그것으로 시작한다** (사용자가 정해 준 179명)
+    2. **없으면 콜업 때 굴린다** — Evolve와 가상 선수
+    3. **여섯 해마다 뒤집힐 수 있다** — 정해진 사람도 예외가 아니다
+
+    시드와 주차로만 굴리므로 **같은 밤을 다시 열면 같은 성향**이다(§3-D4).
+    """
+    start = member.alignment
+    if start is None:
+        # 이름을 실어야 한 해에 올라온 신인들이 **같은 성향으로 몰리지 않는다.**
+        roll = SeededRoll(seed, member.debut_week, f"align:{member.name}")
+        start = roll.pick(ROLLED_ALIGNMENT)
+    turns = max(0, (week - member.debut_week) // TURN_EVERY)
+    now = start
+    for index in range(turns):
+        roll = SeededRoll(
+            seed, member.debut_week + index * TURN_EVERY, f"turn:{member.name}"
+        )
+        if roll.chance(TURN_CHANCE):
+            now = _turned(now, roll)
+    return now
+
+
+def _turned(now: Alignment, roll: SeededRoll) -> Alignment:
+    """뒤집힌 성향. **트위너는 양쪽 어디로든 간다** — 그게 트위너의 자리다."""
+    if now is Alignment.TWEENER:
+        return roll.pick((Alignment.FACE, Alignment.HEEL))
+    other = Alignment.HEEL if now is Alignment.FACE else Alignment.FACE
+    return roll.pick((other, other, Alignment.TWEENER))
+
+
+def alignment_of(name: str, week: int, seed: int = 0) -> Alignment | None:
+    """이름으로 그 주차의 성향 (§3-D95).
+
+    **명부 밖이면 None이다** — 플레이어가 그렇고(§3-D10-1), 화면은 그 자리에 아무것도
+    쓰지 않는다. 이름은 그 주차에 불리던 이름이므로(`name_at`) 개명·배역을 그대로 탄다.
+    """
+    member = member_of(name, seed)
+    return None if member is None else alignment_at(member, week, seed)
 
 
 def tier_in(brand: Brand, tier: RivalTier) -> RivalTier:
-    """그 브랜드에 **실제로 있는** 등급으로 접는다.
+    """그 브랜드에 **실제로 있는** 위상으로 접는다.
 
-    육성 브랜드에는 유망주만 살고 메인 로스터에는 유망주가 없다(`brand_at`). 접지 않고
-    물으면 빈 명단이 돌아오고, 그러면 벨트에 주인이 사라지거나(§3-D38) 대립 상대가
-    없어진다 — **없는 칸을 묻지 않게 하는 것이 이 함수의 일이다.**
+    **이제 접을 것이 거의 없다** (§3-D95). 세 브랜드 모두 어퍼·미드·로우가 다 있으므로
+    (사용자 표) 위상을 그대로 쓴다 — 예전에는 NXT에 유망주만 살아서 모든 물음을
+    유망주로 접어야 했고, 그것이 NXT 챔피언을 신인 중에서 뽑던 원인이었다.
+
+    함수를 남겨 두는 이유: 부르는 자리가 열 곳이 넘고, 앞으로 브랜드마다 없는 칸이
+    생기면 **그 판단이 다시 여기 한 곳에 모여야** 한다.
     """
-    if brand is Brand.NXT:
-        return RivalTier.PROSPECT
-    return max(tier, RivalTier.MIDCARD)
+    return tier
 
 
 @lru_cache(maxsize=8192)
@@ -3917,9 +5255,32 @@ def pool_for(
         for m in ROSTER
         if m.gender is gender
         and m.is_active_at(week)
-        and tier_at(m, week) is tier
+        and tier_at(m, week, seed) is tier
         and (brand is None or brand_at(m, week, seed) is brand)
     )
+
+
+REACH_UP_CHANCE = 0.18
+"""**한 칸 위를 넘보는 확률** (§3-D95, 2026-08-19 사용자 요청).
+
+*"가끔씩 미드카드가 어퍼카드 챔피언십을 노리고, 로우카드가 미드카드 챔피언십을 노리는
+등 이런 일들이 있었으면 해. 대립도 같이."*
+
+다섯에 한 번쯤이면 **사건**이고, 절반이면 위상이 없는 것과 같다. 어퍼카드는 더 갈 곳이
+없으므로 이 굴림을 지나치고, 아래로 내려가는 굴림은 두지 않았다 — 위를 보는 이야기가
+아래를 보는 이야기보다 훨씬 자주 쓰인다.
+"""
+
+
+def reaching_tier(tier: RivalTier, week: int, seed: int = 0) -> RivalTier:
+    """그 주차에 **넘보는** 위상 (§3-D95). 대개는 제 위상 그대로다.
+
+    주차와 시드로만 굴리므로 같은 주를 다시 열면 같은 답이다(§3-D4).
+    """
+    if tier is RivalTier.UPPER_CARD:
+        return tier
+    roll = SeededRoll(seed, week, "reach")
+    return RivalTier(tier + 1) if roll.chance(REACH_UP_CHANCE) else tier
 
 
 def tier_for_popularity(popularity: int) -> RivalTier:
@@ -3929,10 +5290,10 @@ def tier_for_popularity(popularity: int) -> RivalTier:
     이야기가 되지 않는다.
     """
     if popularity >= 60:
-        return RivalTier.MAIN_EVENT
+        return RivalTier.UPPER_CARD
     if popularity >= 30:
-        return RivalTier.MIDCARD
-    return RivalTier.PROSPECT
+        return RivalTier.MID_CARD
+    return RivalTier.LOW_CARD
 
 
 MIN_POOL = 6
