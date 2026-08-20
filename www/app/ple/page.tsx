@@ -1,25 +1,23 @@
-import { PleEventGrid } from "@/components/ple-event-grid";
+import { PleStatusBoard } from "@/components/ple/ple-status-board";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
 
 export default function PlePage() {
   return (
     <WweArenaShell>
-      <div className="mx-auto w-full max-w-5xl min-w-0 px-4 py-10">
-        <header className="mb-8 text-center">
-          <h1 className="font-kr-display text-3xl text-stone-900 drop-shadow-[0_0_24px_rgba(224,32,32,0.25)] dark:text-white sm:text-4xl">
-            <span className="font-sport tracking-[-0.04em]">2026</span> 월별 PLE
+      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-10">
+        <header className="mb-8">
+          <h1 className="font-kr-display text-3xl text-foreground sm:text-4xl">
+            <span className="font-sport tracking-[-0.04em]">2026</span> PLE 예측
           </h1>
-          <p className="mt-3 text-base text-stone-400 sm:text-lg">
-            예측할 이벤트를 선택하고{" "}
+          <p className="mt-3 text-base text-muted-foreground sm:text-lg">
+            진행 중 · 예정 · 종료로 나눠 봅니다. 예측할 대회를 고르고{" "}
             <span className="text-head-of-table font-sport text-lg font-semibold sm:text-xl">
               Head of the Table
             </span>
-            에 도전하세요
+            에 도전하세요.
           </p>
         </header>
-        <div className="ple-section-glow rounded-2xl border border-stone-300/50 dark:border-stone-700/50 bg-stone-50/60 dark:bg-stone-950/60 p-4 sm:p-6">
-          <PleEventGrid variant="large" featured />
-        </div>
+        <PleStatusBoard />
       </div>
     </WweArenaShell>
   );

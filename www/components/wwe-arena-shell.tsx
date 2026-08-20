@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 /** 네온 톤 다크 아레나 배경 — 링 주변·상단 레드 글로우 */
 export function WweArenaShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative min-h-screen w-full min-w-0 overflow-x-hidden bg-white text-stone-900 dark:bg-[#0a0a0c] dark:text-stone-100">
+    // 표면은 토큰이 정한다 (KAYFABE 2.0) — 하드코딩된 `dark:bg-[#0a0a0c]`가
+    // `--background`를 덮고 있어서 여기만 옛 값에 남아 있었다.
+    <main className="relative min-h-screen w-full min-w-0 overflow-x-hidden bg-background text-foreground">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_-8%,rgba(224,32,32,0.22),transparent_68%)]"

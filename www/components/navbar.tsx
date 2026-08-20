@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LogIn, Menu, ShoppingBag, Trophy, X } from "lucide-react";
+import { BarChart3, Brain, LogIn, Menu, Trophy, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { KayfabeLogo } from "@/components/kayfabe-logo";
-import { KICKOFF_ITEMS, KickoffMenu, isKickoffPath } from "@/components/kickoff-menu";
-import { PlePickerDialog } from "@/components/ple-picker-dialog";
+import { MORE_GROUPS, MoreMenu, isMorePath } from "@/components/more-menu";
 import { WeatherWidget } from "@/components/weather-widget";
 import { WweTicker } from "@/components/wwe-ticker";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -59,6 +58,40 @@ function NavLink({
   );
 }
 
+/**
+ * 아직 안 열린 메인 자리 — 데이터 센터 · AI LAB (Phase 2·3).
+ *
+ * **링크로 두지 않는다.** 새 IA를 먼저 보여 주되 404로 보내지 않기 위한 자리이고,
+ * `KickoffMenu`가 쓰던 "href 없으면 아직 안 열린 자리" 규약과 같은 처리다.
+ * 페이지가 생기면 이 컴포넌트 대신 `NavLink`로 바꾼다.
+ */
+function NavSoon({
+  icon,
+  children,
+  fullWidth = false,
+}: {
+  icon?: ReactNode;
+  children: ReactNode;
+  fullWidth?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        buttonVariants({ variant: "outline", size: "sm" }),
+        "gap-1.5 cursor-default border-dashed border-stone-300/60 bg-transparent text-stone-400 shadow-none dark:border-stone-700/60 dark:text-stone-500",
+        fullWidth && "w-full justify-start",
+      )}
+      aria-disabled="true"
+    >
+      {icon}
+      {children}
+      <span className="ml-1 rounded border border-current px-1 text-[10px] leading-tight">
+        준비 중
+      </span>
+    </span>
+  );
+}
+
 export function Navbar() {
   const router = useRouter();
   const { user, logout, isReady } = useAuth();
@@ -74,12 +107,11 @@ export function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
+  const isHome = mounted && pathname === "/";
   const isPle = mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
   const isRankings = mounted && pathname === "/rankings";
-  const isShop = mounted && (pathname === "/shop" || pathname.startsWith("/shop/"));
   const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
-  const isKickoff = mounted && isKickoffPath(pathname);
-  const isLesson = mounted && (pathname === "/lesson" || pathname.startsWith("/lesson/"));
+  const isMore = mounted && isMorePath(pathname);
   const isAdmin = mounted && pathname === "/admin";
   const isLogin = mounted && pathname === "/login";
   const isMyInfo = mounted && pathname === "/my-info";
@@ -125,41 +157,56 @@ export function Navbar() {
     </NavLink>
   );
 
+  /** 메인 여섯 자리 (KAYFABE 2.0). 데스크톱·모바일이 같은 목록을 그린다. */
+  const mainNav = (fullWidth: boolean) => (
+    <>
+      <NavLink href="/" active={isHome} fullWidth={fullWidth}>
+        홈
+      </NavLink>
+      <NavLink href="/ple" active={isPle} fullWidth={fullWidth}>
+        PLE 예측
+      </NavLink>
+      <NavSoon
+        icon={<BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+        fullWidth={fullWidth}
+      >
+        데이터 센터
+      </NavSoon>
+      <NavSoon
+        icon={<Brain className="h-3.5 w-3.5 shrink-0 text-data" aria-hidden />}
+        fullWidth={fullWidth}
+      >
+        AI LAB
+      </NavSoon>
+      <NavLink
+        href="/rankings"
+        active={isRankings}
+        champion
+        fullWidth={fullWidth}
+        icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
+      >
+        랭킹
+      </NavLink>
+      <NavLink href="/records" active={isRecords} fullWidth={fullWidth}>
+        기록
+      </NavLink>
+    </>
+  );
+
   return (
-    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-stone-200/80 dark:border-white/10 bg-white/90 dark:bg-[#0a0a0c]/85 backdrop-blur-[12px] supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-[#0a0a0c]/70">
-      <div className="mx-auto flex w-full max-w-5xl min-w-0 items-center justify-between gap-2 px-4 py-3">
+    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-border bg-background/85 backdrop-blur-[12px] supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex w-full max-w-6xl min-w-0 items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           <KayfabeLogo />
         </div>
 
-        <div className="hidden items-center gap-1.5 md:flex">
-          <PlePickerDialog triggerClassName={navLinkClass(isPle)} />
-          <NavLink href="/records" active={isRecords}>
-            기록
-          </NavLink>
-          <NavLink
-            href="/rankings"
-            active={isRankings}
-            champion
-            icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
-          >
-            순위표
-          </NavLink>
-          <NavLink
-            href="/shop"
-            active={isShop}
-            icon={<ShoppingBag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-          >
-            상점
-          </NavLink>
-          <KickoffMenu active={isKickoff} triggerClassName={navLinkClass(isKickoff)} />
-        </div>
+        <nav className="hidden items-center gap-1.5 lg:flex" aria-label="주요 메뉴">
+          {mainNav(false)}
+        </nav>
 
-        <div className="hidden shrink-0 items-center gap-1.5 md:flex">
+        <div className="hidden shrink-0 items-center gap-1.5 lg:flex">
+          <MoreMenu active={isMore} triggerClassName={navLinkClass(isMore)} />
           <WeatherWidget />
-          <NavLink href="/lesson" active={isLesson}>
-            Lesson
-          </NavLink>
           {isUserAdmin && (
             <NavLink href="/admin" active={isAdmin}>
               관리자
@@ -169,14 +216,14 @@ export function Navbar() {
           <ThemeToggle />
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+        <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
           <ThemeToggle />
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
             aria-expanded={mobileOpen}
             aria-label={mobileOpen ? "메뉴 닫기" : "메뉴 열기"}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-stone-300/70 dark:border-stone-700/70 bg-stone-100/40 dark:bg-stone-800/40 text-stone-700 dark:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-700/60"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-card-2"
           >
             {mobileOpen ? (
               <X className="size-5" aria-hidden />
@@ -188,49 +235,27 @@ export function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-stone-200/80 dark:border-white/10 px-4 py-3 md:hidden">
-          <nav className="mx-auto flex w-full max-w-5xl flex-col gap-2" aria-label="모바일 메뉴">
-            <PlePickerDialog triggerClassName={cn(navLinkClass(isPle), "w-full justify-start")} />
-            <NavLink href="/records" active={isRecords} fullWidth>
-              기록
-            </NavLink>
-            <NavLink
-              href="/rankings"
-              active={isRankings}
-              champion
-              fullWidth
-              icon={<Trophy className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />}
-            >
-              순위표
-            </NavLink>
-            <NavLink
-              href="/shop"
-              active={isShop}
-              fullWidth
-              icon={<ShoppingBag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-            >
-              상점
-            </NavLink>
-            <p className="px-1 pt-1 text-xs text-muted-foreground">킥오프</p>
-            {KICKOFF_ITEMS.map((item) =>
-              item.href ? (
-                <NavLink
-                  key={item.label}
-                  href={item.href}
-                  active={mounted && pathname.startsWith(item.href)}
-                  fullWidth
-                >
-                  {item.label}
-                </NavLink>
-              ) : (
-                <span key={item.label} className="px-3 py-1.5 text-sm text-muted-foreground">
-                  {item.label} · {item.description}
-                </span>
-              ),
-            )}
-            <NavLink href="/lesson" active={isLesson} fullWidth>
-              Lesson
-            </NavLink>
+        <div className="border-t border-border px-4 py-3 lg:hidden">
+          <nav className="mx-auto flex w-full max-w-6xl flex-col gap-2" aria-label="모바일 메뉴">
+            {mainNav(true)}
+
+            {/* 더보기 — 데스크톱의 드롭다운과 같은 목록을 펼쳐 둔다. */}
+            {MORE_GROUPS.map((group, index) => (
+              <div key={group.title ?? `group-${index}`} className="flex flex-col gap-2">
+                <p className="px-1 pt-1 text-xs text-muted-foreground">{group.title ?? "더보기"}</p>
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    active={mounted && pathname.startsWith(item.href)}
+                    fullWidth
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+
             {isUserAdmin && (
               <NavLink href="/admin" active={isAdmin} fullWidth>
                 관리자

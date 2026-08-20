@@ -1,9 +1,12 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, Database, RefreshCw } from "lucide-react";
 import { GeminiChatPanel } from "@/components/gemini-chat-panel";
+import { AiPredictionCard } from "@/components/home/ai-prediction-card";
+import { KpiStrip } from "@/components/home/kpi-strip";
 import { PleAiScoreboard } from "@/components/ple-ai-scoreboard";
 import { LeaderboardPreview } from "@/components/leaderboard-preview";
 import { NextPleCountdownCard } from "@/components/next-ple-countdown-card";
@@ -26,49 +29,81 @@ function TitanicQaAppContent() {
   return (
     <WweArenaShell>
       {currentView === "qa" ? (
-        <div className="flex min-h-[calc(100dvh-5.5rem)] flex-col">
-          <section className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-6 pb-4 text-center sm:pt-10">
-            <div className="relative mx-auto w-full">
-              <div className="relative w-full py-2 sm:py-3">
-                <div aria-hidden className="hero-title-backdrop" />
-                <h2 className="sr-only">WWE PLE 승부 예측, 당신의 본능을 증명하라</h2>
-                <video
-                  className="hero-ring-glow relative z-10 aspect-video w-full rounded-2xl border border-stone-300/60 object-cover dark:border-stone-700/60"
-                  src="/intro/kayfabe-hero.mp4"
-                  poster="/intro/kayfabe-hero-poster.jpg"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  aria-label="KAYFABE · WWE PLE 예측 게임 인트로 영상"
-                />
+        <div className="flex flex-col">
+          {/*
+           * ── 히어로 (KAYFABE 2.0 §2) ─────────────────────────────────────
+           * **비디오를 지우지 않았다.** 화면 전체를 먹던 것을 왼쪽 칸 안으로
+           * 줄였을 뿐이다 — 오른쪽은 실제 AI 예측이 선다. 첫 화면에서
+           * "무엇을 하는 서비스인가"와 "그래서 지금 뭘 아는가"가 같이 보여야 한다.
+           */}
+          <section className="mx-auto w-full max-w-6xl px-4 pt-8 pb-6 sm:pt-12">
+            <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-10">
+              <div className="min-w-0">
+                <p className="font-sport text-sm tracking-[0.3em] text-brand-link">KAYFABE</p>
+                <h1 className="mt-3 font-sport text-4xl leading-[1.05] text-foreground sm:text-5xl lg:text-6xl">
+                  WWE DATA &<br />
+                  PREDICTION
+                  <br />
+                  PLATFORM
+                </h1>
+                <p className="mt-4 max-w-lg text-base text-muted-foreground sm:text-lg">
+                  경기를 예측하고 데이터를 분석합니다.
+                </p>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/ple"
+                    className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-brand-hover"
+                  >
+                    PLE 예측하기
+                  </Link>
+                  <Link
+                    href="/rankings"
+                    className="inline-flex h-10 items-center rounded-full border border-border px-5 text-sm font-semibold text-foreground transition-colors hover:bg-card-2"
+                  >
+                    랭킹 보기
+                  </Link>
+                </div>
+
+                <div className="relative mt-7 max-w-lg">
+                  <div aria-hidden className="hero-title-backdrop" />
+                  <video
+                    className="hero-ring-glow relative z-10 aspect-video w-full rounded-2xl border border-border object-cover"
+                    src="/intro/kayfabe-hero.mp4"
+                    poster="/intro/kayfabe-hero-poster.jpg"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    aria-label="KAYFABE · WWE PLE 예측 게임 인트로 영상"
+                  />
+                </div>
               </div>
-              <p className="relative z-10 mx-auto mt-4 max-w-2xl text-balance text-base font-medium leading-relaxed text-stone-600 dark:text-stone-400 sm:mt-5 sm:text-lg">
-                경기 결과를 예측하고 점수를 쌓아{" "}
-                <span className="font-sport font-semibold text-stone-900 dark:text-white">
-                  2026
-                </span>
-                년의{" "}
-                <span className="text-head-of-table font-sport text-lg font-semibold sm:text-xl">
-                  Head of the Table
-                </span>{" "}
-                자리를 차지하세요!
-              </p>
+
+              <AiPredictionCard className="w-full" />
             </div>
           </section>
 
-          <section className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col justify-center px-4 py-3 sm:py-5">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <LeaderboardPreview />
+          {/* ── KPI — 실제 수치만 (§7·§12) ───────────────────────────────── */}
+          <section className="mx-auto w-full max-w-6xl px-4 pb-8" aria-label="서비스 현황">
+            <KpiStrip />
+          </section>
+
+          {/* ── 다음 PLE · 리더보드 (§4·§6) ──────────────────────────────── */}
+          <section className="mx-auto w-full max-w-6xl px-4 pb-8">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <NextPleCountdownCard />
+              <LeaderboardPreview />
             </div>
           </section>
 
-          <div className="shrink-0 px-4">
+          {/* ── AI 예측 기록 (§5) — 기존 스코어보드를 그대로 둔다 ─────────── */}
+          <div className="pb-2">
             <PleAiScoreboard />
           </div>
-          <div className="mx-auto w-full max-w-2xl shrink-0 px-4 pb-6 pt-3 sm:pt-4">
+
+          <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-4">
             <GeminiChatPanel className="min-h-[240px] h-[min(40dvh,480px)] max-h-[46dvh] sm:min-h-[280px] sm:h-[min(46dvh,560px)] sm:max-h-[52dvh]" />
           </div>
         </div>

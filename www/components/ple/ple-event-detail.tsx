@@ -77,9 +77,25 @@ export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
           <p className="mt-1 text-xs leading-relaxed text-stone-600">{ple.highlight}</p>
         </header>
 
-        <PleMatchBracket slug={ple.slug as PleSlug} className="mt-8" />
-
+        {/*
+         * ── 정보 계층 (KAYFABE 2.0 §9) ────────────────────────────────────
+         * 헤더 → **이벤트 정보** → 경기(그 안에 AI 예측 · 내 예측 · 결과).
+         *
+         * 예전에는 정보가 경기 **뒤**에 있었다 — 무슨 대회인지 읽기 전에 카드부터
+         * 만났다. 예측·포인트 로직은 한 줄도 안 건드렸다: `PleMatchBracket`이
+         * 그대로 그 셋을 들고 있고, 여기서는 순서와 제목만 세웠다.
+         */}
         <PleHighlightsSection detail={detail} />
+
+        <section className="mt-10">
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="font-sport text-lg text-foreground">경기</h2>
+            <p className="text-sm text-muted-foreground">
+              카드마다 <span className="text-data">AI 예측</span> · 내 예측 · 결과가 함께 있습니다.
+            </p>
+          </div>
+          <PleMatchBracket slug={ple.slug as PleSlug} />
+        </section>
 
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
@@ -105,9 +121,7 @@ function PleHighlightsSection({ detail }: { detail: PleEventDetail }) {
 
   return (
     <section className="mt-8">
-      <h2 className="font-sport mb-3 text-sm font-semibold tracking-[-0.03em] text-stone-600 dark:text-stone-400">
-        PLE INFO
-      </h2>
+      <h2 className="font-sport mb-3 text-lg text-foreground">이벤트 정보</h2>
       <HighlightList highlights={highlights} theme={theme} />
     </section>
   );
