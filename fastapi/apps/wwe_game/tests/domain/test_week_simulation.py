@@ -9,7 +9,7 @@ from wwe_game.domain.constants.ple_calendar import (
     QUIET_MONTH,
     calendar_for,
 )
-from wwe_game.domain.services import championship
+from wwe_game.domain.services import championship, quarter_plan
 from wwe_game.domain.services.championship import NXT_MIN_WEEKS
 from wwe_game.domain.services.seeded_roll import SeededRoll
 from wwe_game.domain.services.week_simulation import (
@@ -25,6 +25,7 @@ from wwe_game.domain.services.week_simulation import (
     win_chance,
 )
 from wwe_game.domain.value_objects.condition import Condition, InjuryGrade
+from wwe_game.domain.value_objects.quarter_goal import QuarterGoal
 from wwe_game.domain.value_objects.title import Brand, Title
 from wwe_game.domain.value_objects.week_report import CallUpReason, WeekKind
 from wwe_game.domain.value_objects.wrestler_identity import PlayStyle
@@ -429,6 +430,34 @@ class TestTitleMatchPlacement:
             ).kind
             is WeekKind.PROMO
         )
+
+
+class TestTheGoalNeverBreaksTheRoll:
+    """**목표 배수를 곱한 확률이 1을 넘으면 '다음'이 죽는다** (2026-08-20).
+
+    `title_shot_chance`는 1.0으로 잘라서 돌려주는데 그 위에 *"벨트를 노린다"*의
+    1.6을 곱하면 1.6이 되고, `SeededRoll.chance`는 범위를 지켜 예외를 던진다 —
+    실제로 커리어를 끝까지 돌려 보다가 305주차에서 터졌다. 진행 루프 한가운데라
+    화면에서는 500이다.
+    """
+
+    @staticmethod
+    def _chasing(week: int) -> object:
+        run = make_run(
+            week=week,
+            stats=WrestlerStats(popularity=95, in_ring=90, mic_work=80, backstage=100),
+        )
+        return run.evolve(
+            goal=QuarterGoal.TITLE, goal_quarter=quarter_plan.quarter_of(week)
+        )
+
+    def test_chasing_the_belt_at_the_top_still_advances(self) -> None:
+        for week in range(300, 400):
+            simulate_week(self._chasing(week))  # 터지면 그것이 실패다
+
+    def test_the_multiplier_is_actually_on(self) -> None:
+        """배수가 1.0이면 이 테스트는 아무것도 안 지킨다 — 그것부터 확인한다."""
+        assert quarter_plan.plan_of(self._chasing(300)).title_shot > 1.0
 
 
 class TestBrandProgression:
