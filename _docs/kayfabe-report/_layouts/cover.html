@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: 'ko' }}">
+  {%- include head.html -%}
+  <body class="is-cover">
+    <main class="cover">
+      <div class="cover__inner">
+        <p class="cover__eyebrow">{{ page.subtitle }}</p>
+        {%- comment -%}
+          title_break(어절 목록)에 적힌 어절 뒤에서 제목을 차례로 끊는다. 제목
+          문자열은 page.title 하나뿐이므로 사업명이 바뀌어도 두 곳을 고칠 일이 없다.
+          제목에 없는 어절은 건너뛰고, 목록이 비어 있으면 한 덩어리로 렌더한다.
+        {%- endcomment -%}
+        {%- assign title_rest = page.title -%}
+        {%- assign title_lines = "" -%}
+        {%- for brk in page.title_break -%}
+          {%- if title_rest contains brk -%}
+            {%- assign title_parts = title_rest | split: brk -%}
+            {%- assign title_head = title_parts[0] | append: brk | strip -%}
+            {%- assign title_lines = title_lines | append: title_head | append: "%%LINE%%" -%}
+            {%- assign title_rest = title_parts[1] | strip -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- assign title_lines = title_lines | append: title_rest | split: "%%LINE%%" -%}
+        <h1 class="cover__title">
+          {%- for line in title_lines %}
+          <span>{{ line }}</span>
+          {%- endfor %}
+        </h1>
+        {%- if page.title_en %}
+        <p class="cover__title-en">{{ page.title_en }}</p>
+        {%- endif %}
+
+        <div class="cover__rule" role="presentation"></div>
+
+        <dl class="cover__meta">
+          {%- comment -%} 사업명은 바로 위 대제목과 겹치므로 메타에 다시 넣지 않는다. {%- endcomment -%}
+          {%- if page.team %}
+          <dt>팀명</dt>
+          <dd>
+            {{ page.team }}
+            {%- if page.team_ko %}
+            <span class="cover__aside">{{ page.team_ko }}</span>
+            {%- endif %}
+          </dd>
+          {%- endif %}
+
+          <dt>개발자</dt>
+          <dd>
+            {{ page.members | join: " · " }}
+            <span class="cover__aside">총 {{ page.members | size }}명</span>
+          </dd>
+
+          <dt>개발기간</dt>
+          <dd>
+            {{ page.period_start }} &ndash; {{ page.period_end }}
+            <span class="cover__aside">{{ page.period_note }}</span>
+          </dd>
+
+          <dt>작성일</dt>
+          <dd>{{ page.issued }}</dd>
+
+          {%- comment -%} 주소 표기는 URL 에서 스킴만 떼어 쓴다. 값이 바뀌면 링크와 함께 따라간다. {%- endcomment -%}
+          {%- if page.repo_url %}
+          <dt>저장소</dt>
+          <dd>
+            <a class="cover__link" href="{{ page.repo_url }}">
+              {{- page.repo_url | remove: "https://" | remove: "http://" -}}
+            </a>
+          </dd>
+          {%- endif %}
+
+          {%- if page.demo_url %}
+          <dt>데모</dt>
+          <dd>
+            <a class="cover__link" href="{{ page.demo_url }}">
+              {{- page.demo_url | remove: "https://" | remove: "http://" -}}
+            </a>
+          </dd>
+          {%- endif %}
+        </dl>
+
+        <a class="cover__cta" href="{{ '/toc/' | relative_url }}">목차 보기 &rarr;</a>
+      </div>
+    </main>
+  </body>
+</html>
