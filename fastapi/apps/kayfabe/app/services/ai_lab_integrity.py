@@ -52,6 +52,8 @@ class PredictionRow:
     pick_name: str
     win_probability: float
     confidence: float
+    #: 합성이 엮어 낸 근거 문장. 리포트 요약을 규칙으로 이은 값이라 LLM을 다시 부르지 않는다.
+    rationale: str
     source: str
     generated_at: datetime
     #: 아직 안 끝난 경기면 `None`이다 — 채점 대상이 아니다.
@@ -68,6 +70,8 @@ class ReportRow:
     agent: str
     pick: str | None
     weight: float
+    #: 에이전트가 쓴 판단 요약. 의견이 없어도 이유가 적혀 있어 근거로 쓸 만하다.
+    summary: str
     sources: tuple[str, ...]
 
 

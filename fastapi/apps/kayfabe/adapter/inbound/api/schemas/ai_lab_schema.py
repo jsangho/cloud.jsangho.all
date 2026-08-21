@@ -88,3 +88,60 @@ class AiLabOverviewSchema(_Camel):
     system: list[SystemComponentSchema]
     agents: list[AgentActivitySchema]
     recent: list[RecentPredictionSchema]
+
+
+class AgentReportSchema(_Camel):
+    """에이전트 한 명의 의견. 저장된 값을 그대로 옮긴다 — 추정하지 않는다.
+
+    필드 이름은 기존 `/api/ple_events/{slug}/ai-predictions`의 리포트와 같다.
+    화면이 같은 `AiReportDialog`를 그대로 열 수 있어야 하기 때문이다.
+    """
+
+    agent: str
+    pick: str | None = None
+    """`None`이면 **의견 없음**이다 — 빈 문자열과 구분한다."""
+    weight: float
+    summary: str
+    sources: list[str]
+    """저장된 출처 URL. **검색된 청크가 아니다** — 어떤 청크가 쓰였는지는 지금 구조가
+    기록하지 않으므로 그렇게 주장할 수 없다(Phase 3-4·3-6에서 따로 다룬다)."""
+
+
+class PredictionItemSchema(_Camel):
+    event_slug: str = Field(alias="eventSlug")
+    event_label: str = Field(alias="eventLabel")
+    match_key: str = Field(alias="matchKey")
+    match_title: str = Field(alias="matchTitle")
+    pick: str
+    pick_name: str = Field(alias="pickName")
+    win_probability: float = Field(alias="winProbability")
+    confidence: float
+    rationale: str
+    source: str
+    """"agents" | "bookmaker_fallback" — 폴백으로 만들어졌는지 화면이 구분해야 한다."""
+    generated_at: datetime = Field(alias="generatedAt")
+    winner_name: str | None = Field(default=None, alias="winnerName")
+    correct: bool | None = None
+    """결과가 아직 없으면 `None` (Pending) — 실패(False)와 다른 상태다."""
+    reports: list[AgentReportSchema]
+
+
+class PredictionEventSchema(_Camel):
+    """예측이 **실제로 존재하는** 대회만. 필터 목록을 화면에 박지 않는다."""
+
+    slug: str
+    label: str
+    count: int
+
+
+class AiLabPredictionsSchema(_Camel):
+    """예측 목록 + 그 목록을 어떻게 읽어야 하는지(무결성).
+
+    **둘을 한 응답에 담는다.** 화면이 목록만 받아 적중률을 자랑하지 못하게 하려는
+    것이고, 무결성 수치를 두 번 계산하지 않게 하려는 것이다(Phase 3-0 재사용).
+    """
+
+    totals: PredictionTotalsSchema
+    integrity: IntegritySchema
+    events: list[PredictionEventSchema]
+    items: list[PredictionItemSchema]

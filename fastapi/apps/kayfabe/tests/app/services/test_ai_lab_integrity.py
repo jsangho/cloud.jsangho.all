@@ -44,6 +44,7 @@ def _prediction(
         pick_name="Someone",
         win_probability=win_probability,
         confidence=confidence,
+        rationale="2/2 분석이 Someone을(를) 골랐습니다.",
         source=source,
         generated_at=_NOW,
         winner_pick=winner_pick,
@@ -153,6 +154,7 @@ class TestSummarizeIntegrity:
                 agent="rumor",
                 pick="left",
                 weight=1.0,
+                summary="자료에 따르면 ...",
                 sources=("https://en.wikipedia.org/wiki/SummerSlam_(2026)",),
             )
         ]
@@ -207,6 +209,7 @@ class TestSummarizeIntegrity:
                 agent="rumor",
                 pick="left",
                 weight=1.0,
+                summary="자료에 따르면 ...",
                 sources=("https://en.wikipedia.org/wiki/SummerSlam_(2026)",),
             )
         ]
@@ -218,9 +221,9 @@ class TestSummarizeIntegrity:
 class TestSummarizeAgents:
     def test_each_agent_gets_an_opinion_rate(self) -> None:
         reports = [
-            ReportRow("s", "m1", "odds", "left", 0.5, ()),
-            ReportRow("s", "m2", "odds", None, 0.0, ()),
-            ReportRow("s", "m1", "rumor", "left", 1.0, ()),
+            ReportRow("s", "m1", "odds", "left", 0.5, "배당 근거", ()),
+            ReportRow("s", "m2", "odds", None, 0.0, "배당 정보가 없습니다", ()),
+            ReportRow("s", "m1", "rumor", "left", 1.0, "소식 근거", ()),
         ]
         activities = {a.agent: a for a in summarize_agents(reports)}
         assert activities["odds"].reports == 2

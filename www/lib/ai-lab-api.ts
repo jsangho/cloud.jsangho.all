@@ -85,6 +85,66 @@ export type AiLabOverview = {
   recent: RecentPrediction[];
 };
 
+/**
+ * 저장된 예측 한 건 + 에이전트 리포트.
+ *
+ * 필드는 기존 `AiPrediction`(`lib/ple-ai-predictions`)과 **같은 이름**이다. 화면이
+ * 그대로 `AiReportDialog`에 넘길 수 있어야 해서 맞췄다 — 같은 것을 두 벌 만들지 않는다.
+ */
+export type PredictionReport = {
+  agent: string;
+  /** `null`이면 **의견 없음**이다 — 빈 문자열과 다르다. */
+  pick: string | null;
+  weight: number;
+  summary: string;
+  /** 에이전트가 인용한 출처 URL. **검색된 청크가 아니다.** */
+  sources: string[];
+};
+
+export type PredictionItem = {
+  eventSlug: string;
+  eventLabel: string;
+  matchKey: string;
+  matchTitle: string;
+  pick: string;
+  pickName: string;
+  winProbability: number;
+  confidence: number;
+  rationale: string;
+  source: string;
+  generatedAt: string;
+  winnerName: string | null;
+  /** 결과가 아직 없으면 `null` (Pending) — 실패(false)와 다르다. */
+  correct: boolean | null;
+  reports: PredictionReport[];
+};
+
+export type PredictionEvent = { slug: string; label: string; count: number };
+
+export type AiLabPredictions = {
+  totals: PredictionTotals;
+  integrity: Integrity;
+  /** 예측이 **실제로 있는** 대회만 온다 — 목록을 화면에 박지 않는다. */
+  events: PredictionEvent[];
+  items: PredictionItem[];
+};
+
+export async function fetchAiLabPredictions(): Promise<AiLabPredictions | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/predictions`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabPredictions;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchAiLabOverview(): Promise<AiLabOverview | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);

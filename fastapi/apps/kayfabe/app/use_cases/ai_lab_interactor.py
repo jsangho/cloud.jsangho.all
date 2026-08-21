@@ -14,7 +14,11 @@ from __future__ import annotations
 import logging
 
 from kayfabe.app.dtos.ai_lab_dto import (
+    AgentReportItem,
     AiLabOverviewResponse,
+    AiLabPredictionsResponse,
+    PredictionEvent,
+    PredictionItem,
     RecentPrediction,
     SystemComponent,
 )
@@ -24,6 +28,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     AgentActivity,
     CorpusFacts,
     PredictionRow,
+    ReportRow,
     summarize_agents,
     summarize_integrity,
     summarize_predictions,
@@ -67,6 +72,96 @@ class AiLabInteractor(AiLabUseCase):
             recent=_recent(predictions),
         )
 
+    async def list_predictions(self) -> AiLabPredictionsResponse:
+        """저장된 예측 전체 + 리포트 + 무결성.
+
+        **무결성을 목록과 같은 응답에 담는다.** 목록만 따로 받아 가면 화면이 적중률을
+        맥락 없이 세울 수 있고, 같은 판정을 두 번 계산하게 된다 — 개요와 같은
+        `summarize_integrity()`를 그대로 쓴다.
+        """
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        grouped = _group_reports(reports)
+        # 최근 생성이 위로. 같은 시각이면 대회·경기 순서를 지켜 재조회에도 흔들리지 않는다.
+        ordered = sorted(
+            predictions,
+            key=lambda r: (r.generated_at, r.event_slug, r.match_key),
+            reverse=True,
+        )
+
+        logger.info(
+            "[AiLabInteractor] list_predictions | 예측=%d 리포트=%d",
+            len(predictions),
+            len(reports),
+        )
+
+        return AiLabPredictionsResponse(
+            totals=summarize_predictions(predictions),
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            events=_events(predictions),
+            items=[
+                PredictionItem(
+                    event_slug=row.event_slug,
+                    event_label=row.event_label,
+                    match_key=row.match_key,
+                    match_title=row.match_title,
+                    pick=row.pick,
+                    pick_name=row.pick_name,
+                    win_probability=row.win_probability,
+                    confidence=row.confidence,
+                    rationale=row.rationale,
+                    source=row.source,
+                    generated_at=row.generated_at,
+                    winner_name=row.winner_name,
+                    correct=_correct(row),
+                    reports=tuple(grouped.get((row.event_slug, row.match_key), ())),
+                )
+                for row in ordered
+            ],
+        )
+
+
+def _correct(row: PredictionRow) -> bool | None:
+    """채점 결과. **미채점은 `None`이다** — 실패(False)와 뭉치지 않는다."""
+    if row.winner_pick is None:
+        return None
+    return row.pick == row.winner_pick
+
+
+def _group_reports(
+    reports: list[ReportRow],
+) -> dict[tuple[str, str], list[AgentReportItem]]:
+    """리포트를 경기별로 묶는다. 순서는 리포지토리가 준 순서(`id`)를 지킨다."""
+    grouped: dict[tuple[str, str], list[AgentReportItem]] = {}
+    for report in reports:
+        grouped.setdefault((report.event_slug, report.match_key), []).append(
+            AgentReportItem(
+                agent=report.agent,
+                pick=report.pick,
+                weight=report.weight,
+                summary=report.summary,
+                sources=report.sources,
+            )
+        )
+    return grouped
+
+
+def _events(rows: list[PredictionRow]) -> list[PredictionEvent]:
+    """예측이 **실제로 있는** 대회만. 목록을 화면에 박지 않는다."""
+    counts: dict[str, tuple[str, int]] = {}
+    for row in rows:
+        label, count = counts.get(row.event_slug, (row.event_label, 0))
+        counts[row.event_slug] = (label, count + 1)
+    return [
+        PredictionEvent(slug=slug, label=label, count=count)
+        for slug, (label, count) in sorted(counts.items())
+    ]
+
 
 def _recent(rows: list[PredictionRow]) -> list[RecentPrediction]:
     """최근 생성 순. **미채점은 `correct=None`이다** — 실패(False)와 구분한다."""
@@ -83,7 +178,7 @@ def _recent(rows: list[PredictionRow]) -> list[RecentPrediction]:
             source=row.source,
             generated_at=row.generated_at,
             winner_name=row.winner_name,
-            correct=None if row.winner_pick is None else row.pick == row.winner_pick,
+            correct=_correct(row),
         )
         for row in newest
     ]

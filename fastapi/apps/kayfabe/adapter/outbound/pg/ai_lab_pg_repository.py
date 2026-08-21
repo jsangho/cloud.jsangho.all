@@ -46,6 +46,7 @@ class AiLabPgRepository(AiLabRepository):
                 AgentPredictionModel.pick_name,
                 AgentPredictionModel.win_probability,
                 AgentPredictionModel.confidence,
+                AgentPredictionModel.rationale,
                 AgentPredictionModel.source,
                 AgentPredictionModel.generated_at,
                 PleMatchModel.winner_pick,
@@ -70,6 +71,7 @@ class AiLabPgRepository(AiLabRepository):
                 pick_name=row.pick_name,
                 win_probability=row.win_probability,
                 confidence=row.confidence,
+                rationale=row.rationale,
                 source=row.source,
                 generated_at=row.generated_at,
                 winner_pick=row.winner_pick,
@@ -88,6 +90,7 @@ class AiLabPgRepository(AiLabRepository):
                 AgentReportModel.agent,
                 AgentReportModel.pick,
                 AgentReportModel.weight,
+                AgentReportModel.summary,
                 AgentReportModel.sources,
             )
             .join(
@@ -104,6 +107,7 @@ class AiLabPgRepository(AiLabRepository):
                 agent=row.agent,
                 pick=row.pick,
                 weight=row.weight,
+                summary=row.summary,
                 sources=_split_sources(row.sources),
             )
             for row in result.all()

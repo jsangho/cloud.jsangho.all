@@ -55,3 +55,48 @@ class AiLabOverviewResponse:
     system: list[SystemComponent]
     agents: list[AgentActivity]
     recent: list[RecentPrediction]
+
+
+@dataclass(frozen=True)
+class AgentReportItem:
+    """저장된 에이전트 의견 그대로. `pick`이 `None`이면 의견 없음이다."""
+
+    agent: str
+    pick: str | None
+    weight: float
+    summary: str
+    sources: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PredictionItem:
+    event_slug: str
+    event_label: str
+    match_key: str
+    match_title: str
+    pick: str
+    pick_name: str
+    win_probability: float
+    confidence: float
+    rationale: str
+    source: str
+    generated_at: datetime
+    winner_name: str | None
+    #: 결과가 아직 없으면 `None` (Pending).
+    correct: bool | None
+    reports: tuple[AgentReportItem, ...]
+
+
+@dataclass(frozen=True)
+class PredictionEvent:
+    slug: str
+    label: str
+    count: int
+
+
+@dataclass(frozen=True)
+class AiLabPredictionsResponse:
+    totals: PredictionTotals
+    integrity: IntegrityFacts
+    events: list[PredictionEvent]
+    items: list[PredictionItem]
