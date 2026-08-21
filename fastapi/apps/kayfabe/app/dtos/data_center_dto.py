@@ -1,29 +1,21 @@
 """데이터 센터 DTO — 유스케이스가 주고받는 값 (Phase 2).
 
-스키마와 한 겹 떨어뜨려 두는 이유는 이 앱의 규약이다(§4 네이밍): 도메인·유스케이스는
-Pydantic을 모르고, 어댑터가 `to_schema()`로 옮긴다.
+**Pydantic 스키마를 import하지 않는다.** 예전에는 여기서 `to_schema()`를 들고 있었는데,
+그러면 app 레이어가 adapter를 향해 의존이 뒤집힌다(CLAUDE.md §0-2). 그리고 그 역방향이
+실제로 순환을 만들었다:
+
+    dto → api.schemas.data_center_schema → `kayfabe.adapter.inbound.api` 패키지 __init__
+        → data_center_router → dto (아직 실행 중)
+
+`import kayfabe.app.dtos.data_center_dto` 하나만으로 `ImportError`가 났다. 테스트에서는
+다른 모듈이 먼저 패키지를 깨워 줘서 드러나지 않았을 뿐이다.
+
+매핑은 인접한 `ai_prediction_router`·`ai_lab_router`와 같은 자리 — **라우터가 한다.**
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-
-from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
-    AnalyticsSchema,
-    BeltStatSchema,
-    BrandCountSchema,
-    ChampionshipStatsSchema,
-    DataCenterCountsSchema,
-    DataCenterOverviewSchema,
-    EventOptionSchema,
-    EventStatSchema,
-    HolderStatSchema,
-    MatchPageSchema,
-    MatchRowSchema,
-    RatedWrestlerSchema,
-    WrestlerPageSchema,
-    WrestlerRowSchema,
-)
 
 
 @dataclass(frozen=True)
@@ -59,21 +51,6 @@ class MatchRowResponse:
     winner_name: str | None
     is_title_match: bool
 
-    def to_schema(self) -> MatchRowSchema:
-        return MatchRowSchema(
-            event_slug=self.event_slug,
-            event_label=self.event_label,
-            month=self.month,
-            year=self.year,
-            match_key=self.match_key,
-            title=self.title,
-            format=self.format,
-            status=self.status,
-            participants=list(self.participants),
-            winner_name=self.winner_name,
-            is_title_match=self.is_title_match,
-        )
-
 
 @dataclass(frozen=True)
 class DataCenterCountsResponse:
@@ -85,28 +62,11 @@ class DataCenterCountsResponse:
     championship_belts: int
     title_acquisitions: int
 
-    def to_schema(self) -> DataCenterCountsSchema:
-        return DataCenterCountsSchema(
-            wrestlers=self.wrestlers,
-            matches=self.matches,
-            finished_matches=self.finished_matches,
-            events=self.events,
-            finished_events=self.finished_events,
-            championship_belts=self.championship_belts,
-            title_acquisitions=self.title_acquisitions,
-        )
-
 
 @dataclass(frozen=True)
 class DataCenterOverviewResponse:
     counts: DataCenterCountsResponse
     recent_matches: list[MatchRowResponse] = field(default_factory=list)
-
-    def to_schema(self) -> DataCenterOverviewSchema:
-        return DataCenterOverviewSchema(
-            counts=self.counts.to_schema(),
-            recent_matches=[m.to_schema() for m in self.recent_matches],
-        )
 
 
 @dataclass(frozen=True)
@@ -123,21 +83,6 @@ class WrestlerRowResponse:
     win_rate: float | None
     titles: int
 
-    def to_schema(self) -> WrestlerRowSchema:
-        return WrestlerRowSchema(
-            name=self.name,
-            brand=self.brand,
-            real_name=self.real_name,
-            birth_date=self.birth_date,
-            finisher=self.finisher,
-            stable_team=self.stable_team,
-            matches=self.matches,
-            wins=self.wins,
-            losses=self.losses,
-            win_rate=self.win_rate,
-            titles=self.titles,
-        )
-
 
 @dataclass(frozen=True)
 class WrestlerPageResponse:
@@ -147,23 +92,11 @@ class WrestlerPageResponse:
     size: int
     brands: list[str]
 
-    def to_schema(self) -> WrestlerPageSchema:
-        return WrestlerPageSchema(
-            items=[i.to_schema() for i in self.items],
-            total=self.total,
-            page=self.page,
-            size=self.size,
-            brands=list(self.brands),
-        )
-
 
 @dataclass(frozen=True)
 class EventOptionResponse:
     slug: str
     label: str
-
-    def to_schema(self) -> EventOptionSchema:
-        return EventOptionSchema(slug=self.slug, label=self.label)
 
 
 @dataclass(frozen=True)
@@ -174,15 +107,6 @@ class MatchPageResponse:
     size: int
     events: list[EventOptionResponse]
 
-    def to_schema(self) -> MatchPageSchema:
-        return MatchPageSchema(
-            items=[i.to_schema() for i in self.items],
-            total=self.total,
-            page=self.page,
-            size=self.size,
-            events=[e.to_schema() for e in self.events],
-        )
-
 
 @dataclass(frozen=True)
 class BeltStatResponse:
@@ -192,24 +116,12 @@ class BeltStatResponse:
     top_holder: str | None
     top_holder_reigns: int
 
-    def to_schema(self) -> BeltStatSchema:
-        return BeltStatSchema(
-            belt_name=self.belt_name,
-            reigns=self.reigns,
-            holders=self.holders,
-            top_holder=self.top_holder,
-            top_holder_reigns=self.top_holder_reigns,
-        )
-
 
 @dataclass(frozen=True)
 class HolderStatResponse:
     name: str
     reigns: int
     belts: int
-
-    def to_schema(self) -> HolderStatSchema:
-        return HolderStatSchema(name=self.name, reigns=self.reigns, belts=self.belts)
 
 
 @dataclass(frozen=True)
@@ -219,15 +131,6 @@ class ChampionshipStatsResponse:
     holder_count: int
     belts: list[BeltStatResponse]
     top_holders: list[HolderStatResponse]
-
-    def to_schema(self) -> ChampionshipStatsSchema:
-        return ChampionshipStatsSchema(
-            total_acquisitions=self.total_acquisitions,
-            belt_count=self.belt_count,
-            holder_count=self.holder_count,
-            belts=[b.to_schema() for b in self.belts],
-            top_holders=[h.to_schema() for h in self.top_holders],
-        )
 
 
 @dataclass(frozen=True)
@@ -241,26 +144,11 @@ class EventStatResponse:
     title_matches: int
     multi_matches: int
 
-    def to_schema(self) -> EventStatSchema:
-        return EventStatSchema(
-            slug=self.slug,
-            label=self.label,
-            month=self.month,
-            year=self.year,
-            matches=self.matches,
-            finished=self.finished,
-            title_matches=self.title_matches,
-            multi_matches=self.multi_matches,
-        )
-
 
 @dataclass(frozen=True)
 class BrandCountResponse:
     brand: str
     wrestlers: int
-
-    def to_schema(self) -> BrandCountSchema:
-        return BrandCountSchema(brand=self.brand, wrestlers=self.wrestlers)
 
 
 @dataclass(frozen=True)
@@ -269,11 +157,6 @@ class RatedWrestlerResponse:
     wins: int
     losses: int
     win_rate: float
-
-    def to_schema(self) -> RatedWrestlerSchema:
-        return RatedWrestlerSchema(
-            name=self.name, wins=self.wins, losses=self.losses, win_rate=self.win_rate
-        )
 
 
 @dataclass(frozen=True)
@@ -286,15 +169,3 @@ class AnalyticsResponse:
     non_title_matches: int
     top_win_rates: list[RatedWrestlerResponse]
     min_matches_for_rate: int
-
-    def to_schema(self) -> AnalyticsSchema:
-        return AnalyticsSchema(
-            events=[e.to_schema() for e in self.events],
-            brands=[b.to_schema() for b in self.brands],
-            singles_matches=self.singles_matches,
-            multi_matches=self.multi_matches,
-            title_matches=self.title_matches,
-            non_title_matches=self.non_title_matches,
-            top_win_rates=[r.to_schema() for r in self.top_win_rates],
-            min_matches_for_rate=self.min_matches_for_rate,
-        )
