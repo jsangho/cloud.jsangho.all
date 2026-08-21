@@ -58,40 +58,6 @@ function NavLink({
   );
 }
 
-/**
- * 아직 안 열린 메인 자리 — 데이터 센터 · AI LAB (Phase 2·3).
- *
- * **링크로 두지 않는다.** 새 IA를 먼저 보여 주되 404로 보내지 않기 위한 자리이고,
- * `KickoffMenu`가 쓰던 "href 없으면 아직 안 열린 자리" 규약과 같은 처리다.
- * 페이지가 생기면 이 컴포넌트 대신 `NavLink`로 바꾼다.
- */
-function NavSoon({
-  icon,
-  children,
-  fullWidth = false,
-}: {
-  icon?: ReactNode;
-  children: ReactNode;
-  fullWidth?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        buttonVariants({ variant: "outline", size: "sm" }),
-        "gap-1.5 cursor-default border-dashed border-stone-300/60 bg-transparent text-stone-400 shadow-none dark:border-stone-700/60 dark:text-stone-500",
-        fullWidth && "w-full justify-start",
-      )}
-      aria-disabled="true"
-    >
-      {icon}
-      {children}
-      <span className="ml-1 rounded border border-current px-1 text-[10px] leading-tight">
-        준비 중
-      </span>
-    </span>
-  );
-}
-
 export function Navbar() {
   const router = useRouter();
   const { user, logout, isReady } = useAuth();
@@ -110,6 +76,7 @@ export function Navbar() {
   const isHome = mounted && pathname === "/";
   const isPle = mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
   const isDataCenter = mounted && pathname.startsWith("/data-center");
+  const isAiLab = mounted && pathname.startsWith("/ai-lab");
   const isRankings = mounted && pathname === "/rankings";
   const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
   const isMore = mounted && isMorePath(pathname);
@@ -175,12 +142,14 @@ export function Navbar() {
       >
         데이터 센터
       </NavLink>
-      <NavSoon
-        icon={<Brain className="h-3.5 w-3.5 shrink-0 text-data" aria-hidden />}
+      <NavLink
+        href="/ai-lab"
+        active={isAiLab}
         fullWidth={fullWidth}
+        icon={<Brain className="h-3.5 w-3.5 shrink-0 text-data" aria-hidden />}
       >
         AI LAB
-      </NavSoon>
+      </NavLink>
       <NavLink
         href="/rankings"
         active={isRankings}
