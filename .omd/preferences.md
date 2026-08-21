@@ -79,3 +79,108 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/components/career-belt.
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/career-belt.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T02:32:39.688Z — introduced-off-palette-color-s-e63946-db
+
+```omd-meta
+id: pref_mt0wnvns_904c623d
+timestamp: 2026-08-20T02:32:39.688Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #e63946, #dbeafe, #93c5fd in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-08-20T02:32:49.517Z — introduced-off-palette-color-s-101a2e-in
+
+```omd-meta
+id: pref_mt0wo38t_d126d8d3
+timestamp: 2026-08-20T02:32:49.517Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #101a2e in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-08-20T02:33:14.235Z — introduced-off-palette-color-s-dbeafe-93
+
+```omd-meta
+id: pref_mt0wombf_480520a4
+timestamp: 2026-08-20T02:33:14.235Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #dbeafe, #93c5fd, #60a5fa in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-08-20T02:46:38.661Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt0x5v0l_ab563416
+timestamp: 2026-08-20T02:46:38.661Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/navbar.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/navbar.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T02:48:46.621Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt0x8lr1_d5a8026d
+timestamp: 2026-08-20T02:48:46.621Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx"
+```
+
+Introduced off-scale border radius rounded-2xl(16px), rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T02:50:00.576Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt0xa6tc_98ea80b0
+timestamp: 2026-08-20T02:50:00.576Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/page.tsx"
+```
+
+Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/app/page.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T02:50:59.673Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt0xbgex_7329da68
+timestamp: 2026-08-20T02:50:59.673Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/ple/ple-status-board.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/ple/ple-status-board.tsx — not in DESIGN.md radius scale
