@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WrestlerFormChart } from "@/components/records/wrestler-form-chart";
 import { resolveCompetitorInfo } from "@/lib/wrestler-info";
 import type { CompetitorProfile, CompetitorMatchRecord } from "@/lib/records-api";
 import type { TitleAcquisition } from "@/lib/title-history-api";
@@ -468,6 +469,12 @@ export function CompetitorRecordView({
           </div>
         </div>
       </section>
+
+      {/*
+       * PLE별 성적 (Phase 2 §6). **데이터가 얇으면 컴포넌트가 스스로 안 그린다** —
+       * 대회 하나짜리 막대는 성적이 아니라 장식이라 그 판단을 차트 쪽에 뒀다.
+       */}
+      <WrestlerFormChart matches={profile.matches} />
 
       <section className="rounded-2xl border border-stone-200/70 dark:border-stone-700/70 bg-stone-50/40 dark:bg-stone-950/40 p-4">
         <h2 className="text-sm font-extrabold text-stone-50">필터</h2>

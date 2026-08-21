@@ -109,6 +109,7 @@ export function Navbar() {
 
   const isHome = mounted && pathname === "/";
   const isPle = mounted && (pathname === "/ple" || pathname.startsWith("/ple/"));
+  const isDataCenter = mounted && pathname.startsWith("/data-center");
   const isRankings = mounted && pathname === "/rankings";
   const isRecords = mounted && (pathname === "/records" || pathname.startsWith("/records/"));
   const isMore = mounted && isMorePath(pathname);
@@ -166,12 +167,14 @@ export function Navbar() {
       <NavLink href="/ple" active={isPle} fullWidth={fullWidth}>
         PLE 예측
       </NavLink>
-      <NavSoon
-        icon={<BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+      <NavLink
+        href="/data-center"
+        active={isDataCenter}
         fullWidth={fullWidth}
+        icon={<BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden />}
       >
         데이터 센터
-      </NavSoon>
+      </NavLink>
       <NavSoon
         icon={<Brain className="h-3.5 w-3.5 shrink-0 text-data" aria-hidden />}
         fullWidth={fullWidth}
