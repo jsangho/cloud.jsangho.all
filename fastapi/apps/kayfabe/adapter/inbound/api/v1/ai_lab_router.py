@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentActivitySchema,
+    AgentAnalysisSchema,
     AgentReportSchema,
+    AgentTotalsSchema,
+    AiLabAgentsSchema,
     AiLabOverviewSchema,
     AiLabPredictionsSchema,
     IntegritySchema,
@@ -26,6 +29,7 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     SystemComponentSchema,
 )
 from kayfabe.app.dtos.ai_lab_dto import (
+    AiLabAgentsResponse,
     AiLabOverviewResponse,
     AiLabPredictionsResponse,
 )
@@ -58,7 +62,10 @@ async def get_ai_lab_overview(use_case: AiLabUseCase = Depends(get_ai_lab)):
     response_model=AiLabPredictionsSchema,
     response_model_by_alias=True,
 )
-async def list_ai_lab_predictions(use_case: AiLabUseCase = Depends(get_ai_lab)):
+async def list_ai_lab_predictions(
+    agent: str | None = Query(default=None),
+    use_case: AiLabUseCase = Depends(get_ai_lab),
+):
     """저장된 예측 전체 + 에이전트 리포트 + 무결성 판정.
 
     **저장된 값만 읽는다** — LLM을 부르지도, 예측을 만들지도 않는다. 생성은 관리자
@@ -66,9 +73,65 @@ async def list_ai_lab_predictions(use_case: AiLabUseCase = Depends(get_ai_lab)):
 
     리포트의 `sources`는 에이전트가 인용한 URL이지 **검색된 청크가 아니다.** 어떤
     청크가 어떤 유사도로 쓰였는지는 지금 구조가 기록하지 않는다.
+
+    `agent`를 주면 그 에이전트가 리포트를 낸 예측만 남는다. 모르는 이름이면 빈
+    목록이다 — 없음은 예외가 아니다.
     """
-    logger.info("[AiLabRouter] list_ai_lab_predictions")
-    return predictions_to_schema(await use_case.list_predictions())
+    logger.info("[AiLabRouter] list_ai_lab_predictions | agent=%s", agent or "-")
+    return predictions_to_schema(await use_case.list_predictions(agent=agent))
+
+
+@ai_lab_router.get(
+    "/agents",
+    response_model=AiLabAgentsSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_agents(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """에이전트별 응답률·의견률·정확도·가중치·자기 참조 출처 (Phase 3-3).
+
+    **저장된 리포트만 읽는다** — LLM을 부르지 않는다. 정확도는 최종 예측이 아니라
+    **그 에이전트의 의견**을 실제 승자와 대조한 값이다.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_agents")
+    return agents_to_schema(await use_case.get_agents())
+
+
+def agents_to_schema(response: AiLabAgentsResponse) -> AiLabAgentsSchema:
+    return AiLabAgentsSchema(
+        totals=AgentTotalsSchema(
+            agent_count=response.totals.agent_count,
+            total_reports=response.totals.total_reports,
+            opinionated=response.totals.opinionated,
+            no_opinion=response.totals.no_opinion,
+            overall_opinion_rate=response.totals.overall_opinion_rate,
+            gradable_reports=response.totals.gradable_reports,
+            total_predictions=response.totals.total_predictions,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        agents=[
+            AgentAnalysisSchema(
+                agent=item.agent,
+                reports=item.reports,
+                with_pick=item.with_pick,
+                no_opinion=item.no_opinion,
+                response_rate=item.response_rate,
+                opinion_rate=item.opinion_rate,
+                gradable=item.gradable,
+                correct=item.correct,
+                incorrect=item.incorrect,
+                accuracy=item.accuracy,
+                accuracy_low=item.accuracy_low,
+                accuracy_high=item.accuracy_high,
+                avg_weight=item.avg_weight,
+                avg_weight_opinionated=item.avg_weight_opinionated,
+                matches_covered=item.matches_covered,
+                events_covered=item.events_covered,
+                self_referencing_reports=item.self_referencing_reports,
+                uses_knowledge=item.uses_knowledge,
+            )
+            for item in response.agents
+        ],
+    )
 
 
 def totals_to_schema(totals: PredictionTotals) -> PredictionTotalsSchema:

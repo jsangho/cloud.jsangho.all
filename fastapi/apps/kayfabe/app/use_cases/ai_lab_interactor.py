@@ -15,6 +15,7 @@ import logging
 
 from kayfabe.app.dtos.ai_lab_dto import (
     AgentReportItem,
+    AiLabAgentsResponse,
     AiLabOverviewResponse,
     AiLabPredictionsResponse,
     PredictionEvent,
@@ -29,6 +30,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
     PredictionRow,
     ReportRow,
+    summarize_agent_analysis,
     summarize_agents,
     summarize_integrity,
     summarize_predictions,
@@ -72,7 +74,38 @@ class AiLabInteractor(AiLabUseCase):
             recent=_recent(predictions),
         )
 
-    async def list_predictions(self) -> AiLabPredictionsResponse:
+    async def get_agents(self) -> AiLabAgentsResponse:
+        """에이전트별 성적. **새 쿼리를 쓰지 않는다** — 이미 읽는 두 목록을 잇는다.
+
+        정확도는 `report.pick`을 실제 `winner_pick`과 대조해 낸다. 최종 예측이 맞았는지가
+        아니라 **그 에이전트의 의견이 맞았는지**다 — 둘은 다르고, 갈리는 자리가 이
+        화면의 존재 이유다.
+        """
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, agents = summarize_agent_analysis(predictions, reports)
+        logger.info(
+            "[AiLabInteractor] get_agents | 에이전트=%d 리포트=%d 채점가능=%d",
+            totals.agent_count,
+            totals.total_reports,
+            totals.gradable_reports,
+        )
+
+        return AiLabAgentsResponse(
+            totals=totals,
+            # 개요·목록과 **같은** 판정을 쓴다. 화면마다 다른 무결성이 나오면 안 된다.
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            agents=agents,
+        )
+
+    async def list_predictions(
+        self, *, agent: str | None = None
+    ) -> AiLabPredictionsResponse:
         """저장된 예측 전체 + 리포트 + 무결성.
 
         **무결성을 목록과 같은 응답에 담는다.** 목록만 따로 받아 가면 화면이 적중률을
@@ -91,11 +124,18 @@ class AiLabInteractor(AiLabUseCase):
             key=lambda r: (r.generated_at, r.event_slug, r.match_key),
             reverse=True,
         )
+        if agent is not None:
+            with_agent = {
+                (r.event_slug, r.match_key) for r in reports if r.agent == agent
+            }
+            ordered = [r for r in ordered if (r.event_slug, r.match_key) in with_agent]
 
         logger.info(
-            "[AiLabInteractor] list_predictions | 예측=%d 리포트=%d",
+            "[AiLabInteractor] list_predictions | 예측=%d 리포트=%d agent=%s 결과=%d",
             len(predictions),
             len(reports),
+            agent or "-",
+            len(ordered),
         )
 
         return AiLabPredictionsResponse(

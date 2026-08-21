@@ -15,7 +15,11 @@ export function IntegrityBanner({
   totals,
 }: {
   integrity: Integrity;
-  totals: PredictionTotals;
+  /**
+   * 없으면 적중률 줄을 아예 세우지 않는다. **0으로 채우지 않는다** — 에이전트 화면처럼
+   * 전체 적중률이 문맥에 없는 자리가 있고, 거기에 0을 넣으면 "다 틀렸다"가 된다.
+   */
+  totals?: PredictionTotals;
 }) {
   const leakageSuspected =
     integrity.selfReferencingPredictions > 0 || !integrity.temporalVerifiable;
@@ -40,14 +44,16 @@ export function IntegrityBanner({
       </div>
 
       <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-        <IntegrityFact
-          label="Hit rate"
-          value={
-            totals.hitRate === null
-              ? "채점된 예측 없음"
-              : `${formatRatio(totals.hitRate)} · ${totals.correct}/${totals.graded} · 95% CI ${formatRatio(totals.hitRateLow)}–${formatRatio(totals.hitRateHigh)}`
-          }
-        />
+        {totals && (
+          <IntegrityFact
+            label="Hit rate"
+            value={
+              totals.hitRate === null
+                ? "채점된 예측 없음"
+                : `${formatRatio(totals.hitRate)} · ${totals.correct}/${totals.graded} · 95% CI ${formatRatio(totals.hitRateLow)}–${formatRatio(totals.hitRateHigh)}`
+            }
+          />
+        )}
         <IntegrityFact label="Sample" value={`${integrity.sampleSize} predictions`} />
         <IntegrityFact
           label="Coverage"
@@ -79,7 +85,7 @@ export function IntegrityBanner({
           Potential data leakage detected.
         </p>
       )}
-      {!integrity.generalizable && totals.hitRate !== null && (
+      {!integrity.generalizable && totals && totals.hitRate !== null && (
         <p className="mt-1 text-sm text-foreground">
           현재 적중률 {formatRatio(totals.hitRate)}는{" "}
           <strong className="font-semibold">일반화 성능 지표가 아닙니다.</strong>

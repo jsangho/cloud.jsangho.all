@@ -134,6 +134,59 @@ class PredictionEventSchema(_Camel):
     count: int
 
 
+class AgentAnalysisSchema(_Camel):
+    """에이전트 한 명의 성적 (Phase 3-3).
+
+    **분모를 함께 낸다.** 비율만 보내면 화면이 "90%"만 세울 수 있고, 그 뒤의 9/10이
+    사라진다. 표본이 5~10건인 지금은 분모가 비율보다 중요하다.
+    """
+
+    agent: str
+    """코드의 이름 그대로 — storyline · odds · rumor."""
+    reports: int
+    with_pick: int = Field(alias="withPick")
+    no_opinion: int = Field(alias="noOpinion")
+    response_rate: float | None = Field(default=None, alias="responseRate")
+    """리포트 수 / 전체 예측 수."""
+    opinion_rate: float | None = Field(default=None, alias="opinionRate")
+    gradable: int
+    """의견을 냈고 결과도 나온 리포트 — **정확도의 분모다.**"""
+    correct: int
+    incorrect: int
+    accuracy: float | None = None
+    """채점 대상이 없으면 `None` — 0.0이 아니다."""
+    accuracy_low: float | None = Field(default=None, alias="accuracyLow")
+    """윌슨 95% 신뢰구간. **화면은 이 값을 함께 적어야 한다.**"""
+    accuracy_high: float | None = Field(default=None, alias="accuracyHigh")
+    avg_weight: float | None = Field(default=None, alias="avgWeight")
+    avg_weight_opinionated: float | None = Field(
+        default=None, alias="avgWeightOpinionated"
+    )
+    matches_covered: int = Field(alias="matchesCovered")
+    events_covered: int = Field(alias="eventsCovered")
+    self_referencing_reports: int = Field(alias="selfReferencingReports")
+    """그 대회 자체를 다룬 문서를 인용한 리포트 수."""
+    uses_knowledge: bool = Field(alias="usesKnowledge")
+    """출처를 한 번이라도 낸 적이 있는가. 실측이다 — 코드를 읽어 정하지 않는다."""
+
+
+class AgentTotalsSchema(_Camel):
+    agent_count: int = Field(alias="agentCount")
+    total_reports: int = Field(alias="totalReports")
+    opinionated: int
+    no_opinion: int = Field(alias="noOpinion")
+    overall_opinion_rate: float | None = Field(default=None, alias="overallOpinionRate")
+    gradable_reports: int = Field(alias="gradableReports")
+    total_predictions: int = Field(alias="totalPredictions")
+    """응답률의 분모 — 폴백을 뺀 예측 수."""
+
+
+class AiLabAgentsSchema(_Camel):
+    totals: AgentTotalsSchema
+    integrity: IntegritySchema
+    agents: list[AgentAnalysisSchema]
+
+
 class AiLabPredictionsSchema(_Camel):
     """예측 목록 + 그 목록을 어떻게 읽어야 하는지(무결성).
 

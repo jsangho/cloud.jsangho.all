@@ -9,7 +9,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from kayfabe.app.dtos.ai_lab_dto import AiLabOverviewResponse, AiLabPredictionsResponse
+from kayfabe.app.dtos.ai_lab_dto import (
+    AiLabAgentsResponse,
+    AiLabOverviewResponse,
+    AiLabPredictionsResponse,
+)
 
 
 class AiLabUseCase(ABC):
@@ -19,11 +23,23 @@ class AiLabUseCase(ABC):
         ...
 
     @abstractmethod
-    async def list_predictions(self) -> AiLabPredictionsResponse:
+    async def list_predictions(
+        self, *, agent: str | None = None
+    ) -> AiLabPredictionsResponse:
         """저장된 예측 전체 + 에이전트 리포트 + 무결성 판정.
+
+        `agent`를 주면 **그 에이전트가 리포트를 낸 예측만** 남긴다. 모르는 이름이면
+        빈 목록이다 — 없음은 예외가 아니다. 무결성·집계·대회 목록은 필터와 무관하게
+        전체를 기준으로 낸다: 그것들은 *지금 보고 있는 목록*이 아니라 *저장된 예측 전체*를
+        설명하는 값이라, 필터에 따라 흔들리면 무결성 경고가 약해진다.
 
         **페이지네이션이 없다.** 지금 예측은 12건이고, 나눠 보낼 이유가 생기기 전에
         나누면 화면과 API 양쪽에 쓰이지 않는 구조만 남는다. 수백 건이 되면 그때
         `data_center`의 페이지 질의 패턴을 그대로 가져온다 — 그 경계를 여기 적어 둔다.
         """
+        ...
+
+    @abstractmethod
+    async def get_agents(self) -> AiLabAgentsResponse:
+        """에이전트별 응답률·의견률·정확도·가중치·자기 참조 출처 (Phase 3-3)."""
         ...

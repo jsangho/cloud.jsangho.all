@@ -16,6 +16,8 @@ from datetime import datetime
 
 from kayfabe.app.services.ai_lab_integrity import (
     AgentActivity,
+    AgentAnalysis,
+    AgentAnalysisTotals,
     IntegrityFacts,
     PredictionTotals,
 )
@@ -100,3 +102,16 @@ class AiLabPredictionsResponse:
     integrity: IntegrityFacts
     events: list[PredictionEvent]
     items: list[PredictionItem]
+
+
+@dataclass(frozen=True)
+class AiLabAgentsResponse:
+    """에이전트 성적 + 그 성적을 어떻게 읽어야 하는지 (Phase 3-3).
+
+    무결성을 같은 응답에 담는 이유는 예측 목록과 같다 — 정확도만 따로 받아 가면
+    화면이 맥락 없이 세울 수 있고, 같은 판정을 두 번 계산하게 된다.
+    """
+
+    totals: AgentAnalysisTotals
+    integrity: IntegrityFacts
+    agents: list[AgentAnalysis]

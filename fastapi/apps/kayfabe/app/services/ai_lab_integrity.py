@@ -126,6 +126,158 @@ class AgentActivity:
     avg_weight: float | None
 
 
+@dataclass(frozen=True)
+class AgentAnalysis:
+    """에이전트 한 명의 성적 (Phase 3-3).
+
+    `AgentActivity`(개요용)와 **별도 타입이다.** 개요는 활동량만 보여 주고 정확도를
+    말하지 않으므로, 거기에 필드를 끼워 넣으면 개요 계약이 커지고 쓰지 않는 값을 매번
+    계산하게 된다.
+
+    분모가 셋 다 다르다 — 그래서 비율만 들고 다니지 않고 **분자·분모를 함께** 낸다.
+    화면이 "90%"만 세우면 그 뒤의 9/10이 사라진다.
+    """
+
+    agent: str
+    #: 이 에이전트가 낸 리포트 수. 분모는 `total_predictions`(응답률).
+    reports: int
+    with_pick: int
+    no_opinion: int
+    #: 리포트 수 / 전체 예측 수. 예측이 0건이면 `None`.
+    response_rate: float | None
+    #: pick을 고른 리포트 / 이 에이전트의 리포트. 리포트가 0건이면 `None`.
+    opinion_rate: float | None
+    #: 의견을 냈고 결과도 나온 리포트 — **정확도의 분모다.**
+    gradable: int
+    correct: int
+    incorrect: int
+    #: 채점 대상이 없으면 `None`이다 — 0.0이 아니다.
+    accuracy: float | None
+    accuracy_low: float | None
+    accuracy_high: float | None
+    #: 전체 리포트 평균. 의견 없음(0.0)이 끌어내린 값이다.
+    avg_weight: float | None
+    #: 의견을 낸 리포트만의 평균. 위와 함께 봐야 뜻이 통한다.
+    avg_weight_opinionated: float | None
+    matches_covered: int
+    events_covered: int
+    #: 그 대회 자체를 다룬 문서를 인용한 리포트 수.
+    self_referencing_reports: int
+    #: 출처를 한 번이라도 낸 적이 있는가. **실측이다** — 코드를 읽어 정하지 않는다.
+    uses_knowledge: bool
+
+
+@dataclass(frozen=True)
+class AgentAnalysisTotals:
+    agent_count: int
+    total_reports: int
+    opinionated: int
+    no_opinion: int
+    overall_opinion_rate: float | None
+    gradable_reports: int
+    #: 응답률의 분모 — 폴백을 뺀 예측 수.
+    total_predictions: int
+
+
+def summarize_agent_analysis(
+    predictions: Sequence[PredictionRow], reports: Sequence[ReportRow]
+) -> tuple[AgentAnalysisTotals, list[AgentAnalysis]]:
+    """에이전트별 성적. **새 SQL 없이** 이미 읽어 온 두 목록을 메모리에서 잇는다.
+
+    조인 키는 `(event_slug, match_key)`다.
+
+    규칙 셋을 지킨다.
+
+    1. **북메이커 폴백 예측은 통째로 뺀다** — 에이전트가 답하지 못해 배당으로
+       대체한 예측이라, 그 경기의 리포트로 에이전트를 평가할 수 없다.
+    2. **미채점(`winner_pick is None`)은 정확도 분모에서 뺀다.** 아직 결과가 없는 것을
+       오답으로 세면 안 된다.
+    3. **의견 없음(`pick is None`)은 오답이 아니다.** 근거가 없어 판단하지 않은 것은
+       설계된 동작이고(하네스 §13-Q1), 정확도 분모에도 들어가지 않는다.
+    """
+    graded_source = {
+        (p.event_slug, p.match_key): p
+        for p in predictions
+        if p.source != BOOKMAKER_FALLBACK
+    }
+    scoped = [r for r in reports if (r.event_slug, r.match_key) in graded_source]
+
+    by_agent: dict[str, list[ReportRow]] = {}
+    for report in scoped:
+        by_agent.setdefault(report.agent, []).append(report)
+
+    total_predictions = len(graded_source)
+    agents = [
+        _analyze_agent(agent, rows, graded_source, total_predictions)
+        for agent, rows in sorted(by_agent.items())
+    ]
+
+    opinionated = sum(a.with_pick for a in agents)
+    total_reports = sum(a.reports for a in agents)
+    totals = AgentAnalysisTotals(
+        agent_count=len(agents),
+        total_reports=total_reports,
+        opinionated=opinionated,
+        no_opinion=total_reports - opinionated,
+        overall_opinion_rate=(opinionated / total_reports) if total_reports else None,
+        gradable_reports=sum(a.gradable for a in agents),
+        total_predictions=total_predictions,
+    )
+    return totals, agents
+
+
+def _analyze_agent(
+    agent: str,
+    rows: Sequence[ReportRow],
+    predictions: dict[tuple[str, str], PredictionRow],
+    total_predictions: int,
+) -> AgentAnalysis:
+    opinionated = [r for r in rows if r.pick is not None]
+    gradable = [
+        r
+        for r in opinionated
+        if predictions[(r.event_slug, r.match_key)].winner_pick is not None
+    ]
+    correct = sum(
+        1
+        for r in gradable
+        if r.pick == predictions[(r.event_slug, r.match_key)].winner_pick
+    )
+    interval = wilson_interval(correct, len(gradable))
+
+    self_referencing = sum(
+        1
+        for r in rows
+        if r.sources
+        and cites_own_event(
+            r.sources, predictions[(r.event_slug, r.match_key)].event_label
+        )
+    )
+
+    return AgentAnalysis(
+        agent=agent,
+        reports=len(rows),
+        with_pick=len(opinionated),
+        no_opinion=len(rows) - len(opinionated),
+        response_rate=(len(rows) / total_predictions) if total_predictions else None,
+        opinion_rate=(len(opinionated) / len(rows)) if rows else None,
+        gradable=len(gradable),
+        correct=correct,
+        incorrect=len(gradable) - correct,
+        accuracy=(correct / len(gradable)) if gradable else None,
+        accuracy_low=interval[0] if interval else None,
+        accuracy_high=interval[1] if interval else None,
+        avg_weight=_mean(r.weight for r in rows),
+        avg_weight_opinionated=_mean(r.weight for r in opinionated),
+        matches_covered=len({(r.event_slug, r.match_key) for r in rows}),
+        events_covered=len({r.event_slug for r in rows}),
+        self_referencing_reports=self_referencing,
+        # 출처를 한 번도 낸 적이 없으면 이 에이전트는 코퍼스를 읽지 않는다는 뜻이다.
+        # `BookmakerOddsScout`가 그렇다 — 판단 근거가 카드의 배당 숫자뿐이다.
+        uses_knowledge=any(r.sources for r in rows),
+    )
+
+
 def wilson_interval(correct: int, total: int) -> tuple[float, float] | None:
     """비율의 윌슨 95% 신뢰구간. 표본이 없으면 `None`.
 

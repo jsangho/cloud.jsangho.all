@@ -129,15 +129,81 @@ export type AiLabPredictions = {
   items: PredictionItem[];
 };
 
-export async function fetchAiLabPredictions(): Promise<AiLabPredictions | null> {
+/**
+ * `agent`를 주면 그 에이전트가 리포트를 낸 예측만 온다. 모르는 이름이면 **빈 목록**이지
+ * 오류가 아니다. 집계·무결성·대회 목록은 필터와 무관하게 전체를 설명한다.
+ */
+export async function fetchAiLabPredictions(options?: {
+  agent?: string;
+}): Promise<AiLabPredictions | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   try {
-    const res = await fetch(`${aiLabBaseUrl}/predictions`, {
+    const params = new URLSearchParams();
+    if (options?.agent?.trim()) params.set("agent", options.agent.trim());
+    const query = params.toString();
+    const res = await fetch(`${aiLabBaseUrl}/predictions${query ? `?${query}` : ""}`, {
       signal: controller.signal,
     });
     if (!res.ok) return null;
     return (await res.json()) as AiLabPredictions;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export type AgentAnalysis = {
+  /** 코드의 이름 그대로 — storyline · odds · rumor. */
+  agent: string;
+  reports: number;
+  withPick: number;
+  noOpinion: number;
+  /** 리포트 수 / 전체 예측 수. */
+  responseRate: number | null;
+  opinionRate: number | null;
+  /** 의견을 냈고 결과도 나온 리포트 — **정확도의 분모다.** */
+  gradable: number;
+  correct: number;
+  incorrect: number;
+  /** 채점 대상이 없으면 `null` — 0이 아니다. */
+  accuracy: number | null;
+  accuracyLow: number | null;
+  accuracyHigh: number | null;
+  avgWeight: number | null;
+  avgWeightOpinionated: number | null;
+  matchesCovered: number;
+  eventsCovered: number;
+  /** 그 대회 자체를 다룬 문서를 인용한 리포트 수. */
+  selfReferencingReports: number;
+  /** 출처를 한 번이라도 낸 적이 있는가. 실측값이다. */
+  usesKnowledge: boolean;
+};
+
+export type AgentTotals = {
+  agentCount: number;
+  totalReports: number;
+  opinionated: number;
+  noOpinion: number;
+  overallOpinionRate: number | null;
+  gradableReports: number;
+  totalPredictions: number;
+};
+
+export type AiLabAgents = {
+  totals: AgentTotals;
+  integrity: Integrity;
+  agents: AgentAnalysis[];
+};
+
+export async function fetchAiLabAgents(): Promise<AiLabAgents | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/agents`, { signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabAgents;
   } catch {
     return null;
   } finally {

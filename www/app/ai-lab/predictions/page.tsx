@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다.
@@ -11,6 +13,7 @@ import {
 // 근거 모달은 PLE 화면이 쓰던 것을 **그대로** 연다 — 같은 것을 두 벌 만들지 않는다.
 import { AiReportDialog } from "@/components/ple/ai-report-dialog";
 import {
+  agentLabel,
   fetchAiLabPredictions,
   formatRatio,
   type AiLabPredictions,
@@ -35,20 +38,33 @@ const ALL = "__all__";
  * 보게 되므로, 그 위에 표본과 자기 참조 출처가 함께 서 있어야 100%가 무슨 뜻인지 읽힌다.
  */
 export default function AiLabPredictionsPage() {
+  /* `useSearchParams`는 Suspense 경계 안에서만 정적 프리렌더가 된다(Next 15). */
+  return (
+    <Suspense fallback={<AiLabShell title="Predictions">{null}</AiLabShell>}>
+      <PredictionsView />
+    </Suspense>
+  );
+}
+
+function PredictionsView() {
+  const searchParams = useSearchParams();
+  /* Agents 화면에서 넘어오는 `?agent=odds`. 모르는 이름이면 서버가 빈 목록을 준다. */
+  const agent = searchParams.get("agent");
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [event, setEvent] = useState<string>(ALL);
 
   useEffect(() => {
     let alive = true;
+    setState({ status: "loading" });
     void (async () => {
-      const data = await fetchAiLabPredictions();
+      const data = await fetchAiLabPredictions(agent ? { agent } : undefined);
       if (!alive) return;
       setState(data ? { status: "ready", data } : { status: "error" });
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [agent]);
 
   const data = state.status === "ready" ? state.data : null;
   const items = useMemo(() => {
@@ -77,6 +93,8 @@ export default function AiLabPredictionsPage() {
             </span>
           </p>
 
+          {agent && <AgentFilterNotice agent={agent} shown={data.items.length} />}
+
           <IntegrityBanner integrity={data.integrity} totals={data.totals} />
 
           {data.events.length > 1 && (
@@ -102,6 +120,32 @@ export default function AiLabPredictionsPage() {
         </div>
       )}
     </AiLabShell>
+  );
+}
+
+/**
+ * `?agent=` 로 걸러진 상태임을 밝힌다.
+ *
+ * 위의 집계·무결성은 **필터와 무관하게 전체**를 설명한다. 그 사실을 안 적으면
+ * "odds 예측 12건인데 표본 12건"으로 읽혀 두 숫자가 같은 것을 센다고 오해하게 된다.
+ */
+function AgentFilterNotice({ agent, shown }: { agent: string; shown: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-data-500/40 bg-data-surface px-4 py-2.5">
+      <span className="text-sm text-foreground">
+        <span className="font-medium text-data">{agentLabel(agent)}</span> 에이전트가
+        리포트를 낸 예측 <span className="tabular-nums">{shown}</span>건
+      </span>
+      <Link
+        href="/ai-lab/predictions"
+        className="text-xs text-brand-link underline underline-offset-2 hover:text-brand-hover"
+      >
+        필터 해제
+      </Link>
+      <span className="basis-full text-xs text-muted-foreground">
+        아래 집계와 무결성은 필터와 무관하게 저장된 예측 전체를 설명합니다.
+      </span>
+    </div>
   );
 }
 

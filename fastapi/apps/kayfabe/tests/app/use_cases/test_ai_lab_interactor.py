@@ -75,6 +75,33 @@ class FakeAiLabRepository(AiLabRepository):
         return self._events
 
 
+class CountingAiLabRepository(FakeAiLabRepository):
+    """호출을 센다 — 새 쿼리가 늘지 않았는지 구조로 확인하기 위해서다."""
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.calls: dict[str, int] = {}
+
+    def _record(self, name: str) -> None:
+        self.calls[name] = self.calls.get(name, 0) + 1
+
+    async def list_predictions(self) -> list[PredictionRow]:
+        self._record("list_predictions")
+        return await super().list_predictions()
+
+    async def list_reports(self) -> list[ReportRow]:
+        self._record("list_reports")
+        return await super().list_reports()
+
+    async def corpus_facts(self) -> CorpusFacts:
+        self._record("corpus_facts")
+        return await super().corpus_facts()
+
+    async def count_events(self) -> int:
+        self._record("count_events")
+        return await super().count_events()
+
+
 def _interactor(**kwargs) -> AiLabInteractor:
     return AiLabInteractor(repository=FakeAiLabRepository(**kwargs))
 
@@ -201,6 +228,154 @@ class TestNoGeneration:
                     imported.extend(alias.name for alias in node.names)
             offenders = [m for m in imported if any(b in m for b in banned)]
             assert offenders == [], f"{module.__name__} imports {offenders}"
+
+
+class TestAgentAnalysis:
+    """Phase 3-3 — 에이전트 성적. **새 쿼리 없이** 기존 두 목록을 잇는다."""
+
+    @pytest.mark.asyncio
+    async def test_the_agents_endpoint_reads_only_the_four_existing_queries(
+        self,
+    ) -> None:
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        )
+        await AiLabInteractor(repository=repository).get_agents()
+        # 새 리포지토리 메서드를 만들지 않았다는 것을 구조로 고정한다.
+        assert repository.calls == {
+            "list_predictions": 1,
+            "list_reports": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_agent_accuracy_is_measured_against_the_real_winner(self) -> None:
+        rows = [
+            _prediction(match_key="m1", pick="left", winner_pick="left"),
+            _prediction(match_key="m2", pick="left", winner_pick="right"),
+        ]
+        reports = [
+            # 최종 예측은 m2에서 틀렸지만, odds는 그 경기에서 맞혔다.
+            ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ()),
+            ReportRow("summerslam", "m2", "odds", "right", 0.7, "…", ()),
+        ]
+        result = await _interactor(predictions=rows, reports=reports).get_agents()
+        odds = next(a for a in result.agents if a.agent == "odds")
+        assert (odds.gradable, odds.correct, odds.incorrect) == (2, 2, 0)
+        assert odds.accuracy == 1.0
+
+    @pytest.mark.asyncio
+    async def test_the_agents_view_shares_the_integrity_verdict(self) -> None:
+        rows = [_prediction(match_key=f"m{i}") for i in range(12)]
+        reports = [
+            ReportRow(
+                "summerslam",
+                f"m{i}",
+                "rumor",
+                "left",
+                1.0,
+                "…",
+                ("https://en.wikipedia.org/wiki/SummerSlam_(2026)",),
+            )
+            for i in range(12)
+        ]
+        interactor = _interactor(predictions=rows, reports=reports)
+        agents = await interactor.get_agents()
+        overview = await interactor.get_overview()
+        # 화면마다 다른 무결성이 나오면 어느 쪽도 못 믿는다.
+        assert agents.integrity == overview.integrity
+        assert agents.integrity.generalizable is False
+
+    @pytest.mark.asyncio
+    async def test_the_overview_agent_contract_gains_no_new_fields(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import to_schema
+
+        overview = await _interactor(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        ).get_overview()
+        fields = set(to_schema(overview).agents[0].model_dump(by_alias=True))
+        # Phase 3-3 필드를 개요에 끼워 넣지 않는다 — 계약이 커지면 되돌리기 어렵다.
+        assert fields == {"agent", "reports", "withPick", "opinionRate", "avgWeight"}
+
+    @pytest.mark.asyncio
+    async def test_the_schema_keeps_the_denominators(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import agents_to_schema
+
+        rows = [_prediction(match_key=f"m{i}") for i in range(10)]
+        reports = [
+            ReportRow(
+                "summerslam",
+                f"m{i}",
+                "odds",
+                "left" if i < 9 else "right",
+                0.6,
+                "…",
+                (),
+            )
+            for i in range(10)
+        ]
+        schema = agents_to_schema(
+            await _interactor(predictions=rows, reports=reports).get_agents()
+        )
+        odds = schema.agents[0]
+        assert (odds.gradable, odds.correct, odds.incorrect) == (10, 9, 1)
+        assert odds.accuracy == pytest.approx(0.9)
+        assert odds.accuracy_low is not None and odds.accuracy_low < 0.9
+        assert odds.uses_knowledge is False
+
+
+class TestPredictionsAgentFilter:
+    """Phase 3-3 — Agents 화면에서 넘어오는 `?agent=` 필터."""
+
+    @staticmethod
+    def _fixture():
+        rows = [_prediction(match_key="m1"), _prediction(match_key="m2")]
+        reports = [
+            ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ()),
+            ReportRow("summerslam", "m2", "odds", "left", 0.6, "…", ()),
+            ReportRow("summerslam", "m1", "storyline", "left", 1.0, "…", ()),
+        ]
+        return rows, reports
+
+    @pytest.mark.asyncio
+    async def test_filtering_by_an_agent_keeps_only_its_predictions(self) -> None:
+        rows, reports = self._fixture()
+        result = await _interactor(predictions=rows, reports=reports).list_predictions(
+            agent="storyline"
+        )
+        assert [i.match_key for i in result.items] == ["m1"]
+
+    @pytest.mark.asyncio
+    async def test_every_real_agent_name_filters(self) -> None:
+        rows, reports = self._fixture()
+        interactor = _interactor(predictions=rows, reports=reports)
+        odds = await interactor.list_predictions(agent="odds")
+        storyline = await interactor.list_predictions(agent="storyline")
+        rumor = await interactor.list_predictions(agent="rumor")
+        assert len(odds.items) == 2
+        assert len(storyline.items) == 1
+        # rumor는 이 픽스처에 리포트가 없다 — 빈 목록이지 오류가 아니다.
+        assert rumor.items == []
+
+    @pytest.mark.asyncio
+    async def test_an_unknown_agent_yields_an_empty_list_not_an_error(self) -> None:
+        rows, reports = self._fixture()
+        result = await _interactor(predictions=rows, reports=reports).list_predictions(
+            agent="statistics"
+        )
+        assert result.items == []
+        # 없음은 예외가 아니다 — 집계와 무결성은 여전히 전체를 설명한다.
+        assert result.totals.total == 2
+        assert result.integrity.sample_size == 2
+
+    @pytest.mark.asyncio
+    async def test_no_filter_keeps_everything(self) -> None:
+        rows, reports = self._fixture()
+        result = await _interactor(predictions=rows, reports=reports).list_predictions()
+        assert len(result.items) == 2
 
 
 class TestListPredictions:
