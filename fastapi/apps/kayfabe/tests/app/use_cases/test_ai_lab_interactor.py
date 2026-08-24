@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -336,6 +337,109 @@ class TestAgentAnalysis:
         assert odds.accuracy == pytest.approx(0.9)
         assert odds.accuracy_low is not None and odds.accuracy_low < 0.9
         assert odds.uses_knowledge is False
+
+
+class TestEvaluation:
+    """Phase 3-6 — 평가 자격. **성능을 재지 않고 분모를 정한다.**"""
+
+    @staticmethod
+    def _document(url: str, *, published: int = 0) -> DocumentRow:
+        return DocumentRow(
+            source_url=url,
+            source_domain="en.wikipedia.org",
+            title="doc",
+            chunks=3,
+            chunks_embedded=3,
+            chunks_with_published_at=published,
+            first_published_at=None,
+            last_collected_at=_NOW,
+        )
+
+    @pytest.mark.asyncio
+    async def test_it_reuses_the_five_existing_reads(self) -> None:
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        )
+        await AiLabInteractor(repository=repository).get_evaluation()
+        # 새 리포지토리 메서드도 새 쿼리도 만들지 않았다.
+        assert repository.calls == {
+            "list_predictions": 1,
+            "list_reports": 1,
+            "list_documents": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_a_prediction_made_after_the_result_is_disqualified(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import evaluation_to_schema
+
+        # 운영 데이터의 모양 그대로: 결과가 기록된 뒤에 예측이 만들어졌다.
+        row = _prediction(match_key="m1", generated_at=datetime(2026, 8, 5, tzinfo=UTC))
+        row = replace(row, finished_at=datetime(2026, 8, 4, tzinfo=UTC))
+        schema = evaluation_to_schema(
+            await _interactor(
+                predictions=[row],
+                reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+            ).get_evaluation()
+        )
+        assert schema.totals.disqualified == 1
+        assert schema.totals.eligible == 0
+        # **자격이 0건이면 성능은 null이다.** 0%가 아니다.
+        assert schema.performance is None
+        item = schema.items[0]
+        assert item.status == "disqualified"
+        assert any(v.code == "temporal_inversion" and v.failed for v in item.verdicts)
+
+    @pytest.mark.asyncio
+    async def test_the_evaluation_view_shares_the_integrity_verdict(self) -> None:
+        rows = [_prediction(match_key=f"m{i}") for i in range(12)]
+        interactor = _interactor(predictions=rows)
+        evaluation = await interactor.get_evaluation()
+        overview = await interactor.get_overview()
+        # 3-0의 경고와 이 자격 판정이 갈리면 어느 쪽도 못 믿는다.
+        assert evaluation.integrity == overview.integrity
+
+    @pytest.mark.asyncio
+    async def test_an_eligible_sample_keeps_the_integrity_warning(self) -> None:
+        """자격이 있어도 표본이 작으면 3-0 경고는 그대로 선다."""
+        url = "https://en.wikipedia.org/wiki/Backlash_(2026)"
+        row = replace(
+            _prediction(match_key="m1", generated_at=datetime(2026, 8, 1, tzinfo=UTC)),
+            finished_at=datetime(2026, 8, 4, tzinfo=UTC),
+        )
+        result = await _interactor(
+            predictions=[row],
+            reports=[ReportRow("summerslam", "m1", "rumor", "left", 1.0, "…", (url,))],
+            documents=[self._document(url, published=3)],
+        ).get_evaluation()
+
+        assert result.totals.eligible == 1
+        assert result.performance is not None
+        assert result.performance.sample == 1
+        # 숫자는 내되 경고는 유지된다 — 둘은 다른 층위다.
+        assert result.integrity.generalizable is False
+        assert result.integrity.reasons
+
+    @pytest.mark.asyncio
+    async def test_the_rule_list_is_fixed_even_with_no_predictions(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import evaluation_to_schema
+
+        schema = evaluation_to_schema(await _interactor().get_evaluation())
+        assert schema.totals.predictions == 0
+        assert schema.performance is None
+        assert [rule.code for rule in schema.rules] == [
+            "not_applicable",
+            "pending",
+            "temporal_inversion",
+            "self_reference",
+            "unverifiable_corpus",
+        ]
+        # 보류를 실격으로 적지 않도록 severity를 함께 낸다.
+        by_code = {rule.code: rule.severity for rule in schema.rules}
+        assert by_code["unverifiable_corpus"] == "hold"
+        assert by_code["temporal_inversion"] == "disqualify"
 
 
 class TestPerformance:

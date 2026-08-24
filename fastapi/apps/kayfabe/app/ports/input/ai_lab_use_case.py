@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 
 from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
+    AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
@@ -44,6 +45,17 @@ class AiLabUseCase(ABC):
     @abstractmethod
     async def get_agents(self) -> AiLabAgentsResponse:
         """에이전트별 응답률·의견률·정확도·가중치·자기 참조 출처 (Phase 3-3)."""
+        ...
+
+    @abstractmethod
+    async def get_evaluation(self) -> AiLabEvaluationResponse:
+        """어떤 예측이 채점 대상이 될 **자격**이 있는가 (Phase 3-6).
+
+        **성능을 재지 않는다.** 자격 없는 예측을 분모에서 빼내는 것이 이 조회의 일이고,
+        자격 있는 표본이 0건이면 `performance`는 `None`으로 나간다 — 0%를 만들지 않는다.
+
+        새 쿼리를 쓰지 않는다 — 이미 읽는 예측·리포트·문서 목록을 잇는다.
+        """
         ...
 
     @abstractmethod

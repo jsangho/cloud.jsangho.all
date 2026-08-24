@@ -11,11 +11,15 @@ import {
 } from "@/components/data-center/data-center-shell";
 import {
   agentLabel,
+  fetchAiLabEvaluation,
   fetchAiLabPerformance,
   formatRatio,
   type AgentContribution,
+  type AiLabEvaluation,
   type AiLabPerformance,
   type ConsensusLevel,
+  type EvaluationItem,
+  type EvaluationStatus,
   type PerformanceItem,
 } from "@/lib/ai-lab-api";
 import { cn } from "@/lib/utils";
@@ -23,6 +27,11 @@ import { cn } from "@/lib/utils";
 type PageState =
   | { status: "loading" }
   | { status: "ready"; data: AiLabPerformance }
+  | { status: "error" };
+
+type EvaluationState =
+  | { status: "loading" }
+  | { status: "ready"; data: AiLabEvaluation }
   | { status: "error" };
 
 /**
@@ -41,6 +50,8 @@ type PageState =
  */
 export default function AiLabPerformancePage() {
   const [state, setState] = useState<PageState>({ status: "loading" });
+  /* 자격 판정은 **따로 받는다** — 한쪽이 실패해도 다른 쪽은 그대로 선다. */
+  const [evaluation, setEvaluation] = useState<EvaluationState>({ status: "loading" });
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +59,11 @@ export default function AiLabPerformancePage() {
       const data = await fetchAiLabPerformance();
       if (!alive) return;
       setState(data ? { status: "ready", data } : { status: "error" });
+    })();
+    void (async () => {
+      const data = await fetchAiLabEvaluation();
+      if (!alive) return;
+      setEvaluation(data ? { status: "ready", data } : { status: "error" });
     })();
     return () => {
       alive = false;
@@ -62,7 +78,202 @@ export default function AiLabPerformancePage() {
       {state.status === "loading" && <LoadingBlock rows={4} />}
       {state.status === "error" && <DataUnavailable what="합성 해부" />}
       {state.status === "ready" && <Synthesis data={state.data} />}
+
+      <div className="mt-6">
+        {evaluation.status === "loading" && <LoadingBlock rows={2} />}
+        {evaluation.status === "error" && <DataUnavailable what="평가 자격" />}
+        {evaluation.status === "ready" && <Eligibility data={evaluation.data} />}
+      </div>
     </AiLabShell>
+  );
+}
+
+/**
+ * Evaluation eligibility (Phase 3-6).
+ *
+ * **어떤 예측이 채점 대상이 될 자격이 있는가.** 3-0의 무결성 경고가 표본 수준에서
+ * "이 숫자를 믿어도 되는가"를 물었다면, 여기서는 예측 하나하나가 애초에 분모에
+ * 들어갈 자격이 있는지를 판정한 결과를 옮긴다.
+ *
+ * **문구를 화면이 지어내지 않는다** — 규칙 이름·설명·판정 사유가 전부 서버에서 온다.
+ * 자격이 0건이면 성능 블록 자체가 없다(`performance === null`).
+ */
+function Eligibility({ data }: { data: AiLabEvaluation }) {
+  const { totals, rules, items, performance } = data;
+
+  return (
+    <section
+      aria-labelledby="eligibility-heading"
+      className="flex flex-col gap-4 border-t border-border pt-6"
+    >
+      <div>
+        <h2 id="eligibility-heading" className="font-sport text-base tracking-wide text-foreground">
+          Evaluation eligibility
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          채점 대상이 될 자격이 있는 예측이 몇 건인가. 자격 없는 예측은 경고를 붙이는 것이 아니라
+          분모에서 빼냅니다.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <StatTile
+          value={totals.eligible}
+          label="Eligible"
+          note="채점 가능"
+          tone={totals.eligible > 0 ? "data" : "default"}
+        />
+        <StatTile value={totals.disqualified} label="Disqualified" note="누수 확정" />
+        <StatTile value={totals.held} label="Held" note="증명도 반증도 불가" />
+        <StatTile value={totals.pending} label="Pending" note="결과 없음" />
+        <StatTile value={totals.fallback} label="N/A" note="배당 폴백" />
+      </div>
+
+      <EligiblePerformanceBlock
+        performance={performance}
+        eligible={totals.eligible}
+        predictions={totals.predictions}
+      />
+
+      <ul className="flex flex-col gap-2">
+        {rules.map((rule) => (
+          <li key={rule.code} className="rounded-xl border border-border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {rule.label}{" "}
+                <span className="font-normal text-muted-foreground">({rule.code})</span>
+              </p>
+              <span className="flex items-center gap-2">
+                <SeverityBadge severity={rule.severity} />
+                <span className="text-xs tabular-nums text-muted-foreground">{rule.blocked}건</span>
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{rule.description}</p>
+          </li>
+        ))}
+      </ul>
+
+      {items.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {items.map((item) => (
+            <EligibilityRow key={`${item.eventSlug}-${item.matchKey}`} item={item} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** 자격 있는 표본이 없으면 **숫자를 세우지 않는다.** 0%를 만들지 않기 위해서다. */
+function EligiblePerformanceBlock({
+  performance,
+  eligible,
+  predictions,
+}: {
+  performance: AiLabEvaluation["performance"];
+  eligible: number;
+  predictions: number;
+}) {
+  if (performance === null) {
+    return (
+      <div className="rounded-xl border border-live/40 bg-card px-4 py-4 sm:px-5">
+        <p className="text-sm font-medium text-foreground">
+          자격 있는 표본이 {eligible}건입니다 — 성능을 계산하지 않았습니다.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          저장된 예측 {predictions}건 중 채점 대상 자격을 얻은 것이 없습니다. 0%나 임시 숫자로 이
+          자리를 채우지 않습니다.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5">
+      <p className="text-sm text-foreground">
+        자격 표본 {performance.sample}건 ·{" "}
+        <span className="tabular-nums">
+          {formatRatio(performance.accuracy)} ({performance.correct}/{performance.sample})
+        </span>{" "}
+        <span className="text-muted-foreground">
+          · 95% CI {formatRatio(performance.accuracyLow)}–{formatRatio(performance.accuracyHigh)}
+        </span>
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        대회 {performance.eventsCovered}개 기준. 자격 판정을 통과한 표본이지만 위의 무결성 경고는
+        그대로 적용됩니다 — 자격과 일반화 가능성은 다른 층위입니다.
+      </p>
+    </div>
+  );
+}
+
+function EligibilityRow({ item }: { item: EvaluationItem }) {
+  const blocking = item.verdicts.filter((v) => v.failed || !v.applicable);
+
+  return (
+    <li className="rounded-xl border border-border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{item.eventLabel}</p>
+          <p className="mt-0.5 truncate text-sm font-medium text-foreground">{item.matchTitle}</p>
+        </div>
+        <StatusBadge status={item.status} />
+      </div>
+      {blocking.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-1">
+          {blocking.map((verdict) => (
+            <li key={verdict.code} className="flex gap-2 text-xs text-muted-foreground">
+              <span aria-hidden className="select-none">
+                ·
+              </span>
+              {/* 사유는 서버가 낸 문장 그대로다. */}
+              <span>{verdict.detail}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+/** **보류를 실격으로 적지 않는다.** 색만으로 말하지 않고 글자를 함께 단다. */
+function SeverityBadge({ severity }: { severity: string }) {
+  const label = severity === "disqualify" ? "실격" : severity === "hold" ? "보류" : "제외";
+  return (
+    <span
+      className={cn(
+        "rounded border px-1.5 py-0.5 text-xs",
+        severity === "disqualify"
+          ? "border-live/50 bg-live/10 text-live"
+          : "border-border text-muted-foreground",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: EvaluationStatus }) {
+  const label: Record<EvaluationStatus, string> = {
+    eligible: "자격 있음",
+    disqualified: "실격",
+    held: "보류",
+    pending: "결과 없음",
+    not_applicable: "평가 대상 아님",
+  };
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded border px-1.5 py-0.5 text-xs",
+        status === "eligible"
+          ? "border-data-500/50 bg-data-surface text-data"
+          : status === "disqualified"
+            ? "border-live/50 bg-live/10 text-live"
+            : "border-border text-muted-foreground",
+      )}
+    >
+      {label[status]}
+    </span>
   );
 }
 

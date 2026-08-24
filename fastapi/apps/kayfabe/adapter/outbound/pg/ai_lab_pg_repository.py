@@ -56,6 +56,10 @@ class AiLabPgRepository(AiLabRepository):
                 AgentPredictionModel.generated_at,
                 PleMatchModel.winner_pick,
                 PleMatchModel.winner_name,
+                # 결과가 기록된 시각 (Phase 3-6). 평가 자격 판정이 "예측을 만들 때
+                # 정답이 이미 시스템 안에 있었는가"를 묻는 데 쓴다. 컬럼 하나가
+                # 늘 뿐 쿼리 수도 조인도 그대로다.
+                PleMatchModel.finished_at,
             )
             .join(PleEventModel, AgentPredictionModel.event_id == PleEventModel.id)
             # 경기 행이 사라져도 예측은 남는다 — 그때 채점 불가로 두고 버리지 않는다.
@@ -81,6 +85,7 @@ class AiLabPgRepository(AiLabRepository):
                 generated_at=row.generated_at,
                 winner_pick=row.winner_pick,
                 winner_name=row.winner_name,
+                finished_at=row.finished_at,
             )
             for row in result.all()
         ]

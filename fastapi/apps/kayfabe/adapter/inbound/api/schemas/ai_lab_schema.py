@@ -188,6 +188,77 @@ class AiLabAgentsSchema(_Camel):
     agents: list[AgentAnalysisSchema]
 
 
+class RuleVerdictSchema(_Camel):
+    """규칙 하나에 대한 판정 (Phase 3-6).
+
+    `applicable=False`는 **통과가 아니다** — 잴 수 없었다는 뜻이고, 잴 수 없으면
+    그 예측은 자격을 얻지 못한다.
+    """
+
+    code: str
+    failed: bool
+    applicable: bool
+    detail: str
+    """왜 그렇게 판정했는지. 사실만 적는다 — 화면이 문구를 지어내지 않게."""
+
+
+class EvaluationItemSchema(_Camel):
+    event_slug: str = Field(alias="eventSlug")
+    event_label: str = Field(alias="eventLabel")
+    match_key: str = Field(alias="matchKey")
+    match_title: str = Field(alias="matchTitle")
+    generated_at: datetime = Field(alias="generatedAt")
+    result_recorded_at: datetime | None = Field(default=None, alias="resultRecordedAt")
+    """결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다."""
+    status: str
+    """"eligible" | "disqualified" | "held" | "pending" | "not_applicable"."""
+    eligible: bool
+    verdicts: list[RuleVerdictSchema]
+
+
+class EvaluationRuleSchema(_Camel):
+    code: str
+    label: str
+    severity: str
+    """"exclude" | "disqualify" | "hold". **보류를 실격으로 적지 않기 위해 함께 낸다.**"""
+    description: str
+    blocked: int
+    """이 규칙이 막은 예측 수."""
+
+
+class EvaluationTotalsSchema(_Camel):
+    """다섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
+
+    predictions: int
+    fallback: int
+    pending: int
+    disqualified: int
+    held: int
+    """누수를 증명도 반증도 못 한 예측. **실격과 다른 상태다.**"""
+    eligible: int
+
+
+class EligiblePerformanceSchema(_Camel):
+    """**자격 있는 표본이 있을 때만 존재한다.**"""
+
+    sample: int
+    correct: int
+    incorrect: int
+    accuracy: float
+    accuracy_low: float = Field(alias="accuracyLow")
+    accuracy_high: float = Field(alias="accuracyHigh")
+    events_covered: int = Field(alias="eventsCovered")
+
+
+class AiLabEvaluationSchema(_Camel):
+    totals: EvaluationTotalsSchema
+    integrity: IntegritySchema
+    rules: list[EvaluationRuleSchema]
+    items: list[EvaluationItemSchema]
+    performance: EligiblePerformanceSchema | None = None
+    """자격 있는 표본이 0건이면 `null`. **0%도 빈 객체도 아니다.**"""
+
+
 class ReportContributionSchema(_Camel):
     """예측 하나에 실린 에이전트 한 명의 몫 (Phase 3-5)."""
 

@@ -211,6 +211,93 @@ export async function fetchAiLabAgents(): Promise<AiLabAgents | null> {
   }
 }
 
+/**
+ * 규칙 하나에 대한 판정 (Phase 3-6).
+ *
+ * `applicable=false`는 **통과가 아니다** — 잴 수 없었다는 뜻이고, 잴 수 없으면
+ * 그 예측은 자격을 얻지 못한다.
+ */
+export type RuleVerdict = {
+  code: string;
+  failed: boolean;
+  applicable: boolean;
+  /** 왜 그렇게 판정했는지. 서버가 낸 문장을 그대로 쓴다. */
+  detail: string;
+};
+
+export type EvaluationStatus = "eligible" | "disqualified" | "held" | "pending" | "not_applicable";
+
+export type EvaluationItem = {
+  eventSlug: string;
+  eventLabel: string;
+  matchKey: string;
+  matchTitle: string;
+  generatedAt: string;
+  /** 결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다. */
+  resultRecordedAt: string | null;
+  status: EvaluationStatus;
+  eligible: boolean;
+  verdicts: RuleVerdict[];
+};
+
+export type EvaluationSeverity = "exclude" | "disqualify" | "hold";
+
+export type EvaluationRule = {
+  code: string;
+  label: string;
+  /** **보류를 실격으로 적지 않기 위해** 함께 온다. */
+  severity: EvaluationSeverity;
+  description: string;
+  blocked: number;
+};
+
+/** 다섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다. */
+export type EvaluationTotals = {
+  predictions: number;
+  fallback: number;
+  pending: number;
+  disqualified: number;
+  /** 누수를 증명도 반증도 못 한 예측. **실격과 다른 상태다.** */
+  held: number;
+  eligible: number;
+};
+
+/** **자격 있는 표본이 있을 때만 존재한다.** */
+export type EligiblePerformance = {
+  sample: number;
+  correct: number;
+  incorrect: number;
+  accuracy: number;
+  accuracyLow: number;
+  accuracyHigh: number;
+  eventsCovered: number;
+};
+
+export type AiLabEvaluation = {
+  totals: EvaluationTotals;
+  integrity: Integrity;
+  rules: EvaluationRule[];
+  items: EvaluationItem[];
+  /** 자격 있는 표본이 0건이면 `null`. **0%도 빈 객체도 아니다.** */
+  performance: EligiblePerformance | null;
+};
+
+export async function fetchAiLabEvaluation(): Promise<AiLabEvaluation | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/evaluation`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabEvaluation;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** 예측 하나에 실린 에이전트 한 명의 몫 (Phase 3-5). */
 export type ReportContribution = {
   agent: string;

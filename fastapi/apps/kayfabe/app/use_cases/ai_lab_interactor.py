@@ -16,6 +16,7 @@ import logging
 from kayfabe.app.dtos.ai_lab_dto import (
     AgentReportItem,
     AiLabAgentsResponse,
+    AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
@@ -28,6 +29,7 @@ from kayfabe.app.dtos.ai_lab_dto import (
 )
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
+from kayfabe.app.services.ai_lab_evaluation import summarize_evaluation
 from kayfabe.app.services.ai_lab_integrity import (
     AgentActivity,
     CorpusFacts,
@@ -106,6 +108,42 @@ class AiLabInteractor(AiLabUseCase):
                 predictions, reports, corpus, events_total=events_total
             ),
             agents=agents,
+        )
+
+    async def get_evaluation(self) -> AiLabEvaluationResponse:
+        """평가 자격 판정 (Phase 3-6). **새 쿼리를 쓰지 않는다.**
+
+        3-4가 쓰는 문서 목록을 여기서도 읽는 이유는 하나다 — 인용 문서에 발행일이
+        있는지를 봐야 "예측보다 먼저 쓰인 글"인지 판정할 수 있기 때문이다. 그 값이
+        없으면 실격이 아니라 **보류**로 둔다.
+        """
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        documents = await self._repository.list_documents()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, rules, items, performance = summarize_evaluation(
+            predictions, reports, documents
+        )
+        logger.info(
+            "[AiLabInteractor] get_evaluation | 예측=%d 자격=%d 실격=%d 보류=%d 성능=%s",
+            totals.predictions,
+            totals.eligible,
+            totals.disqualified,
+            totals.held,
+            "있음" if performance else "없음",
+        )
+
+        return AiLabEvaluationResponse(
+            totals=totals,
+            # 다른 화면과 **같은** 판정을 쓴다. 3-0의 경고와 이 자격 판정이 갈리면 안 된다.
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            rules=rules,
+            items=items,
+            performance=performance,
         )
 
     async def get_performance(self) -> AiLabPerformanceResponse:

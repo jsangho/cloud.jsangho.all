@@ -14,6 +14,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from kayfabe.app.services.ai_lab_evaluation import (
+    EligiblePerformance,
+    EvaluationItem,
+    EvaluationTotals,
+    RuleTally,
+)
 from kayfabe.app.services.ai_lab_integrity import (
     AgentActivity,
     AgentAnalysis,
@@ -113,6 +119,26 @@ class AiLabPredictionsResponse:
     integrity: IntegrityFacts
     events: list[PredictionEvent]
     items: list[PredictionItem]
+
+
+@dataclass(frozen=True)
+class AiLabEvaluationResponse:
+    """어떤 예측이 채점 대상이 될 자격이 있는가 (Phase 3-6).
+
+    **성능을 재는 응답이 아니다.** `performance`는 자격 있는 표본이 있을 때만
+    만들어지고, 0건이면 `None`이다 — 0%도 빈 객체도 아니다.
+
+    무결성을 같은 응답에 담는 이유는 다른 화면과 같다. 다만 여기서는 관계가 뒤집힌다 —
+    3-0의 경고가 이 판정의 **결과**를 설명하는 것이 아니라, 이 판정이 그 경고의
+    **원인**을 예측 단위로 짚는다.
+    """
+
+    totals: EvaluationTotals
+    integrity: IntegrityFacts
+    rules: list[RuleTally]
+    items: list[EvaluationItem]
+    #: 자격 있는 표본이 없으면 `None`. **반드시 `None`이다.**
+    performance: EligiblePerformance | None
 
 
 @dataclass(frozen=True)

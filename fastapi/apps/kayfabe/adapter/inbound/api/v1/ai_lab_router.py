@@ -20,11 +20,16 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentReportSchema,
     AgentTotalsSchema,
     AiLabAgentsSchema,
+    AiLabEvaluationSchema,
     AiLabKnowledgeSchema,
     AiLabOverviewSchema,
     AiLabPerformanceSchema,
     AiLabPredictionsSchema,
     ConsensusLevelSchema,
+    EligiblePerformanceSchema,
+    EvaluationItemSchema,
+    EvaluationRuleSchema,
+    EvaluationTotalsSchema,
     InferentialSchema,
     IntegritySchema,
     KnowledgeDocumentSchema,
@@ -37,10 +42,12 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     PredictionTotalsSchema,
     RecentPredictionSchema,
     ReportContributionSchema,
+    RuleVerdictSchema,
     SystemComponentSchema,
 )
 from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
+    AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
@@ -107,6 +114,90 @@ async def get_ai_lab_agents(use_case: AiLabUseCase = Depends(get_ai_lab)):
     """
     logger.info("[AiLabRouter] get_ai_lab_agents")
     return agents_to_schema(await use_case.get_agents())
+
+
+@ai_lab_router.get(
+    "/evaluation",
+    response_model=AiLabEvaluationSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_evaluation(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """어떤 예측이 채점 대상이 될 **자격**이 있는가 (Phase 3-6).
+
+    **성능을 재는 응답이 아니다.** 3-0이 표본 수준에서 "이 적중률을 믿어도 되는가"를
+    물었다면, 여기서는 예측 하나하나가 애초에 분모에 들어갈 자격이 있는지를 판정한다.
+
+    `performance`는 **자격 있는 표본이 있을 때만** 만들어진다. 0건이면 `null`이다 —
+    0%도 빈 객체도 아니다.
+
+    `severity`가 실격(`disqualify`)과 보류(`hold`)를 가른다. 보류는 누수를 증명도
+    반증도 못 한 상태이고, 통과가 아니다.
+
+    **추정하지 않는다.** `ple_prediction_retrievals`가 없으므로 어떤 청크가 실제로
+    검색됐는지는 판정에 쓰지 않는다. 저장된 출처 URL까지가 확인 가능한 전부다.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_evaluation")
+    return evaluation_to_schema(await use_case.get_evaluation())
+
+
+def evaluation_to_schema(response: AiLabEvaluationResponse) -> AiLabEvaluationSchema:
+    return AiLabEvaluationSchema(
+        totals=EvaluationTotalsSchema(
+            predictions=response.totals.predictions,
+            fallback=response.totals.fallback,
+            pending=response.totals.pending,
+            disqualified=response.totals.disqualified,
+            held=response.totals.held,
+            eligible=response.totals.eligible,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        rules=[
+            EvaluationRuleSchema(
+                code=rule.code,
+                label=rule.label,
+                severity=rule.severity,
+                description=rule.description,
+                blocked=rule.blocked,
+            )
+            for rule in response.rules
+        ],
+        items=[
+            EvaluationItemSchema(
+                event_slug=item.event_slug,
+                event_label=item.event_label,
+                match_key=item.match_key,
+                match_title=item.match_title,
+                generated_at=item.generated_at,
+                result_recorded_at=item.result_recorded_at,
+                status=item.status,
+                eligible=item.eligible,
+                verdicts=[
+                    RuleVerdictSchema(
+                        code=verdict.code,
+                        failed=verdict.failed,
+                        applicable=verdict.applicable,
+                        detail=verdict.detail,
+                    )
+                    for verdict in item.verdicts
+                ],
+            )
+            for item in response.items
+        ],
+        # 자격이 0건이면 `None`을 그대로 내보낸다 — 여기서 0%를 만들지 않는다.
+        performance=(
+            None
+            if response.performance is None
+            else EligiblePerformanceSchema(
+                sample=response.performance.sample,
+                correct=response.performance.correct,
+                incorrect=response.performance.incorrect,
+                accuracy=response.performance.accuracy,
+                accuracy_low=response.performance.accuracy_low,
+                accuracy_high=response.performance.accuracy_high,
+                events_covered=response.performance.events_covered,
+            )
+        ),
+    )
 
 
 @ai_lab_router.get(
