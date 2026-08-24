@@ -13,6 +13,7 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
+    AiLabPerformanceResponse,
     AiLabPredictionsResponse,
 )
 
@@ -43,6 +44,17 @@ class AiLabUseCase(ABC):
     @abstractmethod
     async def get_agents(self) -> AiLabAgentsResponse:
         """에이전트별 응답률·의견률·정확도·가중치·자기 참조 출처 (Phase 3-3)."""
+        ...
+
+    @abstractmethod
+    async def get_performance(self) -> AiLabPerformanceResponse:
+        """최종 승률이 세 의견에서 **어떻게 접혔는지** (Phase 3-5).
+
+        **정확도를 재지 않는다.** 전체 적중률은 `get_overview()`가, 에이전트별
+        정확도는 `get_agents()`가 이미 낸다. 여기서 또 세면 같은 숫자가 세 번 나온다.
+
+        새 쿼리를 쓰지 않는다 — 이미 읽는 예측·리포트 목록을 잇는다.
+        """
         ...
 
     @abstractmethod

@@ -21,7 +21,11 @@ export const AI_LAB_TABS = [
   { href: "/ai-lab/predictions", label: "Predictions", ready: true },
   { href: "/ai-lab/agents", label: "Agents", ready: true },
   { href: "/ai-lab/knowledge", label: "Knowledge", ready: true },
-  { href: "/ai-lab/performance", label: "Performance", ready: false },
+  // 라우트는 `performance`, 라벨은 `Synthesis`다. 이 화면은 정확도를 재지 않고 최종
+  // 승률이 어떻게 만들어졌는지를 해부한다 — 이름이 재지 않는 것을 약속하면 화면이
+  // 아무리 정직해도 탭이 먼저 거짓말을 한다. "Performance"라는 이름은 누수 없는 표본이
+  // 생긴 뒤의 실제 성능 화면을 위해 남겨 둔다.
+  { href: "/ai-lab/performance", label: "Synthesis", ready: true },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

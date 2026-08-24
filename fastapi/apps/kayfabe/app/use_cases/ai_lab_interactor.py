@@ -18,7 +18,9 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
+    AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    InferentialAvailability,
     PredictionEvent,
     PredictionItem,
     RecentPrediction,
@@ -37,6 +39,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     summarize_predictions,
 )
 from kayfabe.app.services.ai_lab_knowledge import summarize_knowledge
+from kayfabe.app.services.ai_lab_performance import summarize_performance
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -103,6 +106,45 @@ class AiLabInteractor(AiLabUseCase):
                 predictions, reports, corpus, events_total=events_total
             ),
             agents=agents,
+        )
+
+    async def get_performance(self) -> AiLabPerformanceResponse:
+        """최종 승률의 합성 해부 (Phase 3-5). **새 쿼리를 쓰지 않는다.**
+
+        `get_agents()`와 같은 두 목록(`list_predictions`·`list_reports`)을 읽어
+        **다른 것을 편다** — 3-3은 의견이 맞았는지를, 여기서는 그 의견들이 최종
+        숫자로 어떻게 접혔는지를 본다.
+        """
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, consensus, contributions, items = summarize_performance(
+            predictions, reports
+        )
+        # 다른 화면과 **같은** 판정을 쓴다. 화면마다 다른 무결성이 나오면 안 된다.
+        integrity = summarize_integrity(
+            predictions, reports, corpus, events_total=events_total
+        )
+        logger.info(
+            "[AiLabInteractor] get_performance | 예측=%d 합의층=%d 에이전트=%d 추론가능=%s",
+            totals.predictions,
+            len(consensus),
+            len(contributions),
+            integrity.generalizable,
+        )
+
+        return AiLabPerformanceResponse(
+            totals=totals,
+            integrity=integrity,
+            # 새 문턱을 만들지 않는다 — 3-0의 결론을 이 화면의 언어로 옮기기만 한다.
+            inferential=InferentialAvailability(
+                available=integrity.generalizable, reasons=integrity.reasons
+            ),
+            consensus=consensus,
+            contributions=contributions,
+            items=items,
         )
 
     async def get_knowledge(self) -> AiLabKnowledgeResponse:

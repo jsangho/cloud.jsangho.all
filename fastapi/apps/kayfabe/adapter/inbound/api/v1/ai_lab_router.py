@@ -16,26 +16,34 @@ from fastapi import APIRouter, Depends, Query
 from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentActivitySchema,
     AgentAnalysisSchema,
+    AgentContributionSchema,
     AgentReportSchema,
     AgentTotalsSchema,
     AiLabAgentsSchema,
     AiLabKnowledgeSchema,
     AiLabOverviewSchema,
+    AiLabPerformanceSchema,
     AiLabPredictionsSchema,
+    ConsensusLevelSchema,
+    InferentialSchema,
     IntegritySchema,
     KnowledgeDocumentSchema,
     KnowledgeDomainSchema,
     KnowledgeTotalsSchema,
+    PerformanceItemSchema,
+    PerformanceTotalsSchema,
     PredictionEventSchema,
     PredictionItemSchema,
     PredictionTotalsSchema,
     RecentPredictionSchema,
+    ReportContributionSchema,
     SystemComponentSchema,
 )
 from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
     AiLabKnowledgeResponse,
     AiLabOverviewResponse,
+    AiLabPerformanceResponse,
     AiLabPredictionsResponse,
 )
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
@@ -99,6 +107,93 @@ async def get_ai_lab_agents(use_case: AiLabUseCase = Depends(get_ai_lab)):
     """
     logger.info("[AiLabRouter] get_ai_lab_agents")
     return agents_to_schema(await use_case.get_agents())
+
+
+@ai_lab_router.get(
+    "/performance",
+    response_model=AiLabPerformanceSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_performance(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """최종 승률이 세 의견에서 **어떻게 접혔는지** (Phase 3-5).
+
+    **정확도를 재는 응답이 아니다.** 전체 적중률은 `/overview`가, 에이전트별
+    정확도는 `/agents`가 이미 낸다. 여기 실린 `correct`·`graded`는 그 숫자를 다시
+    세우기 위한 것이 아니라 각 합의 층의 **분모를 밝히기 위한** 것이다.
+
+    `consensus`는 `confidence` 값이 아니라 `(answered, agreed)` 짝으로 묶인다 —
+    곱이 같으면 서로 다른 상황이 한 줄로 접히기 때문이다.
+
+    저장된 값만 읽는다. LLM도 임베딩도 부르지 않는다.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_performance")
+    return performance_to_schema(await use_case.get_performance())
+
+
+def performance_to_schema(
+    response: AiLabPerformanceResponse,
+) -> AiLabPerformanceSchema:
+    return AiLabPerformanceSchema(
+        totals=PerformanceTotalsSchema(
+            predictions=response.totals.predictions,
+            graded=response.totals.graded,
+            correct=response.totals.correct,
+            incorrect=response.totals.incorrect,
+            bookmaker_fallback=response.totals.bookmaker_fallback,
+            singles=response.totals.singles,
+            multi=response.totals.multi,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        inferential=InferentialSchema(
+            available=response.inferential.available,
+            reasons=list(response.inferential.reasons),
+        ),
+        consensus=[
+            ConsensusLevelSchema(
+                confidence=level.confidence,
+                answered=level.answered,
+                agreed=level.agreed,
+                predictions=level.predictions,
+                graded=level.graded,
+                correct=level.correct,
+            )
+            for level in response.consensus
+        ],
+        contributions=[
+            AgentContributionSchema(
+                agent=item.agent,
+                reports=item.reports,
+                opinions=item.opinions,
+                distinct_weights=item.distinct_weights,
+                min_weight=item.min_weight,
+                max_weight=item.max_weight,
+                constant=item.constant,
+            )
+            for item in response.contributions
+        ],
+        items=[
+            PerformanceItemSchema(
+                event_slug=item.event_slug,
+                event_label=item.event_label,
+                match_key=item.match_key,
+                match_title=item.match_title,
+                win_probability=item.win_probability,
+                confidence=item.confidence,
+                agreement=item.agreement,
+                coverage=item.coverage,
+                correct=item.correct,
+                reports=[
+                    ReportContributionSchema(
+                        agent=report.agent,
+                        weight=report.weight,
+                        opinionated=report.opinionated,
+                    )
+                    for report in item.reports
+                ],
+            )
+            for item in response.items
+        ],
+    )
 
 
 @ai_lab_router.get(

@@ -338,6 +338,96 @@ class TestAgentAnalysis:
         assert odds.uses_knowledge is False
 
 
+class TestPerformance:
+    """Phase 3-5 — 합성 해부. **정확도를 다시 세지 않는다.**"""
+
+    @pytest.mark.asyncio
+    async def test_it_reuses_the_four_existing_reads(self) -> None:
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        )
+        await AiLabInteractor(repository=repository).get_performance()
+        # 새 리포지토리 메서드도 새 쿼리도 만들지 않았다는 것을 구조로 고정한다.
+        assert repository.calls == {
+            "list_predictions": 1,
+            "list_reports": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_the_performance_view_shares_the_integrity_verdict(self) -> None:
+        rows = [_prediction(match_key=f"m{i}") for i in range(12)]
+        reports = [
+            ReportRow("summerslam", f"m{i}", "rumor", "left", 1.0, "…", ())
+            for i in range(12)
+        ]
+        interactor = _interactor(predictions=rows, reports=reports)
+        performance = await interactor.get_performance()
+        overview = await interactor.get_overview()
+        # 화면마다 다른 무결성이 나오면 어느 쪽도 못 믿는다.
+        assert performance.integrity == overview.integrity
+
+    @pytest.mark.asyncio
+    async def test_the_inferential_lock_is_a_projection_not_a_new_threshold(
+        self,
+    ) -> None:
+        """새 문턱을 만들지 않는다 — 3-0의 판정을 그대로 옮긴다."""
+        result = await _interactor(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        ).get_performance()
+        assert result.inferential.available is result.integrity.generalizable
+        assert result.inferential.reasons == result.integrity.reasons
+
+    @pytest.mark.asyncio
+    async def test_a_collapsed_win_probability_still_carries_its_coverage(self) -> None:
+        """승률 1.0이 근거의 두께를 뜻하지 않는다 — 둘이 같은 응답에 실린다."""
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import performance_to_schema
+
+        schema = performance_to_schema(
+            await _interactor(
+                predictions=[
+                    _prediction(match_key="m1", pick="0", winner_pick="0"),
+                ],
+                reports=[
+                    ReportRow("summerslam", "m1", "rumor", "0", 1.0, "…", ()),
+                    ReportRow("summerslam", "m1", "odds", None, 0.0, "…", ()),
+                ],
+            ).get_performance()
+        )
+        item = schema.items[0]
+        assert item.agreement == 1.0
+        assert item.coverage == pytest.approx(1 / 3)
+        assert [(r.agent, r.opinionated) for r in item.reports] == [
+            ("rumor", True),
+            ("odds", False),
+        ]
+        assert (schema.totals.singles, schema.totals.multi) == (0, 1)
+
+    @pytest.mark.asyncio
+    async def test_the_schema_keeps_the_consensus_denominators(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import performance_to_schema
+
+        schema = performance_to_schema(
+            await _interactor(
+                predictions=[
+                    _prediction(match_key="m1"),
+                    _prediction(match_key="m2", winner_pick=None),
+                ],
+                reports=[
+                    ReportRow("summerslam", "m1", "rumor", "left", 1.0, "…", ()),
+                    ReportRow("summerslam", "m2", "rumor", "left", 1.0, "…", ()),
+                ],
+            ).get_performance()
+        )
+        level = schema.consensus[0]
+        # 미채점은 예측 수에는 들어가고 정답률 분모에서는 빠진다.
+        assert (level.answered, level.agreed) == (1, 1)
+        assert (level.predictions, level.graded, level.correct) == (2, 1, 1)
+
+
 class TestKnowledge:
     """Phase 3-4 — 코퍼스에 있는 것과 **실제로 쓰인 것**을 갈라 놓는다."""
 

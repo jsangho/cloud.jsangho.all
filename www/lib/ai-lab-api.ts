@@ -211,6 +211,102 @@ export async function fetchAiLabAgents(): Promise<AiLabAgents | null> {
   }
 }
 
+/** 예측 하나에 실린 에이전트 한 명의 몫 (Phase 3-5). */
+export type ReportContribution = {
+  agent: string;
+  weight: number;
+  /** `pick`이 있었는가. **의견 없음은 오답이 아니다.** */
+  opinionated: boolean;
+};
+
+/**
+ * 예측 하나 + 그것을 만든 리포트 구성 (Phase 3-5).
+ *
+ * **승률과 근거의 두께는 같지 않다.** 의견이 하나뿐이고 그 weight가 1.0이면 분포가
+ * 붕괴해 `winProbability`가 1.0이 되므로 화면은 `coverage`를 반드시 함께 세운다.
+ */
+export type PerformanceItem = {
+  eventSlug: string;
+  eventLabel: string;
+  matchKey: string;
+  matchTitle: string;
+  winProbability: number;
+  /** 저장된 값. `agreement × coverage`가 이 값을 재현한다. */
+  confidence: number;
+  /** 최종 pick에 동의한 의견 / 전체 의견. **의견이 없으면 `null`** — 0이 아니다. */
+  agreement: number | null;
+  coverage: number;
+  /** 미채점이면 `null` — 실패(false)와 다르다. */
+  correct: boolean | null;
+  reports: ReportContribution[];
+};
+
+/**
+ * `(answered, agreed)` 한 짝. **`confidence`로 묶지 않는다** — 곱이 같으면
+ * "2명이 답해 둘 다 동의"와 "3명이 답해 2명 동의"가 한 줄로 접힌다.
+ */
+export type ConsensusLevel = {
+  confidence: number;
+  answered: number;
+  agreed: number;
+  predictions: number;
+  /** 결과가 나온 예측 수 — **정답률의 분모다.** */
+  graded: number;
+  correct: number;
+};
+
+/** 그 에이전트의 `weight`가 실제로 변하는가 (Phase 3-5). 3-3의 정확도와 다른 축이다. */
+export type AgentContribution = {
+  agent: string;
+  reports: number;
+  opinions: number;
+  distinctWeights: number;
+  minWeight: number | null;
+  maxWeight: number | null;
+  /** 값이 하나뿐인가. **의견이 없으면 `null`** — 상수라고 말할 근거가 없다. */
+  constant: boolean | null;
+};
+
+export type PerformanceTotals = {
+  /** 저장된 예측 전체 (폴백 포함). */
+  predictions: number;
+  graded: number;
+  correct: number;
+  incorrect: number;
+  bookmakerFallback: number;
+  /** 아래 둘은 폴백을 뺀 예측을 센다. */
+  singles: number;
+  multi: number;
+};
+
+/** 추론 지표를 낼 수 있는 상태인가. **새 판정이 아니라 `integrity`의 투영이다.** */
+export type Inferential = { available: boolean; reasons: string[] };
+
+export type AiLabPerformance = {
+  totals: PerformanceTotals;
+  integrity: Integrity;
+  inferential: Inferential;
+  consensus: ConsensusLevel[];
+  contributions: AgentContribution[];
+  items: PerformanceItem[];
+};
+
+export async function fetchAiLabPerformance(): Promise<AiLabPerformance | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/performance`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabPerformance;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * 코퍼스 문서 한 건 (Phase 3-4).
  *

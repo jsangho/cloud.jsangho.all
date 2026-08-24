@@ -26,6 +26,12 @@ from kayfabe.app.services.ai_lab_knowledge import (
     KnowledgeDocument,
     KnowledgeTotals,
 )
+from kayfabe.app.services.ai_lab_performance import (
+    AgentContribution,
+    ConsensusLevel,
+    PerformanceItem,
+    PerformanceTotals,
+)
 
 
 @dataclass(frozen=True)
@@ -107,6 +113,36 @@ class AiLabPredictionsResponse:
     integrity: IntegrityFacts
     events: list[PredictionEvent]
     items: list[PredictionItem]
+
+
+@dataclass(frozen=True)
+class InferentialAvailability:
+    """추론 지표를 낼 수 있는 상태인가 (Phase 3-5).
+
+    **새 판정이 아니라 `IntegrityFacts`의 투영이다.** 캘리브레이션·Brier 같은 추론
+    지표는 무결성 판정이 통과해야 의미가 생기는데, 그 판정 규칙을 화면마다 다시
+    쓰면 갈린다. 여기서는 3-0이 이미 내린 결론을 이 화면의 언어로 옮기기만 한다.
+    """
+
+    available: bool
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AiLabPerformanceResponse:
+    """최종 승률이 무엇으로 만들어졌는지 (Phase 3-5).
+
+    **정확도를 재는 응답이 아니다.** 전체 적중률은 3-1이, 에이전트별 정확도는 3-3이
+    이미 낸다. 여기 실린 `correct`·`graded`는 그 숫자를 다시 세우기 위한 것이 아니라
+    각 합의 층의 **분모를 밝히기 위한** 것이다.
+    """
+
+    totals: PerformanceTotals
+    integrity: IntegrityFacts
+    inferential: InferentialAvailability
+    consensus: list[ConsensusLevel]
+    contributions: list[AgentContribution]
+    items: list[PerformanceItem]
 
 
 @dataclass(frozen=True)
