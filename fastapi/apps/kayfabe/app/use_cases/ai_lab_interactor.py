@@ -16,6 +16,7 @@ import logging
 from kayfabe.app.dtos.ai_lab_dto import (
     AgentReportItem,
     AiLabAgentsResponse,
+    AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPredictionsResponse,
     PredictionEvent,
@@ -35,6 +36,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     summarize_integrity,
     summarize_predictions,
 )
+from kayfabe.app.services.ai_lab_knowledge import summarize_knowledge
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -101,6 +103,37 @@ class AiLabInteractor(AiLabUseCase):
                 predictions, reports, corpus, events_total=events_total
             ),
             agents=agents,
+        )
+
+    async def get_knowledge(self) -> AiLabKnowledgeResponse:
+        """코퍼스 문서 + 그중 실제로 프롬프트에 들어간 문서 (Phase 3-4).
+
+        **검색을 돌리지 않는다.** 저장된 리포트의 출처 URL과 문서 목록을 맞춰 볼 뿐이라
+        임베딩도 LLM도 부르지 않는다 — 다른 AI LAB 화면과 같은 규칙이다(§3-D1).
+        """
+        documents = await self._repository.list_documents()
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, items, domains = summarize_knowledge(documents, reports)
+        logger.info(
+            "[AiLabInteractor] get_knowledge | 문서=%d 청크=%d 사용문서=%d 코퍼스밖출처=%d",
+            totals.documents,
+            totals.chunks,
+            totals.used_documents,
+            totals.sources_outside_corpus,
+        )
+
+        return AiLabKnowledgeResponse(
+            totals=totals,
+            # 다른 화면과 **같은** 판정을 쓴다. 발행일 0건의 원인이 바로 이 코퍼스다.
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            documents=items,
+            domains=domains,
         )
 
     async def list_predictions(

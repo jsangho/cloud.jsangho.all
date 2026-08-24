@@ -19,9 +19,13 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentReportSchema,
     AgentTotalsSchema,
     AiLabAgentsSchema,
+    AiLabKnowledgeSchema,
     AiLabOverviewSchema,
     AiLabPredictionsSchema,
     IntegritySchema,
+    KnowledgeDocumentSchema,
+    KnowledgeDomainSchema,
+    KnowledgeTotalsSchema,
     PredictionEventSchema,
     PredictionItemSchema,
     PredictionTotalsSchema,
@@ -30,6 +34,7 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
 )
 from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
+    AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPredictionsResponse,
 )
@@ -94,6 +99,68 @@ async def get_ai_lab_agents(use_case: AiLabUseCase = Depends(get_ai_lab)):
     """
     logger.info("[AiLabRouter] get_ai_lab_agents")
     return agents_to_schema(await use_case.get_agents())
+
+
+@ai_lab_router.get(
+    "/knowledge",
+    response_model=AiLabKnowledgeSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_knowledge(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """RAG 코퍼스 문서 목록 + **그중 실제로 프롬프트에 들어간 문서** (Phase 3-4).
+
+    **검색을 돌리지 않는다.** 저장된 리포트의 출처 URL과 문서 목록을 맞춰 볼 뿐이라
+    임베딩도 LLM도 부르지 않는다.
+
+    `usedByReports`가 셀 수 있는 값인 이유는 저장된 출처가 LLM이 쓴 문장이 아니라
+    **실제로 프롬프트에 넣은 청크의 URL**이기 때문이다. 다만 리포트당 상위 5청크·최대
+    5출처만 남으므로 이 수치는 **하한**이다.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_knowledge")
+    return knowledge_to_schema(await use_case.get_knowledge())
+
+
+def knowledge_to_schema(response: AiLabKnowledgeResponse) -> AiLabKnowledgeSchema:
+    return AiLabKnowledgeSchema(
+        totals=KnowledgeTotalsSchema(
+            documents=response.totals.documents,
+            chunks=response.totals.chunks,
+            chunks_embedded=response.totals.chunks_embedded,
+            chunks_with_published_at=response.totals.chunks_with_published_at,
+            domains=response.totals.domains,
+            last_collected_at=response.totals.last_collected_at,
+            used_documents=response.totals.used_documents,
+            used_document_rate=response.totals.used_document_rate,
+            reports_total=response.totals.reports_total,
+            reports_with_sources=response.totals.reports_with_sources,
+            sources_outside_corpus=response.totals.sources_outside_corpus,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        documents=[
+            KnowledgeDocumentSchema(
+                source_url=item.source_url,
+                source_domain=item.source_domain,
+                title=item.title,
+                chunks=item.chunks,
+                chunks_embedded=item.chunks_embedded,
+                chunks_with_published_at=item.chunks_with_published_at,
+                first_published_at=item.first_published_at,
+                last_collected_at=item.last_collected_at,
+                used_by_reports=item.used_by_reports,
+                used_by_agents=list(item.used_by_agents),
+            )
+            for item in response.documents
+        ],
+        domains=[
+            KnowledgeDomainSchema(
+                domain=item.domain,
+                documents=item.documents,
+                chunks=item.chunks,
+                used_documents=item.used_documents,
+            )
+            for item in response.domains
+        ],
+    )
 
 
 def agents_to_schema(response: AiLabAgentsResponse) -> AiLabAgentsSchema:

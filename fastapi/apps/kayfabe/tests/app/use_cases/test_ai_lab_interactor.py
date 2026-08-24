@@ -17,6 +17,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     PredictionRow,
     ReportRow,
 )
+from kayfabe.app.services.ai_lab_knowledge import DocumentRow
 from kayfabe.app.use_cases.ai_lab_interactor import AiLabInteractor
 
 _NOW = datetime(2026, 8, 5, tzinfo=UTC)
@@ -55,11 +56,13 @@ class FakeAiLabRepository(AiLabRepository):
         predictions: list[PredictionRow] | None = None,
         reports: list[ReportRow] | None = None,
         corpus: CorpusFacts | None = None,
+        documents: list[DocumentRow] | None = None,
         events: int = 11,
     ) -> None:
         self._predictions = predictions or []
         self._reports = reports or []
         self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, None)
+        self._documents = documents or []
         self._events = events
 
     async def list_predictions(self) -> list[PredictionRow]:
@@ -70,6 +73,9 @@ class FakeAiLabRepository(AiLabRepository):
 
     async def corpus_facts(self) -> CorpusFacts:
         return self._corpus
+
+    async def list_documents(self) -> list[DocumentRow]:
+        return self._documents
 
     async def count_events(self) -> int:
         return self._events
@@ -96,6 +102,10 @@ class CountingAiLabRepository(FakeAiLabRepository):
     async def corpus_facts(self) -> CorpusFacts:
         self._record("corpus_facts")
         return await super().corpus_facts()
+
+    async def list_documents(self) -> list[DocumentRow]:
+        self._record("list_documents")
+        return await super().list_documents()
 
     async def count_events(self) -> int:
         self._record("count_events")
@@ -206,6 +216,7 @@ class TestNoGeneration:
             "list_predictions",
             "list_reports",
             "corpus_facts",
+            "list_documents",
             "count_events",
         }
 
@@ -325,6 +336,100 @@ class TestAgentAnalysis:
         assert odds.accuracy == pytest.approx(0.9)
         assert odds.accuracy_low is not None and odds.accuracy_low < 0.9
         assert odds.uses_knowledge is False
+
+
+class TestKnowledge:
+    """Phase 3-4 — 코퍼스에 있는 것과 **실제로 쓰인 것**을 갈라 놓는다."""
+
+    @staticmethod
+    def _document(url: str, *, chunks: int = 10) -> DocumentRow:
+        return DocumentRow(
+            source_url=url,
+            source_domain="en.wikipedia.org",
+            title="SummerSlam (2026)",
+            chunks=chunks,
+            chunks_embedded=chunks,
+            chunks_with_published_at=0,
+            first_published_at=None,
+            last_collected_at=_NOW,
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_corpus_document_no_agent_loaded_stays_unused(self) -> None:
+        result = await _interactor(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+            documents=[self._document("https://en.wikipedia.org/wiki/A")],
+        ).get_knowledge()
+        assert result.totals.documents == 1
+        assert result.totals.used_documents == 0
+        assert result.documents[0].used_by_agents == ()
+
+    @pytest.mark.asyncio
+    async def test_the_knowledge_view_shares_the_integrity_verdict(self) -> None:
+        rows = [_prediction(match_key=f"m{i}") for i in range(12)]
+        reports = [
+            ReportRow(
+                "summerslam",
+                f"m{i}",
+                "rumor",
+                "left",
+                1.0,
+                "…",
+                ("https://en.wikipedia.org/wiki/SummerSlam_(2026)",),
+            )
+            for i in range(12)
+        ]
+        interactor = _interactor(
+            predictions=rows,
+            reports=reports,
+            documents=[
+                self._document("https://en.wikipedia.org/wiki/SummerSlam_(2026)")
+            ],
+        )
+        knowledge = await interactor.get_knowledge()
+        overview = await interactor.get_overview()
+        # 발행일 0건이라는 판정의 원인이 바로 이 코퍼스다 — 두 화면이 갈리면 안 된다.
+        assert knowledge.integrity == overview.integrity
+        assert knowledge.documents[0].used_by_reports == 12
+
+    @pytest.mark.asyncio
+    async def test_it_reads_the_documents_but_runs_no_search(self) -> None:
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+            documents=[self._document("https://en.wikipedia.org/wiki/A")],
+        )
+        await AiLabInteractor(repository=repository).get_knowledge()
+        # 문서 목록 하나만 늘었다 — 임베딩도 검색도 부르지 않는다.
+        assert repository.calls == {
+            "list_documents": 1,
+            "list_predictions": 1,
+            "list_reports": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_the_schema_keeps_the_used_document_denominator(self) -> None:
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import knowledge_to_schema
+
+        used = "https://en.wikipedia.org/wiki/Used"
+        schema = knowledge_to_schema(
+            await _interactor(
+                predictions=[_prediction(match_key="m1")],
+                reports=[
+                    ReportRow("summerslam", "m1", "rumor", "left", 1.0, "…", (used,))
+                ],
+                documents=[
+                    self._document(used),
+                    self._document("https://en.wikipedia.org/wiki/Unused"),
+                ],
+            ).get_knowledge()
+        )
+        assert (schema.totals.used_documents, schema.totals.documents) == (1, 2)
+        assert schema.totals.used_document_rate == 0.5
+        assert schema.documents[0].used_by_agents == ["rumor"]
 
 
 class TestPredictionsAgentFilter:

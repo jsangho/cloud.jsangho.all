@@ -103,8 +103,9 @@ class AgentReportSchema(_Camel):
     weight: float
     summary: str
     sources: list[str]
-    """저장된 출처 URL. **검색된 청크가 아니다** — 어떤 청크가 쓰였는지는 지금 구조가
-    기록하지 않으므로 그렇게 주장할 수 없다(Phase 3-4·3-6에서 따로 다룬다)."""
+    """저장된 출처 URL — 프롬프트에 넣은 청크의 **문서 주소**다. 어떤 청크가 어떤
+    유사도로 쓰였는지는 지금 구조가 기록하지 않는다. 문서 단위 대조는 Phase 3-4가
+    맡고(`GET /api/ai-lab/knowledge`), 유사도는 3-6에서 따로 다룬다."""
 
 
 class PredictionItemSchema(_Camel):
@@ -185,6 +186,58 @@ class AiLabAgentsSchema(_Camel):
     totals: AgentTotalsSchema
     integrity: IntegritySchema
     agents: list[AgentAnalysisSchema]
+
+
+class KnowledgeDocumentSchema(_Camel):
+    """코퍼스 문서 한 건 (Phase 3-4).
+
+    `usedByReports`는 **인용 주장이 아니라 적재 기록이다** — 저장된 출처가 실제로
+    프롬프트에 넣은 청크의 URL이라서 셀 수 있는 값이다. 리포트당 최대 5건만 남으므로
+    이 수치는 하한이다.
+    """
+
+    source_url: str = Field(alias="sourceUrl")
+    source_domain: str = Field(alias="sourceDomain")
+    title: str | None = None
+    chunks: int
+    chunks_embedded: int = Field(alias="chunksEmbedded")
+    """임베딩이 없는 청크는 검색되지 않는다 — 있으나 마나 한 상태를 숨기지 않는다."""
+    chunks_with_published_at: int = Field(alias="chunksWithPublishedAt")
+    first_published_at: datetime | None = Field(default=None, alias="firstPublishedAt")
+    last_collected_at: datetime | None = Field(default=None, alias="lastCollectedAt")
+    used_by_reports: int = Field(alias="usedByReports")
+    used_by_agents: list[str] = Field(alias="usedByAgents")
+
+
+class KnowledgeDomainSchema(_Camel):
+    domain: str
+    documents: int
+    chunks: int
+    used_documents: int = Field(alias="usedDocuments")
+
+
+class KnowledgeTotalsSchema(_Camel):
+    documents: int
+    chunks: int
+    chunks_embedded: int = Field(alias="chunksEmbedded")
+    chunks_with_published_at: int = Field(alias="chunksWithPublishedAt")
+    domains: int
+    last_collected_at: datetime | None = Field(default=None, alias="lastCollectedAt")
+    used_documents: int = Field(alias="usedDocuments")
+    """프롬프트에 한 번이라도 들어간 문서. **하한이다** — 출처는 리포트당 5건까지만 남는다."""
+    used_document_rate: float | None = Field(default=None, alias="usedDocumentRate")
+    """문서가 0건이면 `None` — 0이 아니다."""
+    reports_total: int = Field(alias="reportsTotal")
+    reports_with_sources: int = Field(alias="reportsWithSources")
+    sources_outside_corpus: int = Field(alias="sourcesOutsideCorpus")
+    """리포트가 든 출처 중 지금 코퍼스에 없는 URL 수. 재수집·삭제로 생긴다."""
+
+
+class AiLabKnowledgeSchema(_Camel):
+    totals: KnowledgeTotalsSchema
+    integrity: IntegritySchema
+    documents: list[KnowledgeDocumentSchema]
+    domains: list[KnowledgeDomainSchema]
 
 
 class AiLabPredictionsSchema(_Camel):

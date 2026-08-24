@@ -211,6 +211,71 @@ export async function fetchAiLabAgents(): Promise<AiLabAgents | null> {
   }
 }
 
+/**
+ * 코퍼스 문서 한 건 (Phase 3-4).
+ *
+ * `usedByReports`는 **인용 주장이 아니라 적재 기록이다** — 저장된 출처가 실제로
+ * 프롬프트에 넣은 청크의 URL이라 셀 수 있다. 리포트당 최대 5건만 남으므로 **하한**이다.
+ */
+export type KnowledgeDocument = {
+  sourceUrl: string;
+  sourceDomain: string;
+  title: string | null;
+  chunks: number;
+  /** 임베딩이 없는 청크는 검색되지 않는다. */
+  chunksEmbedded: number;
+  chunksWithPublishedAt: number;
+  firstPublishedAt: string | null;
+  lastCollectedAt: string | null;
+  usedByReports: number;
+  usedByAgents: string[];
+};
+
+export type KnowledgeDomain = {
+  domain: string;
+  documents: number;
+  chunks: number;
+  usedDocuments: number;
+};
+
+export type KnowledgeTotals = {
+  documents: number;
+  chunks: number;
+  chunksEmbedded: number;
+  chunksWithPublishedAt: number;
+  domains: number;
+  lastCollectedAt: string | null;
+  /** 프롬프트에 한 번이라도 들어간 문서. **하한이다.** */
+  usedDocuments: number;
+  /** 문서가 0건이면 `null` — 0이 아니다. */
+  usedDocumentRate: number | null;
+  reportsTotal: number;
+  reportsWithSources: number;
+  /** 리포트가 든 출처 중 지금 코퍼스에 없는 URL 수. */
+  sourcesOutsideCorpus: number;
+};
+
+export type AiLabKnowledge = {
+  totals: KnowledgeTotals;
+  integrity: Integrity;
+  documents: KnowledgeDocument[];
+  domains: KnowledgeDomain[];
+};
+
+export async function fetchAiLabKnowledge(): Promise<AiLabKnowledge | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/knowledge`, { signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabKnowledge;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchAiLabOverview(): Promise<AiLabOverview | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);

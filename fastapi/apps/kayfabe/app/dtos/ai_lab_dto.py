@@ -21,6 +21,11 @@ from kayfabe.app.services.ai_lab_integrity import (
     IntegrityFacts,
     PredictionTotals,
 )
+from kayfabe.app.services.ai_lab_knowledge import (
+    DomainFacts,
+    KnowledgeDocument,
+    KnowledgeTotals,
+)
 
 
 @dataclass(frozen=True)
@@ -102,6 +107,20 @@ class AiLabPredictionsResponse:
     integrity: IntegrityFacts
     events: list[PredictionEvent]
     items: list[PredictionItem]
+
+
+@dataclass(frozen=True)
+class AiLabKnowledgeResponse:
+    """코퍼스에 무엇이 있고 그중 무엇이 쓰였는지 (Phase 3-4).
+
+    무결성을 같은 응답에 담는 이유가 다른 화면보다 여기서 더 직접적이다 — 발행일이
+    0건이라 시간 검증이 불가능하다는 판정의 **원인이 바로 이 코퍼스**다.
+    """
+
+    totals: KnowledgeTotals
+    integrity: IntegrityFacts
+    documents: list[KnowledgeDocument]
+    domains: list[DomainFacts]
 
 
 @dataclass(frozen=True)

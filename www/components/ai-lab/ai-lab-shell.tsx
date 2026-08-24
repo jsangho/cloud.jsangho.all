@@ -20,7 +20,7 @@ export const AI_LAB_TABS = [
   { href: "/ai-lab", label: "Overview", ready: true },
   { href: "/ai-lab/predictions", label: "Predictions", ready: true },
   { href: "/ai-lab/agents", label: "Agents", ready: true },
-  { href: "/ai-lab/knowledge", label: "Knowledge", ready: false },
+  { href: "/ai-lab/knowledge", label: "Knowledge", ready: true },
   { href: "/ai-lab/performance", label: "Performance", ready: false },
 ] as const;
 

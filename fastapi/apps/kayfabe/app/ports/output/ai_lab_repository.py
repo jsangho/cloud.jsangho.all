@@ -17,6 +17,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     PredictionRow,
     ReportRow,
 )
+from kayfabe.app.services.ai_lab_knowledge import DocumentRow
 
 
 class AiLabRepository(ABC):
@@ -35,6 +36,15 @@ class AiLabRepository(ABC):
     @abstractmethod
     async def corpus_facts(self) -> CorpusFacts:
         """RAG 코퍼스 실측 — 청크·문서·도메인 수와 발행일 보유 수."""
+        ...
+
+    @abstractmethod
+    async def list_documents(self) -> list[DocumentRow]:
+        """지식 청크를 출처 URL로 묶은 문서 목록 (Phase 3-4).
+
+        **여기서만 묶는다.** `corpus_facts()`도 문서 수를 세지만 그것은 개요의
+        한 줄짜리 값이고, 이쪽은 문서마다 청크·임베딩·발행일을 함께 낸다.
+        """
         ...
 
     @abstractmethod

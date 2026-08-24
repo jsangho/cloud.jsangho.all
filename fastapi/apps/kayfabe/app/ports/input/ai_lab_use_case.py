@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 
 from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
+    AiLabKnowledgeResponse,
     AiLabOverviewResponse,
     AiLabPredictionsResponse,
 )
@@ -42,4 +43,13 @@ class AiLabUseCase(ABC):
     @abstractmethod
     async def get_agents(self) -> AiLabAgentsResponse:
         """에이전트별 응답률·의견률·정확도·가중치·자기 참조 출처 (Phase 3-3)."""
+        ...
+
+    @abstractmethod
+    async def get_knowledge(self) -> AiLabKnowledgeResponse:
+        """코퍼스 문서 목록 + **그중 실제로 프롬프트에 들어간 문서** (Phase 3-4).
+
+        검색을 새로 돌리지 않는다 — 저장된 리포트의 출처와 문서 목록을 URL로 맞춰
+        볼 뿐이다. 이 화면도 다른 AI LAB 화면처럼 LLM도 임베딩도 부르지 않는다.
+        """
         ...
