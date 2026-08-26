@@ -11,6 +11,7 @@ from datetime import datetime
 
 from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -48,6 +49,14 @@ class AgentPredictionModel(Base):
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    #: 생성 시점에 결과가 **시스템 밖에서** 이미 알려져 있었는가 (Phase 3-7).
+    #: `NULL`은 모른다가 아니라 **아무도 선언하지 않았다**는 뜻이다 — 그 행은
+    #: Phase 3-6의 판정 경로를 그대로 지난다. "모른다"는 `False`로 명시한다.
+    outcome_known_externally: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+    #: 위 선언의 근거. **사실만 적는다** — 추정한 경기 날짜나 승자를 넣지 않는다.
+    provenance_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
