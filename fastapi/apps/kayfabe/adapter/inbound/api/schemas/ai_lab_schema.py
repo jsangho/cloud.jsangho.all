@@ -211,7 +211,7 @@ class EvaluationItemSchema(_Camel):
     result_recorded_at: datetime | None = Field(default=None, alias="resultRecordedAt")
     """결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다."""
     status: str
-    """"eligible" | "disqualified" | "held" | "pending" | "not_applicable"."""
+    """"eligible" | "disqualified" | "held" | "pending" | "ex_post" | "not_applicable"."""
     eligible: bool
     verdicts: list[RuleVerdictSchema]
 
@@ -227,10 +227,12 @@ class EvaluationRuleSchema(_Camel):
 
 
 class EvaluationTotalsSchema(_Camel):
-    """다섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
+    """여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
 
     predictions: int
     fallback: int
+    ex_post: int = Field(alias="exPost")
+    """생성 전에 결과가 시스템 밖에서 알려져 있던 표본. **실격과 다른 상태다.**"""
     pending: int
     disqualified: int
     held: int

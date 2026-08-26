@@ -393,6 +393,30 @@ class TestEvaluation:
         assert any(v.code == "temporal_inversion" and v.failed for v in item.verdicts)
 
     @pytest.mark.asyncio
+    async def test_an_ex_post_sample_reaches_the_api_as_its_own_bucket(self) -> None:
+        """Phase 3-7. 응답에서 실격과 **같은 칸에 담기지 않는다.**"""
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import evaluation_to_schema
+
+        note = "Historical/ex-post sample."
+        row = replace(
+            _prediction(match_key="m1"),
+            outcome_known_externally=True,
+            provenance_note=note,
+        )
+        schema = evaluation_to_schema(
+            await _interactor(
+                predictions=[row],
+                reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+            ).get_evaluation()
+        )
+        assert schema.totals.ex_post == 1
+        assert (schema.totals.disqualified, schema.totals.eligible) == (0, 0)
+        assert schema.performance is None
+        assert schema.items[0].status == "ex_post"
+        # 사유는 선언한 문장 그대로다.
+        assert schema.items[0].verdicts[0].detail == note
+
+    @pytest.mark.asyncio
     async def test_the_evaluation_view_shares_the_integrity_verdict(self) -> None:
         rows = [_prediction(match_key=f"m{i}") for i in range(12)]
         interactor = _interactor(predictions=rows)
@@ -431,6 +455,7 @@ class TestEvaluation:
         assert schema.performance is None
         assert [rule.code for rule in schema.rules] == [
             "not_applicable",
+            "external_outcome_known",
             "pending",
             "temporal_inversion",
             "self_reference",
@@ -440,6 +465,8 @@ class TestEvaluation:
         by_code = {rule.code: rule.severity for rule in schema.rules}
         assert by_code["unverifiable_corpus"] == "hold"
         assert by_code["temporal_inversion"] == "disqualify"
+        # 사후 재현 표본은 **실격이 아니라 제외다.**
+        assert by_code["external_outcome_known"] == "exclude"
 
 
 class TestPerformance:

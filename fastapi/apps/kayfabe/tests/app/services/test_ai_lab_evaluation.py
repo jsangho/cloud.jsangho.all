@@ -21,6 +21,7 @@ from kayfabe.app.services import ai_lab_evaluation
 from kayfabe.app.services.ai_lab_evaluation import (
     STATUS_DISQUALIFIED,
     STATUS_ELIGIBLE,
+    STATUS_EX_POST,
     STATUS_HELD,
     STATUS_NOT_APPLICABLE,
     STATUS_PENDING,
@@ -47,6 +48,8 @@ def _prediction(
     finished_at: datetime | None = _RESULT_AT,
     source: str = "agents",
     event_label: str = "SummerSlam",
+    outcome_known_externally: bool | None = None,
+    provenance_note: str | None = None,
 ) -> PredictionRow:
     return PredictionRow(
         event_slug="summerslam",
@@ -63,6 +66,8 @@ def _prediction(
         winner_pick=winner_pick,
         winner_name="Someone",
         finished_at=finished_at,
+        outcome_known_externally=outcome_known_externally,
+        provenance_note=provenance_note,
     )
 
 
@@ -249,8 +254,106 @@ class TestPerformanceGate:
             summarize_eligible_performance([])
 
 
+class TestProvenanceRule:
+    """Phase 3-7. **선언하지 않은 예측의 판정은 한 글자도 바뀌지 않아야 한다.**
+
+    이 축이 하는 일은 시간 규칙이 볼 수 없는 것 — 결과가 시스템 **밖에서** 이미
+    알려져 있었는가 — 을 적는 것이다. 시간 규칙을 대신하지 않고 옆에 선다.
+    """
+
+    def test_declaring_external_knowledge_is_ex_post_not_disqualified(self) -> None:
+        item = _only(
+            [_prediction(outcome_known_externally=True)], [_report()], [_document()]
+        )
+        assert item.status == STATUS_EX_POST
+        assert item.eligible is False
+        # 실격과 섞지 않는다 — 누수 확정과 표본 성격은 다른 사실이다.
+        assert item.status != STATUS_DISQUALIFIED
+
+    def test_an_undeclared_prediction_keeps_its_original_verdicts(self) -> None:
+        """`None`은 모른다가 아니라 **선언되지 않았다**는 뜻이다."""
+        declared_none = _only([_prediction()], [_report()], [_document()])
+        declared_false = _only(
+            [_prediction(outcome_known_externally=False)], [_report()], [_document()]
+        )
+        assert declared_none.status == STATUS_ELIGIBLE
+        assert declared_false.status == STATUS_ELIGIBLE
+        # 규칙 코드도 사유 문장도 그대로다.
+        assert [
+            (v.code, v.failed, v.applicable, v.detail) for v in declared_none.verdicts
+        ] == [
+            (v.code, v.failed, v.applicable, v.detail) for v in declared_false.verdicts
+        ]
+
+    def test_it_does_not_catch_none_as_a_falsy_value(self) -> None:
+        """`is True`가 아니라 truthy로 봤다면 여기서 무너진다."""
+        item = _only(
+            [_prediction(match_key="late", generated_at=_AFTER)],
+            [_report(match_key="late")],
+            [_document()],
+        )
+        assert item.status == STATUS_DISQUALIFIED
+        assert _verdict(item, "temporal_inversion").failed is True
+
+    def test_an_ex_post_sample_is_not_judged_by_the_temporal_rule(self) -> None:
+        item = _only(
+            [_prediction(outcome_known_externally=True, generated_at=_AFTER)],
+            [_report()],
+            [_document()],
+        )
+        assert [v.code for v in item.verdicts] == ["external_outcome_known"]
+
+    def test_it_stays_ex_post_even_before_a_result_exists(self) -> None:
+        """결과가 없어 `pending`으로 보일 수 있어도 채점 대상이 되지 못한다."""
+        item = _only(
+            [
+                _prediction(
+                    winner_pick=None, finished_at=None, outcome_known_externally=True
+                )
+            ],
+            [_report()],
+            [_document()],
+        )
+        assert item.status == STATUS_EX_POST
+
+    def test_a_bookmaker_fallback_is_judged_before_provenance(self) -> None:
+        item = _only(
+            [_prediction(source="bookmaker_fallback", outcome_known_externally=True)],
+            [_report()],
+            [_document()],
+        )
+        assert item.status == STATUS_NOT_APPLICABLE
+
+    def test_an_ex_post_sample_never_reaches_the_performance_denominator(self) -> None:
+        totals, _, _, performance = summarize_evaluation(
+            [_prediction(match_key="expost", outcome_known_externally=True)],
+            [_report(match_key="expost")],
+            [_document()],
+        )
+        assert (totals.ex_post, totals.eligible) == (1, 0)
+        assert performance is None
+
+    def test_the_declared_note_is_the_reason_shown(self) -> None:
+        """사유는 사람이 쓴 문장 그대로다 — 모듈이 지어내지 않는다."""
+        note = "Historical/ex-post sample. Match had already occurred."
+        item = _only(
+            [_prediction(outcome_known_externally=True, provenance_note=note)],
+            [_report()],
+            [_document()],
+        )
+        assert _verdict(item, "external_outcome_known").detail == note
+
+    def test_the_rule_is_an_exclusion_not_a_disqualification(self) -> None:
+        _, rules, _, _ = summarize_evaluation(
+            [_prediction(outcome_known_externally=True)], [_report()], [_document()]
+        )
+        rule = next(r for r in rules if r.code == "external_outcome_known")
+        assert rule.severity == "exclude"
+        assert rule.blocked == 1
+
+
 class TestTotals:
-    def test_the_five_buckets_cover_every_prediction(self) -> None:
+    def test_the_six_buckets_cover_every_prediction(self) -> None:
         totals, _, _, _ = summarize_evaluation(
             [
                 _prediction(match_key="ok"),
@@ -258,16 +361,18 @@ class TestTotals:
                 _prediction(match_key="pending", winner_pick=None, finished_at=None),
                 _prediction(match_key="fb", source="bookmaker_fallback"),
                 _prediction(match_key="unknown", finished_at=None),
+                _prediction(match_key="expost", outcome_known_externally=True),
             ],
             [
                 _report(match_key=key)
-                for key in ("ok", "late", "pending", "fb", "unknown")
+                for key in ("ok", "late", "pending", "fb", "unknown", "expost")
             ],
             [_document()],
         )
-        assert totals.predictions == 5
+        assert totals.predictions == 6
         assert (totals.eligible, totals.disqualified) == (1, 1)
         assert (totals.pending, totals.fallback, totals.held) == (1, 1, 1)
+        assert totals.ex_post == 1
         # 어디로도 새지 않는다.
         assert (
             totals.eligible
@@ -275,6 +380,7 @@ class TestTotals:
             + totals.pending
             + totals.fallback
             + totals.held
+            + totals.ex_post
             == totals.predictions
         )
 
@@ -285,6 +391,7 @@ class TestTotals:
         # 규칙 목록은 고정이다 — 예측이 없어도 자리를 지운다.
         assert [rule.code for rule in rules] == [
             "not_applicable",
+            "external_outcome_known",
             "pending",
             "temporal_inversion",
             "self_reference",

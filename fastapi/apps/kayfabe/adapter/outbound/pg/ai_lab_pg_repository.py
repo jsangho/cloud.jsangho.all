@@ -60,6 +60,10 @@ class AiLabPgRepository(AiLabRepository):
                 # 정답이 이미 시스템 안에 있었는가"를 묻는 데 쓴다. 컬럼 하나가
                 # 늘 뿐 쿼리 수도 조인도 그대로다.
                 PleMatchModel.finished_at,
+                # 표본의 계보 (Phase 3-7). 결과가 **시스템 밖에서** 이미 알려져
+                # 있었는지는 어떤 시각 컬럼으로도 알 수 없어 따로 적어 둔 값이다.
+                AgentPredictionModel.outcome_known_externally,
+                AgentPredictionModel.provenance_note,
             )
             .join(PleEventModel, AgentPredictionModel.event_id == PleEventModel.id)
             # 경기 행이 사라져도 예측은 남는다 — 그때 채점 불가로 두고 버리지 않는다.
@@ -86,6 +90,8 @@ class AiLabPgRepository(AiLabRepository):
                 winner_pick=row.winner_pick,
                 winner_name=row.winner_name,
                 finished_at=row.finished_at,
+                outcome_known_externally=row.outcome_known_externally,
+                provenance_note=row.provenance_note,
             )
             for row in result.all()
         ]

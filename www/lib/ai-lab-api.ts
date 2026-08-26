@@ -225,7 +225,13 @@ export type RuleVerdict = {
   detail: string;
 };
 
-export type EvaluationStatus = "eligible" | "disqualified" | "held" | "pending" | "not_applicable";
+export type EvaluationStatus =
+  | "eligible"
+  | "disqualified"
+  | "held"
+  | "pending"
+  | "ex_post"
+  | "not_applicable";
 
 export type EvaluationItem = {
   eventSlug: string;
@@ -251,10 +257,12 @@ export type EvaluationRule = {
   blocked: number;
 };
 
-/** 다섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다. */
+/** 여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다. */
 export type EvaluationTotals = {
   predictions: number;
   fallback: number;
+  /** 생성 전에 결과가 시스템 밖에서 알려져 있던 표본. **실격과 다른 상태다.** */
+  exPost: number;
   pending: number;
   disqualified: number;
   /** 누수를 증명도 반증도 못 한 예측. **실격과 다른 상태다.** */

@@ -11,10 +11,11 @@
 생성됐다. 그것은 예측이 아니라 사후 재현이고, 어떤 통계 처리로도 예측 능력을 복원할
 수 없다. 신뢰구간을 넓히는 문제가 아니라 **분모에 들어가면 안 되는 문제**다.
 
-판정 규칙은 다섯이고 무게가 셋으로 갈린다.
+판정 규칙은 여섯이고 무게가 셋으로 갈린다.
 
 * **제외**(`exclude`) — 애초에 평가 대상이 아니다. 실격이 아니다.
-  `not_applicable`(북메이커 폴백) · `pending`(결과 없음)
+  `not_applicable`(북메이커 폴백) · `external_outcome_known`(사후 재현 표본) ·
+  `pending`(결과 없음)
 * **실격**(`disqualify`) — 누수가 확정됐다.
   `temporal_inversion`(결과 기록 이후 생성) · `self_reference`(자기 대회 문서 인용)
 * **보류**(`hold`) — 누수를 **증명도 반증도 못 한다.**
@@ -26,6 +27,12 @@
 **추정하지 않는다.** `ple_prediction_retrievals`가 없으므로 어떤 청크가 실제로
 검색됐는지는 기록이 없고, 이 모듈은 그것을 사후에 지어내지 않는다. 판정에 쓰는 것은
 저장된 출처 URL까지다.
+
+**Phase 3-7이 축을 하나 더했다.** 시간 규칙이 보는 것은 `ple_matches.finished_at`,
+곧 결과가 **DB에 들어온** 시각이다. 그래서 이미 끝난 경기를 나중에 예측하고 결과를
+그 뒤에 입력하면 시간 규칙을 통과해 버린다 — 규칙이 틀린 게 아니라 시스템 밖의 앎을
+볼 수 없을 뿐이다. `external_outcome_known`이 그 자리를 맡는다. **기존 다섯 규칙은
+한 줄도 바뀌지 않았다.**
 """
 
 from __future__ import annotations
@@ -46,8 +53,9 @@ from kayfabe.app.services.ai_lab_integrity import (
 # 서로 다른 문서를 같은 문서라고 말하게 된다.
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow, _canonical
 
-#: 자격 상태. 다섯은 **서로 겹치지 않고 전체를 덮는다** — 합이 예측 수와 같아야 한다.
+#: 자격 상태. 여섯은 **서로 겹치지 않고 전체를 덮는다** — 합이 예측 수와 같아야 한다.
 STATUS_NOT_APPLICABLE = "not_applicable"
+STATUS_EX_POST = "ex_post"
 STATUS_PENDING = "pending"
 STATUS_DISQUALIFIED = "disqualified"
 STATUS_HELD = "held"
@@ -78,6 +86,16 @@ RULES: tuple[Rule, ...] = (
         description=(
             "에이전트가 아무도 답하지 못해 북메이커 배당으로 대체한 예측입니다. "
             "에이전트의 판단이 아니므로 채점 대상이 아닙니다."
+        ),
+    ),
+    Rule(
+        code="external_outcome_known",
+        label="생성 전 결과가 외부에 알려짐",
+        severity=SEVERITY_EXCLUDE,
+        description=(
+            "예측을 만들 때 결과가 이 시스템 밖에서 이미 알려져 있었다고 기록된 "
+            "표본입니다. 사후 재현이므로 채점 대상이 아닙니다 — 누수가 확정된 "
+            "실격과 달리, 표본의 성격이 처음부터 다릅니다."
         ),
     ),
     Rule(
@@ -161,10 +179,12 @@ class RuleTally:
 
 @dataclass(frozen=True)
 class EvaluationTotals:
-    """다섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
+    """여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
 
     predictions: int
     fallback: int
+    #: 생성 전에 결과가 시스템 밖에서 알려져 있던 표본 (Phase 3-7). **실격이 아니다.**
+    ex_post: int
     pending: int
     disqualified: int
     held: int
@@ -219,6 +239,7 @@ def summarize_evaluation(
     totals = EvaluationTotals(
         predictions=len(items),
         fallback=_count(items, STATUS_NOT_APPLICABLE),
+        ex_post=_count(items, STATUS_EX_POST),
         pending=_count(items, STATUS_PENDING),
         disqualified=_count(items, STATUS_DISQUALIFIED),
         held=_count(items, STATUS_HELD),
@@ -272,7 +293,8 @@ _STATUS_ORDER = {
     STATUS_HELD: 1,
     STATUS_DISQUALIFIED: 2,
     STATUS_PENDING: 3,
-    STATUS_NOT_APPLICABLE: 4,
+    STATUS_EX_POST: 4,
+    STATUS_NOT_APPLICABLE: 5,
 }
 
 
@@ -304,6 +326,27 @@ def _judge(
                     failed=True,
                     applicable=True,
                     detail="북메이커 배당으로 대체된 예측입니다.",
+                ),
+            ),
+        )
+
+    if row.outcome_known_externally is True:
+        # **`is True`여야 한다.** `if row.outcome_known_externally:`로 쓰면 `None`이
+        # 함께 걸려 선언한 적 없는 옛 예측까지 여기로 빨려 들어온다.
+        #
+        # 결과가 기록되기 전이어도(그래서 `pending`으로 보일 수 있어도) 이 표본은
+        # 채점 대상이 되지 못한다. 그 사실을 나중이 아니라 지금 말한다.
+        return _item(
+            row,
+            STATUS_EX_POST,
+            (
+                _verdict(
+                    "external_outcome_known",
+                    failed=True,
+                    applicable=True,
+                    # 선언의 근거는 사람이 쓴 문장이다. 여기서 지어내지 않는다.
+                    detail=row.provenance_note
+                    or "생성 시점에 결과가 시스템 밖에서 이미 알려져 있었습니다.",
                 ),
             ),
         )
