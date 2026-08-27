@@ -85,11 +85,15 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     highlight: "2 Nights",
   },
   {
-    month: 9,
+    // WWE가 2026-06-08에 9.6 → 10.10으로 옮겼다. 사상 첫 10월 MITB이고,
+    // 그래서 이 목록에서 유일하게 SummerSlam **뒤에** 온다.
+    // 낡은 9.6을 두면 `parsePleStartDate`가 9월 7일부터 이 카드를 "종료"로 굳혀
+    // 실제로는 한 달 넘게 남은 대회의 예측이 닫힌다.
+    month: 10,
     year: WWE_PLE_YEAR,
     slug: "money-in-the-bank",
     label: "Money in the Bank",
-    dateLabel: "9.6",
+    dateLabel: "10.10",
     venue: "뉴올리언스",
     highlight: "MITB 래더",
   },
