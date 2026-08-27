@@ -40,6 +40,32 @@ BOOKMAKER_FALLBACK = "bookmaker_fallback"
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
+def is_scorable(row: PredictionRow) -> bool:
+    """**이 예측으로 점수를 매겨도 되는가.**
+
+    집계 함수 넷이 공유하는 단 하나의 정의다. 네 곳에 같은 조건을 따로 적으면
+    언젠가 한 곳만 바뀌고, 그때 화면들이 서로 다른 분모로 같은 이름의 비율을
+    말하게 된다.
+
+    거르는 것은 둘이다.
+
+    1. **북메이커 폴백** — 에이전트가 아무도 답하지 못해 배당으로 대체한 예측이라
+       에이전트의 판단이 아니다.
+    2. **사후 재현 표본**(Phase 3-7) — 생성 시점에 결과가 시스템 밖에서 이미
+       알려져 있었다고 **선언된** 예측이다.
+
+    **`is not True`여야 한다.** `not row.outcome_known_externally`로 쓰면 `None`이
+    함께 걸려, 아무도 선언한 적 없는 정상 표본까지 채점에서 빠진다. `None`은
+    "모른다"가 아니라 "선언되지 않았다"이고, 그 표본은 채점 대상으로 남는다
+    (`ai_lab_evaluation._judge()`의 `is True`와 정확히 대칭이다).
+
+    **이 함수는 "무엇으로 점수를 매기는가"만 정한다.** "무엇을 했는가"(리포트 수·
+    응답률·재고 수치)는 여기를 지나지 않는다 — 사후 재현 표본에도 에이전트는
+    실제로 일을 했고, 그 사실까지 지우면 활동량이 거짓이 된다.
+    """
+    return row.source != BOOKMAKER_FALLBACK and row.outcome_known_externally is not True
+
+
 @dataclass(frozen=True)
 class PredictionRow:
     """저장된 예측 한 건 + 그 경기의 실제 결과."""
@@ -213,21 +239,28 @@ def summarize_agent_analysis(
        오답으로 세면 안 된다.
     3. **의견 없음(`pick is None`)은 오답이 아니다.** 근거가 없어 판단하지 않은 것은
        설계된 동작이고(하네스 §13-Q1), 정확도 분모에도 들어가지 않는다.
+
+    **활동량과 정확도의 분모가 다르다.** 리포트 수·응답률·의견율은 아래
+    `activity_source` 전체를 보고, 정확도만 `is_scorable`을 한 번 더 지난다.
+    사후 재현 표본에서도 에이전트는 실제로 답했으므로 그 일한 기록까지 지우면
+    화면이 "이 에이전트는 그만큼 일하지 않았다"고 거짓말을 하게 된다.
     """
-    graded_source = {
+    # 활동량 모집단이다 — **채점 모집단이 아니다.** 정확도용 필터는 `_analyze_agent`가
+    # 예측 단위로 한 번 더 건다.
+    activity_source = {
         (p.event_slug, p.match_key): p
         for p in predictions
         if p.source != BOOKMAKER_FALLBACK
     }
-    scoped = [r for r in reports if (r.event_slug, r.match_key) in graded_source]
+    scoped = [r for r in reports if (r.event_slug, r.match_key) in activity_source]
 
     by_agent: dict[str, list[ReportRow]] = {}
     for report in scoped:
         by_agent.setdefault(report.agent, []).append(report)
 
-    total_predictions = len(graded_source)
+    total_predictions = len(activity_source)
     agents = [
-        _analyze_agent(agent, rows, graded_source, total_predictions)
+        _analyze_agent(agent, rows, activity_source, total_predictions)
         for agent, rows in sorted(by_agent.items())
     ]
 
@@ -252,10 +285,13 @@ def _analyze_agent(
     total_predictions: int,
 ) -> AgentAnalysis:
     opinionated = [r for r in rows if r.pick is not None]
+    # **정확도 분모만 `is_scorable`을 지난다.** 위 `opinionated`(활동량)는 그대로 둔다 —
+    # 사후 재현 표본에 답한 것도 답한 것이다.
     gradable = [
         r
         for r in opinionated
-        if predictions[(r.event_slug, r.match_key)].winner_pick is not None
+        if is_scorable(predictions[(r.event_slug, r.match_key)])
+        and predictions[(r.event_slug, r.match_key)].winner_pick is not None
     ]
     correct = sum(
         1
@@ -339,13 +375,18 @@ def cites_own_event(sources: Iterable[str], event_label: str) -> bool:
 
 
 def summarize_predictions(rows: Sequence[PredictionRow]) -> PredictionTotals:
-    """저장된 예측을 센다. **채점은 북메이커 폴백을 뺀다.**
+    """저장된 예측을 센다. **채점은 북메이커 폴백과 사후 재현 표본을 뺀다.**
 
     폴백은 에이전트가 아무도 답하지 못해 배당으로 대체한 예측이라, 그것까지 세면
     "무엇의 적중률인가"를 말할 수 없게 된다(하네스 §13-Q4와 같은 규칙).
+
+    **모집단이 둘이다.** `agent_rows`는 폴백만 뺀 재고 수치용이고, `scorable_rows`는
+    거기서 사후 재현 표본까지 뺀 채점용이다. 둘을 하나로 합치면 `bookmaker_fallback`
+    잔차식이 깨진다 — 폴백이 아닌 이유로 빠진 예측이 폴백으로 집계된다.
     """
     agent_rows = [r for r in rows if r.source != BOOKMAKER_FALLBACK]
-    graded_rows = [r for r in agent_rows if r.winner_pick is not None]
+    scorable_rows = [r for r in rows if is_scorable(r)]
+    graded_rows = [r for r in scorable_rows if r.winner_pick is not None]
     correct = sum(1 for r in graded_rows if r.pick == r.winner_pick)
     graded = len(graded_rows)
     interval = wilson_interval(correct, graded)
@@ -358,8 +399,12 @@ def summarize_predictions(rows: Sequence[PredictionRow]) -> PredictionTotals:
         hit_rate=(correct / graded) if graded else None,
         hit_rate_low=interval[0] if interval else None,
         hit_rate_high=interval[1] if interval else None,
-        avg_confidence=_mean(r.confidence for r in agent_rows),
-        avg_win_probability=_mean(r.win_probability for r in agent_rows),
+        # 평균 둘도 채점 모집단을 쓴다. 사후 재현 표본은 근거 문서가 없어 확신도가
+        # 낮게 깔리는데, 그것이 채점 대상 예측의 평균 확신도인 척하면 안 된다.
+        avg_confidence=_mean(r.confidence for r in scorable_rows),
+        avg_win_probability=_mean(r.win_probability for r in scorable_rows),
+        # **잔차식은 `agent_rows`를 그대로 쓴다.** 여기에 채점 모집단을 넣으면
+        # 사후 재현 표본이 폴백으로 둔갑한다.
         bookmaker_fallback=len(rows) - len(agent_rows),
     )
 
@@ -371,11 +416,18 @@ def summarize_integrity(
     *,
     events_total: int,
 ) -> IntegrityFacts:
-    """적중률을 믿어도 되는지 판정하고 **그 이유를 함께 낸다.**"""
-    agent_rows = [r for r in rows if r.source != BOOKMAKER_FALLBACK]
-    graded_rows = [r for r in agent_rows if r.winner_pick is not None]
+    """적중률을 믿어도 되는지 판정하고 **그 이유를 함께 낸다.**
+
+    **여기서 재는 것은 적중률 하나다.** 그러므로 이 함수의 모든 수치는 그 적중률을
+    만든 표본, 곧 `graded_rows` 하나만 본다. 재고 수치는 이 함수의 일이 아니다.
+    """
+    graded_rows = [r for r in rows if is_scorable(r) and r.winner_pick is not None]
     sample_size = len(graded_rows)
-    events_covered = len({r.event_slug for r in agent_rows})
+    # **`graded_rows` 기준이어야 한다.** 예전에는 미채점 예측까지 포함한 목록으로
+    # 셌는데, 그러면 "채점된 12건이 대회 3개에 걸쳐 있다"는 말이 된다 — 실제로 그
+    # 12건은 한 대회에서만 나왔다. 아래 일반화 검사가 보는 값이 바로 이것이라,
+    # 모집단이 어긋나면 나와야 할 경고가 통째로 사라진다.
+    events_covered = len({r.event_slug for r in graded_rows})
 
     labels = {(r.event_slug, r.match_key): r.event_label for r in graded_rows}
     sources_by_match: dict[tuple[str, str], list[str]] = {}

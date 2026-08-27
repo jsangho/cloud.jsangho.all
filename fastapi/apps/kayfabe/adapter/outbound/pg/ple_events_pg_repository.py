@@ -169,6 +169,27 @@ class PleEventsPgRepository(PleEventsRepository):
 
         **북메이커 폴백은 제외한다** — 에이전트가 아무도 답하지 못해 배당으로
         대체한 예측이라, 그것까지 세면 지우기로 한 그 숫자가 다시 섞인다.
+
+        **사후 재현 표본도 제외한다** (Phase 3-9). 생성 시점에 결과가 시스템 밖에서
+        이미 알려져 있었다고 선언된 예측이다(Phase 3-7). AI LAB의 자격 판정이
+        "채점 대상 아님"이라 적은 그 표본을, 홈 화면이 적중률로 세고 있으면 안 된다.
+
+        **이 함수가 내는 여섯 값은 전부 채점 지표다** — `total_graded`·`correct`·
+        `incorrect`·`accuracy_percent`·`recent[]`·`recent[].correct`. 재고나 활동량을
+        말하는 필드가 하나도 없어서, 여기서는 모집단을 통째로 좁혀도 잃는 의미가 없다.
+        (`ai_lab_integrity`의 집계 넷은 재고와 채점이 한 목록을 공유해서 사정이 다르다 —
+        거기서는 지표별로 갈라 걸어야 한다.)
+
+        **`isnot(True)`여야 한다.** `== False`나 `is_(False)`로 쓰면 아무도 선언한 적
+        없는 `NULL` 행이 통째로 채점에서 빠진다. `NULL`은 "모른다"가 아니라
+        **"선언되지 않았다"**이고 그 표본은 채점 대상으로 남는다. SQL의 `IS NOT TRUE`가
+        `ai_lab_integrity.is_scorable()`의 파이썬 `is not True`와 같은 뜻이 되는 유일한
+        표현이다.
+
+        **같은 뜻이 파이썬과 SQL 두 곳에 적혀 있다.** 이 쿼리는 행을 `PredictionRow`로
+        조립하지 않고 SQL에서 바로 집계해서 `is_scorable()`을 부를 자리가 없다. 한쪽만
+        바뀌면 홈 화면과 AI LAB이 서로 다른 적중률을 말하게 되므로, 둘 중 하나를 고칠
+        때는 반드시 다른 하나도 함께 본다.
         """
         logger.info("[PleEventsPgRepository] get_ai_stats -> Neon")
         graded = (
@@ -195,6 +216,8 @@ class PleEventsPgRepository(PleEventsRepository):
             .where(
                 PleMatchModel.winner_pick.isnot(None),
                 AgentPredictionModel.source != BOOKMAKER_FALLBACK_SOURCE,
+                # `== False`가 아니다 — 위 docstring 참조. NULL은 채점 대상으로 남는다.
+                AgentPredictionModel.outcome_known_externally.isnot(True),
             )
             .subquery()
         )

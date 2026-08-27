@@ -28,6 +28,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     BOOKMAKER_FALLBACK,
     PredictionRow,
     ReportRow,
+    is_scorable,
 )
 from kayfabe.domain.entities.agent_prediction import AgentKind
 
@@ -146,6 +147,13 @@ def summarize_performance(
        예측이라 합성이라 부를 것이 없다.
     2. **미채점은 정확도 분모에서 뺀다.** 결과가 없는 것을 오답으로 세지 않는다.
     3. **의견 없음은 오답이 아니다.** 동의도 분모에도 들어가지 않는다.
+
+    여기에 넷째가 붙는다.
+
+    4. **사후 재현 표본은 채점 분모에서 뺀다**(Phase 3-7). 이 화면 하단의 자격 판정이
+       "채점 대상 아님"이라고 적은 표본을, 같은 화면 상단이 세고 있으면 안 된다.
+       다만 `predictions`·`singles`·`multi`와 합의 버킷의 **재고**는 그대로 둔다 —
+       이 화면이 해부하는 것은 "무엇이 있었는가"이기도 하기 때문이다.
     """
     scoped = [row for row in predictions if row.source != BOOKMAKER_FALLBACK]
     keys = {(row.event_slug, row.match_key) for row in scoped}
@@ -161,13 +169,18 @@ def summarize_performance(
     # 승률이 높은 것이 위로. 같으면 경기 키 순 — 재조회에도 순서가 안 흔들린다.
     items.sort(key=lambda i: (-i.win_probability, i.match_key))
 
-    graded = [row for row in scoped if row.winner_pick is not None]
+    # **`scoped`가 아니라 채점 모집단에서 센다.** `scoped`는 아래 재고 수치와
+    # 잔차식이 쓰는 목록이라 좁히면 안 된다.
+    graded = [
+        row for row in predictions if is_scorable(row) and row.winner_pick is not None
+    ]
     correct = sum(1 for row in graded if row.pick == row.winner_pick)
     totals = PerformanceTotals(
         predictions=len(predictions),
         graded=len(graded),
         correct=correct,
         incorrect=len(graded) - correct,
+        # 잔차식은 `scoped` 그대로다 — 사후 재현 표본을 폴백으로 세지 않기 위해서다.
         bookmaker_fallback=len(predictions) - len(scoped),
         singles=sum(1 for row in scoped if row.pick in _SINGLES_PICKS),
         multi=sum(1 for row in scoped if row.pick not in _SINGLES_PICKS),
@@ -236,12 +249,17 @@ def _consensus(
             confidence=_confidence_of(answered, agreed),
             answered=answered,
             agreed=agreed,
+            # 버킷의 재고(`predictions`)는 전부 세고, 채점 둘만 `is_scorable`을 지난다.
             predictions=len(group),
-            graded=sum(1 for row in group if row.winner_pick is not None),
+            graded=sum(
+                1 for row in group if is_scorable(row) and row.winner_pick is not None
+            ),
             correct=sum(
                 1
                 for row in group
-                if row.winner_pick is not None and row.pick == row.winner_pick
+                if is_scorable(row)
+                and row.winner_pick is not None
+                and row.pick == row.winner_pick
             ),
         )
         for (answered, agreed), group in grouped.items()
