@@ -4,6 +4,11 @@
 멀티 에이전트 기록이 한 숫자로 섞이면 무엇의 적중률인지 말할 수 없다. 그래서 집계
 대상을 `ple_agent_predictions`로 옮겼고, 이 파일이 그 계약을 고정한다.
 
+**사후 재현 표본도 세지 않는다** (Phase 3-9). 이 쿼리가 홈 화면 KPI가 읽는 유일한
+채점 경로인데, SQL에서 바로 집계해서 `ai_lab_integrity.is_scorable()`을 부를 자리가
+없다. 그래서 같은 뜻이 파이썬과 SQL 두 곳에 적혀 있고, 아래 테스트들이 그 둘이
+갈라지지 않게 붙든다.
+
 SQLite 인메모리에서 실제 쿼리를 돌린다 — 이 경로에는 pgvector 타입이 없다.
 
 실행:
@@ -68,8 +73,14 @@ def _match(
 
 
 def _prediction(
-    pid: int, *, key: str, pick: str, source: str = "agents"
+    pid: int,
+    *,
+    key: str,
+    pick: str,
+    source: str = "agents",
+    outcome_known_externally: bool | None = None,
 ) -> AgentPredictionModel:
+    """기본값 `None` = **아무도 선언하지 않았다** — 기존 테스트가 지나는 길이다."""
     return AgentPredictionModel(
         id=pid,
         event_id=1,
@@ -81,6 +92,8 @@ def _prediction(
         rationale="근거",
         source=source,
         generated_at=_NOW,
+        outcome_known_externally=outcome_known_externally,
+        provenance_note="사후 재현 표본." if outcome_known_externally else None,
     )
 
 
@@ -164,6 +177,92 @@ def test_bookmaker_fallback_is_excluded() -> None:
 
     assert stats.total_graded == 1
     assert [r.match_key for r in stats.recent] == ["a"]
+
+
+def test_ex_post_sample_is_excluded_even_with_a_result() -> None:
+    """**이 파일에서 가장 중요한 테스트다** (Phase 3-9).
+
+    사후 재현 표본은 결과가 들어와도 홈 KPI를 움직이지 않아야 한다. 이 조건이
+    없으면 Bad Blood·King & Queen 7건의 결과를 넣는 순간 홈 화면만 AI LAB과
+    다른 적중률을 말한다 — AI LAB은 같은 7건을 `ex_post`로 빼고 있는데도.
+
+    ex-post 쪽을 **오답**으로 둔 이유는, 빠지지 않았을 때 값이 눈에 띄게
+    틀어지게 하기 위해서다(2/2 → 1/2, 100% → 50%).
+    """
+    stats = _stats(
+        [
+            _match(1, key="a", winner="left"),
+            _match(2, key="b", winner="right"),
+            _prediction(10, key="a", pick="left"),
+            _prediction(11, key="b", pick="left", outcome_known_externally=True),
+        ]
+    )
+
+    assert stats.total_graded == 1
+    assert stats.correct == 1
+    assert stats.incorrect == 0
+    assert stats.accuracy_percent == 100.0
+    assert [r.match_key for r in stats.recent] == ["a"]
+
+
+def test_undeclared_none_is_still_graded() -> None:
+    """**`NULL`은 "모른다"가 아니라 "선언되지 않았다"이다.**
+
+    운영의 기존 12건이 전부 이 자리에 있다. SQL을 `== False`로 썼다면 여기서
+    깨진다 — 아무도 선언한 적 없는 표본이 통째로 채점에서 빠진다.
+    """
+    stats = _stats(
+        [
+            _match(1, key="a", winner="left"),
+            _prediction(10, key="a", pick="left", outcome_known_externally=None),
+        ]
+    )
+
+    assert stats.total_graded == 1
+    assert stats.correct == 1
+    assert [r.match_key for r in stats.recent] == ["a"]
+
+
+def test_declared_false_is_still_graded() -> None:
+    """`False`는 "결과가 밖에 알려지지 않았다"고 **명시한** 것이다 — 채점한다.
+
+    `None`과 뜻은 다르지만 채점 여부는 같다. 셋 중 `True` 하나만 빠진다.
+    """
+    stats = _stats(
+        [
+            _match(1, key="a", winner="left"),
+            _prediction(10, key="a", pick="left", outcome_known_externally=False),
+        ]
+    )
+
+    assert stats.total_graded == 1
+    assert stats.correct == 1
+    assert [r.match_key for r in stats.recent] == ["a"]
+
+
+def test_recent_and_aggregate_share_one_population() -> None:
+    """`recent[]`와 집계가 **같은 서브쿼리**에서 나온다는 계약.
+
+    둘이 갈라지면 화면이 "12건 채점"이라 적고 목록에는 19줄을 그리게 된다.
+    셋을 섞어 두고 길이와 합계가 함께 움직이는지 본다.
+    """
+    stats = _stats(
+        [
+            _match(1, key="a", winner="left"),
+            _match(2, key="b", winner="left"),
+            _match(3, key="c", winner="left"),
+            _match(4, key="d", winner="left"),
+            _prediction(10, key="a", pick="left"),
+            _prediction(11, key="b", pick="left", outcome_known_externally=False),
+            _prediction(12, key="c", pick="left", outcome_known_externally=True),
+            _prediction(13, key="d", pick="left", source="bookmaker_fallback"),
+        ]
+    )
+
+    assert stats.total_graded == 2
+    assert len(stats.recent) == stats.total_graded
+    assert [r.match_key for r in stats.recent] == ["a", "b"]
+    assert stats.correct + stats.incorrect == stats.total_graded
 
 
 def test_unfinished_match_is_not_graded() -> None:
