@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -47,6 +47,9 @@ def _prediction(
         generated_at=generated_at,
         winner_pick=winner_pick,
         winner_name="Someone",
+        # Phase 3-12: 코퍼스 규칙이 이 날짜로 "인용 문서가 경기 전 글인가"를 잰다.
+        # 없으면 다른 규칙을 재는 테스트까지 전부 보류로 떨어진다.
+        event_start_date=date(2026, 8, 10),
     )
 
 
@@ -353,6 +356,10 @@ class TestEvaluation:
             chunks_with_published_at=published,
             first_published_at=None,
             last_collected_at=_NOW,
+            # 경기(8/10)보다 앞선 깨끗한 계보. 계보 자체를 재는 테스트는
+            # `test_ai_lab_revision_gate.py`에 따로 있다.
+            chunks_with_revision=3,
+            latest_revised_at=datetime(2026, 8, 1, tzinfo=UTC),
         )
 
     @pytest.mark.asyncio

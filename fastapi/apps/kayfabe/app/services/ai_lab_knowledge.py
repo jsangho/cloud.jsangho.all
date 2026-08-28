@@ -36,6 +36,13 @@ class DocumentRow:
     #: 이 문서 청크 중 가장 이른 발행일. 전부 NULL이면 `None`이다.
     first_published_at: datetime | None
     last_collected_at: datetime | None
+    #: 개정본 시각을 아는 청크 수 (Phase 3-12). `chunks`보다 작으면 계보가 불완전하다.
+    chunks_with_revision: int = 0
+    #: 이 문서 청크 중 **가장 늦은** 개정본 시각. 전부 NULL이면 `None`.
+    #:
+    #: 가장 이른 것이 아니라 늦은 것을 쓴다 — 하나라도 경기 뒤 개정본이 섞여 있으면
+    #: 그 문서를 인용한 예측은 결과를 봤을 수 있다. 판정은 최악을 기준으로 한다.
+    latest_revised_at: datetime | None = None
 
 
 @dataclass(frozen=True)

@@ -23,6 +23,11 @@ from ontology.app.ports.input.public_source_use_case import (
     PublicSourceUseCase,
     SourceNotAllowedError,
 )
+from ontology.app.ports.output.revision_metadata_port import (
+    RevisionMetadata,
+    RevisionMetadataPort,
+    wiki_title_from_url,
+)
 from ontology.app.ports.output.robots_policy_port import RobotsPolicyPort
 from ontology.app.ports.output.web_page_fetcher_port import WebPageFetcherPort
 
@@ -58,10 +63,13 @@ class PublicSourceInteractor(PublicSourceUseCase):
         allowed_domains: frozenset[str],
         fetcher: WebPageFetcherPort,
         robots: RobotsPolicyPort,
+        revisions: RevisionMetadataPort | None = None,
     ) -> None:
         self._allowed_domains = frozenset(d.lower() for d in allowed_domains)
         self._fetcher = fetcher
         self._robots = robots
+        #: 없으면 계보 없이 수집한다 — 계보는 있으면 좋은 것이지 수집의 조건이 아니다.
+        self._revisions = revisions
 
     async def collect(self, url: str) -> PublicDocument | None:
         self._require_allowed(url)
@@ -85,12 +93,46 @@ class PublicSourceInteractor(PublicSourceUseCase):
             logger.info("[ontology.public_source] 본문 비어 있음 | url=%s", url)
             return None
 
+        revision = await self._revision_of(url)
         return PublicDocument(
             url=url,
             title=_title(soup),
             text=text,
             published_at=_published_at(soup),
+            revision_id=revision.revision_id if revision else None,
+            revised_at=revision.revised_at if revision else None,
         )
+
+    async def _revision_of(self, url: str) -> RevisionMetadata | None:
+        """개정본 계보를 얻되, **돌려받은 제목이 주소와 맞을 때만 인정한다.**
+
+        식별자만 믿으면 조용히 다른 문서를 가리킬 수 있다 — 잘린 `oldid=13677280`이
+        "Who Framed Roger Rabbit"으로 해석된 실측 사례가 있다. 그런 계보는 없는 것만
+        못하므로 버린다.
+
+        **어느 경우에도 예외를 올리지 않는다.** 계보가 비는 것과 문서를 못 가져오는
+        것은 다른 일이고, 여기서 멈추면 본문까지 잃는다.
+        """
+        if self._revisions is None:
+            return None
+        revision = await self._revisions.fetch(url)
+        if revision is None:
+            return None
+
+        expected = wiki_title_from_url(url)
+        if expected is None:
+            # 위키가 아닌 주소다. 대조할 기준이 없으면 계보를 주장하지 않는다.
+            return None
+        if _normalize_title(revision.title) != _normalize_title(expected):
+            logger.info(
+                "[ontology.public_source] 계보 제목 불일치 — 버린다 | url=%s "
+                "| 기대=%s | 응답=%s",
+                url,
+                expected,
+                revision.title,
+            )
+            return None
+        return revision
 
     def _require_allowed(self, url: str) -> None:
         parsed = urlparse(url)
@@ -100,6 +142,15 @@ class PublicSourceInteractor(PublicSourceUseCase):
         if host not in self._allowed_domains:
             # 목록에 없는 주소는 존재조차 확인하지 않는다.
             raise SourceNotAllowedError(f"허용 도메인이 아닙니다: {host or url}")
+
+
+def _normalize_title(text: str) -> str:
+    """제목 대조용 정규화 — 밑줄·연속 공백·대소문자 차이만 흡수한다.
+
+    구두점까지 지우지는 않는다. `Money in the Bank (2026)`과 `Money in the Bank`는
+    **다른 문서**이고, 그 차이를 흘리면 이 대조가 하는 일이 없어진다.
+    """
+    return _WHITESPACE.sub(" ", text.replace("_", " ")).strip().casefold()
 
 
 def _title(soup: BeautifulSoup) -> str | None:

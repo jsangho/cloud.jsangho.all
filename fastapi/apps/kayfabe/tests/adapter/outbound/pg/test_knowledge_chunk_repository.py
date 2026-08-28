@@ -27,7 +27,13 @@ from kayfabe.adapter.outbound.pg.knowledge_chunk_pg_repository import (
 from kayfabe.app.dtos.knowledge_ingestion_dto import NewKnowledgeChunk
 
 
-def _chunk(content: str = "본문", content_hash: str = "a" * 64) -> NewKnowledgeChunk:
+def _chunk(
+    content: str = "본문",
+    content_hash: str = "a" * 64,
+    *,
+    revision_id: str | None = "1367773770",
+    revised_at: datetime | None = datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC),
+) -> NewKnowledgeChunk:
     return NewKnowledgeChunk(
         source_url="https://www.wwe.com/shows/summerslam",
         source_domain="www.wwe.com",
@@ -36,6 +42,8 @@ def _chunk(content: str = "본문", content_hash: str = "a" * 64) -> NewKnowledg
         content_hash=content_hash,
         embedding=[0.1, 0.2],
         published_at=datetime(2026, 8, 1, tzinfo=UTC),
+        source_revision_id=revision_id,
+        source_revised_at=revised_at,
     )
 
 
@@ -124,3 +132,23 @@ async def test_old_version_of_the_same_document_is_removed_first() -> None:
     assert "INSERT INTO" in str(
         session.statements[1].compile(dialect=postgresql.dialect())
     )
+
+
+def test_row_carries_revision_provenance() -> None:
+    """계보가 청크까지 실려 가는지 본다 (Phase 3-12).
+
+    여기서 빠뜨리면 재수집을 해도 `source_revised_at`이 `NULL`로 들어가고,
+    평가의 시간 게이트는 여전히 아무것도 판정하지 못한다.
+    """
+    row = _deduplicated([_chunk()])[0]
+
+    assert row["source_revision_id"] == "1367773770"
+    assert row["source_revised_at"] == datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC)
+
+
+def test_missing_revision_is_stored_as_null_not_now() -> None:
+    """계보를 못 얻으면 `NULL`이다 — 수집 시각으로 대신 채우지 않는다."""
+    row = _deduplicated([_chunk(revision_id=None, revised_at=None)])[0]
+
+    assert row["source_revision_id"] is None
+    assert row["source_revised_at"] is None

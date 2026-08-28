@@ -64,6 +64,9 @@ class AiLabPgRepository(AiLabRepository):
                 # 있었는지는 어떤 시각 컬럼으로도 알 수 없어 따로 적어 둔 값이다.
                 AgentPredictionModel.outcome_known_externally,
                 AgentPredictionModel.provenance_note,
+                # 대회 날짜 (Phase 3-12). 코퍼스 규칙이 "인용 문서가 경기보다 앞선
+                # 개정본인가"를 재는 데 쓴다. 컬럼 하나가 늘 뿐 조인은 그대로다.
+                PleEventModel.start_date,
             )
             .join(PleEventModel, AgentPredictionModel.event_id == PleEventModel.id)
             # 경기 행이 사라져도 예측은 남는다 — 그때 채점 불가로 두고 버리지 않는다.
@@ -92,6 +95,7 @@ class AiLabPgRepository(AiLabRepository):
                 finished_at=row.finished_at,
                 outcome_known_externally=row.outcome_known_externally,
                 provenance_note=row.provenance_note,
+                event_start_date=row.start_date,
             )
             for row in result.all()
         ]
@@ -177,6 +181,10 @@ class AiLabPgRepository(AiLabRepository):
                 func.count(KnowledgeChunkModel.published_at),
                 func.min(KnowledgeChunkModel.published_at),
                 func.max(KnowledgeChunkModel.collected_at),
+                # 계보 (Phase 3-12). **가장 늦은** 개정본을 집는다 — 경기 뒤 개정본이
+                # 하나라도 섞여 있으면 그 문서는 통과시키지 않는다.
+                func.count(KnowledgeChunkModel.source_revised_at),
+                func.max(KnowledgeChunkModel.source_revised_at),
             ).group_by(KnowledgeChunkModel.source_url)
         )
         rows = [
@@ -189,6 +197,8 @@ class AiLabPgRepository(AiLabRepository):
                 chunks_with_published_at=int(published or 0),
                 first_published_at=first_published,
                 last_collected_at=collected,
+                chunks_with_revision=int(revisions or 0),
+                latest_revised_at=latest_revised,
             )
             for (
                 url,
@@ -199,6 +209,8 @@ class AiLabPgRepository(AiLabRepository):
                 published,
                 first_published,
                 collected,
+                revisions,
+                latest_revised,
             ) in result.all()
         ]
         logger.info("[AiLabPgRepository] list_documents <- count=%d", len(rows))

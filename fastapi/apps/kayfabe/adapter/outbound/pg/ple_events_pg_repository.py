@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from kayfabe.adapter.outbound.catalog.ple_event_schedule_catalog import schedule_for
 from kayfabe.adapter.outbound.mappers.ple_orm_mapper import (
     card_command_to_json,
     event_to_read,
@@ -287,6 +288,10 @@ class PleEventsPgRepository(PleEventsRepository):
         self, payload: PleEventSyncCommand
     ) -> PleEventSnapshotQuery:
         status_val = payload.status or PleEventStatus.UPCOMING
+        # **날짜는 페이로드에서 받지 않는다** (Phase 3-12). 이 값이 평가의 시간
+        # 게이트를 좌우하므로, 클라이언트가 보내는 값이 아니라 백엔드 카탈로그가
+        # 정한다. 모르는 대회는 `None`이고 그대로 `NULL`로 남는다.
+        start_date, end_date = schedule_for(payload.slug)
         await self.db.execute(
             pg_insert(PleEventModel)
             .values(
@@ -295,6 +300,8 @@ class PleEventsPgRepository(PleEventsRepository):
                 month=payload.month,
                 year=payload.year,
                 status=status_val,
+                start_date=start_date,
+                end_date=end_date,
             )
             .on_conflict_do_update(
                 index_elements=["slug"],
@@ -302,6 +309,8 @@ class PleEventsPgRepository(PleEventsRepository):
                     "label": payload.label,
                     "month": payload.month,
                     "year": payload.year,
+                    "start_date": start_date,
+                    "end_date": end_date,
                 },
             )
         )
