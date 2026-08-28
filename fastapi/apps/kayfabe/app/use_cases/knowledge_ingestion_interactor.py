@@ -59,12 +59,21 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
         total_chunks = 0
         stored = 0
         failed = 0
+        provenance_unavailable = 0
 
         for url in command.urls:
             document = await self._collect(url)
             if document is None:
                 continue
             collected += 1
+            if document.revised_at is None:
+                # 본문은 받았지만 개정본 시각을 모른다 — 수집 실패가 아니다.
+                # 이 문서를 인용한 예측은 시간 게이트를 통과할 수 없다는 뜻이라
+                # 요약에 남겨 두고, 여기서 멈추지는 않는다.
+                provenance_unavailable += 1
+                logger.info(
+                    "[kayfabe.knowledge_ingestion] 개정본 계보 없음 | url=%s", url
+                )
 
             prepared, failures = await self._prepare(document)
             total_chunks += len(prepared) + failures
@@ -74,13 +83,15 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
 
         duplicates = total_chunks - failed - stored
         logger.info(
-            "[kayfabe.knowledge_ingestion] 적재 완료 | 요청=%d 수집=%d 청크=%d 저장=%d 중복=%d 실패=%d",
+            "[kayfabe.knowledge_ingestion] 적재 완료 | 요청=%d 수집=%d 청크=%d "
+            "저장=%d 중복=%d 실패=%d 계보없음=%d",
             len(command.urls),
             collected,
             total_chunks,
             stored,
             duplicates,
             failed,
+            provenance_unavailable,
         )
         return IngestionSummary(
             requested=len(command.urls),
@@ -89,6 +100,7 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
             stored=stored,
             duplicates=duplicates,
             failed=failed,
+            provenance_unavailable=provenance_unavailable,
         )
 
     async def _collect(self, url: str) -> SourceDocument | None:
@@ -136,6 +148,8 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
                     content_hash=content_fingerprint(content),
                     embedding=embedding,
                     published_at=document.published_at,
+                    source_revision_id=document.revision_id,
+                    source_revised_at=document.revised_at,
                 )
             )
         return prepared, failed

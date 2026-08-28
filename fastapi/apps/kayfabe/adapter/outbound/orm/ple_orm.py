@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -39,6 +40,12 @@ class PleEventModel(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     year: Mapped[int] = mapped_column(Integer, nullable=False, default=2026)
+    #: 대회 시작일 (Phase 3-12). **`DATE`다** — 우리가 가진 것은 날짜뿐이고 없는
+    #: 시각 정밀도를 지어내지 않는다. 평가의 시간 게이트가 보는 유일한 값이다.
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    #: 2일 대회의 끝날 (WrestleMania 4.18–19 · SummerSlam 8.1–2). 없으면 하루짜리다.
+    #: **판정은 이 값을 보지 않는다** — 시작 전 개정본이면 둘째 날 결과도 있을 수 없다.
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default=PleEventStatus.UPCOMING
     )

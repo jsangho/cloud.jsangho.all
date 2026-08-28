@@ -39,6 +39,16 @@ class KnowledgeChunkModel(Base):
     published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
+    #: 우리가 실제로 읽은 개정본의 식별자 (Phase 3-12). 위키는 `oldid`/`revid`다.
+    #: **URL이 같아도 개정본이 다르면 다른 글이다** — `published_at`은 그 차이를
+    #: 표현하지 못해서 이 칸을 따로 둔다.
+    source_revision_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 그 개정본이 만들어진 시각. `ple_events.start_date`보다 앞서야 "경기 결과가
+    #: 적혀 있을 수 없다"고 말할 수 있다(하네스 판정의 충분조건).
+    #: 확인 못 하면 `NULL` — 수집 시각으로 대체하지 않는다. `published_at`과 같은 규칙이다.
+    source_revised_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     #: 본문 sha256. 재수집 시 같은 글이 여러 벌 쌓여 검색 결과를 독식하는 것을 막는다.
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     #: 임베딩 실패·지연 적재를 허용해 NULL을 둔다. 검색은 NULL 행을 건너뛴다.

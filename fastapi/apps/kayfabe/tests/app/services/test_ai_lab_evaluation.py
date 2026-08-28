@@ -6,14 +6,21 @@
 무게 셋을 갈라 놓는 것이 테스트의 핵심이다.
 - **제외**(폴백·미채점)는 실격이 아니다.
 - **실격**(시간 역전·자기참조)은 누수가 확정된 것이다.
-- **보류**(발행일 미상)는 통과도 실격도 아니다 — **통과로 세면 판정이 무의미해진다.**
+- **보류**(인용 문서가 경기보다 앞선 개정본임을 확인 못 함)는 통과도 실격도 아니다
+  — **통과로 세면 판정이 무의미해진다.**
+
+Phase 3-12에서 코퍼스 규칙의 기준이 `published_at` 존재에서 **개정본 시각 대 대회
+시작일** 비교로 바뀌었다. 아래 헬퍼가 기본으로 "깨끗한 계보"를 주는 이유가 그것이다 —
+이 파일의 테스트들은 대부분 코퍼스 규칙이 아니라 **다른 규칙**을 재고 있어서, 계보가
+비면 재려던 것과 무관하게 전부 보류로 떨어진다. 계보 자체를 재는 테스트는
+`test_ai_lab_revision_gate.py`에 따로 있다.
 
 그리고 하나 더: **자격이 0건이면 성능 집계 함수를 호출조차 하지 않는다.**
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -35,6 +42,11 @@ _RESULT_AT = datetime(2026, 8, 4, 7, tzinfo=UTC)
 _BEFORE = datetime(2026, 8, 3, 7, tzinfo=UTC)
 _AFTER = datetime(2026, 8, 5, 7, tzinfo=UTC)
 
+#: 대회 시작일과 그보다 앞선 개정본 (Phase 3-12). 인용 문서가 경기 전 글이어야
+#: 코퍼스 규칙을 지나므로, 다른 규칙을 재는 테스트들이 이 기본값을 쓴다.
+_EVENT_START = date(2026, 8, 10)
+_REVISED = datetime(2026, 8, 1, 7, tzinfo=UTC)
+
 _DOC = "https://en.wikipedia.org/wiki/Backlash_(2026)"
 _OWN = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
 
@@ -50,6 +62,7 @@ def _prediction(
     event_label: str = "SummerSlam",
     outcome_known_externally: bool | None = None,
     provenance_note: str | None = None,
+    event_start_date: date | None = _EVENT_START,
 ) -> PredictionRow:
     return PredictionRow(
         event_slug="summerslam",
@@ -68,6 +81,7 @@ def _prediction(
         finished_at=finished_at,
         outcome_known_externally=outcome_known_externally,
         provenance_note=provenance_note,
+        event_start_date=event_start_date,
     )
 
 
@@ -83,7 +97,13 @@ def _report(*, match_key: str = "m1", sources: tuple[str, ...] = (_DOC,)) -> Rep
     )
 
 
-def _document(*, url: str = _DOC, published: int = 3) -> DocumentRow:
+def _document(
+    *,
+    url: str = _DOC,
+    published: int = 3,
+    revisions: int = 3,
+    revised_at: datetime | None = _REVISED,
+) -> DocumentRow:
     return DocumentRow(
         source_url=url,
         source_domain="en.wikipedia.org",
@@ -93,6 +113,8 @@ def _document(*, url: str = _DOC, published: int = 3) -> DocumentRow:
         chunks_with_published_at=published,
         first_published_at=None,
         last_collected_at=_BEFORE,
+        chunks_with_revision=revisions,
+        latest_revised_at=revised_at,
     )
 
 
@@ -177,16 +199,38 @@ class TestSelfReference:
 
 
 class TestCorpusVerifiability:
-    def test_a_cited_document_without_a_published_date_is_held(self) -> None:
-        item = _only([_prediction()], [_report()], [_document(published=0)])
+    def test_a_cited_document_without_a_revision_is_held(self) -> None:
+        """**Phase 3-12에서 기준이 바뀌었다.** 보는 것은 개정본 시각이다.
+
+        예전에는 `published_at`이 없으면 보류였는데, 그 값은 위키에서 늘 비어 있어
+        아무것도 가르지 못했다. 이제는 우리가 읽은 개정본이 경기보다 앞선다는 것을
+        확인할 수 없을 때 보류한다. 계보를 재는 나머지 경우는
+        `test_ai_lab_revision_gate.py`에 있다.
+        """
+        item = _only(
+            [_prediction()], [_report()], [_document(revisions=0, revised_at=None)]
+        )
         verdict = _verdict(item, "unverifiable_corpus")
         assert verdict.failed is True
         # 실격이 아니라 보류다 — 누수를 증명도 반증도 못 한다.
         assert item.status == STATUS_HELD
         assert item.eligible is False
 
+    def test_a_published_date_alone_does_not_pass(self) -> None:
+        """발행일이 다 채워져 있어도 개정본이 없으면 통과가 아니다.
+
+        Phase 3-11이 경고한 함정이다 — 백필만 하면 hold가 pass로 뒤집히면서
+        시간 비교는 한 번도 일어나지 않는다.
+        """
+        item = _only(
+            [_prediction()],
+            [_report()],
+            [_document(published=3, revisions=0, revised_at=None)],
+        )
+        assert item.status == STATUS_HELD
+
     def test_a_cited_document_missing_from_the_corpus_is_held(self) -> None:
-        """코퍼스에 없는 문서는 발행일을 확인할 방법이 없다."""
+        """코퍼스에 없는 문서는 개정본을 확인할 방법이 없다."""
         item = _only(
             [_prediction()], [_report(sources=("https://gone.example/x",))], []
         )

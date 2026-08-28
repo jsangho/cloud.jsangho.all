@@ -19,7 +19,7 @@
 * **실격**(`disqualify`) — 누수가 확정됐다.
   `temporal_inversion`(결과 기록 이후 생성) · `self_reference`(자기 대회 문서 인용)
 * **보류**(`hold`) — 누수를 **증명도 반증도 못 한다.**
-  `unverifiable_corpus`(인용 문서의 발행일 미상)
+  `unverifiable_corpus`(인용 문서가 경기보다 앞선 개정본임을 확인 못 함)
 
 **보류를 통과로 세지 않는다.** 모르는 것을 괜찮은 것으로 접으면 이 판정이 하는 일이
 사라진다. 그렇다고 실격으로도 세지 않는다 — 확정된 누수와 모르는 것은 다른 사실이다.
@@ -27,6 +27,13 @@
 **추정하지 않는다.** `ple_prediction_retrievals`가 없으므로 어떤 청크가 실제로
 검색됐는지는 기록이 없고, 이 모듈은 그것을 사후에 지어내지 않는다. 판정에 쓰는 것은
 저장된 출처 URL까지다.
+
+**Phase 3-12가 코퍼스 규칙의 기준을 바꿨다.** 예전에는 인용 문서에 `published_at`이
+있는지만 봤는데, 그 검사는 위키에서 아무것도 증명하지 못했다 — 위키는 그 값을
+내보내지 않아 늘 비어 있었고, 채운다 해도 같은 URL이 경기 전후로 계속 고쳐지므로
+"그때 결과가 적혀 있었는가"에 답하지 않는다. 이제는 **우리가 읽은 개정본의 시각이
+대회 시작일보다 앞서는지**를 본다. 앞서면 결과가 있을 수 없다(충분조건). 나머지 다섯
+규칙과 적용 순서는 그대로다.
 
 **Phase 3-7이 축을 하나 더했다.** 시간 규칙이 보는 것은 `ple_matches.finished_at`,
 곧 결과가 **DB에 들어온** 시각이다. 그래서 이미 끝난 경기를 나중에 예측하고 결과를
@@ -39,7 +46,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from kayfabe.app.services.ai_lab_integrity import (
     BOOKMAKER_FALLBACK,
@@ -125,16 +132,56 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         code="unverifiable_corpus",
-        label="인용 문서의 발행일 미상",
+        label="인용 문서가 경기보다 앞선 개정본이 아님",
         severity=SEVERITY_HOLD,
         description=(
-            "인용한 문서가 예측보다 먼저 쓰인 글인지 확인할 수 없습니다. 발행일이 "
-            "없는 문서를 과거 문서로 간주하지 않으므로, 통과도 실격도 아닌 보류입니다."
+            "인용한 문서를 우리가 읽은 개정본이 경기 시작일보다 앞선다는 것을 "
+            "확인할 수 없습니다. 개정본 시각이나 대회 날짜를 모르는 경우, 그리고 "
+            "경기 당일 이후 개정본인 경우가 모두 여기에 들어갑니다. 모르는 것을 "
+            "과거로 간주하지 않으므로 통과도 실격도 아닌 보류입니다."
         ),
     ),
 )
 
 _RULE_BY_CODE = {rule.code: rule for rule in RULES}
+
+
+@dataclass(frozen=True)
+class DocumentProvenance:
+    """문서 하나의 개정본 계보 (Phase 3-12).
+
+    `_corpus`가 판정에 쓰는 값만 담는다. 문서 전체 통계인 `DocumentRow`를 그대로
+    넘기지 않는 이유는, 판정이 무엇을 보는지가 타입에 드러나야 하기 때문이다.
+    """
+
+    chunks: int
+    chunks_with_revision: int
+    #: 이 문서 청크 중 **가장 늦은** 개정본 시각. 최악을 기준으로 판정한다.
+    latest_revised_at: datetime | None
+    last_collected_at: datetime | None
+
+    @property
+    def is_complete(self) -> bool:
+        """청크 **전부**가 개정본 시각을 갖고 있고, 그 시각이 앞뒤가 맞는가.
+
+        하나라도 비면 그 문서의 계보는 불완전하다 — 검색이 하필 그 청크를 골랐을 수
+        있고, 어느 청크가 뽑혔는지는 기록이 없다. 부분 계보를 통과로 접으면 판정이
+        운에 기대게 된다.
+
+        **개정본이 수집보다 나중일 수는 없다.** 그런 값이 나왔다면 시계가 틀렸거나
+        계보가 엉뚱한 문서 것이다. 어느 쪽이든 그 계보로는 아무것도 증명할 수 없으므로
+        불완전으로 본다 — 시각을 고쳐 쓰지 않는다.
+        """
+        if self.chunks <= 0 or self.chunks_with_revision != self.chunks:
+            return False
+        if self.latest_revised_at is None:
+            return False
+        if (
+            self.last_collected_at is not None
+            and self.latest_revised_at > self.last_collected_at
+        ):
+            return False
+        return True
 
 
 @dataclass(frozen=True)
@@ -220,8 +267,13 @@ def summarize_evaluation(
     3-3·3-5와 같은 `(event_slug, match_key)`다.
     """
     sources_by_match = _sources_by_match(reports)
-    published_by_url = {
-        _canonical(doc.source_url): doc.chunks_with_published_at > 0
+    provenance_by_url = {
+        _canonical(doc.source_url): DocumentProvenance(
+            chunks=doc.chunks,
+            chunks_with_revision=doc.chunks_with_revision,
+            latest_revised_at=doc.latest_revised_at,
+            last_collected_at=doc.last_collected_at,
+        )
         for doc in documents
     }
 
@@ -229,7 +281,7 @@ def summarize_evaluation(
         _judge(
             row,
             sources_by_match.get((row.event_slug, row.match_key), ()),
-            published_by_url,
+            provenance_by_url,
         )
         for row in predictions
     ]
@@ -313,7 +365,7 @@ def _sources_by_match(
 def _judge(
     row: PredictionRow,
     sources: tuple[str, ...],
-    published_by_url: dict[str, bool],
+    provenance_by_url: dict[str, DocumentProvenance],
 ) -> EvaluationItem:
     """규칙을 **적용 순서대로** 본다. 앞이 막으면 뒤는 판정하지 않는다."""
     if row.source == BOOKMAKER_FALLBACK:
@@ -368,7 +420,7 @@ def _judge(
     verdicts = (
         _temporal(row),
         _self_reference(row, sources),
-        _corpus(sources, published_by_url),
+        _corpus(sources, provenance_by_url, row.event_start_date),
     )
     return _item(row, _status_of(verdicts), verdicts)
 
@@ -432,11 +484,32 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
     )
 
 
-def _corpus(sources: tuple[str, ...], published_by_url: dict[str, bool]) -> RuleVerdict:
-    """인용 문서가 예측보다 먼저 쓰인 글인지 확인할 수 있는가.
+def _corpus(
+    sources: tuple[str, ...],
+    provenance_by_url: dict[str, DocumentProvenance],
+    event_start_date: date | None,
+) -> RuleVerdict:
+    """인용 문서가 **경기보다 앞선 개정본**인지 확인할 수 있는가 (Phase 3-12).
 
-    **어떤 청크가 검색됐는지는 보지 않는다** — 그 기록이 없다. 저장된 출처 URL의
-    문서에 발행일이 있는지까지가 지금 확인 가능한 전부다.
+    예전에는 `published_at`이 있는지만 봤다. 그 검사는 위키에서 아무것도 증명하지
+    못한다 — 위키는 그 값을 내보내지 않아 늘 비어 있었고, 채운다 해도 문서 최초
+    생성일에 가까워 "그때 결과가 적혀 있었는가"에 답하지 않는다. 같은 URL이 경기
+    전후로 계속 고쳐지기 때문이다.
+
+    그래서 재는 것을 바꿨다. **개정본 시각이 대회 시작일보다 앞서면** 그 글에 결과가
+    적혀 있을 수 없다 — 충분조건이다. 뒤면 없다는 것을 증명할 수 없으므로 인정하지
+    않는다. 실측이 이 구분을 뒷받침한다: SummerSlam 문서는 우리가 읽은 개정본이
+    경기 3일 뒤(`2026-08-05`)라 결과가 통째로 실려 있었고, MITB 문서는 경기 두 달
+    전(`2026-08-01`) 개정본이라 경기 목록조차 없었다.
+
+    **모르는 것은 통과가 아니다.** 개정본 시각이 없거나(레거시 청크) 대회 날짜가
+    없으면 비교 자체가 불가능하므로 보류로 간다. `severity=hold`라 실격도 아니다 —
+    확정된 누수와 모르는 것은 다른 사실이다.
+
+    **어떤 청크가 검색됐는지는 여전히 보지 않는다** — 그 기록이 없다(`ple_prediction_
+    retrievals` 미도입). 그래서 문서 단위로, 그 문서의 **가장 늦은** 개정본을 기준으로
+    판정한다. 최악을 기준으로 잡아야 "하나는 경기 전, 하나는 경기 후"인 문서가
+    통과하지 않는다.
     """
     if not sources:
         return _verdict(
@@ -446,22 +519,58 @@ def _corpus(sources: tuple[str, ...], published_by_url: dict[str, bool]) -> Rule
             detail="인용 출처가 없어 확인할 문서가 없습니다.",
         )
 
-    unknown = [url for url in sources if not published_by_url.get(_canonical(url))]
+    if event_start_date is None:
+        return _verdict(
+            "unverifiable_corpus",
+            failed=True,
+            applicable=True,
+            detail=(
+                "대회 날짜를 몰라 인용 문서가 경기보다 앞선 글인지 비교할 수 없습니다."
+            ),
+        )
+
+    unknown: list[str] = []
+    too_late: list[str] = []
+    for url in sources:
+        provenance = provenance_by_url.get(_canonical(url))
+        if provenance is None or not provenance.is_complete:
+            unknown.append(url)
+            continue
+        revised_at = provenance.latest_revised_at
+        if revised_at is None:
+            unknown.append(url)
+            continue
+        # **날짜끼리 비교한다.** 대회 날짜는 `DATE`라 시각이 없고, 없는 정밀도를
+        # 지어내지 않는다. 같은 날이면 통과시키지 않는다 — 경기 당일 개정본에
+        # 결과가 없다는 보장이 없다.
+        if revised_at.date() >= event_start_date:
+            too_late.append(url)
+
+    if too_late:
+        return _verdict(
+            "unverifiable_corpus",
+            failed=True,
+            applicable=True,
+            detail=(
+                f"인용 문서 {len(too_late)}/{len(sources)}건이 경기 당일 이후 "
+                "개정본입니다. 결과가 적혀 있지 않다고 증명할 수 없습니다."
+            ),
+        )
     if unknown:
         return _verdict(
             "unverifiable_corpus",
             failed=True,
             applicable=True,
             detail=(
-                f"인용 문서 {len(unknown)}/{len(sources)}건의 발행일을 확인할 수 "
-                "없습니다."
+                f"인용 문서 {len(unknown)}/{len(sources)}건의 개정본 시각을 확인할 "
+                "수 없습니다."
             ),
         )
     return _verdict(
         "unverifiable_corpus",
         failed=False,
         applicable=True,
-        detail=f"인용 문서 {len(sources)}건 모두 발행일이 있습니다.",
+        detail=(f"인용 문서 {len(sources)}건 모두 경기 시작일보다 앞선 개정본입니다."),
     )
 
 

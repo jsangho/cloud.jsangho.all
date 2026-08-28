@@ -24,7 +24,7 @@ import math
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 #: 윌슨 구간의 z (95%). 바꾸면 화면 문구의 "95%"도 함께 바꾼다.
 Z_95 = 1.959963984540054
@@ -104,6 +104,12 @@ class PredictionRow:
     outcome_known_externally: bool | None = None
     #: 위 선언의 근거 문장. 서버가 그대로 화면에 내보내므로 **사실만 담는다.**
     provenance_note: str | None = None
+    #: 그 대회가 열린 날 (Phase 3-12). 인용 문서의 개정본이 이 날보다 앞서야
+    #: "결과가 적혀 있을 수 없다"고 말할 수 있다.
+    #:
+    #: **`None`은 통과가 아니다.** 날짜를 모르면 비교 자체가 불가능하므로 보류로 간다.
+    #: 기본값을 둔 이유는 이 필드를 모르는 기존 호출자를 그대로 두기 위해서다.
+    event_start_date: date | None = None
 
 
 @dataclass(frozen=True)

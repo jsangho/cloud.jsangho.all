@@ -72,6 +72,8 @@ def _deduplicated(chunks: Sequence[NewKnowledgeChunk]) -> list[dict[str, object]
                 "content_hash": chunk.content_hash,
                 "embedding": chunk.embedding,
                 "published_at": chunk.published_at,
+                "source_revision_id": chunk.source_revision_id,
+                "source_revised_at": chunk.source_revised_at,
             }
         )
     return rows

@@ -19,3 +19,9 @@ class PublicDocument:
     text: str
     #: 원문 게시 시각. 페이지에서 못 읽으면 `None` — 수집 시각으로 대신 채우지 않는다.
     published_at: datetime | None = None
+    #: 우리가 읽은 개정본의 식별자 (Phase 3-12). 위키는 `revid`다.
+    #: **`published_at`과 다른 것을 잰다** — 같은 URL도 개정본마다 내용이 다르다.
+    revision_id: str | None = None
+    #: 그 개정본이 만들어진 시각. 확인 못 하면 `None`이고, 그 `None`은
+    #: "모른다"이지 "통과"가 아니다. 여기서도 오늘 날짜로 대신 채우지 않는다.
+    revised_at: datetime | None = None

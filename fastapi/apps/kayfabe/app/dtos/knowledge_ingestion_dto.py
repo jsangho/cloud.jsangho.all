@@ -21,6 +21,9 @@ class SourceDocument:
     title: str | None
     text: str
     published_at: datetime | None = None
+    #: 개정본 계보 (Phase 3-12). 확인 못 했으면 `None`이고, 그 `None`은 "모른다"다.
+    revision_id: str | None = None
+    revised_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,9 @@ class NewKnowledgeChunk:
     content_hash: str
     embedding: list[float]
     published_at: datetime | None = None
+    #: 이 청크를 뽑아낸 개정본. 같은 URL이라도 개정본이 다르면 다른 글이다.
+    source_revision_id: str | None = None
+    source_revised_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -49,3 +55,7 @@ class IngestionSummary:
     duplicates: int
     #: 임베딩에 실패해 저장하지 못한 청크.
     failed: int
+    #: 본문은 받았지만 **개정본 계보를 확인하지 못한** 문서 수 (Phase 3-12).
+    #: API 장애·제목 불일치·위키 아닌 소스가 전부 여기로 온다. 수집 실패가 아니므로
+    #: `collected`에서 빼지 않고 따로 센다 — 이 숫자가 곧 시간 판정 불가 표본이다.
+    provenance_unavailable: int = 0
