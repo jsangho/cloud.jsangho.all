@@ -88,7 +88,7 @@ Karpathy 원문 전체 → 보조 [`CLAUDE.md`](CLAUDE.md) §1–4
 
 - 코드를 바꾸기 전에 **§0 `.cursorrules`**와 관련 소스 파일을 읽거나 검색해 저장소 맥락에 맞춘다.
 - 사용자가 “실행해 달라”고 하거나 검증이 필요하면 터미널·도구로 직접 확인한다. 추측으로 끝내지 않는다.
-- Docker: 루트 [`docker-compose.yaml`](docker-compose.yaml) — `backend`(fastapi), `frontend`(www).
+- 로컬 스택: k3s — 매니페스트 [`k8s/`](k8s/), 진입점 `scripts/k3s-up.sh`, 규칙 [`_docs/k3s-rules.md`](_docs/k3s-rules.md). (EC2 운영은 아직 docker compose다.)
 
 ## 문서 중복
 

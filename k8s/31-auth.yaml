@@ -1,0 +1,62 @@
+# 인증 게이트웨이. backend와 같은 이미지를 쓰고 엔트리포인트만 auth_main:app 이다.
+# compose에서 호스트 포트를 노출하지 않았으므로 여기서도 ClusterIP로 둔다.
+# (서버의 cloudflared 고정 IP 172.28.0.2 는 EC2 전용 구성이라 로컬에는 옮기지 않는다.)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: jsangho
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: jsangho/backend:dev
+          imagePullPolicy: Never
+          workingDir: /app/fastapi
+          command: ["uvicorn", "auth_main:app", "--host", "0.0.0.0", "--port", "9000"]
+          ports:
+            - containerPort: 9000
+          envFrom:
+            - secretRef:
+                name: app-env
+          volumeMounts:
+            - name: repo
+              mountPath: /app
+          startupProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+      volumes:
+        - name: repo
+          hostPath:
+            path: __REPO_ROOT__
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: jsangho
+spec:
+  type: ClusterIP
+  selector:
+    app: auth
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000

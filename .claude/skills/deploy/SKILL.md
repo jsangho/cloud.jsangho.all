@@ -77,7 +77,29 @@ git switch aws && git merge ho && git push origin aws
 git switch ho
 ```
 
-`docker-compose.yaml`에서 충돌이 나면 서버 전용 서비스(nginx·certbot·cloudflared)를 **지우지 않고** 양쪽을 합친다.
+#### `docker-compose.yaml` modify/delete 충돌은 **aws 쪽을 남긴다** (2026-09-07)
+
+로컬 개발 스택이 k3s로 넘어가면서 **`ho`에서 `docker-compose.yaml`을 삭제했다**
+(매니페스트는 `k8s/`, 규칙은 [`_docs/k3s-rules.md`](../../../_docs/k3s-rules.md)).
+`aws`에는 그 파일이 살아 있고 **EC2 운영이 전적으로 그 파일로 돈다** — nginx·certbot·cloudflared가 거기에만 있다.
+
+그래서 `git merge ho`는 매번 이 충돌을 낸다:
+
+```
+CONFLICT (modify/delete): docker-compose.yaml deleted in ho and modified in HEAD.
+```
+
+**해결은 서버 파일을 되살리는 것이다:**
+
+```bash
+git checkout --ours docker-compose.yaml
+git add docker-compose.yaml
+```
+
+`git rm docker-compose.yaml`로 "해결"하면 다음 `git pull`에 서버에서 파일이 사라지고
+스택 전체가 내려간다. 충돌 메시지가 삭제를 권하는 것처럼 보여도 따르지 않는다.
+
+그 밖의 충돌에서도 서버 전용 서비스(nginx·certbot·cloudflared)를 **지우지 않고** 양쪽을 합친다.
 
 ### 3. 서버 갱신
 
