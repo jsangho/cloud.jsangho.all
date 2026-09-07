@@ -17,7 +17,7 @@ Rabbit"(2005년)으로 돌아왔다. 그런 계보를 저장하면 판정이 엉
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -44,11 +44,17 @@ _REVISED = datetime(2026, 8, 1, 14, 24, 4, tzinfo=UTC)
 
 
 class FakeFetcher(WebPageFetcherPort):
+    """본문을 돌려준다. 리다이렉트 사례는 **목적지 문서의 본문**을 싣는다 — 실제
+    수집이 그렇게 동작한다(HTML fetch는 리다이렉트를 따라간다)."""
+
+    def __init__(self, html: str = _PAGE) -> None:
+        self.html = html
+
     async def fetch(self, url: str) -> FetchedPage:
         return FetchedPage(
             url=url,
             status_code=200,
-            html=_PAGE,
+            html=self.html,
             fetched_at=datetime.now(UTC).isoformat(),
         )
 
@@ -78,10 +84,12 @@ class FakeRevisions(RevisionMetadataPort):
         return self.result
 
 
-def _interactor(revisions: RevisionMetadataPort | None) -> PublicSourceInteractor:
+def _interactor(
+    revisions: RevisionMetadataPort | None, *, html: str = _PAGE
+) -> PublicSourceInteractor:
     return PublicSourceInteractor(
         allowed_domains=_ALLOWED,
-        fetcher=FakeFetcher(),
+        fetcher=FakeFetcher(html),
         robots=FakeRobots(),
         revisions=revisions,
     )
@@ -192,3 +200,165 @@ class TestApiFailureDoesNotStopIngestion:
         assert document is not None
         assert document.revision_id is None
         assert document.text
+
+
+def _redirect_page(subject: str, redirected_from: str) -> str:
+    """리다이렉트로 도착한 문서의 본문 — 위키가 실제로 내보내는 모양이다."""
+    return (
+        f"<html><head><title>{subject} - Wikipedia</title></head>"
+        f"<body><p>(Redirected from {redirected_from}) {subject} is a "
+        "professional wrestler.</p></body></html>"
+    )
+
+
+class TestRedirectStubIsRejected:
+    """**Phase 3-13 Stage 1 — production 실측 3건을 고정한다.**
+
+    이 문서들은 URL 제목과 본문이 다르다. HTML fetch가 리다이렉트를 따라가 목적지
+    문서를 저장하는데, 계보 API는 출발지 스텁의 개정본을 준다. 둘을 붙여 두면
+    **오래된 스텁 시각이 최신 본문의 알리바이**가 된다.
+
+    셋 다 계보는 버리되 **수집은 성공해야 한다** — 본문은 이미 손에 있다.
+    """
+
+    @pytest.mark.asyncio
+    async def test_iyo_sky_2023_revision_never_passes(self) -> None:
+        """CASE A · H — **대소문자만 다른 리다이렉트**라 제목 대조가 통과한다.
+
+        `/wiki/IYO_SKY` → `Iyo Sky`. 정규화가 대소문자를 흡수하므로
+        `"iyo sky" == "iyo sky"`이고, 제목만 보면 멀쩡하다. 그런데 스텁 개정본은
+        **2023-02-25**라, 받아들이면 2026년 대회의 사전 게이트를 전부 거짓으로
+        넘는다. 이 테스트가 그것을 막는 유일한 방어선이다.
+        """
+        url = "https://en.wikipedia.org/wiki/IYO_SKY"
+        stub_revised_at = datetime(2023, 2, 25, 8, 31, 23, tzinfo=UTC)
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="1141484684",
+                revised_at=stub_revised_at,
+                title="Iyo Sky",
+                is_redirect=True,
+            )
+        )
+        interactor = _interactor(revisions, html=_redirect_page("Iyo Sky", "IYO SKY"))
+        document = await interactor.collect(url)
+
+        assert document is not None, "계보를 버려도 본문 수집은 성공한다"
+        assert document.text, "본문은 그대로 남는다"
+        assert document.revision_id is None, "2023 개정본이 새어 나가면 안 된다"
+        assert document.revised_at is None
+        assert document.revised_at != stub_revised_at
+
+    @pytest.mark.asyncio
+    async def test_royce_keys_redirect_is_rejected(self) -> None:
+        """CASE B — `/wiki/Royce_Keys` → `Powerhouse Hobbs` (스텁 2026-02-04)."""
+        url = "https://en.wikipedia.org/wiki/Royce_Keys"
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="1336561152",
+                revised_at=datetime(2026, 2, 4, 13, 41, 25, tzinfo=UTC),
+                title="Powerhouse Hobbs",
+                is_redirect=True,
+            )
+        )
+        interactor = _interactor(
+            revisions, html=_redirect_page("Powerhouse Hobbs", "Royce Keys")
+        )
+        document = await interactor.collect(url)
+
+        assert document is not None
+        assert document.revision_id is None
+        assert document.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_the_bloodline_redirect_is_rejected(self) -> None:
+        """CASE C — `/wiki/The_Bloodline` → `Bloodline (disambiguation)`."""
+        url = "https://en.wikipedia.org/wiki/The_Bloodline"
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="1367555159",
+                revised_at=datetime(2026, 8, 3, 20, 19, 44, tzinfo=UTC),
+                title="Bloodline (disambiguation)",
+                is_redirect=True,
+            )
+        )
+        interactor = _interactor(
+            revisions,
+            html=_redirect_page("Bloodline (disambiguation)", "The Bloodline"),
+        )
+        document = await interactor.collect(url)
+
+        assert document is not None
+        assert document.revision_id is None
+        assert document.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_redirect_flag_alone_is_enough_to_reject(self) -> None:
+        """CASE H — **제목이 완전히 같아도** 리다이렉트면 버린다.
+
+        제목 대조가 통과하는 상황을 일부러 만들어, 리다이렉트 관문이 제목 관문에
+        흡수되지 않았음을 격리해서 확인한다.
+        """
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="1367179316",
+                revised_at=_REVISED,
+                title="Money in the Bank (2026)",
+                is_redirect=True,
+            )
+        )
+        document = await _interactor(revisions).collect(_URL)
+
+        assert document is not None
+        assert document.revision_id is None, "제목이 같아도 리다이렉트면 계보가 없다"
+
+
+class TestFutureRevisionIsRejected:
+    """CASE G — 아직 만들어지지도 않은 개정본을 우리가 읽었을 수는 없다."""
+
+    @pytest.mark.asyncio
+    async def test_revision_after_collection_is_dropped(self) -> None:
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="9999",
+                revised_at=datetime.now(UTC) + timedelta(days=1),
+                title="Money in the Bank (2026)",
+            )
+        )
+        document = await _interactor(revisions).collect(_URL)
+
+        assert document is not None
+        assert document.revision_id is None
+        assert document.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_revision_just_before_collection_is_kept(self) -> None:
+        """경계 바로 아래는 통과해야 한다 — 게이트가 과하게 닫히면 안 된다."""
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="1367179316",
+                revised_at=datetime.now(UTC) - timedelta(seconds=1),
+                title="Money in the Bank (2026)",
+            )
+        )
+        document = await _interactor(revisions).collect(_URL)
+
+        assert document is not None
+        assert document.revision_id == "1367179316"
+
+
+class TestEmptyRevisionIdIsRejected:
+    @pytest.mark.asyncio
+    async def test_blank_revision_id_drops_provenance(self) -> None:
+        """식별자가 빈 문자열이면 타입은 통과하지만 계보로는 쓸 수 없다."""
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="",
+                revised_at=_REVISED,
+                title="Money in the Bank (2026)",
+            )
+        )
+        document = await _interactor(revisions).collect(_URL)
+
+        assert document is not None
+        assert document.revision_id is None
