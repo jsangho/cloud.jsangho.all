@@ -184,3 +184,48 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/components/ple/ple-stat
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/ple/ple-status-board.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T07:14:43.985Z — introduced-off-palette-color-s-ef4444-in
+
+```omd-meta
+id: pref_mt16qmj5_d14da753
+timestamp: 2026-08-20T07:14:43.985Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/charts/chart-theme.tsx"
+```
+
+Introduced off-palette color(s) #ef4444 in /home/ho/projects/cloud.jsangho.all/www/components/charts/chart-theme.tsx — not in DESIGN.md
+
+## 2026-08-20T07:16:55.027Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt16tfn7_63b10a57
+timestamp: 2026-08-20T07:16:55.027Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/data-center/match-row-card.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/data-center/match-row-card.tsx — not in DESIGN.md radius scale
+
+## 2026-08-20T07:17:39.716Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_mt16ue4k_bd60edc7
+timestamp: 2026-08-20T07:17:39.716Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestlers/page.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestlers/page.tsx — not in DESIGN.md radius scale
