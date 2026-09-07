@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from core.entities.user_model import UserModel
 from core.matrix.grid_oracle_database_manager import LAYER_LOG
@@ -283,6 +283,48 @@ class PleEventsPgRepository(PleEventsRepository):
 
     async def _get_event_orm(self, slug: str) -> PleEventModel | None:
         return await self._load_event_model(slug, with_predictions=False)
+
+    async def set_event_schedule(
+        self, *, slug: str, start_date: date | None, end_date: date | None
+    ) -> bool:
+        """날짜 두 칸만 쓰는 좁은 문 (Phase 3-13 Stage 3-A).
+
+        **ORM이 아니라 Core `update()`다.** 이유가 안전성 그 자체다 — 엔티티를 세션에
+        올리면 `PleEventModel.matches`(`cascade="all, delete-orphan"`)가 딸려 오고,
+        그 뒤로는 관계 하나를 잘못 만지면 경기와 사용자 예측이 함께 사라질 수 있다.
+        여기서는 행을 **읽지 않고** 컬럼 두 개만 지정해 보낸다.
+
+        `updated_at`은 컬럼 정의의 `onupdate=func.now()` 때문에 SET 절에 함께 실린다.
+        의도한 동작이다 — 행이 바뀐 사실을 남기는 장부 칸이고, 도메인 값이 아니다.
+
+        `upsert_event_from_sync`과 달리 `on_conflict_do_update`가 아니므로 **없는
+        대회를 만들지 않는다.**
+        """
+        result = await self.db.execute(
+            update(PleEventModel)
+            .where(PleEventModel.slug == slug)
+            .values(start_date=start_date, end_date=end_date)
+        )
+        if result.rowcount > 1:
+            # `slug`에 UNIQUE 제약이 있어 여기 올 수 없다. 왔다면 제약이 사라진
+            # 것이므로, 조용히 넘기지 말고 멈춘다.
+            raise RuntimeError(
+                f"set_event_schedule이 {result.rowcount}행을 바꿨습니다: slug={slug!r}"
+            )
+        if result.rowcount == 0:
+            logger.info(
+                "[PleEventsPgRepository] set_event_schedule 대상 없음 | slug=%s", slug
+            )
+            return False
+
+        await self.db.flush()
+        logger.info(
+            "[PleEventsPgRepository] set_event_schedule -> Neon | slug=%s %s~%s",
+            slug,
+            start_date,
+            end_date,
+        )
+        return True
 
     async def upsert_event_from_sync(
         self, payload: PleEventSyncCommand

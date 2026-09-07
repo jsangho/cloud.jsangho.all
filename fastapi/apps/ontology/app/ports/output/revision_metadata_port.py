@@ -54,6 +54,16 @@ class RevisionMetadata:
     revised_at: datetime
     #: 소스가 말하는 문서 제목. 요청한 문서와 같은지 확인하는 데 쓴다.
     title: str
+    #: 요청한 주소가 **다른 문서로 넘어갔는가** (Phase 3-13 Stage 1).
+    #:
+    #: **제목 대조만으로는 이걸 잡을 수 없다.** 대소문자만 다른 리다이렉트가 실제로
+    #: 있다 — 실측에서 `/wiki/IYO_SKY`는 `Iyo Sky`로 넘어가는데, 제목 정규화가
+    #: 대소문자를 흡수하므로 `"iyo sky" == "iyo sky"`로 **통과해 버린다.** 그 문서의
+    #: 스텁 개정본은 2023-02-25라, 통과시키면 2026년 대회의 사전 게이트를 거짓으로
+    #: 넘는다. 그래서 제목과 **별개의 사실**로 싣는다.
+    #:
+    #: 기본값이 `False`인 것은 기존 호출자·테스트를 그대로 두기 위해서다.
+    is_redirect: bool = False
 
 
 class RevisionMetadataPort(ABC):

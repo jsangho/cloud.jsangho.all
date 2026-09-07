@@ -118,7 +118,7 @@ dependencies/     ← FastAPI Depends 팩토리
 | 엔드포인트 추가 | `http://127.0.0.1:8000/docs` Swagger UI에서 확인 |
 | DB 모델 변경 | `alembic revision --autogenerate -m "..."` → `alembic upgrade head` |
 | 전체 동작 | `curl http://127.0.0.1:8000/{prefix}/{endpoint}` 200 응답 |
-| Docker | `docker compose up --build -d backend` 정상 기동 후 로그 확인 |
+| 로컬 스택 | `kubectl -n jsangho rollout restart deploy/backend` 후 `kubectl -n jsangho logs deploy/backend` 확인 |
 
 ---
 
@@ -170,4 +170,5 @@ result = await asyncio.to_thread(use_case.analyze_intent, question)
 | `_claude/CLAUDE.md` | 백엔드 구현 세부 지침 |
 | [`apps/kayfabe/_docs/CLAUDE.md`](apps/kayfabe/_docs/CLAUDE.md) | Kayfabe 도메인 · CQRS · ERD |
 | [`apps/titanic/_docs/CLAUDE.md`](apps/titanic/_docs/CLAUDE.md) | Titanic 앱 구조 (템플릿) |
-| [`_docs/docker-rules.md`](_docs/docker-rules.md) | Docker 컨테이너(DB·백엔드 등) 생성 전 기존 리소스 확인 규칙 |
+| [`../_docs/k3s-rules.md`](../_docs/k3s-rules.md) | **로컬 개발 스택(k3s)** — 매니페스트·워크플로우·명령 대응표 |
+| [`_docs/docker-rules.md`](_docs/docker-rules.md) | EC2 운영 컨테이너(DB·백엔드·터널) 생성 전 기존 리소스 확인 규칙 |

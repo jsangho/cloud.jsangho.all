@@ -1,0 +1,40 @@
+# compose의 named volume 5개를 그대로 옮긴 것이다.
+# StorageClass를 지정하지 않으면 k3s 기본값 local-path 가 잡히고,
+# 실제 데이터는 노드의 /var/lib/rancher/k3s/storage/ 아래에 생긴다.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgadmin-data
+  namespace: jsangho
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+# compose는 n8n만 bind mount(`./data/n8n`)를 썼지만 여기서는 PVC로 바꿨다.
+# hostPath + DirectoryOrCreate 는 kubelet이 root:root로 디렉터리를 만들어
+# uid 1000(node)로 도는 n8n이 쓰지 못한다. 로컬에 `data/` 자체가 없기도 하다.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-data
+  namespace: jsangho
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+# bge-m3(약 2.2GB) 등 HF 모델 캐시. 이 볼륨이 없으면 파드를 재생성할 때마다
+# 다시 내려받아 첫 임베딩 호출이 매우 느려진다.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hf-cache
+  namespace: jsangho
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi

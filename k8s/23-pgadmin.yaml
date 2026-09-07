@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: jsangho
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      # pgadmin4 이미지는 /var/lib/pgadmin 을 uid 5050(pgadmin)으로 쓴다.
+      # local-path PVC는 root 소유로 생기므로 fsGroup을 주지 않으면 기동에 실패한다.
+      securityContext:
+        fsGroup: 5050
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4
+          ports:
+            - containerPort: 80
+          # PGADMIN_DEFAULT_EMAIL / PGADMIN_DEFAULT_PASSWORD 가 Secret에서 온다.
+          envFrom:
+            - secretRef:
+                name: app-env
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgadmin
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pgadmin-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: jsangho
+spec:
+  type: LoadBalancer
+  selector:
+    app: pgadmin
+  ports:
+    - name: http
+      port: 5050
+      targetPort: 80

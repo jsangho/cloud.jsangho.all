@@ -1,0 +1,76 @@
+# __REPO_ROOT__ · __NODE_IP__ 는 scripts/k3s-up.sh 가 envsubst로 채운다.
+# 그래서 이 파일은 `kubectl apply -f` 로 직접 적용하지 않는다 — k3s-up.sh 가 유일한 진입점이다.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: jsangho
+spec:
+  replicas: 1
+  # hf-cache PVC가 ReadWriteOnce라 롤링 중 두 파드가 겹치면 멈춘다.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # fastapi/.env 의 OLLAMA_HOST 가 host.docker.internal 을 가리킨다.
+      # k8s에는 그 이름이 없으므로 노드 IP로 직접 매핑한다.
+      hostAliases:
+        - ip: "__NODE_IP__"
+          hostnames: ["host.docker.internal"]
+      containers:
+        - name: backend
+          image: jsangho/backend:dev
+          # 로컬에서 빌드해 containerd로 import한 이미지다. 레지스트리에 없으니 절대 pull하지 않는다.
+          imagePullPolicy: Never
+          workingDir: /app/fastapi
+          command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: app-env
+          volumeMounts:
+            # 저장소 전체를 마운트한다. compose의 `.:/app` 과 같은 역할이라
+            # 코드 수정은 이미지 재빌드 없이 반영된다 (반영 트리거는 rollout restart).
+            - name: repo
+              mountPath: /app
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+          # torch·transformers import가 길어서 기동이 느리다. 그동안 죽이지 않는다.
+          startupProbe:
+            tcpSocket:
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            periodSeconds: 10
+      volumes:
+        - name: repo
+          hostPath:
+            path: __REPO_ROOT__
+            type: Directory
+        - name: hf-cache
+          persistentVolumeClaim:
+            claimName: hf-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: jsangho
+spec:
+  type: LoadBalancer
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

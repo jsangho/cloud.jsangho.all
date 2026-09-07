@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: jsangho
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      # n8n 이미지는 uid 1000(node)로 돈다. PVC는 root 소유로 생기므로 fsGroup이 필요하다.
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: n8n
+          image: n8nio/n8n
+          ports:
+            - containerPort: 5678
+          # N8N_ENCRYPTION_KEY 가 Secret에서 온다.
+          # 주의: n8n 워크플로는 이 Secret의 앱 비밀값도 $env 로 읽을 수 있다 (compose와 같은 트레이드오프).
+          envFrom:
+            - secretRef:
+                name: app-env
+          env:
+            - name: N8N_DIAGNOSTICS_ENABLED
+              value: "false"
+            - name: N8N_VERSION_NOTIFICATIONS_ENABLED
+              value: "false"
+            - name: N8N_HOST
+              value: n8n.jsangho.cloud
+            - name: N8N_PORT
+              value: "5678"
+            - name: N8N_PROTOCOL
+              value: https
+            - name: WEBHOOK_URL
+              value: https://n8n.jsangho.cloud
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: n8n-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+  namespace: jsangho
+spec:
+  type: LoadBalancer
+  selector:
+    app: n8n
+  ports:
+    - name: http
+      port: 5678
+      targetPort: 5678
