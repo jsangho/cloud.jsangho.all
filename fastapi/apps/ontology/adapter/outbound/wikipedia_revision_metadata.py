@@ -19,6 +19,8 @@
 - `/wiki/IYO_SKY` → `Iyo Sky` (스텁 개정본 **2023-02-25**)
 - `/wiki/Royce_Keys` → `Powerhouse Hobbs` (스텁 개정본 2026-02-04)
 - `/wiki/The_Bloodline` → `Bloodline (disambiguation)`
+  (2026-09-21 재실측: 이 항목은 **더 이상 맞지 않는다.** `The Bloodline`은 리다이렉트가
+  아니라 스테이블 본문 문서다. 위 둘은 그대로 성립한다.)
 
 `redirects=1`을 붙이면 응답의 `query.redirects`가 넘어간 사실을 실토한다. 그 사실을
 `RevisionMetadata.is_redirect`로 실어 보내고, 버릴지는 부르는 쪽이 정한다.
