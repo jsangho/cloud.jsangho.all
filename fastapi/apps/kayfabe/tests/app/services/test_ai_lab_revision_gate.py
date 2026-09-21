@@ -23,6 +23,7 @@ from kayfabe.app.services.ai_lab_evaluation import (
     STATUS_ELIGIBLE,
     STATUS_HELD,
     DocumentProvenance,
+    RetrievalRow,
     summarize_evaluation,
 )
 from kayfabe.app.services.ai_lab_integrity import PredictionRow, ReportRow
@@ -101,11 +102,26 @@ def _document(
     )
 
 
-def _status(predictions, reports, documents) -> str:
+def _status(predictions, reports, documents, retrievals=()) -> str:
     _totals, _rules, items, _perf = summarize_evaluation(
-        predictions, reports, documents
+        predictions, reports, documents, retrievals
     )
     return items[0].status
+
+
+def _retrieval(
+    *,
+    revised_at: datetime | None,
+    url: str = _DOC,
+    slug: str = "summerslam",
+    match_key: str = "m1",
+) -> RetrievalRow:
+    return RetrievalRow(
+        event_slug=slug,
+        match_key=match_key,
+        source_url=url,
+        source_revised_at=revised_at,
+    )
 
 
 class TestRevisionBeforeEventPasses:
@@ -260,3 +276,93 @@ class TestRealWorldGate:
             sources=(_DOC,),
         )
         assert _status([prediction], [report], [document]) == STATUS_ELIGIBLE
+
+
+class TestRetrievalBeatsTheDocument:
+    """**그때 읽은 것으로 판정한다** (Phase 3-13 Stage 4-B).
+
+    문서 단위 판정은 두 군데서 느슨하다. 어느 청크가 뽑혔는지 몰라 그 문서의 가장
+    늦은 개정본을 잡고, 그 값이 코퍼스의 *지금* 상태라 재수집이 과거 판정을 바꾼다.
+    검색 기록이 있으면 둘 다 없어진다.
+    """
+
+    def test_reingest_does_not_change_a_past_verdict(self) -> None:
+        """**이 테스트가 Stage 4-B의 존재 이유다.**
+
+        예측은 7/20에 7/10 개정본을 읽고 만들어졌다. 그 뒤 9/19 재수집으로 문서의
+        최신 개정본이 경기(8/01) 이후가 됐다 — 운영에서 실제로 일어난 일이다.
+        문서만 보면 보류로 뒤집히지만, 읽은 것은 여전히 7/10 개정본이다.
+        """
+        reingested = _document(
+            revised_at=datetime(2026, 9, 19, tzinfo=UTC),
+            collected_at=datetime(2026, 9, 19, 12, tzinfo=UTC),
+        )
+        prediction = _prediction()
+        report = _report()
+
+        # 기록이 없으면 재수집이 판정을 뒤집는다 — 이것이 고치려는 상태다.
+        assert _status([prediction], [report], [reingested]) == STATUS_HELD
+
+        # 기록이 있으면 그때 읽은 개정본이 판정한다.
+        read_back_then = (_retrieval(revised_at=datetime(2026, 7, 10, tzinfo=UTC)),)
+        assert (
+            _status([prediction], [report], [reingested], read_back_then)
+            == STATUS_ELIGIBLE
+        )
+
+    def test_a_chunk_read_after_the_match_still_holds(self) -> None:
+        """기록을 본다고 느슨해지지 않는다 — 경기 뒤 개정본을 읽었으면 보류다."""
+        after = (_retrieval(revised_at=datetime(2026, 8, 5, tzinfo=UTC)),)
+
+        assert (
+            _status([_prediction()], [_report()], [_document()], after) == STATUS_HELD
+        )
+
+    def test_one_late_chunk_among_many_holds_the_whole(self) -> None:
+        """하나라도 늦으면 보류다. 읽은 것 중 무엇이 답에 쓰였는지는 알 수 없다."""
+        mixed = (
+            _retrieval(revised_at=datetime(2026, 7, 10, tzinfo=UTC)),
+            _retrieval(revised_at=datetime(2026, 8, 3, tzinfo=UTC)),
+        )
+
+        assert (
+            _status([_prediction()], [_report()], [_document()], mixed) == STATUS_HELD
+        )
+
+    def test_a_chunk_without_a_revision_holds(self) -> None:
+        """레거시 청크를 읽었으면 모르는 것이다 — 모르는 것을 과거로 접지 않는다."""
+        unknown = (_retrieval(revised_at=None),)
+
+        assert (
+            _status([_prediction()], [_report()], [_document()], unknown) == STATUS_HELD
+        )
+
+    def test_records_of_another_match_do_not_leak_in(self) -> None:
+        """기록은 경기 키로 묶인다. 남의 기록이 이 예측을 판정하면 안 된다."""
+        elsewhere = (
+            _retrieval(
+                revised_at=datetime(2026, 8, 5, tzinfo=UTC), match_key="other-match"
+            ),
+        )
+
+        # 이 예측에는 기록이 없으므로 문서 단위로 판정된다(7/10 개정본 → 자격).
+        assert (
+            _status([_prediction()], [_report()], [_document()], elsewhere)
+            == STATUS_ELIGIBLE
+        )
+
+    def test_it_judges_even_when_no_source_was_cited(self) -> None:
+        """출처를 안 적었어도 읽은 것은 읽은 것이다.
+
+        문서 단위 경로는 "인용 출처 0건이면 통과"인데, 그건 리포트가 URL을 안
+        적었다는 뜻이지 아무것도 안 읽었다는 뜻이 아니다.
+        """
+        late = (_retrieval(revised_at=datetime(2026, 8, 5, tzinfo=UTC)),)
+
+        assert _status([_prediction()], [_report(sources=())], [_document()]) == (
+            STATUS_ELIGIBLE
+        )
+        assert (
+            _status([_prediction()], [_report(sources=())], [_document()], late)
+            == STATUS_HELD
+        )

@@ -13,6 +13,7 @@ import pytest
 
 from kayfabe.app.dtos.ai_lab_dto import AiLabOverviewResponse
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
+from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
 from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
     PredictionRow,
@@ -61,12 +62,15 @@ class FakeAiLabRepository(AiLabRepository):
         reports: list[ReportRow] | None = None,
         corpus: CorpusFacts | None = None,
         documents: list[DocumentRow] | None = None,
+        retrievals: list[RetrievalRow] | None = None,
         events: int = 11,
     ) -> None:
         self._predictions = predictions or []
         self._reports = reports or []
         self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, 0, None)
         self._documents = documents or []
+        # 옛 예측에는 기록이 없다 — 빈 것이 기본값이어야 기존 테스트가 그대로 산다.
+        self._retrievals = retrievals or []
         self._events = events
 
     async def list_predictions(self) -> list[PredictionRow]:
@@ -80,6 +84,9 @@ class FakeAiLabRepository(AiLabRepository):
 
     async def list_documents(self) -> list[DocumentRow]:
         return self._documents
+
+    async def list_retrievals(self) -> list[RetrievalRow]:
+        return self._retrievals
 
     async def count_events(self) -> int:
         return self._events
@@ -110,6 +117,10 @@ class CountingAiLabRepository(FakeAiLabRepository):
     async def list_documents(self) -> list[DocumentRow]:
         self._record("list_documents")
         return await super().list_documents()
+
+    async def list_retrievals(self) -> list[RetrievalRow]:
+        self._record("list_retrievals")
+        return await super().list_retrievals()
 
     async def count_events(self) -> int:
         self._record("count_events")
@@ -221,6 +232,8 @@ class TestNoGeneration:
             "list_reports",
             "corpus_facts",
             "list_documents",
+            # Stage 4-B에서 늘었다 — 읽기 전용이라는 이 테스트의 주장은 그대로다.
+            "list_retrievals",
             "count_events",
         }
 
@@ -363,17 +376,22 @@ class TestEvaluation:
         )
 
     @pytest.mark.asyncio
-    async def test_it_reuses_the_five_existing_reads(self) -> None:
+    async def test_it_reads_six_lists_once_each(self) -> None:
+        """Stage 4-B에서 여섯 번째(`list_retrievals`)가 늘었다.
+
+        **늘린 것은 하나뿐이고 전부 한 번씩이다.** 예측마다 기록을 따로 물으면
+        N+1이 되는데, 그러지 않고 통째로 읽어 경기 키로 묶는다.
+        """
         repository = CountingAiLabRepository(
             predictions=[_prediction(match_key="m1")],
             reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
         )
         await AiLabInteractor(repository=repository).get_evaluation()
-        # 새 리포지토리 메서드도 새 쿼리도 만들지 않았다.
         assert repository.calls == {
             "list_predictions": 1,
             "list_reports": 1,
             "list_documents": 1,
+            "list_retrievals": 1,
             "corpus_facts": 1,
             "count_events": 1,
         }
