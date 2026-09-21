@@ -13,6 +13,7 @@ import {
   agentLabel,
   fetchAiLabOverview,
   formatRatio,
+  scoringExclusionLabel,
   type AiLabOverview,
   type SystemComponent,
   type SystemState,
@@ -173,7 +174,10 @@ function Overview({ data }: { data: AiLabOverview }) {
                     승률 {formatRatio(row.winProbability)} · 확신{" "}
                     {formatRatio(row.confidence)}
                   </span>
-                  <ResultBadge correct={row.correct} />
+                  <ResultBadge
+                    correct={row.correct}
+                    scoringExclusion={row.scoringExclusion}
+                  />
                 </div>
               </li>
             ))}
@@ -211,25 +215,49 @@ function SystemRow({ item }: { item: SystemComponent }) {
   );
 }
 
-/** 미채점은 빈칸이 아니라 **미채점**이라고 적는다 — 실패와 다른 상태다. */
-function ResultBadge({ correct }: { correct: boolean | null }) {
+/**
+ * 미채점은 빈칸이 아니라 **미채점**이라고 적는다 — 실패와 다른 상태다.
+ *
+ * 채점에서 빠진 줄은 **적중/실패를 지우지 않고 사유를 덧붙인다.** 이 목록은
+ * 재고라 폴백까지 싣기 때문에, 위 적중률이 세지 않는 줄이 여기 그대로 있다.
+ * 맞힌 사실을 숨기면 그 표본이 무엇을 했는지 화면에서 사라진다.
+ */
+function ResultBadge({
+  correct,
+  scoringExclusion,
+}: {
+  correct: boolean | null;
+  scoringExclusion: string | null;
+}) {
+  const excluded = scoringExclusion !== null && (
+    <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+      {scoringExclusionLabel(scoringExclusion)}
+    </span>
+  );
+
   if (correct === null) {
     return (
-      <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-        미채점
+      <span className="flex items-center gap-1.5">
+        {excluded}
+        <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+          미채점
+        </span>
       </span>
     );
   }
   return (
-    <span
-      className={cn(
-        "rounded px-1.5 py-0.5 text-xs font-medium",
-        correct
-          ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
-          : "border border-live/50 bg-live/10 text-live",
-      )}
-    >
-      {correct ? "적중" : "실패"}
+    <span className="flex items-center gap-1.5">
+      {excluded}
+      <span
+        className={cn(
+          "rounded px-1.5 py-0.5 text-xs font-medium",
+          correct
+            ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
+            : "border border-live/50 bg-live/10 text-live",
+        )}
+      >
+        {correct ? "적중" : "실패"}
+      </span>
     </span>
   );
 }

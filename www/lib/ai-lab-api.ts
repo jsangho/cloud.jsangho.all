@@ -78,6 +78,13 @@ export type RecentPrediction = {
   winnerName: string | null;
   /** 미채점이면 `null` — 실패(false)와 다른 상태다. */
   correct: boolean | null;
+  /**
+   * 채점에서 빠진 이유, 아니면 `null`.
+   *
+   * 이 목록은 **재고**라 폴백까지 싣는다. 그래서 `correct`가 `true`인데 위
+   * `predictions` 적중률에 안 세어지는 줄이 있고, 화면은 그 이유를 적어야 한다.
+   */
+  scoringExclusion: string | null;
 };
 
 export type AiLabOverview = {
@@ -119,6 +126,12 @@ export type PredictionItem = {
   winnerName: string | null;
   /** 결과가 아직 없으면 `null` (Pending) — 실패(false)와 다르다. */
   correct: boolean | null;
+  /**
+   * 채점에서 빠진 이유, 아니면 `null`.
+   *
+   * **`source`로는 못 가린다** — 사후 재현 표본의 `source`도 `agents`다.
+   */
+  scoringExclusion: string | null;
   reports: PredictionReport[];
 };
 
@@ -336,6 +349,11 @@ export type PerformanceItem = {
   coverage: number;
   /** 미채점이면 `null` — 실패(false)와 다르다. */
   correct: boolean | null;
+  /**
+   * 채점에서 빠진 이유, 아니면 `null`. 이 목록은 폴백을 이미 뺀 뒤라
+   * 실제로 오는 값은 `ex_post` 하나다.
+   */
+  scoringExclusion: string | null;
   reports: ReportContribution[];
 };
 
@@ -505,4 +523,22 @@ const AGENT_LABELS: Record<string, string> = {
 
 export function agentLabel(agent: string): string {
   return AGENT_LABELS[agent] ?? agent;
+}
+
+/**
+ * 채점에서 빠진 이유를 화면 문구로 (Phase 3-8 잔여).
+ *
+ * **세 화면이 같은 문구를 써야 한다.** 예측 목록·개요 최근·Synthesis 항목이
+ * 각자 다르게 적으면, 같은 예측이 화면마다 다른 이유로 빠진 것처럼 읽힌다.
+ *
+ * 모르는 코드는 그대로 내보낸다 — 서버가 사유를 늘렸는데 화면이 조용히 "채점됨"인
+ * 척하는 것이 더 나쁘다.
+ */
+const SCORING_EXCLUSION_LABELS: Record<string, string> = {
+  ex_post: "사후 재현 — 채점 제외",
+  bookmaker_fallback: "배당 대체 — 채점 제외",
+};
+
+export function scoringExclusionLabel(reason: string): string {
+  return SCORING_EXCLUSION_LABELS[reason] ?? `채점 제외 (${reason})`;
 }

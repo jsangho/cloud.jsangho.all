@@ -16,6 +16,7 @@ import {
   agentLabel,
   fetchAiLabPredictions,
   formatRatio,
+  scoringExclusionLabel,
   type AiLabPredictions,
   type PredictionItem,
 } from "@/lib/ai-lab-api";
@@ -235,7 +236,11 @@ function PredictionRow({ item }: { item: PredictionItem }) {
             승률 {formatRatio(item.winProbability)} · 확신 {formatRatio(item.confidence)}
           </span>
           <SourceBadge fallback={fallback} />
-          <ResultBadge correct={item.correct} winnerName={item.winnerName} />
+          <ResultBadge
+            correct={item.correct}
+            winnerName={item.winnerName}
+            scoringExclusion={item.scoringExclusion}
+          />
           {/* 기존 PLE 근거 모달을 그대로 연다. */}
           <AiReportDialog
             slug={item.eventSlug}
@@ -287,32 +292,49 @@ function SourceBadge({ fallback }: { fallback: boolean }) {
 /**
  * 결과 배지. **미채점은 빈칸이 아니라 Pending이다** — 실패와 다른 상태다.
  * 색만으로 말하지 않고 글자를 함께 적는다(DESIGN.md §2).
+ *
+ * 채점에서 빠진 줄은 **Correct/Incorrect를 그대로 두고 사유를 덧붙인다.**
+ * 위 적중률이 세지 않는 줄이라는 사실과, 그 예측이 맞았다는 사실은 둘 다 참이다.
  */
 function ResultBadge({
   correct,
   winnerName,
+  scoringExclusion,
 }: {
   correct: boolean | null;
   winnerName: string | null;
+  scoringExclusion: string | null;
 }) {
+  const excluded = scoringExclusion !== null && (
+    <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+      {scoringExclusionLabel(scoringExclusion)}
+    </span>
+  );
+
   if (correct === null) {
     return (
-      <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-        Pending
+      <span className="flex items-center gap-1.5">
+        {excluded}
+        <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+          Pending
+        </span>
       </span>
     );
   }
   return (
-    <span
-      title={winnerName ? `실제 승자 ${winnerName}` : undefined}
-      className={cn(
-        "rounded px-1.5 py-0.5 text-xs font-medium",
-        correct
-          ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
-          : "border border-live/50 bg-live/10 text-live",
-      )}
-    >
-      {correct ? "Correct" : "Incorrect"}
+    <span className="flex items-center gap-1.5">
+      {excluded}
+      <span
+        title={winnerName ? `실제 승자 ${winnerName}` : undefined}
+        className={cn(
+          "rounded px-1.5 py-0.5 text-xs font-medium",
+          correct
+            ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
+            : "border border-live/50 bg-live/10 text-live",
+        )}
+      >
+        {correct ? "Correct" : "Incorrect"}
+      </span>
     </span>
   );
 }

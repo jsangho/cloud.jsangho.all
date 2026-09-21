@@ -274,6 +274,7 @@ def performance_to_schema(
                 agreement=item.agreement,
                 coverage=item.coverage,
                 correct=item.correct,
+                scoring_exclusion=item.scoring_exclusion,
                 reports=[
                     ReportContributionSchema(
                         agent=report.agent,
@@ -447,6 +448,7 @@ def predictions_to_schema(
                 generated_at=item.generated_at,
                 winner_name=item.winner_name,
                 correct=item.correct,
+                scoring_exclusion=item.scoring_exclusion,
                 reports=[
                     AgentReportSchema(
                         agent=report.agent,
@@ -496,6 +498,7 @@ def to_schema(response: AiLabOverviewResponse) -> AiLabOverviewSchema:
                 generated_at=item.generated_at,
                 winner_name=item.winner_name,
                 correct=item.correct,
+                scoring_exclusion=item.scoring_exclusion,
             )
             for item in response.recent
         ],
