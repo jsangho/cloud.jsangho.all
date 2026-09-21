@@ -65,7 +65,7 @@ class FakeAiLabRepository(AiLabRepository):
     ) -> None:
         self._predictions = predictions or []
         self._reports = reports or []
-        self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, None)
+        self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, 0, None)
         self._documents = documents or []
         self._events = events
 
@@ -141,14 +141,14 @@ class TestSystemStatus:
 
     @pytest.mark.asyncio
     async def test_partial_embeddings_read_as_degraded(self) -> None:
-        corpus = CorpusFacts(100, 60, 0, 5, 1, _NOW)
+        corpus = CorpusFacts(100, 60, 0, 0, 5, 1, _NOW)
         overview = await _interactor(corpus=corpus).get_overview()
         assert _state(overview, "knowledge") == "degraded"
         assert "40건" in _detail(overview, "knowledge")
 
     @pytest.mark.asyncio
     async def test_a_fully_embedded_corpus_reads_as_operational(self) -> None:
-        corpus = CorpusFacts(668, 668, 0, 40, 1, _NOW)
+        corpus = CorpusFacts(668, 668, 0, 0, 40, 1, _NOW)
         overview = await _interactor(corpus=corpus).get_overview()
         assert _state(overview, "knowledge") == "operational"
 

@@ -412,6 +412,7 @@ def integrity_to_schema(integrity: IntegrityFacts) -> IntegritySchema:
         predictions_with_sources=integrity.predictions_with_sources,
         chunks_total=integrity.chunks_total,
         chunks_with_published_at=integrity.chunks_with_published_at,
+        chunks_with_revision=integrity.chunks_with_revision,
         temporal_verifiable=integrity.temporal_verifiable,
         generalizable=integrity.generalizable,
         reasons=list(integrity.reasons),

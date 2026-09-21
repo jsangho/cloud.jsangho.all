@@ -102,11 +102,12 @@ def _report(
     )
 
 
-def _corpus(*, total: int = 668, published: int = 0) -> CorpusFacts:
+def _corpus(*, total: int = 668, published: int = 0, revisions: int = 0) -> CorpusFacts:
     return CorpusFacts(
         chunks_total=total,
         chunks_embedded=total,
         chunks_with_published_at=published,
+        chunks_with_revision=revisions,
         documents=31,
         domains=1,
         last_collected_at=_GENERATED,

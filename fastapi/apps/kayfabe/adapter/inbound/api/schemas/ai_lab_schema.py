@@ -44,8 +44,11 @@ class IntegritySchema(_Camel):
     predictions_with_sources: int = Field(alias="predictionsWithSources")
     chunks_total: int = Field(alias="chunksTotal")
     chunks_with_published_at: int = Field(alias="chunksWithPublishedAt")
+    """위키는 발행일 메타태그를 내보내지 않아 구조적으로 0이다. 판정 근거가 아니다."""
+    chunks_with_revision: int = Field(alias="chunksWithRevision")
+    """개정본 계보가 붙은 청크. `temporalVerifiable`의 근거다."""
     temporal_verifiable: bool = Field(alias="temporalVerifiable")
-    """발행일이 하나도 없으면 `False` — 누수가 없다는 것을 증명할 수 없다."""
+    """계보가 **하나라도 빠지면** `False` — 누수가 없다는 것을 증명할 수 없다."""
     generalizable: bool
     reasons: list[str]
 

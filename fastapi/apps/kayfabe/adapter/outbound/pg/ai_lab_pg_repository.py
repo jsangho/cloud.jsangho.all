@@ -141,23 +141,29 @@ class AiLabPgRepository(AiLabRepository):
                 func.count(),
                 func.count(KnowledgeChunkModel.embedding),
                 func.count(KnowledgeChunkModel.published_at),
+                # 계보 (Phase 3-13). 시간 판정이 보는 것은 발행일이 아니라 이쪽이다.
+                func.count(KnowledgeChunkModel.source_revised_at),
                 func.count(func.distinct(KnowledgeChunkModel.source_url)),
                 func.count(func.distinct(KnowledgeChunkModel.source_domain)),
                 func.max(KnowledgeChunkModel.collected_at),
             ).select_from(KnowledgeChunkModel)
         )
-        total, embedded, published, documents, domains, collected = result.one()
+        total, embedded, published, revisions, documents, domains, collected = (
+            result.one()
+        )
         facts = CorpusFacts(
             chunks_total=int(total or 0),
             chunks_embedded=int(embedded or 0),
             chunks_with_published_at=int(published or 0),
+            chunks_with_revision=int(revisions or 0),
             documents=int(documents or 0),
             domains=int(domains or 0),
             last_collected_at=collected,
         )
         logger.info(
-            "[AiLabPgRepository] corpus_facts <- 청크=%d 발행일=%d",
+            "[AiLabPgRepository] corpus_facts <- 청크=%d 계보=%d 발행일=%d",
             facts.chunks_total,
+            facts.chunks_with_revision,
             facts.chunks_with_published_at,
         )
         return facts
