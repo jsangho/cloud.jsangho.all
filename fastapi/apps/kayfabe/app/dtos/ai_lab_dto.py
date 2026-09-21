@@ -65,6 +65,9 @@ class RecentPrediction:
     winner_name: str | None
     #: 아직 안 끝난 경기면 `None` — 실패(False)와 다른 상태다.
     correct: bool | None
+    #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
+    #: 위 `correct`는 그대로 사실을 말하고, 이 칸이 **그것을 적중률에 세는지**를 말한다.
+    scoring_exclusion: str | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +107,9 @@ class PredictionItem:
     #: 결과가 아직 없으면 `None` (Pending).
     correct: bool | None
     reports: tuple[AgentReportItem, ...]
+    #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
+    #: 이 목록도 재고라 폴백을 싣는다 — 같은 화면의 `totals`가 안 세는 줄이 있다.
+    scoring_exclusion: str | None = None
 
 
 @dataclass(frozen=True)

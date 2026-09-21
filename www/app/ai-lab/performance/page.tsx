@@ -14,6 +14,7 @@ import {
   fetchAiLabEvaluation,
   fetchAiLabPerformance,
   formatRatio,
+  scoringExclusionLabel,
   type AgentContribution,
   type AiLabEvaluation,
   type AiLabPerformance,
@@ -544,6 +545,16 @@ function ItemRow({ item }: { item: PerformanceItem }) {
           value={item.correct === null ? "Pending" : item.correct ? "적중" : "실패"}
         />
       </dl>
+
+      {/*
+        이 줄은 위 Totals가 세지 않는다. 사유를 안 적으면 "적중"만 남아,
+        같은 화면의 적중률과 어긋나 보인다 — 숫자가 아니라 설명이 빠진 것이다.
+      */}
+      {item.scoringExclusion !== null && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {scoringExclusionLabel(item.scoringExclusion)} — 위 적중률에 세지 않습니다
+        </p>
+      )}
 
       <ul className="mt-3 flex flex-wrap gap-1.5">
         {item.reports.length === 0 && (

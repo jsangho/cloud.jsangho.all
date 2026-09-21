@@ -39,6 +39,27 @@ BOOKMAKER_FALLBACK = "bookmaker_fallback"
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
+#: 채점에서 빠진 이유. **화면이 문구를 고를 수 있게** 값으로 내보낸다 — 집계만
+#: 걸러 두면 개별 예측 줄은 여전히 정답 표시를 달고, 같은 화면이 그것을 안 센다.
+EXCLUDED_BOOKMAKER_FALLBACK = "bookmaker_fallback"
+EXCLUDED_EX_POST = "ex_post"
+
+
+def scoring_exclusion(row: PredictionRow) -> str | None:
+    """채점에서 빠졌다면 **그 이유**, 아니면 `None`.
+
+    `is_scorable`과 **같은 규칙을 한 곳에서** 판정한다. 둘을 따로 적으면 언젠가
+    한쪽만 바뀌어, 집계는 빼는데 화면은 안 빼거나 그 반대가 된다.
+
+    폴백을 먼저 본다 — 둘 다 해당하는 행이 있다면 에이전트가 답을 못 낸 쪽이 더
+    앞선 사실이다(`is_scorable`의 단락 평가 순서와 같다).
+    """
+    if row.source == BOOKMAKER_FALLBACK:
+        return EXCLUDED_BOOKMAKER_FALLBACK
+    if row.outcome_known_externally is True:
+        return EXCLUDED_EX_POST
+    return None
+
 
 def is_scorable(row: PredictionRow) -> bool:
     """**이 예측으로 점수를 매겨도 되는가.**
@@ -63,7 +84,7 @@ def is_scorable(row: PredictionRow) -> bool:
     응답률·재고 수치)는 여기를 지나지 않는다 — 사후 재현 표본에도 에이전트는
     실제로 일을 했고, 그 사실까지 지우면 활동량이 거짓이 된다.
     """
-    return row.source != BOOKMAKER_FALLBACK and row.outcome_known_externally is not True
+    return scoring_exclusion(row) is None
 
 
 @dataclass(frozen=True)

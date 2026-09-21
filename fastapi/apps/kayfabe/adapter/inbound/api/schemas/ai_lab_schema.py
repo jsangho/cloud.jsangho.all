@@ -83,6 +83,12 @@ class RecentPredictionSchema(_Camel):
     winner_name: str | None = Field(default=None, alias="winnerName")
     correct: bool | None = None
     """아직 안 끝난 경기면 `None` — 미채점과 실패는 다른 상태다."""
+    scoring_exclusion: str | None = Field(default=None, alias="scoringExclusion")
+    """채점에서 빠진 이유(`bookmaker_fallback`·`ex_post`), 아니면 `None`.
+
+    이 목록은 재고라 폴백까지 전부 싣는다. 그래서 위 `correct`가 `true`인데도
+    적중률에 안 세어지는 줄이 있고, **화면은 그 줄에 이유를 적어야 한다.**
+    """
 
 
 class AiLabOverviewSchema(_Camel):
@@ -127,6 +133,11 @@ class PredictionItemSchema(_Camel):
     winner_name: str | None = Field(default=None, alias="winnerName")
     correct: bool | None = None
     """결과가 아직 없으면 `None` (Pending) — 실패(False)와 다른 상태다."""
+    scoring_exclusion: str | None = Field(default=None, alias="scoringExclusion")
+    """채점에서 빠진 이유(`bookmaker_fallback`·`ex_post`), 아니면 `None`.
+
+    `source`만으로는 못 가린다 — 사후 재현 표본의 `source`는 `agents`다.
+    """
     reports: list[AgentReportSchema]
 
 
@@ -294,6 +305,12 @@ class PerformanceItemSchema(_Camel):
     """의견 낸 에이전트 / 물어본 에이전트."""
     correct: bool | None = None
     """미채점이면 `None` — 실패(False)와 다른 상태다."""
+    scoring_exclusion: str | None = Field(default=None, alias="scoringExclusion")
+    """채점에서 빠진 이유(`ex_post`), 아니면 `None`.
+
+    이 목록은 폴백을 이미 뺀 뒤라 여기 실리는 값은 사실상 `ex_post` 하나다.
+    위 `totals`가 안 세는 줄이 어느 것인지 **같은 화면 안에서** 가려야 한다.
+    """
     reports: list[ReportContributionSchema]
 
 

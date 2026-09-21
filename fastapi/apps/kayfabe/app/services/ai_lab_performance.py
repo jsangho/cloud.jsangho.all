@@ -29,6 +29,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     PredictionRow,
     ReportRow,
     is_scorable,
+    scoring_exclusion,
 )
 from kayfabe.domain.entities.agent_prediction import AgentKind
 
@@ -74,6 +75,13 @@ class PerformanceItem:
     coverage: float
     #: 미채점이면 `None` — 실패(False)와 다른 상태다.
     correct: bool | None
+    #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
+    #:
+    #: **`correct`를 지우지 않는다.** 둘은 다른 질문이다 — "그 예측이 맞았는가"와
+    #: "그것을 적중률에 셀 수 있는가". 맞힌 사실까지 지우면 사후 재현 표본이
+    #: 무엇을 했는지 화면에서 사라진다. 대신 이 칸이 **`correct`를 어떻게 읽어야
+    #: 하는지**를 말한다.
+    scoring_exclusion: str | None
     reports: tuple[ReportContribution, ...]
 
 
@@ -203,6 +211,7 @@ def _item(row: PredictionRow, reports: Sequence[ReportRow]) -> PerformanceItem:
         agreement=(agreed / len(opinionated)) if opinionated else None,
         coverage=coverage_of(len(opinionated)),
         correct=_correct(row),
+        scoring_exclusion=scoring_exclusion(row),
         reports=tuple(
             ReportContribution(
                 agent=r.agent, weight=r.weight, opinionated=r.pick is not None

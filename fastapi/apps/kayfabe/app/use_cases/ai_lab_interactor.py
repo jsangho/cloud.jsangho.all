@@ -35,6 +35,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
     PredictionRow,
     ReportRow,
+    scoring_exclusion,
     summarize_agent_analysis,
     summarize_agents,
     summarize_integrity,
@@ -273,6 +274,7 @@ class AiLabInteractor(AiLabUseCase):
                     generated_at=row.generated_at,
                     winner_name=row.winner_name,
                     correct=_correct(row),
+                    scoring_exclusion=scoring_exclusion(row),
                     reports=tuple(grouped.get((row.event_slug, row.match_key), ())),
                 )
                 for row in ordered
@@ -318,7 +320,12 @@ def _events(rows: list[PredictionRow]) -> list[PredictionEvent]:
 
 
 def _recent(rows: list[PredictionRow]) -> list[RecentPrediction]:
-    """최근 생성 순. **미채점은 `correct=None`이다** — 실패(False)와 구분한다."""
+    """최근 생성 순. **미채점은 `correct=None`이다** — 실패(False)와 구분한다.
+
+    이 목록은 폴백까지 **전부** 보여 준다(재고다). 그래서 여기 실린 정답 표시 중
+    일부는 위 `predictions` 적중률에 세어지지 않는다 — 어느 것이 그런지를
+    `scoring_exclusion`이 말한다.
+    """
     newest = sorted(rows, key=lambda r: r.generated_at, reverse=True)[:RECENT_LIMIT]
     return [
         RecentPrediction(
@@ -333,6 +340,7 @@ def _recent(rows: list[PredictionRow]) -> list[RecentPrediction]:
             generated_at=row.generated_at,
             winner_name=row.winner_name,
             correct=_correct(row),
+            scoring_exclusion=scoring_exclusion(row),
         )
         for row in newest
     ]
