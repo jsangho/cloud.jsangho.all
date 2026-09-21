@@ -315,3 +315,23 @@ async def test_an_unreadable_distance_does_not_kill_the_search(
 
     assert chunk.distance is None
     assert chunk.text == "본문"
+
+
+def test_the_distance_column_is_a_float_not_a_vector() -> None:
+    """**이 검사가 없어서 운영에서 깨졌다** (2026-09-21).
+
+    `op("<=>")`는 결과 타입을 왼쪽 피연산자에서 추론해 `VECTOR`로 둔다. `ORDER BY`에만
+    쓰던 동안에는 아무 일도 없다가, `SELECT`에 얹는 순간 SQLAlchemy가 돌아온 float에
+    벡터 파서를 물려 `TypeError: 'float' object is not subscriptable`로 죽었다.
+
+    위의 가짜 세션 테스트들은 이걸 못 잡는다 — 페이크가 결과 처리 자체를 건너뛰고
+    파이썬 객체를 그대로 돌려주기 때문이다. 그래서 여기서는 **식의 타입을 직접 본다.**
+    DB도 임베딩 모델도 필요 없다.
+    """
+    from sqlalchemy import Float
+
+    from kayfabe.adapter.outbound.orm.knowledge_chunk_orm import KnowledgeChunkModel
+
+    expression = KnowledgeChunkModel.embedding.cosine_distance([0.1, 0.2, 0.3])
+
+    assert isinstance(expression.type, Float)
