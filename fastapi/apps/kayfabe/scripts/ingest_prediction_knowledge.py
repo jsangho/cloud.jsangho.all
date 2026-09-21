@@ -8,11 +8,18 @@
 
 여러 번 실행해도 안전하다 — 같은 내용은 `content_hash`로 걸러진다.
 
+**문서당 청크 상한은 기본 25다** (`ingest_event_knowledge.py`와 같은 값).
+예전에는 이 스크립트가 상한을 넘기지 않아 `None`(무제한)으로 돌았는데, 그러면
+재수집이 "같은 모양으로 다시 모으기"가 아니라 **코퍼스를 몇 배로 불리는 작업**이
+된다. 검색은 경기당 `top_k=5`이므로 코퍼스가 커지면 무엇이 뽑히는지가 달라진다 —
+계보를 얻으려고 돌린 재수집이 검색 거동까지 바꾸면 안 된다. 상한을 바꾸는 것은
+그 자체로 판단이 필요한 일이라 **명시적으로 적어야** 바뀐다.
+
 실행:
 
     cd fastapi
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python apps/kayfabe/scripts/ingest_prediction_knowledge.py \\
-        https://en.wikipedia.org/wiki/SummerSlam_(2026)
+        https://en.wikipedia.org/wiki/SummerSlam_(2026) [--max-chunks=N]
 """
 
 from __future__ import annotations
@@ -46,6 +53,34 @@ EXIT_NOTHING_COLLECTED = 1
 #: 저쪽은 주소·robots를 보고, 이쪽은 계보 API(429·리다이렉트·제목 불일치)를 본다.
 EXIT_PROVENANCE_UNAVAILABLE = 3
 
+#: 문서당 청크 상한의 기본값. `ingest_event_knowledge.py`와 **같은 값이어야 한다** —
+#: 현재 코퍼스가 그 값으로 쌓였으므로, 다른 값으로 재수집하면 같은 문서가 다른
+#: 분량으로 들어가 검색 결과가 조용히 갈린다.
+DEFAULT_MAX_CHUNKS = 25
+
+_MAX_CHUNKS_FLAG = "--max-chunks="
+
+
+def max_chunks_from_argv(argv: list[str]) -> int | None:
+    """`--max-chunks=N`을 읽는다. 없으면 `DEFAULT_MAX_CHUNKS`.
+
+    `--max-chunks=0`은 **무제한(`None`)** 이다. "0개를 넣어라"는 뜻으로 읽힐 여지가
+    있지만 그 동작은 쓸 데가 없고, 무제한을 적을 자리는 필요하다. 무제한은 코퍼스
+    분량을 바꾸는 선택이므로 숫자를 직접 적어야만 닿는다.
+    """
+    flag = next((a for a in argv if a.startswith(_MAX_CHUNKS_FLAG)), None)
+    if flag is None:
+        return DEFAULT_MAX_CHUNKS
+    value = int(flag[len(_MAX_CHUNKS_FLAG) :])
+    if value < 0:
+        raise ValueError(f"--max-chunks는 음수일 수 없습니다: {value}")
+    return value or None
+
+
+def urls_from_argv(argv: list[str]) -> list[str]:
+    """`--`로 시작하지 않는 인자만 URL로 본다."""
+    return [a for a in argv if not a.startswith("--")]
+
 
 def exit_code_for(summary: IngestionSummary) -> int:
     """요약 하나를 종료 코드로 바꾼다.
@@ -64,9 +99,10 @@ def exit_code_for(summary: IngestionSummary) -> int:
     return 0
 
 
-async def main(urls: list[str]) -> int:
+async def main(urls: list[str], *, max_chunks: int | None) -> int:
+    print(f"문서 {len(urls)}건 · 문서당 청크 상한 {max_chunks or '무제한'}")
     async with AsyncSessionLocal() as session:
-        use_case = get_knowledge_ingestion_use_case(session)
+        use_case = get_knowledge_ingestion_use_case(session, max_chunks=max_chunks)
         summary = await use_case.ingest(IngestKnowledgeCommand(urls=tuple(urls)))
         # 유스케이스는 flush까지만 한다 — 커밋 시점은 부르는 쪽이 정한다.
         await session.commit()
@@ -86,9 +122,11 @@ async def main(urls: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    if not args:
-        print("사용법: ingest_prediction_knowledge.py <url> [url ...]")
+    argv = sys.argv[1:]
+    urls = urls_from_argv(argv)
+    if not urls:
+        print("사용법: ingest_prediction_knowledge.py <url> [url ...] [--max-chunks=N]")
+        print(f"문서당 청크 상한 기본값: {DEFAULT_MAX_CHUNKS} (0이면 무제한)")
         print("허용 도메인: " + ", ".join(sorted(ALLOWED_DOMAINS)))
         raise SystemExit(2)
-    raise SystemExit(asyncio.run(main(args)))
+    raise SystemExit(asyncio.run(main(urls, max_chunks=max_chunks_from_argv(argv))))
