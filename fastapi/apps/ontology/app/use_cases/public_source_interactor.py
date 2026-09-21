@@ -96,10 +96,11 @@ class PublicSourceInteractor(PublicSourceUseCase):
         # 본문을 손에 넣은 시각이 곧 이 문서의 수집 시각이다. 개정본이 이보다 뒤면
         # 우리가 읽은 판본일 수 없다.
         collected_at = datetime.now(UTC)
-        revision = await self._revision_of(url, collected_at)
+        fetched_title = _title(soup)
+        revision = await self._revision_of(url, collected_at, fetched_title)
         return PublicDocument(
             url=url,
-            title=_title(soup),
+            title=fetched_title,
             text=text,
             published_at=_published_at(soup),
             revision_id=revision.revision_id if revision else None,
@@ -107,21 +108,33 @@ class PublicSourceInteractor(PublicSourceUseCase):
         )
 
     async def _revision_of(
-        self, url: str, collected_at: datetime
+        self, url: str, collected_at: datetime, fetched_title: str | None = None
     ) -> RevisionMetadata | None:
-        """계보를 **네 관문을 모두 통과했을 때만** 인정한다 (Phase 3-13 Stage 1).
+        """계보를 **세 관문을 모두 통과했을 때만** 인정한다 (Phase 3-13).
 
         1. 응답이 있는가 — 없으면 계보 없음(API 장애·위키 아닌 소스)
-        2. **리다이렉트가 아닌가** — 넘어간 주소의 계보는 본문의 계보가 아니다
-        3. 제목이 주소와 맞는가 — 잘린 `oldid=13677280`이 "Who Framed Roger Rabbit"
-           으로 해석된 실측 사례를 막는다
-        4. 개정본 시각이 수집 시각보다 앞서는가 — 뒤라면 우리가 읽은 판본이 아니다
+        2. 계보의 제목이 **우리가 받아 온 본문**의 제목과 맞는가
+        3. 개정본 시각이 수집 시각보다 앞서는가 — 뒤라면 우리가 읽은 판본이 아니다
 
-        **2번이 3번에 흡수되지 않는다.** 대소문자만 다른 리다이렉트가 실제로 있어서,
-        제목 정규화가 그 차이를 흡수해 버린다 — `/wiki/IYO_SKY` → `Iyo Sky`가
-        `"iyo sky" == "iyo sky"`로 통과한다. 그 스텁의 개정본은 **2023-02-25**라,
-        받아들이면 2026년 대회의 사전 게이트를 거짓으로 넘는다. 그래서 제목 대조와
-        별개의 관문으로 둔다.
+        **2번의 대조 대상이 주소가 아니라 본문이다** (2026-09-21에 바꿨다). 원래는
+        주소에서 뽑은 제목과 맞춰 보고, 리다이렉트면 그 앞에서 통째로 버렸다. 근거는
+        "계보는 출발지 스텁의 것이라 본문과 다른 글을 가리킨다"였는데, **그 위험은
+        `redirects=1`을 붙인 뒤로 성립하지 않는다.** 실측:
+
+            IYO SKY 스텁        rev @ 2023-02-25   ← redirects 없이 물었을 때
+            Iyo Sky 목적지      rev @ 2026-09-10   ← redirects=1이 돌려주는 것
+
+        본문 fetch도 리다이렉트를 따라가 목적지를 저장하므로 **둘이 같은 글을
+        가리킨다.** 그걸 버리면 멀쩡한 계보가 사라진다 — 실제로 44청크가 그렇게
+        비어 있었다.
+
+        그래서 관문을 없애는 대신 **더 좁게** 만들었다. 주소는 우리가 조립한 추측이지만
+        본문 제목은 서버가 준 사실이다. 이 대조는 리다이렉트를 통과시키면서도
+        잘린 `oldid=13677280` 사례는 그대로 잡는다 — 그때 계보가 말한
+        "Who Framed Roger Rabbit"은 받아 온 "Lash Legend"와 맞지 않는다.
+
+        본문 제목이 없으면 주소로 돌아간다. 대조할 사실이 없을 때 통과시키지 않기
+        위해서다.
 
         `revision_id`·`revised_at`의 존재는 `RevisionMetadata`의 타입이 이미 보장한다
         (둘 다 선택 필드가 아니다). 다만 빈 문자열은 타입이 못 거르므로 여기서 본다.
@@ -135,30 +148,29 @@ class PublicSourceInteractor(PublicSourceUseCase):
         if revision is None:
             return None
 
-        if revision.is_redirect:
-            # 본문 fetch는 리다이렉트를 따라가 **목적지 문서**를 저장한다. 그런데
-            # 계보는 출발지 스텁의 것이라 서로 다른 글을 가리킨다. 둘을 붙여 두면
-            # 오래된 스텁 시각이 최신 본문의 알리바이가 된다.
-            logger.info(
-                "[ontology.public_source] 리다이렉트 — 계보 버린다 | url=%s | 응답=%s",
-                url,
-                revision.title,
-            )
-            return None
-
-        expected = wiki_title_from_url(url)
+        expected = _page_title(fetched_title) or wiki_title_from_url(url)
         if expected is None:
-            # 위키가 아닌 주소다. 대조할 기준이 없으면 계보를 주장하지 않는다.
+            # 위키도 아니고 본문 제목도 없다. 대조할 기준이 없으면 계보를 주장하지 않는다.
             return None
         if _normalize_title(revision.title) != _normalize_title(expected):
             logger.info(
                 "[ontology.public_source] 계보 제목 불일치 — 버린다 | url=%s "
-                "| 기대=%s | 응답=%s",
+                "| 기대=%s | 응답=%s | 리다이렉트=%s",
                 url,
                 expected,
                 revision.title,
+                revision.is_redirect,
             )
             return None
+
+        if revision.is_redirect:
+            # 버리지는 않는다 — 위 대조가 본문과 같은 글임을 이미 확인했다.
+            # 다만 수집 주소가 정규 주소가 아니라는 사실은 남겨 둔다.
+            logger.info(
+                "[ontology.public_source] 리다이렉트지만 본문과 일치 | url=%s | 문서=%s",
+                url,
+                revision.title,
+            )
 
         if not revision.revision_id:
             logger.info("[ontology.public_source] 계보 식별자 비어 있음 | url=%s", url)
@@ -194,6 +206,24 @@ def _normalize_title(text: str) -> str:
     **다른 문서**이고, 그 차이를 흘리면 이 대조가 하는 일이 없어진다.
     """
     return _WHITESPACE.sub(" ", text.replace("_", " ")).strip().casefold()
+
+
+#: `<title>`이 달고 오는 사이트 꼬리표. 계보 API는 문서 제목만 주므로 떼고 대조한다.
+_TITLE_SUFFIX = " - Wikipedia"
+
+
+def _page_title(fetched_title: str | None) -> str | None:
+    """받아 온 `<title>`에서 문서 제목만 남긴다.
+
+    `Iyo Sky - Wikipedia` → `Iyo Sky`. 꼬리표가 없으면 그대로 둔다 — 위키가 아닌
+    소스도 이 경로를 지나고, 그때는 제목이 안 맞아 관문에서 걸리는 것이 맞다.
+    """
+    if not fetched_title:
+        return None
+    title = fetched_title.strip()
+    if title.endswith(_TITLE_SUFFIX):
+        title = title[: -len(_TITLE_SUFFIX)].strip()
+    return title or None
 
 
 def _title(soup: BeautifulSoup) -> str | None:
