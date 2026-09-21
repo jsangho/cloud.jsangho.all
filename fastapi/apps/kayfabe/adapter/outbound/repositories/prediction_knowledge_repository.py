@@ -68,8 +68,14 @@ class PredictionKnowledgeRepository(PredictionKnowledgePort):
         정렬에만 쓰고 버리면 "무엇이 얼마나 가까워서 뽑혔는지"를 기록할 수 없다.
         같은 식을 `ORDER BY`와 `SELECT`에 두 번 쓰는 셈이지만, 플래너가 한 번만
         계산한다.
+
+        **`op("<=>")`가 아니라 `cosine_distance()`여야 한다.** 둘 다 같은 SQL을
+        내지만 `op()`는 결과 타입을 왼쪽 피연산자에서 추론해 `VECTOR`로 둔다.
+        `ORDER BY`에만 쓸 때는 드러나지 않다가, `SELECT`에 얹는 순간 돌아온 float에
+        벡터 파서가 물려 `TypeError: 'float' object is not subscriptable`로 죽는다
+        (2026-09-21 운영에서 실제로 밟았다). `cosine_distance()`는 `Float`을 단다.
         """
-        distance = KnowledgeChunkModel.embedding.op("<=>")(embedding)
+        distance = KnowledgeChunkModel.embedding.cosine_distance(embedding)
         stmt = (
             select(KnowledgeChunkModel, distance.label("distance"))
             # 임베딩이 없는 행은 거리 계산 대상이 아니다 — 적재 중이거나 실패한 청크다.
