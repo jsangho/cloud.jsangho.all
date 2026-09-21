@@ -37,6 +37,7 @@ from kayfabe.app.ports.output.storyline_analyst_port import StorylineAnalystPort
 from kayfabe.domain.entities.agent_prediction import (
     AgentPrediction,
     AgentReport,
+    KnowledgeRetrieval,
     PredictionSource,
 )
 from kayfabe.domain.services.prediction_synthesis import (
@@ -130,7 +131,9 @@ class AiPredictionInteractor(AiPredictionUseCase):
         except ReportsUnavailableError:
             # 아무도 의견을 내지 못했다 — 화면은 그래도 예측을 보여줘야 하므로
             # 북메이커 배당으로 강등한다. 대신 source에 그 사실을 남긴다.
-            return self._bookmaker_fallback(context)
+            # **읽은 것은 읽은 것이다** — 아무도 답하지 못했어도 그 청크들은
+            # 프롬프트에 들어갔으므로 기록에서 빼지 않는다.
+            return self._bookmaker_fallback(context, knowledge)
 
         option = _option_for(context, synthesis.pick)
         if option is None:
@@ -154,6 +157,7 @@ class AiPredictionInteractor(AiPredictionUseCase):
             source=PredictionSource.AGENTS,
             generated_at=self._clock(),
             reports=tuple(reports),
+            retrievals=_retrievals(knowledge),
         )
 
     async def _search_knowledge(self, context: MatchContext) -> list[KnowledgeChunk]:
@@ -199,7 +203,9 @@ class AiPredictionInteractor(AiPredictionUseCase):
             reports.append(_sanitized(result, allowed, context.match_key))
         return reports
 
-    def _bookmaker_fallback(self, context: MatchContext) -> AgentPrediction | None:
+    def _bookmaker_fallback(
+        self, context: MatchContext, knowledge: Sequence[KnowledgeChunk] = ()
+    ) -> AgentPrediction | None:
         favorite = _bookmaker_favorite(context)
         if favorite is None or (probability := _implied_probability(context)) is None:
             logger.warning(
@@ -229,7 +235,33 @@ class AiPredictionInteractor(AiPredictionUseCase):
             source=PredictionSource.BOOKMAKER_FALLBACK,
             generated_at=self._clock(),
             reports=(),
+            retrievals=_retrievals(knowledge),
         )
+
+
+def _retrievals(
+    knowledge: Sequence[KnowledgeChunk],
+) -> tuple[KnowledgeRetrieval, ...]:
+    """읽은 순서 그대로 기록한다 (Phase 3-13).
+
+    **유사도 순위가 아니라 프롬프트 순서다.** 둘은 다르다 — 선정은 거리로 하고
+    늘어놓는 것은 최신순이라(`_newest_first`), 에이전트가 실제로 먼저 읽은 글이
+    가장 가까운 글이 아닐 수 있다. 감사에서 필요한 것은 읽은 순서이고, 거리는
+    `distance`에 따로 남는다.
+    """
+    return tuple(
+        KnowledgeRetrieval(
+            rank=index,
+            chunk_id=chunk.chunk_id,
+            source_url=chunk.source_url,
+            content_hash=chunk.content_hash,
+            source_revision_id=chunk.source_revision_id,
+            source_revised_at=chunk.source_revised_at,
+            published_at=chunk.published_at,
+            distance=chunk.distance,
+        )
+        for index, chunk in enumerate(knowledge, start=1)
+    )
 
 
 def _knowledge_query(context: MatchContext) -> str:

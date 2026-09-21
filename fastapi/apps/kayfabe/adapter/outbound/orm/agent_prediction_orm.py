@@ -15,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -67,6 +68,12 @@ class AgentPredictionModel(Base):
         order_by="AgentReportModel.id",
         lazy="selectin",
     )
+    retrievals: Mapped[list[PredictionRetrievalModel]] = relationship(
+        back_populates="prediction",
+        cascade="all, delete-orphan",
+        order_by="PredictionRetrievalModel.rank",
+        lazy="selectin",
+    )
 
 
 class AgentReportModel(Base):
@@ -93,6 +100,54 @@ class AgentReportModel(Base):
     )
 
     prediction: Mapped[AgentPredictionModel] = relationship(back_populates="reports")
+
+
+class PredictionRetrievalModel(Base):
+    """예측을 만들 때 프롬프트에 들어간 청크 하나 (Phase 3-13).
+
+    **청크에 FK를 걸지 않는다.** 재수집이 그 URL의 옛 청크를 통째로 DELETE하므로
+    (`replace_document_chunks`), 참조로 두면 코퍼스를 다시 모으는 순간 이 기록이
+    가리키는 것이 사라진다. 그래서 당시 값을 그대로 베껴 둔다 — 비정규화가 아니라
+    **스냅샷**이다. `chunk_id`도 참조가 아니라 당시 식별자를 적어 둔 것뿐이다.
+
+    예측이 지워지면 이 기록도 함께 지운다. 재생성은 예측 행을 갈아 끼우므로
+    (`AgentPredictionPgRepository.save`), 옛 생성의 기록이 새 예측에 붙지 않는다.
+    """
+
+    __tablename__ = "ple_prediction_retrievals"
+    __table_args__ = (
+        # 한 예측 안에서 읽은 순서는 하나뿐이다. 중복은 기록을 무의미하게 만든다.
+        UniqueConstraint("prediction_id", "rank", name="uq_prediction_retrieval_rank"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    prediction_id: Mapped[int] = mapped_column(
+        ForeignKey("ple_agent_predictions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: 프롬프트에 들어간 순서(1부터). 검색 순위가 아니라 **읽은 순서**다.
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: 당시 청크 행의 id. **참조가 아니다** — 재수집하면 그 행은 없을 수 있다.
+    chunk_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    #: 본문 sha256. 재수집 뒤에도 같은 글인지 대조할 수 있는 유일한 값이다.
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 그때 읽은 개정본. **URL이 같아도 개정본이 다르면 다른 글이다.**
+    source_revision_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_revised_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: 코사인 거리. 작을수록 가깝다. 못 구하면 NULL — 0.0으로 채우지 않는다.
+    distance: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    prediction: Mapped[AgentPredictionModel] = relationship(back_populates="retrievals")
 
 
 #: `sources` 컬럼 구분자. 코드 양쪽이 같은 값을 봐야 한다.

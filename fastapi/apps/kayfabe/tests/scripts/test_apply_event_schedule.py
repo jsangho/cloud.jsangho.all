@@ -45,6 +45,7 @@ from kayfabe.adapter.outbound.catalog.ple_event_schedule_catalog import (  # noq
 from kayfabe.adapter.outbound.orm.agent_prediction_orm import (  # noqa: E402
     AgentPredictionModel,
     AgentReportModel,
+    PredictionRetrievalModel,
 )
 from kayfabe.adapter.outbound.orm.ple_orm import (  # noqa: E402
     PleEventModel,
@@ -68,6 +69,8 @@ _TABLES = [
     AgentPredictionModel.__table__,
     # `AgentPredictionModel.reports`가 selectin으로 딸려 온다 — 빠뜨리면 재조회가 깨진다.
     AgentReportModel.__table__,
+    # `retrievals`도 selectin이다 (Phase 3-13) — 같은 이유로 함께 둔다.
+    PredictionRetrievalModel.__table__,
 ]
 
 _FINISHED_AT = datetime(2026, 8, 4, 6, 57, 58, tzinfo=UTC)

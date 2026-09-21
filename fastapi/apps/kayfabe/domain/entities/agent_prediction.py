@@ -65,6 +65,39 @@ class AgentReport:
 
 
 @dataclass(frozen=True)
+class KnowledgeRetrieval:
+    """예측을 만들 때 **실제로 프롬프트에 들어간 청크 하나**의 기록 (Phase 3-13).
+
+    출처 URL은 이미 `AgentReport.sources`에 남는다. 그것으로 부족한 이유는 하나다 —
+    **URL이 같아도 개정본이 다르면 다른 글이다.** 위키 문서는 경기 전후로 계속 고쳐지고,
+    문서 단위 판정은 그 문서의 가장 늦은 개정본을 기준으로 잡을 수밖에 없다(최악 기준).
+    여기에 그때 읽은 개정본을 적어 두면 "이 예측이 읽은 글"을 정확히 말할 수 있다.
+
+    **청크를 FK로 걸지 않고 값을 베껴 둔다.** 재수집이 그 URL의 옛 청크를 통째로
+    DELETE하기 때문이다(`replace_document_chunks`). 참조로 두면 코퍼스를 다시 모으는
+    순간 이 기록이 가리키는 것이 사라지는데, 그러면 **증거가 필요한 바로 그 시점에**
+    증거가 없다. `chunk_id`는 참조가 아니라 당시 식별자를 적어 둔 것뿐이다.
+    """
+
+    #: 프롬프트에 들어간 순서. 1부터다 — 검색 순위가 아니라 **에이전트가 읽은 순서**다.
+    rank: int
+    #: 당시 청크 행의 id. **참조가 아니다** — 재수집하면 그 행은 없을 수 있다.
+    chunk_id: int | None = None
+    source_url: str | None = None
+    #: 본문 sha256. 재수집 뒤에도 같은 글인지 대조할 수 있는 유일한 값이다.
+    content_hash: str | None = None
+    source_revision_id: str | None = None
+    source_revised_at: datetime | None = None
+    published_at: datetime | None = None
+    #: 코사인 거리. 작을수록 가깝다. 못 구하면 `None` — 0.0으로 채우지 않는다.
+    distance: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.rank < 1:
+            raise ValueError(f"rank는 1 이상이어야 합니다: {self.rank}")
+
+
+@dataclass(frozen=True)
 class AgentPrediction:
     """경기 하나에 대한 최종 예측(애그리거트 루트).
 
@@ -83,6 +116,9 @@ class AgentPrediction:
     source: PredictionSource
     generated_at: datetime
     reports: tuple[AgentReport, ...] = field(default_factory=tuple)
+    #: 이 예측을 만들 때 읽은 청크들 (Phase 3-13). **비어 있는 것은 정상이다** —
+    #: 코퍼스에 맞는 글이 없었거나 검색이 실패한 경우이고, 옛 예측에는 아예 없다.
+    retrievals: tuple[KnowledgeRetrieval, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if not self.event_slug or not self.match_key:
@@ -93,6 +129,10 @@ class AgentPrediction:
         _check_ratio(self.confidence, "confidence")
         if self.source is PredictionSource.AGENTS and not self.reports:
             raise ValueError("에이전트 예측에는 근거 리포트가 최소 1건 있어야 합니다.")
+        ranks = [item.rank for item in self.retrievals]
+        if len(set(ranks)) != len(ranks):
+            # 순서가 곧 "무엇을 먼저 읽었는가"다. 중복되면 그 기록이 아무 말도 못 한다.
+            raise ValueError(f"retrievals의 rank가 중복됐습니다: {sorted(ranks)}")
 
     @property
     def opinionated_reports(self) -> tuple[AgentReport, ...]:
