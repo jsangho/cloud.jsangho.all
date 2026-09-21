@@ -211,31 +211,35 @@ def _redirect_page(subject: str, redirected_from: str) -> str:
     )
 
 
-class TestRedirectStubIsRejected:
-    """**Phase 3-13 Stage 1 — production 실측 3건을 고정한다.**
+class TestRedirectKeepsItsLineage:
+    """**Phase 3-13 — 2026-09-21에 규칙을 뒤집었다.**
 
-    이 문서들은 URL 제목과 본문이 다르다. HTML fetch가 리다이렉트를 따라가 목적지
-    문서를 저장하는데, 계보 API는 출발지 스텁의 개정본을 준다. 둘을 붙여 두면
-    **오래된 스텁 시각이 최신 본문의 알리바이**가 된다.
+    Stage 1은 리다이렉트면 계보를 통째로 버렸다. 근거는 "본문은 목적지인데 계보는
+    출발지 스텁의 것이라 서로 다른 글을 가리킨다"였다. 그런데 **그 위험은 같은
+    Stage가 `redirects=1`을 붙이면서 사라졌다.** 실측으로 갈린다:
 
-    셋 다 계보는 버리되 **수집은 성공해야 한다** — 본문은 이미 손에 있다.
+        IYO SKY 스텁     rev 1141484684 @ 2023-02-25   ← redirects 없이 물었을 때
+        Iyo Sky 목적지   rev 1374199432 @ 2026-09-10   ← redirects=1이 주는 것
+
+    어댑터는 후자를 받는다(`wikipedia_revision_metadata_test`의
+    `test_query_sends_redirects_flag`가 그 파라미터를 못 박는다). 본문 fetch도
+    리다이렉트를 따라가므로 **둘이 같은 글을 가리킨다.** 버리면 멀쩡한 계보가
+    사라진다 — 운영 코퍼스에서 실제로 44청크가 그렇게 비어 있었다.
+
+    그래서 관문을 없애는 대신 **대조 대상을 바꿨다**: 주소가 아니라 우리가 받아 온
+    본문의 제목과 맞춘다. 주소는 우리가 이름으로 조립한 추측이고, 본문 제목은
+    서버가 준 사실이다.
     """
 
     @pytest.mark.asyncio
-    async def test_iyo_sky_2023_revision_never_passes(self) -> None:
-        """CASE A · H — **대소문자만 다른 리다이렉트**라 제목 대조가 통과한다.
-
-        `/wiki/IYO_SKY` → `Iyo Sky`. 정규화가 대소문자를 흡수하므로
-        `"iyo sky" == "iyo sky"`이고, 제목만 보면 멀쩡하다. 그런데 스텁 개정본은
-        **2023-02-25**라, 받아들이면 2026년 대회의 사전 게이트를 전부 거짓으로
-        넘는다. 이 테스트가 그것을 막는 유일한 방어선이다.
-        """
+    async def test_iyo_sky_keeps_the_destination_revision(self) -> None:
+        """대소문자만 다른 리다이렉트 — 목적지 개정본이 본문의 계보가 맞다."""
         url = "https://en.wikipedia.org/wiki/IYO_SKY"
-        stub_revised_at = datetime(2023, 2, 25, 8, 31, 23, tzinfo=UTC)
+        revised_at = datetime(2026, 9, 10, 13, 14, 9, tzinfo=UTC)
         revisions = FakeRevisions(
             RevisionMetadata(
-                revision_id="1141484684",
-                revised_at=stub_revised_at,
+                revision_id="1374199432",
+                revised_at=revised_at,
                 title="Iyo Sky",
                 is_redirect=True,
             )
@@ -243,20 +247,23 @@ class TestRedirectStubIsRejected:
         interactor = _interactor(revisions, html=_redirect_page("Iyo Sky", "IYO SKY"))
         document = await interactor.collect(url)
 
-        assert document is not None, "계보를 버려도 본문 수집은 성공한다"
-        assert document.text, "본문은 그대로 남는다"
-        assert document.revision_id is None, "2023 개정본이 새어 나가면 안 된다"
-        assert document.revised_at is None
-        assert document.revised_at != stub_revised_at
+        assert document is not None
+        assert document.revision_id == "1374199432"
+        assert document.revised_at == revised_at
 
     @pytest.mark.asyncio
-    async def test_royce_keys_redirect_is_rejected(self) -> None:
-        """CASE B — `/wiki/Royce_Keys` → `Powerhouse Hobbs` (스텁 2026-02-04)."""
+    async def test_royce_keys_keeps_the_destination_revision(self) -> None:
+        """주소가 말하는 이름과 본문이 달라도, 계보는 **본문**의 것이면 맞다.
+
+        `/wiki/Royce_Keys` → `Powerhouse Hobbs`. 주소가 어긋난 것은 별개의 문제이고
+        (수집기가 이름으로 URL을 조립한다), 계보 자체는 우리가 저장한 글의 것이다.
+        """
         url = "https://en.wikipedia.org/wiki/Royce_Keys"
+        revised_at = datetime(2026, 9, 20, 22, 41, 12, tzinfo=UTC)
         revisions = FakeRevisions(
             RevisionMetadata(
-                revision_id="1336561152",
-                revised_at=datetime(2026, 2, 4, 13, 41, 25, tzinfo=UTC),
+                revision_id="1375925293",
+                revised_at=revised_at,
                 title="Powerhouse Hobbs",
                 is_redirect=True,
             )
@@ -267,12 +274,16 @@ class TestRedirectStubIsRejected:
         document = await interactor.collect(url)
 
         assert document is not None
-        assert document.revision_id is None
-        assert document.revised_at is None
+        assert document.revision_id == "1375925293"
+        assert document.revised_at == revised_at
 
     @pytest.mark.asyncio
-    async def test_the_bloodline_redirect_is_rejected(self) -> None:
-        """CASE C — `/wiki/The_Bloodline` → `Bloodline (disambiguation)`."""
+    async def test_a_worthless_page_still_has_a_correct_lineage(self) -> None:
+        """`/wiki/The_Bloodline` → 동음이의 페이지.
+
+        **계보는 옳고 내용이 무가치한 경우**다. 둘은 다른 문제이고, 계보 관문이
+        내용 품질까지 떠맡으면 판정이 무엇을 재는지 흐려진다.
+        """
         url = "https://en.wikipedia.org/wiki/The_Bloodline"
         revisions = FakeRevisions(
             RevisionMetadata(
@@ -289,28 +300,57 @@ class TestRedirectStubIsRejected:
         document = await interactor.collect(url)
 
         assert document is not None
-        assert document.revision_id is None
+        assert document.revision_id == "1367555159"
+
+    @pytest.mark.asyncio
+    async def test_a_revision_of_another_document_is_still_rejected(self) -> None:
+        """**이 방어는 그대로다.** 잘린 `oldid`가 엉뚱한 문서로 해석된 실측 사례.
+
+        계보가 말하는 제목("Who Framed Roger Rabbit")이 우리가 받아 온 본문
+        ("Lash Legend")과 맞지 않는다. 리다이렉트 관문을 없애도 이쪽은 걸린다 —
+        오히려 주소가 아니라 본문과 맞추므로 기준이 더 단단하다.
+        """
+        url = "https://en.wikipedia.org/wiki/Lash_Legend"
+        revisions = FakeRevisions(
+            RevisionMetadata(
+                revision_id="13677280",
+                revised_at=datetime(2005, 5, 7, 2, 19, 55, tzinfo=UTC),
+                title="Who Framed Roger Rabbit",
+            )
+        )
+        interactor = _interactor(
+            revisions,
+            html=(
+                "<html><head><title>Lash Legend - Wikipedia</title></head>"
+                "<body><p>Lash Legend is a professional wrestler.</p></body></html>"
+            ),
+        )
+        document = await interactor.collect(url)
+
+        assert document is not None, "계보를 버려도 본문 수집은 성공한다"
+        assert document.text
+        assert document.revision_id is None, "2005년 개정본이 새어 나가면 안 된다"
         assert document.revised_at is None
 
     @pytest.mark.asyncio
-    async def test_redirect_flag_alone_is_enough_to_reject(self) -> None:
-        """CASE H — **제목이 완전히 같아도** 리다이렉트면 버린다.
-
-        제목 대조가 통과하는 상황을 일부러 만들어, 리다이렉트 관문이 제목 관문에
-        흡수되지 않았음을 격리해서 확인한다.
-        """
+    async def test_without_a_body_title_it_falls_back_to_the_url(self) -> None:
+        """대조할 사실이 없으면 주소로 돌아간다 — 통과시키지 않기 위해서다."""
         revisions = FakeRevisions(
             RevisionMetadata(
                 revision_id="1367179316",
                 revised_at=_REVISED,
                 title="Money in the Bank (2026)",
-                is_redirect=True,
             )
         )
-        document = await _interactor(revisions).collect(_URL)
+        interactor = _interactor(
+            revisions,
+            html="<html><head></head><body><p>제목 없는 문서</p></body></html>",
+        )
+        document = await interactor.collect(_URL)
 
         assert document is not None
-        assert document.revision_id is None, "제목이 같아도 리다이렉트면 계보가 없다"
+        # 주소에서 뽑은 제목과 맞으므로 통과한다 — 옛 경로가 그대로 산다.
+        assert document.revision_id == "1367179316"
 
 
 class TestFutureRevisionIsRejected:
