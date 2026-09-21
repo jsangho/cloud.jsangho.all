@@ -37,8 +37,11 @@ export type Integrity = {
   selfReferencingPredictions: number;
   predictionsWithSources: number;
   chunksTotal: number;
+  /** 위키는 발행일 메타태그를 안 내보낸다 — 이 값은 구조적으로 0이고 판정 근거가 아니다. */
   chunksWithPublishedAt: number;
-  /** 발행일이 하나도 없으면 `false` — 누수가 없다는 것을 증명할 수 없다. */
+  /** 개정본 계보를 아는 청크 수. `temporalVerifiable`이 보는 값이 이쪽이다. */
+  chunksWithRevision: number;
+  /** **계보가 한 건이라도 빠지면 `false`** — 그 청크를 인용한 예측은 검증할 수 없다. */
   temporalVerifiable: boolean;
   generalizable: boolean;
   reasons: string[];
@@ -420,6 +423,10 @@ export type KnowledgeDocument = {
   lastCollectedAt: string | null;
   usedByReports: number;
   usedByAgents: string[];
+  /** 계보를 아는 청크 수. 이 문서의 작성 시점을 아는지는 발행일이 아니라 이쪽이 말한다. */
+  chunksWithRevision: number;
+  /** 이 문서에서 **가장 늦은** 개정본 시각 — 판정은 최악을 기준으로 한다. */
+  latestRevisedAt: string | null;
 };
 
 export type KnowledgeDomain = {
@@ -434,6 +441,8 @@ export type KnowledgeTotals = {
   chunks: number;
   chunksEmbedded: number;
   chunksWithPublishedAt: number;
+  /** `chunks`보다 작으면 코퍼스가 `temporalVerifiable=false`다 — 판정과 같은 값이다. */
+  chunksWithRevision: number;
   domains: number;
   lastCollectedAt: string | null;
   /** 프롬프트에 한 번이라도 들어간 문서. **하한이다.** */

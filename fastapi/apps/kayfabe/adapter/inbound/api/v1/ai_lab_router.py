@@ -314,6 +314,7 @@ def knowledge_to_schema(response: AiLabKnowledgeResponse) -> AiLabKnowledgeSchem
             chunks=response.totals.chunks,
             chunks_embedded=response.totals.chunks_embedded,
             chunks_with_published_at=response.totals.chunks_with_published_at,
+            chunks_with_revision=response.totals.chunks_with_revision,
             domains=response.totals.domains,
             last_collected_at=response.totals.last_collected_at,
             used_documents=response.totals.used_documents,
@@ -335,6 +336,8 @@ def knowledge_to_schema(response: AiLabKnowledgeResponse) -> AiLabKnowledgeSchem
                 last_collected_at=item.last_collected_at,
                 used_by_reports=item.used_by_reports,
                 used_by_agents=list(item.used_by_agents),
+                chunks_with_revision=item.chunks_with_revision,
+                latest_revised_at=item.latest_revised_at,
             )
             for item in response.documents
         ],

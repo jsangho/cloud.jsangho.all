@@ -68,8 +68,8 @@ export function IntegrityBanner({
           label="Temporal verification"
           value={
             integrity.temporalVerifiable
-              ? `가능 (발행일 ${integrity.chunksWithPublishedAt}/${integrity.chunksTotal})`
-              : `불가 (발행일 0/${integrity.chunksTotal})`
+              ? `가능 (계보 ${integrity.chunksWithRevision}/${integrity.chunksTotal})`
+              : `불가 (계보 없음 ${integrity.chunksTotal - integrity.chunksWithRevision}/${integrity.chunksTotal})`
           }
           tone={integrity.temporalVerifiable ? "default" : "warn"}
         />
@@ -106,8 +106,10 @@ export function IntegrityBanner({
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        누수 없는 평가 표본을 따로 만드는 작업은 Phase 3-6으로 분리했습니다. 발행일이
-        없는 문서를 임의로 과거 문서로 간주하지 않습니다.
+        누수 없는 평가 표본을 따로 만드는 작업은 Phase 3-6으로 분리했습니다. 시간
+        검증이 보는 것은 발행일이 아니라 <strong className="font-semibold">인용한
+        문서가 어느 개정본에서 왔는가</strong>이고, 계보를 모르는 청크를 임의로 과거
+        문서로 간주하지 않습니다.
       </p>
     </section>
   );

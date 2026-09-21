@@ -61,6 +61,13 @@ class KnowledgeDocument:
     used_by_reports: int
     #: 그 리포트를 낸 에이전트 이름. 코드의 이름 그대로 둔다.
     used_by_agents: tuple[str, ...]
+    #: 계보를 아는 청크 수 (Phase 3-13). **화면이 "작성 시점을 모른다"고 말해도 되는지는
+    #: 발행일이 아니라 이 값이 정한다** — 위키는 발행일 메타태그를 내보내지 않아
+    #: `chunks_with_published_at`이 구조적으로 0이다.
+    chunks_with_revision: int
+    #: 이 문서 청크 중 **가장 늦은** 개정본 시각. 전부 NULL이면 `None`.
+    #: 가장 이른 것이 아닌 이유는 `DocumentRow.latest_revised_at` 주석과 같다.
+    latest_revised_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -79,6 +86,9 @@ class KnowledgeTotals:
     chunks: int
     chunks_embedded: int
     chunks_with_published_at: int
+    #: 계보를 아는 청크 수 (Phase 3-13). `chunks`보다 작으면 코퍼스 전체가
+    #: `temporal_verifiable=False`다 — 판정과 같은 값을 화면이 함께 읽게 한다.
+    chunks_with_revision: int
     domains: int
     last_collected_at: datetime | None
     #: 리포트가 한 번이라도 프롬프트에 넣은 문서 수. **하한이다** (모듈 설명 참조).
@@ -129,6 +139,8 @@ def summarize_knowledge(
             used_by_agents=tuple(
                 sorted(used_agents.get(_canonical(row.source_url), ()))
             ),
+            chunks_with_revision=row.chunks_with_revision,
+            latest_revised_at=row.latest_revised_at,
         )
         for row in documents
     ]
@@ -141,6 +153,7 @@ def summarize_knowledge(
         chunks=sum(item.chunks for item in items),
         chunks_embedded=sum(item.chunks_embedded for item in items),
         chunks_with_published_at=sum(item.chunks_with_published_at for item in items),
+        chunks_with_revision=sum(item.chunks_with_revision for item in items),
         domains=len({item.source_domain for item in items}),
         last_collected_at=_latest(items),
         used_documents=used_documents,

@@ -382,6 +382,10 @@ class KnowledgeDocumentSchema(_Camel):
     last_collected_at: datetime | None = Field(default=None, alias="lastCollectedAt")
     used_by_reports: int = Field(alias="usedByReports")
     used_by_agents: list[str] = Field(alias="usedByAgents")
+    chunks_with_revision: int = Field(alias="chunksWithRevision")
+    """계보를 아는 청크 수. 이 문서의 작성 시점을 아는지는 발행일이 아니라 이쪽이 말한다."""
+    latest_revised_at: datetime | None = Field(default=None, alias="latestRevisedAt")
+    """이 문서에서 **가장 늦은** 개정본 시각 — 판정은 최악을 기준으로 한다."""
 
 
 class KnowledgeDomainSchema(_Camel):
@@ -396,6 +400,8 @@ class KnowledgeTotalsSchema(_Camel):
     chunks: int
     chunks_embedded: int = Field(alias="chunksEmbedded")
     chunks_with_published_at: int = Field(alias="chunksWithPublishedAt")
+    chunks_with_revision: int = Field(alias="chunksWithRevision")
+    """`chunks`보다 작으면 코퍼스가 `temporalVerifiable=false`다 — 같은 값을 화면이 읽는다."""
     domains: int
     last_collected_at: datetime | None = Field(default=None, alias="lastCollectedAt")
     used_documents: int = Field(alias="usedDocuments")

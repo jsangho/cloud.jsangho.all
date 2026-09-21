@@ -88,7 +88,7 @@ function Knowledge({ data }: { data: AiLabKnowledge }) {
 
       <CorpusUsage totals={totals} />
 
-      {/* 발행일 0건이라는 판정의 원인이 바로 이 코퍼스다 — 같은 상자를 여기에도 세운다. */}
+      {/* 계보가 빠졌다는 판정의 원인이 바로 이 코퍼스다 — 같은 상자를 여기에도 세운다. */}
       <IntegrityBanner integrity={integrity} />
 
       {domains.length > 0 && <Domains domains={domains} />}
@@ -244,11 +244,32 @@ function DocumentRow({ doc }: { doc: KnowledgeDocument }) {
             임베딩 없는 청크 {missingEmbedding}/{doc.chunks} — 검색되지 않습니다
           </Note>
         )}
-        {doc.chunksWithPublishedAt === 0 && (
-          <Note tone="neutral">발행일 없음 — 작성 시점을 알 수 없습니다</Note>
-        )}
+        {/* **발행일이 아니라 계보로 말한다** — 위키는 발행일 메타태그를 안 내보내므로
+            그 값은 어느 문서에서나 0이고, 그걸로 적으면 계보를 아는 문서까지 시점
+            미상이 된다. 시간 판정이 실제로 보는 값과 같은 것을 여기서도 보여 준다. */}
+        <LineageNote doc={doc} />
       </div>
     </li>
+  );
+}
+
+/**
+ * 이 문서가 **어느 개정본에서 왔는가**.
+ *
+ * 가장 늦은 개정본을 적는다 — 경기 뒤 개정본이 하나라도 섞여 있으면 그 문서를 인용한
+ * 예측은 결과를 봤을 수 있으므로, 판정도 표시도 최악을 기준으로 한다.
+ */
+function LineageNote({ doc }: { doc: KnowledgeDocument }) {
+  const revised = isoDate(doc.latestRevisedAt);
+  if (doc.chunksWithRevision === 0 || !revised) {
+    return <Note tone="warn">개정본 계보 없음 — 경기보다 먼저 쓰인 글인지 가릴 수 없습니다</Note>;
+  }
+  const missing = doc.chunks - doc.chunksWithRevision;
+  return (
+    <Note tone="neutral">
+      개정본 {revised}
+      {missing > 0 && ` · 계보 없는 청크 ${missing}/${doc.chunks}`}
+    </Note>
   );
 }
 
