@@ -22,10 +22,12 @@ from kayfabe.adapter.outbound.orm.agent_prediction_orm import (
     SOURCE_SEPARATOR,
     AgentPredictionModel,
     AgentReportModel,
+    PredictionRetrievalModel,
 )
 from kayfabe.adapter.outbound.orm.knowledge_chunk_orm import KnowledgeChunkModel
 from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
+from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
 from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
     PredictionRow,
@@ -133,6 +135,40 @@ class AiLabPgRepository(AiLabRepository):
             for row in result.all()
         ]
         logger.info("[AiLabPgRepository] list_reports <- count=%d", len(rows))
+        return rows
+
+    async def list_retrievals(self) -> list[RetrievalRow]:
+        """예측이 그때 읽은 청크 기록 (Phase 3-13 Stage 4-B).
+
+        판정에 쓰는 두 칸만 뽑는다 — 거리·해시·본문은 감사용이고 여기서는 안 본다.
+        옛 예측에는 행이 아예 없어서 결과가 비는 것이 정상이다.
+        """
+        result = await self.db.execute(
+            select(
+                PleEventModel.slug,
+                AgentPredictionModel.match_key,
+                PredictionRetrievalModel.source_url,
+                PredictionRetrievalModel.source_revised_at,
+            )
+            .join(
+                AgentPredictionModel,
+                PredictionRetrievalModel.prediction_id == AgentPredictionModel.id,
+            )
+            .join(PleEventModel, AgentPredictionModel.event_id == PleEventModel.id)
+            .order_by(
+                PredictionRetrievalModel.prediction_id, PredictionRetrievalModel.rank
+            )
+        )
+        rows = [
+            RetrievalRow(
+                event_slug=row.slug,
+                match_key=row.match_key,
+                source_url=row.source_url,
+                source_revised_at=row.source_revised_at,
+            )
+            for row in result.all()
+        ]
+        logger.info("[AiLabPgRepository] list_retrievals <- count=%d", len(rows))
         return rows
 
     async def corpus_facts(self) -> CorpusFacts:

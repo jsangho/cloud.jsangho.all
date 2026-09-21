@@ -120,11 +120,12 @@ class AiLabInteractor(AiLabUseCase):
         predictions = await self._repository.list_predictions()
         reports = await self._repository.list_reports()
         documents = await self._repository.list_documents()
+        retrievals = await self._repository.list_retrievals()
         corpus = await self._repository.corpus_facts()
         events_total = await self._repository.count_events()
 
         totals, rules, items, performance = summarize_evaluation(
-            predictions, reports, documents
+            predictions, reports, documents, retrievals
         )
         logger.info(
             "[AiLabInteractor] get_evaluation | 예측=%d 자격=%d 실격=%d 보류=%d 성능=%s",

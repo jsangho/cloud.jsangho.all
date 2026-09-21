@@ -24,9 +24,10 @@
 **보류를 통과로 세지 않는다.** 모르는 것을 괜찮은 것으로 접으면 이 판정이 하는 일이
 사라진다. 그렇다고 실격으로도 세지 않는다 — 확정된 누수와 모르는 것은 다른 사실이다.
 
-**추정하지 않는다.** `ple_prediction_retrievals`가 없으므로 어떤 청크가 실제로
-검색됐는지는 기록이 없고, 이 모듈은 그것을 사후에 지어내지 않는다. 판정에 쓰는 것은
-저장된 출처 URL까지다.
+**추정하지 않는다.** 어떤 청크가 검색됐는지 기록이 있으면(`ple_prediction_retrievals`,
+Stage 4) 그것으로 판정하고, 없으면 저장된 출처 URL까지만 쓴다. 없는 기록을 사후에
+지어내지 않는다 — 지금 코퍼스에서 다시 검색해 채우면 "그때 읽은 것"이 아니라 "지금
+검색되는 것"을 적는 것이 된다. 옛 예측에는 기록이 없으므로 판정이 달라지지 않는다.
 
 **Phase 3-12가 코퍼스 규칙의 기준을 바꿨다.** 예전에는 인용 문서에 `published_at`이
 있는지만 봤는데, 그 검사는 위키에서 아무것도 증명하지 못했다 — 위키는 그 값을
@@ -147,6 +148,25 @@ _RULE_BY_CODE = {rule.code: rule for rule in RULES}
 
 
 @dataclass(frozen=True)
+class RetrievalRow:
+    """예측 하나가 **그때 실제로 읽은** 청크 한 조각 (Phase 3-13 Stage 4-B).
+
+    문서 계보(`DocumentProvenance`)와 결정적으로 다른 점은 **시점**이다. 문서 쪽
+    값은 코퍼스의 *지금* 상태라 재수집이 과거 예측의 판정 근거를 바꿔 버린다 —
+    실제로 2026-09-19 재수집 뒤 SummerSlam 문서의 최신 개정본이 9/19가 되어, 8월에
+    8/05 개정본을 읽고 만든 예측을 9/19 기준으로 재고 있었다. 시대착오다.
+
+    이 행은 생성 시점에 박제된 값이라 그 뒤 코퍼스가 무엇이 되든 움직이지 않는다.
+    """
+
+    event_slug: str
+    match_key: str
+    source_url: str | None
+    #: 그때 읽은 개정본의 시각. 모르면 `None` — 레거시 청크를 읽었을 때다.
+    source_revised_at: datetime | None
+
+
+@dataclass(frozen=True)
 class DocumentProvenance:
     """문서 하나의 개정본 계보 (Phase 3-12).
 
@@ -255,6 +275,7 @@ def summarize_evaluation(
     predictions: Sequence[PredictionRow],
     reports: Sequence[ReportRow],
     documents: Sequence[DocumentRow],
+    retrievals: Sequence[RetrievalRow] = (),
 ) -> tuple[
     EvaluationTotals,
     list[RuleTally],
@@ -277,11 +298,18 @@ def summarize_evaluation(
         for doc in documents
     }
 
+    retrievals_by_match: dict[tuple[str, str], list[RetrievalRow]] = {}
+    for item in retrievals:
+        retrievals_by_match.setdefault((item.event_slug, item.match_key), []).append(
+            item
+        )
+
     items = [
         _judge(
             row,
             sources_by_match.get((row.event_slug, row.match_key), ()),
             provenance_by_url,
+            tuple(retrievals_by_match.get((row.event_slug, row.match_key), ())),
         )
         for row in predictions
     ]
@@ -366,6 +394,7 @@ def _judge(
     row: PredictionRow,
     sources: tuple[str, ...],
     provenance_by_url: dict[str, DocumentProvenance],
+    retrievals: tuple[RetrievalRow, ...] = (),
 ) -> EvaluationItem:
     """규칙을 **적용 순서대로** 본다. 앞이 막으면 뒤는 판정하지 않는다."""
     if row.source == BOOKMAKER_FALLBACK:
@@ -420,7 +449,12 @@ def _judge(
     verdicts = (
         _temporal(row),
         _self_reference(row, sources),
-        _corpus(sources, provenance_by_url, row.event_start_date),
+        # **기록이 있으면 그것이 이긴다.** 문서 단위 판정은 어느 청크가 뽑혔는지
+        # 모를 때의 차선이고, 코퍼스의 지금 상태에 흔들린다. 옛 예측에는 기록이
+        # 없으므로 그쪽은 지금까지와 똑같이 판정된다.
+        _corpus_from_retrievals(retrievals, row.event_start_date)
+        if retrievals
+        else _corpus(sources, provenance_by_url, row.event_start_date),
     )
     return _item(row, _status_of(verdicts), verdicts)
 
@@ -481,6 +515,68 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
         failed=False,
         applicable=True,
         detail=f"인용 출처 {len(sources)}건에 그 대회 문서가 없습니다.",
+    )
+
+
+def _corpus_from_retrievals(
+    retrievals: tuple[RetrievalRow, ...], event_start_date: date | None
+) -> RuleVerdict:
+    """**그때 읽은 청크**로 판정한다 (Phase 3-13 Stage 4-B).
+
+    문서 단위 판정(`_corpus`)은 두 군데서 느슨하다. 첫째, 어느 청크가 뽑혔는지
+    몰라 그 문서의 **가장 늦은** 개정본을 기준으로 잡는다. 둘째, 그 값이 코퍼스의
+    *지금* 상태라 재수집이 과거 판정을 바꾼다. 검색 기록이 있으면 둘 다 없어진다 —
+    읽은 청크가 몇 개인지, 각각 어느 개정본이었는지가 박제돼 있다.
+
+    **출처가 없어도 판정한다.** 문서 단위 경로는 "인용 출처 0건이면 통과"인데,
+    그건 리포트가 URL을 안 적었다는 뜻이지 아무것도 안 읽었다는 뜻이 아니다.
+    기록이 있으면 실제로 읽은 것을 그대로 잰다.
+    """
+    if event_start_date is None:
+        return _verdict(
+            "unverifiable_corpus",
+            failed=True,
+            applicable=True,
+            detail=(
+                "대회 날짜를 몰라 읽은 글이 경기보다 앞선 것인지 비교할 수 없습니다."
+            ),
+        )
+
+    unknown = [item for item in retrievals if item.source_revised_at is None]
+    too_late = [
+        item
+        for item in retrievals
+        if item.source_revised_at is not None
+        and item.source_revised_at.date() >= event_start_date
+    ]
+
+    if too_late:
+        return _verdict(
+            "unverifiable_corpus",
+            failed=True,
+            applicable=True,
+            detail=(
+                f"읽은 청크 {len(too_late)}/{len(retrievals)}건이 경기 당일 이후 "
+                "개정본입니다. 결과가 적혀 있지 않다고 증명할 수 없습니다."
+            ),
+        )
+    if unknown:
+        return _verdict(
+            "unverifiable_corpus",
+            failed=True,
+            applicable=True,
+            detail=(
+                f"읽은 청크 {len(unknown)}/{len(retrievals)}건의 개정본 시각을 "
+                "확인할 수 없습니다."
+            ),
+        )
+    return _verdict(
+        "unverifiable_corpus",
+        failed=False,
+        applicable=True,
+        detail=(
+            f"읽은 청크 {len(retrievals)}건 모두 경기 시작일보다 앞선 개정본입니다."
+        ),
     )
 
 

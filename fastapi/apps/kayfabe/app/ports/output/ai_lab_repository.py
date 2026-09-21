@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
 from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
     PredictionRow,
@@ -31,6 +32,15 @@ class AiLabRepository(ABC):
     @abstractmethod
     async def list_reports(self) -> list[ReportRow]:
         """에이전트 리포트 전체. 인용 출처가 여기 실려 온다."""
+        ...
+
+    @abstractmethod
+    async def list_retrievals(self) -> list[RetrievalRow]:
+        """예측이 **그때 읽은** 청크 기록 (Phase 3-13 Stage 4-B).
+
+        옛 예측에는 행이 없다. 비어 있는 것이 정상이고, 판정은 그때 문서 단위
+        계보로 되돌아간다.
+        """
         ...
 
     @abstractmethod
