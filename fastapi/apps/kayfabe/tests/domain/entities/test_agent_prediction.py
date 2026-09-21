@@ -10,6 +10,7 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentKind,
     AgentPrediction,
     AgentReport,
+    KnowledgeRetrieval,
     PredictionSource,
 )
 
@@ -95,3 +96,37 @@ def test_report_pick_cannot_be_empty_string() -> None:
 def test_report_weight_is_a_ratio() -> None:
     with pytest.raises(ValueError):
         AgentReport(agent=AgentKind.ODDS, pick="left", weight=1.5, summary="")
+
+
+class TestKnowledgeRetrieval:
+    """검색 기록의 불변식 (Phase 3-13).
+
+    이 값 객체가 붙드는 것은 하나다 — **순서가 곧 기록의 의미**다. 어느 글을 먼저
+    읽었는지를 적는 자리이므로, 순서가 없거나 겹치면 적어 둔 것이 아무 말도 못 한다.
+    """
+
+    def test_rank_starts_at_one(self) -> None:
+        assert KnowledgeRetrieval(rank=1).rank == 1
+
+    @pytest.mark.parametrize("rank", [0, -1])
+    def test_rank_below_one_is_rejected(self, rank: int) -> None:
+        with pytest.raises(ValueError):
+            KnowledgeRetrieval(rank=rank)
+
+    def test_everything_but_rank_may_be_unknown(self) -> None:
+        """레거시 청크는 계보도 해시도 없다 — 그 사실을 0이나 빈 문자열로 덮지 않는다."""
+        item = KnowledgeRetrieval(rank=3)
+
+        assert (item.chunk_id, item.source_url, item.content_hash) == (None, None, None)
+        assert (item.source_revision_id, item.source_revised_at) == (None, None)
+        assert (item.published_at, item.distance) == (None, None)
+
+    def test_duplicate_ranks_are_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            _prediction(
+                retrievals=(KnowledgeRetrieval(rank=1), KnowledgeRetrieval(rank=1))
+            )
+
+    def test_a_prediction_may_have_read_nothing(self) -> None:
+        """코퍼스에 맞는 글이 없으면 빈 것이 정직하다 — 옛 예측도 이 상태다."""
+        assert _prediction().retrievals == ()

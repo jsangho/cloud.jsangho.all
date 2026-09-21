@@ -52,11 +52,12 @@ def _prediction(
     )
 
 
-def _corpus(*, total: int = 668, published: int = 0) -> CorpusFacts:
+def _corpus(*, total: int = 668, published: int = 0, revisions: int = 0) -> CorpusFacts:
     return CorpusFacts(
         chunks_total=total,
         chunks_embedded=total,
         chunks_with_published_at=published,
+        chunks_with_revision=revisions,
         documents=40,
         domains=1,
         last_collected_at=_NOW,
@@ -163,23 +164,42 @@ class TestSummarizeIntegrity:
         assert facts.generalizable is False
         assert any("자체를 다룬 문서" in reason for reason in facts.reasons)
 
-    def test_without_publication_dates_time_cannot_be_verified(self) -> None:
+    def test_without_provenance_time_cannot_be_verified(self) -> None:
         facts = summarize_integrity(
-            [_prediction()], [], _corpus(published=0), events_total=11
+            [_prediction()], [], _corpus(total=668, revisions=0), events_total=11
         )
         assert facts.temporal_verifiable is False
-        assert any("발행일" in reason for reason in facts.reasons)
+        assert any("668건 중 668건에 개정본 계보가 없어" in r for r in facts.reasons)
 
-    def test_with_publication_dates_time_can_be_verified(self) -> None:
+    def test_full_provenance_makes_time_verifiable(self) -> None:
         facts = summarize_integrity(
-            [_prediction()], [], _corpus(published=10), events_total=11
+            [_prediction()], [], _corpus(total=668, revisions=668), events_total=11
         )
         assert facts.temporal_verifiable is True
-        assert not any("발행일" in reason for reason in facts.reasons)
+        assert not any("계보" in reason for reason in facts.reasons)
+
+    def test_partial_provenance_is_not_verifiable(self) -> None:
+        """**핵심 회귀.** 옛 판정은 "하나라도 있으면 통과"였다.
+
+        그 형태면 664건 중 620건만 계보가 있는 실제 코퍼스가 "검증 가능"으로 보고된다.
+        계보가 빠진 문서를 인용한 예측은 검증할 수 없으므로 통과시키면 안 된다.
+        """
+        facts = summarize_integrity(
+            [_prediction()], [], _corpus(total=664, revisions=620), events_total=11
+        )
+        assert facts.temporal_verifiable is False
+        assert any("664건 중 44건에 개정본 계보가 없어" in r for r in facts.reasons)
+
+    def test_publication_dates_alone_do_not_verify_time(self) -> None:
+        """발행일은 판정 근거가 아니다 — 위키는 그 메타태그를 안 내보낸다."""
+        facts = summarize_integrity(
+            [_prediction()], [], _corpus(published=668, revisions=0), events_total=11
+        )
+        assert facts.temporal_verifiable is False
 
     def test_one_event_alone_cannot_generalize(self) -> None:
         facts = summarize_integrity(
-            [_prediction()], [], _corpus(published=10), events_total=11
+            [_prediction()], [], _corpus(revisions=668), events_total=11
         )
         assert facts.events_covered == 1
         assert facts.generalizable is False
@@ -194,7 +214,9 @@ class TestSummarizeIntegrity:
             )
             for i in range(30)
         ]
-        facts = summarize_integrity(rows, [], _corpus(published=100), events_total=11)
+        facts = summarize_integrity(
+            rows, [], _corpus(total=668, revisions=668), events_total=11
+        )
         assert facts.sample_size == 30
         assert facts.events_covered == 3
         assert facts.generalizable is True

@@ -18,6 +18,7 @@ from kayfabe.adapter.outbound.orm.agent_prediction_orm import (
     SOURCE_SEPARATOR,
     AgentPredictionModel,
     AgentReportModel,
+    PredictionRetrievalModel,
 )
 from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
 from kayfabe.app.dtos.agent_prediction_dto import MatchContext, MatchOption
@@ -29,6 +30,7 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentKind,
     AgentPrediction,
     AgentReport,
+    KnowledgeRetrieval,
     PredictionSource,
 )
 
@@ -122,6 +124,21 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
                 )
                 for report in prediction.reports
             ],
+            # 검색 기록 (Phase 3-13). 청크를 참조하지 않고 그때 값을 베껴 둔다 —
+            # 재수집이 옛 청크를 지우므로 참조로는 증거가 남지 않는다.
+            retrievals=[
+                PredictionRetrievalModel(
+                    rank=item.rank,
+                    chunk_id=item.chunk_id,
+                    source_url=item.source_url,
+                    content_hash=item.content_hash,
+                    source_revision_id=item.source_revision_id,
+                    source_revised_at=item.source_revised_at,
+                    published_at=item.published_at,
+                    distance=item.distance,
+                )
+                for item in prediction.retrievals
+            ],
         )
         self.db.add(row)
         await self.db.flush()
@@ -155,6 +172,20 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
                 sources=tuple(s for s in report.sources.split(SOURCE_SEPARATOR) if s),
             )
             for report in row.reports
+        ),
+        # 읽는 쪽도 채운다 — 한쪽만 매핑하면 왕복시킨 엔티티가 기록을 조용히 잃는다.
+        retrievals=tuple(
+            KnowledgeRetrieval(
+                rank=item.rank,
+                chunk_id=item.chunk_id,
+                source_url=item.source_url,
+                content_hash=item.content_hash,
+                source_revision_id=item.source_revision_id,
+                source_revised_at=item.source_revised_at,
+                published_at=item.published_at,
+                distance=item.distance,
+            )
+            for item in row.retrievals
         ),
     )
 

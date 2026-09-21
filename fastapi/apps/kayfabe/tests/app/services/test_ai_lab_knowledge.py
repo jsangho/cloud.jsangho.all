@@ -28,6 +28,8 @@ def _document(
     embedded: int | None = None,
     published: int = 0,
     collected: datetime | None = _NOW,
+    revisions: int = 0,
+    revised_at: datetime | None = None,
 ) -> DocumentRow:
     return DocumentRow(
         source_url=url,
@@ -38,6 +40,8 @@ def _document(
         chunks_with_published_at=published,
         first_published_at=None,
         last_collected_at=collected,
+        chunks_with_revision=revisions,
+        latest_revised_at=revised_at,
     )
 
 
@@ -183,6 +187,59 @@ class TestTotals:
             [],
         )
         assert totals.last_collected_at == later
+
+
+class TestRevisionLineage:
+    """**발행일과 계보는 다른 축이다** (Phase 3-13).
+
+    위키는 `article:published_time` 계열 메타태그를 내보내지 않아 발행일이 구조적으로
+    0이다. 그 0을 근거로 화면이 "작성 시점을 알 수 없다"고 적으면 거짓말이 된다 —
+    계보를 아는 문서가 실제로 있기 때문이다. 그래서 집계가 계보를 버리지 않아야 한다.
+    """
+
+    def test_a_document_carries_its_lineage_even_with_no_published_date(self) -> None:
+        revised = datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC)
+        _, documents, _ = summarize_knowledge(
+            [
+                _document(
+                    url="https://en.wikipedia.org/wiki/SummerSlam_(2026)",
+                    chunks=25,
+                    published=0,
+                    revisions=25,
+                    revised_at=revised,
+                )
+            ],
+            [],
+        )
+        assert documents[0].chunks_with_published_at == 0
+        assert documents[0].chunks_with_revision == 25
+        assert documents[0].latest_revised_at == revised
+
+    def test_totals_count_lineage_apart_from_published_dates(self) -> None:
+        """계보가 빠진 문서가 하나라도 있으면 합계가 그것을 드러낸다.
+
+        실제 코퍼스의 모양이 이렇다 — 리다이렉트로 계보를 못 얻은 문서가 섞여 있어
+        합계가 청크 수에 못 미치고, 그 차이가 `temporal_verifiable=False`의 근거다.
+        """
+        totals, _, _ = summarize_knowledge(
+            [
+                _document(
+                    url="https://en.wikipedia.org/wiki/Oba_Femi",
+                    chunks=25,
+                    revisions=25,
+                    revised_at=_NOW,
+                ),
+                _document(
+                    url="https://en.wikipedia.org/wiki/IYO_SKY",
+                    chunks=22,
+                    revisions=0,
+                ),
+            ],
+            [],
+        )
+        assert totals.chunks == 47
+        assert totals.chunks_with_revision == 25
+        assert totals.chunks_with_published_at == 0
 
 
 class TestDomains:

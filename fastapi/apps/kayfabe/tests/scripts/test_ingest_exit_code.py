@@ -86,3 +86,46 @@ class TestExitCode:
         assert script.EXIT_NOTHING_COLLECTED != script.EXIT_PROVENANCE_UNAVAILABLE
         assert script.EXIT_NOTHING_COLLECTED != 0
         assert script.EXIT_PROVENANCE_UNAVAILABLE != 0
+
+
+class TestMaxChunks:
+    """**핵심 회귀.** 상한 없이 돌면 재수집이 코퍼스를 몇 배로 불린다.
+
+    2026-09-21에 실제로 그렇게 돌렸다 — 6문서에 30분이 걸렸고, 31문서면 몇 시간짜리가
+    된다. 분량이 바뀌면 `top_k=5` 검색이 뽑는 것도 달라지므로, 계보를 얻으려던 작업이
+    검색 거동까지 바꾼다.
+    """
+
+    def test_default_matches_the_corpus_that_exists(self, script: ModuleType) -> None:
+        """현재 코퍼스가 25로 쌓였다 — 기본값이 그것과 달라지면 안 된다."""
+        assert script.max_chunks_from_argv([]) == 25
+        assert script.DEFAULT_MAX_CHUNKS == 25
+
+    def test_urls_alone_do_not_change_the_cap(self, script: ModuleType) -> None:
+        assert script.max_chunks_from_argv(["https://en.wikipedia.org/wiki/X"]) == 25
+
+    def test_explicit_value_wins(self, script: ModuleType) -> None:
+        argv = ["https://en.wikipedia.org/wiki/X", "--max-chunks=50"]
+
+        assert script.max_chunks_from_argv(argv) == 50
+
+    def test_zero_means_unlimited(self, script: ModuleType) -> None:
+        """무제한은 적을 자리가 필요하지만, 숫자를 직접 적어야만 닿는다."""
+        assert script.max_chunks_from_argv(["--max-chunks=0"]) is None
+
+    def test_negative_is_rejected(self, script: ModuleType) -> None:
+        with pytest.raises(ValueError):
+            script.max_chunks_from_argv(["--max-chunks=-1"])
+
+    def test_flags_are_not_urls(self, script: ModuleType) -> None:
+        """`--max-chunks=25`가 URL 목록에 섞여 들어가면 허용 도메인 경고만 남는다."""
+        argv = [
+            "https://en.wikipedia.org/wiki/X",
+            "--max-chunks=25",
+            "https://en.wikipedia.org/wiki/Y",
+        ]
+
+        assert script.urls_from_argv(argv) == [
+            "https://en.wikipedia.org/wiki/X",
+            "https://en.wikipedia.org/wiki/Y",
+        ]

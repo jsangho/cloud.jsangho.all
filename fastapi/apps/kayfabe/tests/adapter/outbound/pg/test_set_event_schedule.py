@@ -40,6 +40,7 @@ import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
 from kayfabe.adapter.outbound.orm.agent_prediction_orm import (
     AgentPredictionModel,
     AgentReportModel,
+    PredictionRetrievalModel,
 )
 from kayfabe.adapter.outbound.orm.ple_orm import (
     PleEventModel,
@@ -60,6 +61,8 @@ _TABLES = [
     PlePredictionModel.__table__,
     AgentPredictionModel.__table__,
     AgentReportModel.__table__,
+    # `retrievals`도 selectin이다 (Phase 3-13) — 같은 이유로 함께 둔다.
+    PredictionRetrievalModel.__table__,
 ]
 
 _FINISHED_AT = datetime(2026, 8, 4, 6, 57, 58, tzinfo=UTC)

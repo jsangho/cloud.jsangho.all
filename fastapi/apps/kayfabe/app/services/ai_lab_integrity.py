@@ -133,6 +133,11 @@ class CorpusFacts:
     chunks_total: int
     chunks_embedded: int
     chunks_with_published_at: int
+    #: 개정본 계보가 붙은 청크 (Phase 3-13). **시간 판정이 보는 것은 이쪽이다** —
+    #: `published_at`이 아니다. 위키는 발행일 메타태그를 내보내지 않아 그 칸은
+    #: 구조적으로 비고, 계속 개정되는 문서에서는 "언제 처음 쓰였나"가 애초에
+    #: 답이 아니다. 필요한 것은 **우리가 읽은 개정본이 경기보다 앞서는가**다.
+    chunks_with_revision: int
     documents: int
     domains: int
     last_collected_at: datetime | None
@@ -162,6 +167,8 @@ class IntegrityFacts:
     predictions_with_sources: int
     chunks_total: int
     chunks_with_published_at: int
+    #: 계보가 붙은 청크 수 (Phase 3-13). `temporal_verifiable`의 근거다.
+    chunks_with_revision: int
     temporal_verifiable: bool
     generalizable: bool
     reasons: tuple[str, ...]
@@ -447,7 +454,14 @@ def summarize_integrity(
         for key, urls in sources_by_match.items()
         if urls and cites_own_event(urls, labels[key])
     )
-    temporal_verifiable = corpus.chunks_with_published_at > 0
+    # **"하나라도 있으면 통과"가 아니라 "하나도 빠지지 않아야 통과"다** (Phase 3-13).
+    # 옛 판정은 `chunks_with_published_at > 0`이었는데, 그 형태가 Phase 3-11이
+    # 경고한 함정이다 — 값의 존재만 보고 시간 비교를 한 번도 하지 않으면서 게이트만
+    # 열린다. 계보가 빠진 청크가 하나라도 있으면 그 문서를 인용한 예측은 검증할 수
+    # 없으므로, 여기서 "검증 가능"이라고 말하면 안 된다.
+    temporal_verifiable = (
+        corpus.chunks_total > 0 and corpus.chunks_with_revision == corpus.chunks_total
+    )
 
     reasons: list[str] = []
     if sample_size == 0:
@@ -462,9 +476,10 @@ def summarize_integrity(
             "— 결과가 적힌 글을 읽고 낸 예측일 수 있습니다."
         )
     if not temporal_verifiable:
+        missing = corpus.chunks_total - corpus.chunks_with_revision
         reasons.append(
-            f"지식 청크 {corpus.chunks_total}건 중 발행일이 있는 것이 0건이라 "
-            "예측보다 먼저 쓰인 글인지 검증할 수 없습니다."
+            f"지식 청크 {corpus.chunks_total}건 중 {missing}건에 개정본 계보가 없어 "
+            "경기보다 먼저 쓰인 글인지 검증할 수 없습니다."
         )
 
     return IntegrityFacts(
@@ -475,6 +490,7 @@ def summarize_integrity(
         predictions_with_sources=sum(1 for urls in sources_by_match.values() if urls),
         chunks_total=corpus.chunks_total,
         chunks_with_published_at=corpus.chunks_with_published_at,
+        chunks_with_revision=corpus.chunks_with_revision,
         temporal_verifiable=temporal_verifiable,
         generalizable=not reasons,
         reasons=tuple(reasons),

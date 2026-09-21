@@ -45,7 +45,7 @@ class PredictionKnowledgeRepository(PredictionKnowledgePort):
             top_k,
             len(rows),
         )
-        return _newest_first([_to_chunk(row) for row in rows])
+        return _newest_first([_to_chunk(row, distance) for row, distance in rows])
 
     async def _embed(self, text: str) -> list[float]:
         """bge-m3는 CPU 바운드라 스레드로 넘긴다(하네스 §3-D9).
@@ -62,25 +62,48 @@ class PredictionKnowledgeRepository(PredictionKnowledgePort):
 
     async def _nearest(
         self, embedding: list[float], top_k: int
-    ) -> list[KnowledgeChunkModel]:
+    ) -> list[tuple[KnowledgeChunkModel, float | None]]:
+        """거리도 함께 받는다 (Phase 3-13).
+
+        정렬에만 쓰고 버리면 "무엇이 얼마나 가까워서 뽑혔는지"를 기록할 수 없다.
+        같은 식을 `ORDER BY`와 `SELECT`에 두 번 쓰는 셈이지만, 플래너가 한 번만
+        계산한다.
+        """
+        distance = KnowledgeChunkModel.embedding.op("<=>")(embedding)
         stmt = (
-            select(KnowledgeChunkModel)
+            select(KnowledgeChunkModel, distance.label("distance"))
             # 임베딩이 없는 행은 거리 계산 대상이 아니다 — 적재 중이거나 실패한 청크다.
             .where(KnowledgeChunkModel.embedding.is_not(None))
-            .order_by(KnowledgeChunkModel.embedding.op("<=>")(embedding))
+            .order_by(distance)
             .limit(top_k)
         )
         try:
-            return list((await self.session.scalars(stmt)).all())
+            result = await self.session.execute(stmt)
+            return [(row, _float_or_none(value)) for row, value in result.all()]
         except SQLAlchemyError as exc:
             raise KnowledgeSourceUnavailableError("지식 조회에 실패했습니다.") from exc
 
 
-def _to_chunk(row: KnowledgeChunkModel) -> KnowledgeChunk:
+def _float_or_none(value: object) -> float | None:
+    """거리를 못 읽어도 검색 자체는 살린다 — 기록이 예측을 막지 않는다."""
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_chunk(row: KnowledgeChunkModel, distance: float | None) -> KnowledgeChunk:
     #: 제목을 본문 앞에 붙인다 — 청크만 보면 무슨 글인지 알 수 없는 경우가 많다.
     text = f"{row.title}\n{row.content}" if row.title else row.content
     return KnowledgeChunk(
-        text=text, source_url=row.source_url, published_at=row.published_at
+        text=text,
+        source_url=row.source_url,
+        published_at=row.published_at,
+        chunk_id=row.id,
+        content_hash=row.content_hash,
+        source_revision_id=row.source_revision_id,
+        source_revised_at=row.source_revised_at,
+        distance=distance,
     )
 
 

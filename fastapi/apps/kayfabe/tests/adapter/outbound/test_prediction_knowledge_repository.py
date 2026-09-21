@@ -41,11 +41,23 @@ class _Row:
         source_url: str,
         title: str | None = None,
         published_at: datetime | None = None,
+        id: int | None = None,
+        content_hash: str | None = None,
+        source_revision_id: str | None = None,
+        source_revised_at: datetime | None = None,
+        distance: float | None = None,
     ) -> None:
         self.content = content
         self.source_url = source_url
         self.title = title
         self.published_at = published_at
+        self.id = id
+        self.content_hash = content_hash
+        self.source_revision_id = source_revision_id
+        self.source_revised_at = source_revised_at
+        #: 행에 들고 다니지만 **모델의 칸은 아니다** — 가짜 세션이 쿼리 대신
+        #: 거리를 돌려주기 위한 자리다(실제로는 `SELECT`의 두 번째 열이다).
+        self.distance = distance
 
 
 class _FakeSession:
@@ -54,15 +66,16 @@ class _FakeSession:
         self._error = error
         self.statements: list[Any] = []
 
-    async def scalars(self, statement: Any) -> Any:
+    async def execute(self, statement: Any) -> Any:
+        """`(모델, 거리)` 쌍을 돌려준다 — 실제 쿼리가 두 열을 뽑기 때문이다."""
         self.statements.append(statement)
         if self._error is not None:
             raise self._error
-        rows = self._rows
+        pairs = [(row, row.distance) for row in self._rows]
 
         class _Result:
-            def all(self) -> list[_Row]:
-                return rows
+            def all(self) -> list[tuple[_Row, float | None]]:
+                return pairs
 
         return _Result()
 
@@ -253,3 +266,52 @@ async def test_embedding_failure_becomes_knowledge_unavailable(
 
     with pytest.raises(KnowledgeSourceUnavailableError):
         await _repository(_FakeSession([])).search(query="q", top_k=5)
+
+
+@pytest.mark.asyncio
+async def test_search_carries_the_revision_and_distance(
+    keymaker: _FakeKeymaker,
+) -> None:
+    """검색 결과가 **어느 개정본에서 왔는지**를 들고 나와야 기록할 수 있다.
+
+    URL만으로는 부족하다 — 같은 주소라도 개정본이 다르면 다른 글이고, 경기 전후를
+    가르는 것이 바로 그 차이다. 거리도 함께 나온다: 정렬에만 쓰고 버리면 "무엇이
+    얼마나 가까워서 뽑혔는지"를 남길 수 없다.
+    """
+    session = _FakeSession(
+        [
+            _Row(
+                content="본문",
+                source_url="https://en.wikipedia.org/wiki/SummerSlam_(2026)",
+                title="SummerSlam (2026)",
+                id=11,
+                content_hash="a" * 64,
+                source_revision_id="1367773770",
+                source_revised_at=datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC),
+                distance=0.21,
+            )
+        ]
+    )
+
+    chunk = (await _repository(session).search(query="SummerSlam", top_k=5))[0]
+
+    assert chunk.chunk_id == 11
+    assert chunk.content_hash == "a" * 64
+    assert chunk.source_revision_id == "1367773770"
+    assert chunk.source_revised_at == datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC)
+    assert chunk.distance == 0.21
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_distance_does_not_kill_the_search(
+    keymaker: _FakeKeymaker,
+) -> None:
+    """기록이 예측을 막지 않는다 — 거리를 못 읽으면 `None`이고 청크는 그대로 나온다."""
+    session = _FakeSession(
+        [_Row(content="본문", source_url="https://wwe.com/x", distance=None)]
+    )
+
+    chunk = (await _repository(session).search(query="SummerSlam", top_k=5))[0]
+
+    assert chunk.distance is None
+    assert chunk.text == "본문"

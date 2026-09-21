@@ -81,14 +81,22 @@ class FakeRepository(AgentPredictionRepository):
 
 
 class FakeKnowledge(PredictionKnowledgePort):
-    def __init__(self, *, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        error: Exception | None = None,
+        chunks: list[KnowledgeChunk] | None = None,
+    ) -> None:
         self.error = error
         self.queries: list[str] = []
+        self._chunks = chunks
 
     async def search(self, *, query: str, top_k: int) -> list[KnowledgeChunk]:
         if self.error is not None:
             raise self.error
         self.queries.append(query)
+        if self._chunks is not None:
+            return list(self._chunks)
         return [KnowledgeChunk(text="최근 서사 요약", source_url="https://wwe.com/x")]
 
 
@@ -393,3 +401,96 @@ async def test_rationale_quotes_the_agents_without_another_llm_call() -> None:
     rationale = repo.saved[0].rationale
     assert "Roman Reigns" in rationale
     assert "storyline 근거" in rationale
+
+
+class TestRetrievalRecord:
+    """무엇을 읽고 만든 예측인가 (Phase 3-13 Stage 4).
+
+    출처 URL은 이미 리포트에 남는다. 그것으로 부족한 이유는 **URL이 같아도 개정본이
+    다르면 다른 글**이기 때문이다 — 위키 문서는 경기 전후로 계속 고쳐진다. 그래서
+    그때 읽은 개정본을 예측에 붙여 둔다.
+    """
+
+    @staticmethod
+    def _chunks() -> list[KnowledgeChunk]:
+        return [
+            KnowledgeChunk(
+                text="먼저 읽은 글",
+                source_url="https://en.wikipedia.org/wiki/SummerSlam_(2026)",
+                chunk_id=11,
+                content_hash="a" * 64,
+                source_revision_id="1367773770",
+                source_revised_at=datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC),
+                published_at=None,
+                distance=0.21,
+            ),
+            KnowledgeChunk(
+                text="나중에 읽은 글",
+                source_url="https://en.wikipedia.org/wiki/Oba_Femi",
+                chunk_id=12,
+                content_hash="b" * 64,
+                source_revision_id="1367711306",
+                source_revised_at=datetime(2026, 8, 4, 18, 40, 31, tzinfo=UTC),
+                distance=0.33,
+            ),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_it_records_what_went_into_the_prompt_in_reading_order(self) -> None:
+        interactor, repo = build(knowledge=FakeKnowledge(chunks=self._chunks()))
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        retrievals = repo.saved[0].retrievals
+        assert [item.rank for item in retrievals] == [1, 2]
+        # **검색이 돌려준 순서 그대로다** — 유사도 순위가 아니라 읽은 순서를 적는다.
+        assert [item.chunk_id for item in retrievals] == [11, 12]
+        assert [item.source_revision_id for item in retrievals] == [
+            "1367773770",
+            "1367711306",
+        ]
+        assert [item.distance for item in retrievals] == [0.21, 0.33]
+
+    @pytest.mark.asyncio
+    async def test_the_revision_is_copied_not_referenced(self) -> None:
+        """재수집이 청크를 지워도 남아야 하므로 값을 베껴 둔다."""
+        interactor, repo = build(knowledge=FakeKnowledge(chunks=self._chunks()))
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        first = repo.saved[0].retrievals[0]
+        assert first.source_url == "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
+        assert first.content_hash == "a" * 64
+        assert first.source_revised_at == datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC)
+
+    @pytest.mark.asyncio
+    async def test_a_failed_search_records_nothing(self) -> None:
+        """조회가 실패하면 읽은 것이 없다 — 빈 기록이 사실이다."""
+        interactor, repo = build(
+            knowledge=FakeKnowledge(error=KnowledgeSourceUnavailableError("down"))
+        )
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        assert repo.saved[0].retrievals == ()
+
+    @pytest.mark.asyncio
+    async def test_a_bookmaker_fallback_still_records_what_was_read(self) -> None:
+        """아무도 답하지 못했어도 그 청크들은 프롬프트에 들어갔다.
+
+        폴백은 "에이전트가 의견을 못 냈다"는 사실이지 "아무것도 안 읽었다"가 아니다.
+        여기서 기록을 빼면 근거 없는 예측과 구분되지 않는다.
+        """
+        dead = AgentUnavailableError("quota")
+        interactor, repo = build(
+            knowledge=FakeKnowledge(chunks=self._chunks()),
+            storyline=FakeStoryline(error=dead),
+            odds=FakeOdds(error=dead),
+            rumor=FakeRumor(error=dead),
+        )
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        saved = repo.saved[0]
+        assert saved.source is PredictionSource.BOOKMAKER_FALLBACK
+        assert [item.rank for item in saved.retrievals] == [1, 2]

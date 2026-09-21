@@ -1,4 +1,14 @@
-# compose의 named volume 5개를 그대로 옮긴 것이다.
+# compose의 named volume 5개 중 **셋은 일부러 옮기지 않았다.**
+#
+#   버린 것: pgvector_data · neo4j_data · redis_data
+#     상태를 가진 것은 클러스터 밖 관리형 서비스(Neon)에 둔다. 그래서 여기에
+#     DB 볼륨이 하나도 없는 것이 정상이다 (_docs/k3s-rules.md §4-2).
+#     PostgreSQL은 앱 DB와 벡터 저장소가 따로가 아니라 **DB 하나**다 —
+#     `.env`의 DATABASE_URL·PGVECTOR_URL이 같은 곳을 가리키고, `vector` 확장과
+#     embedding 컬럼이 일반 테이블과 같은 스키마에 있다.
+#   옮긴 것: pgadmin_data · hf_cache
+#   새로 생긴 것: n8n-data — compose에서는 bind mount였다 (아래 주석 참조).
+#
 # StorageClass를 지정하지 않으면 k3s 기본값 local-path 가 잡히고,
 # 실제 데이터는 노드의 /var/lib/rancher/k3s/storage/ 아래에 생긴다.
 apiVersion: v1

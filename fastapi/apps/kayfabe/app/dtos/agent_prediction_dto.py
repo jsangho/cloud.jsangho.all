@@ -63,6 +63,14 @@ class KnowledgeChunk:
     text: str
     source_url: str | None = None
     published_at: datetime | None = None
+    #: 아래 넷은 **검색 기록용**이다 (Phase 3-13). 에이전트는 `text`만 읽는다 —
+    #: 어느 개정본에서 왔는지는 프롬프트가 아니라 감사 기록이 쓸 값이다.
+    chunk_id: int | None = None
+    content_hash: str | None = None
+    source_revision_id: str | None = None
+    source_revised_at: datetime | None = None
+    #: 코사인 거리. 작을수록 가깝다. 못 구하면 `None` — 0.0으로 채우지 않는다.
+    distance: float | None = None
 
 
 @dataclass(frozen=True)

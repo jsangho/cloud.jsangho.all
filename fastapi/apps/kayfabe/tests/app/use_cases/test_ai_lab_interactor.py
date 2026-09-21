@@ -65,7 +65,7 @@ class FakeAiLabRepository(AiLabRepository):
     ) -> None:
         self._predictions = predictions or []
         self._reports = reports or []
-        self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, None)
+        self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, 0, None)
         self._documents = documents or []
         self._events = events
 
@@ -141,14 +141,14 @@ class TestSystemStatus:
 
     @pytest.mark.asyncio
     async def test_partial_embeddings_read_as_degraded(self) -> None:
-        corpus = CorpusFacts(100, 60, 0, 5, 1, _NOW)
+        corpus = CorpusFacts(100, 60, 0, 0, 5, 1, _NOW)
         overview = await _interactor(corpus=corpus).get_overview()
         assert _state(overview, "knowledge") == "degraded"
         assert "40건" in _detail(overview, "knowledge")
 
     @pytest.mark.asyncio
     async def test_a_fully_embedded_corpus_reads_as_operational(self) -> None:
-        corpus = CorpusFacts(668, 668, 0, 40, 1, _NOW)
+        corpus = CorpusFacts(668, 668, 0, 0, 40, 1, _NOW)
         overview = await _interactor(corpus=corpus).get_overview()
         assert _state(overview, "knowledge") == "operational"
 
@@ -570,16 +570,21 @@ class TestKnowledge:
     """Phase 3-4 — 코퍼스에 있는 것과 **실제로 쓰인 것**을 갈라 놓는다."""
 
     @staticmethod
-    def _document(url: str, *, chunks: int = 10) -> DocumentRow:
+    def _document(
+        url: str, *, chunks: int = 10, revisions: int | None = None
+    ) -> DocumentRow:
         return DocumentRow(
             source_url=url,
             source_domain="en.wikipedia.org",
             title="SummerSlam (2026)",
             chunks=chunks,
             chunks_embedded=chunks,
+            # 위키는 발행일 메타태그를 안 내보낸다 — 실제 코퍼스와 같이 0이다.
             chunks_with_published_at=0,
             first_published_at=None,
             last_collected_at=_NOW,
+            chunks_with_revision=chunks if revisions is None else revisions,
+            latest_revised_at=datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC),
         )
 
     @pytest.mark.asyncio
@@ -658,6 +663,35 @@ class TestKnowledge:
         assert (schema.totals.used_documents, schema.totals.documents) == (1, 2)
         assert schema.totals.used_document_rate == 0.5
         assert schema.documents[0].used_by_agents == ["rumor"]
+
+    @pytest.mark.asyncio
+    async def test_the_schema_carries_lineage_next_to_the_empty_published_dates(
+        self,
+    ) -> None:
+        """화면이 "작성 시점을 모른다"를 발행일로 판단하지 않게 하는 칸이다.
+
+        발행일은 위키에서 구조적으로 0이므로, 그 0만 내보내면 계보를 아는 문서까지
+        시점 미상으로 적히게 된다. 두 값이 같은 응답에 함께 있어야 한다.
+        """
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import knowledge_to_schema
+
+        schema = knowledge_to_schema(
+            await _interactor(
+                predictions=[_prediction(match_key="m1")],
+                reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+                documents=[
+                    self._document("https://en.wikipedia.org/wiki/Known", chunks=10),
+                    self._document(
+                        "https://en.wikipedia.org/wiki/IYO_SKY", chunks=4, revisions=0
+                    ),
+                ],
+            ).get_knowledge()
+        )
+        assert (schema.totals.chunks, schema.totals.chunks_with_revision) == (14, 10)
+        assert schema.totals.chunks_with_published_at == 0
+        lineage = {d.source_url: d.chunks_with_revision for d in schema.documents}
+        assert lineage["https://en.wikipedia.org/wiki/Known"] == 10
+        assert lineage["https://en.wikipedia.org/wiki/IYO_SKY"] == 0
 
 
 class TestPredictionsAgentFilter:
