@@ -17,6 +17,16 @@
 그래서 위키에 먼저 한 번 묻는다. 정규 제목으로 바꿔 수집하고, 동음이의와 없는
 문서는 요청조차 보내지 않는다. **확인에 실패하면 추측으로 이어가지 않고 멈춘다.**
 
+**대회 문서는 회차까지 본다** (Phase 3-13 Stage 7). Stage 5의 관문은 "문서가
+실재하는가"만 보므로 시리즈 **총론**이 그대로 통과했다 — `Royal Rumble`·
+`Survivor Series`·`WWE Bad Blood`가 실제로 그렇게 들어가고 있었다. 총론은 과거
+회차의 **결과가 적힌 문서**라 근거가 아니라 오염이다(Phase 3-5가 SummerSlam에서
+본 "두 LLM이 언제나 1.0"이 그 모양이었다). 그래서 대회 문서 하나에 대해서만
+`WikiEditionPort`로 "이게 그해 회차인가"를 한 번 더 묻는다.
+
+**선수 문서에는 걸지 않는다.** 회차 개념이 없을뿐더러 연도 카테고리를 엉뚱한 뜻으로
+갖는다 — `Rhea Ripley`의 연도는 `Category:1996 births`, 곧 출생 연도다.
+
 `--max-chunks`로 문서당 청크 수를 제한한다. 위키 인물 문서는 대부분이 타이틀 이력과
 각주라, 앞부분(요약·최근 활동)만 담아도 예측 근거로는 충분하고 임베딩 시간이 크게 준다.
 
@@ -26,7 +36,7 @@
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python apps/kayfabe/scripts/ingest_event_knowledge.py money-in-the-bank
     ... --dry-run    # 확인만 하고 수집 요청은 보내지 않는다
 
-종료 코드: 0 정상 · 1 카드 없음/수집 0건 · 2 사용법 · **3 주소 확인 실패**
+종료 코드: 0 정상 · 1 카드 없음/수집 0건 · 2 사용법 · **3 주소·회차 확인 실패**
 """
 
 from __future__ import annotations
@@ -54,9 +64,16 @@ from kayfabe.app.dtos.knowledge_ingestion_dto import (  # noqa: E402
 from kayfabe.dependencies.knowledge_ingestion_provider import (  # noqa: E402
     get_knowledge_ingestion_use_case,
 )
+from ontology.app.ports.output.wiki_edition_port import (  # noqa: E402
+    WikiEdition,
+    WikiEditionPort,
+)
 from ontology.app.ports.output.wiki_title_port import (  # noqa: E402
     WikiTitle,
     WikiTitlePort,
+)
+from ontology.dependencies.wiki_edition_provider import (  # noqa: E402
+    get_wiki_edition_port,
 )
 from ontology.dependencies.wiki_title_provider import (  # noqa: E402
     get_wiki_title_port,
@@ -64,21 +81,30 @@ from ontology.dependencies.wiki_title_provider import (  # noqa: E402
 
 _WIKI = "https://en.wikipedia.org/wiki/"
 
-#: 대회 문서 제목. **주소가 아니라 제목이다** — 인코딩은 `_wiki_url`이 하고,
-#: 실재 여부는 위키에 물어 확인한다.
+#: 대회 문서 제목. **주소가 아니라 제목이고, 총론이 아니라 회차다.**
+#: 인코딩은 `_wiki_url`이 하고, 실재 여부와 회차는 위키에 물어 확인한다.
+#:
+#: 값은 2026-09-22에 전수 실측한 것이다. 위키의 회차 문서 명명은 세 갈래로 갈려서
+#: 규칙으로 생성할 수 없다 — `WrestleMania 42`는 연도를 안 쓰고, `Backlash (2026)`은
+#: `WWE ` 접두사가 빠지며, `Survivor Series (2026)`은 `Survivor Series: WarGames
+#: (2026)`으로 넘어간다. 그래서 사람이 확인한 제목을 적고 관문이 검증한다.
+#:
+#: **다음 시즌에 이 표가 낡으면 관문이 소리를 낸다** — 연도가 어긋난 회차 문서는
+#: 조용히 통과하지 않고 `wrong_edition`으로 보고된다.
 _EVENT_TITLES: dict[str, str] = {
-    "royal-rumble": "Royal Rumble",
+    "royal-rumble": "Royal Rumble (2026)",
     "elimination-chamber": "Elimination Chamber (2026)",
-    "stand-and-deliver": "NXT Stand & Deliver",
+    "stand-and-deliver": "NXT Stand & Deliver (2026)",
     "wrestlemania": "WrestleMania 42",
-    "backlash": "WWE Backlash",
-    "clash-in-italy": "WWE Clash in Italy",
-    "night-of-champions": "WWE Night of Champions",
+    "backlash": "Backlash (2026)",
+    "night-of-champions": "Night of Champions (2026)",
     "summerslam": "SummerSlam (2026)",
     "money-in-the-bank": "Money in the Bank (2026)",
-    "king-queen-of-the-ring": "WWE King and Queen of the Ring",
-    "bad-blood": "WWE Bad Blood",
-    "survivor-series": "Survivor Series",
+    "king-queen-of-the-ring": "King and Queen of the Ring (2026)",
+    "survivor-series": "Survivor Series (2026)",
+    # `bad-blood`·`clash-in-italy`는 2026 회차 문서가 위키에 **없다**(실측).
+    # 총론(`WWE Bad Blood`)을 대신 넣지 않는다 — 과거 회차 결과가 적힌 문서라
+    # 근거가 아니라 오염이고, 그게 이 관문이 막으려는 바로 그것이다.
 }
 
 
@@ -88,8 +114,19 @@ def _wiki_url(title: str) -> str:
     `&`·`%`를 그대로 두지 않는다 — `NXT Stand & Deliver`의 실제 주소는
     `NXT_Stand_%26_Deliver`이고, 인코딩을 건너뛰면 경로가 그 자리에서 끊긴다.
     괄호는 남긴다: `Money_in_the_Bank_(2026)`이 위키가 쓰는 모양이다.
+
+    **콜론도 남긴다** (Phase 3-13 Stage 7). 회차 문서에 처음으로 콜론이 들어간
+    제목이 나왔다 — `Survivor Series: WarGames (2026)`. 2026-09-22 실측에서
+    `%3A`와 `:` 둘 다 200이지만 **서로 정규화되지 않는다**:
+
+        …/Survivor_Series:_WarGames_(2026)     200, 주소 그대로
+        …/Survivor_Series%3A_WarGames_(2026)   200, 주소 그대로
+
+    같은 문서가 두 주소로 남을 수 있다는 뜻이고, 그러면 나중에 정규 주소로 넣을 때
+    `content_hash` 유니크에 막혀 **저장 0건이 조용히 성공으로 보고된다** — Stage 5가
+    리다이렉트에서 막은 바로 그 사고를 인코딩으로 다시 내는 것이다.
     """
-    return _WIKI + quote(title.replace(" ", "_"), safe="_(),")
+    return _WIKI + quote(title.replace(" ", "_"), safe="_(),:")
 
 
 def _competitor_names(card_json: str) -> list[str]:
@@ -139,6 +176,35 @@ async def _titles_for(slug: str) -> list[str]:
     return titles
 
 
+async def _event_year(slug: str) -> int | None:
+    """대회 시작일의 연도. 날짜를 모르면 `None`이다.
+
+    **카탈로그가 아니라 DB를 읽는다.** 시간 게이트(`_corpus`)가 판정에 쓰는 값이
+    `ple_events.start_date`이므로, "어느 회차를 읽었나"와 "무엇과 비교하나"가
+    같은 값에서 나와야 둘이 어긋나지 않는다. (카탈로그 →DB 반영은
+    `apply_event_schedule.py`가 한다.)
+    """
+    async with AsyncSessionLocal() as session:
+        start = (
+            await session.execute(
+                text("select start_date from ple_events where slug = :slug"),
+                {"slug": slug},
+            )
+        ).scalar_one_or_none()
+    return start.year if start is not None else None
+
+
+@dataclass(frozen=True)
+class WrongEdition:
+    """그해 회차가 아니라서 버린 대회 문서."""
+
+    title: str
+    canonical: str
+    expected_year: int
+    #: 문서가 실제로 걸려 있는 해들. 총론이면 대개 비어 있다.
+    years: tuple[int, ...]
+
+
 @dataclass(frozen=True)
 class IngestionPlan:
     """무엇을 수집하고 무엇을 왜 버렸는지."""
@@ -150,9 +216,20 @@ class IngestionPlan:
     disambiguation: tuple[str, ...] = ()
     #: 위키에 없어서 버린 것.
     missing: tuple[str, ...] = ()
+    #: 실재하지만 **그해 회차가 아니라서** 버린 대회 문서 (총론 포함).
+    wrong_edition: tuple[WrongEdition, ...] = ()
+    #: 대회 날짜를 몰라 회차를 **판정하지 못해** 보류한 대회 문서.
+    undated: tuple[str, ...] = ()
 
 
-def plan_for(titles: Sequence[str], resolved: dict[str, WikiTitle]) -> IngestionPlan:
+def plan_for(
+    titles: Sequence[str],
+    resolved: dict[str, WikiTitle],
+    *,
+    event_title: str | None = None,
+    event_year: int | None = None,
+    edition: WikiEdition | None = None,
+) -> IngestionPlan:
     """확인 결과를 수집 계획으로 옮긴다. **DB도 네트워크도 모르는 순수 함수다.**
 
     표에 없는 이름은 **없는 문서로 본다.** 확인되지 않은 이름을 수집으로 넘기면
@@ -160,11 +237,19 @@ def plan_for(titles: Sequence[str], resolved: dict[str, WikiTitle]) -> Ingestion
 
     정규 제목이 겹치면 한 번만 수집한다 — `IYO SKY`와 `Iyo Sky`가 같은 문서라
     둘 다 보내면 두 번째는 `content_hash`에 막혀 저장 0건으로 돌아온다.
+
+    `event_title`이 주어지면 그 하나에만 **회차 관문**이 걸린다. 날짜를 모르면
+    (`event_year is None`) 통과가 아니라 **보류**다 — 어느 해 회차를 기대하는지
+    모르는 채로 총론과 회차를 가릴 방법이 없고, 모르는 것을 통과로 읽는 순간
+    이 관문이 없던 것이 된다. `PLE_EVENT_SCHEDULE`이 날짜를 "모른다"로 비워 두는
+    관행과 같은 읽기다.
     """
     urls: list[str] = []
     renamed: list[tuple[str, str]] = []
     disambiguation: list[str] = []
     missing: list[str] = []
+    wrong_edition: list[WrongEdition] = []
+    undated: list[str] = []
     seen: set[str] = set()
 
     for title in titles:
@@ -175,6 +260,20 @@ def plan_for(titles: Sequence[str], resolved: dict[str, WikiTitle]) -> Ingestion
         if entry.is_disambiguation:
             disambiguation.append(title)
             continue
+        if event_title is not None and title == event_title:
+            if event_year is None:
+                undated.append(title)
+                continue
+            if edition is None or not edition.covers(event_year):
+                wrong_edition.append(
+                    WrongEdition(
+                        title=title,
+                        canonical=entry.canonical,
+                        expected_year=event_year,
+                        years=tuple(sorted(edition.years)) if edition else (),
+                    )
+                )
+                continue
         if entry.is_renamed:
             renamed.append((title, entry.canonical))
         if entry.canonical in seen:
@@ -187,6 +286,8 @@ def plan_for(titles: Sequence[str], resolved: dict[str, WikiTitle]) -> Ingestion
         renamed=tuple(renamed),
         disambiguation=tuple(disambiguation),
         missing=tuple(missing),
+        wrong_edition=tuple(wrong_edition),
+        undated=tuple(undated),
     )
 
 
@@ -200,6 +301,14 @@ def _report(plan: IngestionPlan) -> None:
         print(f"  동음이의라 버림: {title}")
     for title in plan.missing:
         print(f"  위키에 없어 버림: {title}")
+    for wrong in plan.wrong_edition:
+        actual = ", ".join(str(y) for y in wrong.years) or "없음"
+        print(
+            f"  {wrong.expected_year}년 회차가 아니라 버림: {wrong.title}"
+            f" (→ {wrong.canonical}, 문서가 걸린 해: {actual})"
+        )
+    for title in plan.undated:
+        print(f"  대회 날짜를 몰라 회차를 못 가려 보류: {title}")
 
 
 async def main(
@@ -208,6 +317,7 @@ async def main(
     dry_run: bool,
     max_chunks: int | None,
     titles_port: WikiTitlePort | None = None,
+    editions_port: WikiEditionPort | None = None,
 ) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
@@ -223,7 +333,33 @@ async def main(
         print("위키에 문서를 확인하지 못했습니다. 수집하지 않고 멈춥니다.")
         return 3
 
-    plan = plan_for(titles, resolved)
+    # 회차는 **대회 문서 하나**에만 묻는다. 실재하지 않는 문서에는 물을 것이 없고,
+    # 날짜를 모르면 비교할 기준이 없어 요청 자체가 낭비다.
+    event_title = _EVENT_TITLES.get(slug)
+    event_entry = resolved.get(event_title) if event_title else None
+    event_year: int | None = None
+    edition: WikiEdition | None = None
+    if event_entry is not None and event_entry.is_usable:
+        event_year = await _event_year(slug)
+        if event_year is not None:
+            canonical = event_entry.canonical
+            assert canonical is not None  # is_usable이 이미 보장한다
+            table = await (editions_port or get_wiki_edition_port()).editions(
+                [canonical]
+            )
+            if table is None:
+                # 잘린 카테고리나 실패한 조회로 판정하면 회차 문서가 거짓 거부된다.
+                print("대회 문서의 회차를 확인하지 못했습니다. 수집하지 않고 멈춥니다.")
+                return 3
+            edition = table.get(canonical)
+
+    plan = plan_for(
+        titles,
+        resolved,
+        event_title=event_title,
+        event_year=event_year,
+        edition=edition,
+    )
     _report(plan)
     if not plan.urls:
         print("수집할 문서가 없습니다.")
