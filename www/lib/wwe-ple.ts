@@ -99,7 +99,10 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     label: "Worlds Collide",
     dateLabel: "9.26",
     venue: "일리노이 로즈몬트",
-    highlight: "Raw·SmackDown·NXT 합동",
+    // 위키 인포박스는 `promotion = WWE + Lucha Libre AAA Worldwide`,
+    // `brand = Raw·SmackDown·NXT`다. 둘 다 사실인데 카드 절반이 루차 선수인
+    // 이유를 설명하는 쪽은 AAA다 (rev 1376055676 확인).
+    highlight: "WWE × AAA 공동 개최",
     brand: "nxt",
   },
   {
