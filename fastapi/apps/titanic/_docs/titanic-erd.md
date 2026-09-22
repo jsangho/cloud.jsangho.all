@@ -72,7 +72,7 @@ erDiagram
 | EMBARKED_PORTS | port_name | Cherbourg, Queenstown, Southampton |ERD
 
 Kaggle 타이타닉 명단 · **이진 분류** (6개 독립변수 → `Survived` 0/1).  
-ORM: `backend/apps/titanic/adapter/outbound/orm/person_orm.py`, `booking_orm.py` → Neon **`titanic_persons`**, **`titanic_bookings`** (아래 개념 ER은 CSV·분석용).
+ORM: `backend/apps/titanic/adapter/outbound/orm/person_orm.py`, `booking_orm.py` → PostgreSQL **`titanic_persons`**, **`titanic_bookings`** (아래 개념 ER은 CSV·분석용).
 
 ```mermaid
 erDiagram
@@ -116,4 +116,4 @@ erDiagram
 | TICKETS / CABINS / EMBARKED_PORTS → PASSENGERS | 1 : N |
 
 **타깃:** `survived` · **특성:** pclass, sex, age, sibsp, parch, fare (CSV·`PassengerSchema`와 동일 의미)  
-**Neon 컬럼:** `passenger_id`, `survived`, `pclass`, `name`, `sex`, `age`, `sibsp`, `parch`, `ticket`, `fare`, `cabin`, `embarked`
+**DB 컬럼:** `passenger_id`, `survived`, `pclass`, `name`, `sex`, `age`, `sibsp`, `parch`, `ticket`, `fare`, `cabin`, `embarked`
