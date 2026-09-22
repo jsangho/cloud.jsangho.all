@@ -103,7 +103,7 @@ def describe_match(context: MatchContext) -> str:
         "선택지:",
     ]
     lines += [
-        f"- 코드 {option.pick} = {option.name}"
+        f"- {_OPTION_LABEL_PREFIX}{option.pick} = {option.name}"
         + (" (현 챔피언)" if option.is_champion else "")
         for option in context.options
     ]
@@ -252,11 +252,37 @@ def _to_report(
     )
 
 
+#: 선택지를 늘어놓을 때 우리가 붙이는 라벨. `describe_match`의 `f"- 코드 {pick} = {name}"`와
+#: **같은 문자열이어야 한다** — 한쪽만 바꾸면 이 되돌리기가 조용히 멈춘다.
+_OPTION_LABEL_PREFIX = "코드 "
+
+
+def _strip_label_echo(pick: str) -> str:
+    """모델이 **우리 라벨을 통째로 베껴** 보냈을 때 코드만 꺼낸다.
+
+    2026-09-22 운영 실측: `wc26-cruiserweight`에서 `pick='코드 2'`가 왔다. 모델은
+    제대로 골랐는데 `describe_match`가 `- 코드 2 = Mini Vikingo`로 적어 준 라벨을
+    값으로 되돌려 준 것이고, 대조가 실패해 **그 의견이 통째로 버려졌다.**
+    그 경기는 배당도 없어 폴백도 못 해 예측 0건으로 끝났다.
+
+    **관대해지는 것이 아니라 우리가 만든 잡음을 우리가 걷어내는 것이다.** 여기서
+    벗겨 내는 것은 우리 프롬프트가 붙인 접두사와 `=` 뒤의 이름뿐이고, 그러고도
+    카드에 없는 값이면 그대로 거부된다.
+    """
+    if pick.startswith(_OPTION_LABEL_PREFIX):
+        pick = pick[len(_OPTION_LABEL_PREFIX) :].strip()
+    # `코드 2 = Mini Vikingo`처럼 줄 전체를 베낀 경우. 이름 쪽은 아래 이름 대조가
+    # 따로 맡으므로 여기서는 코드만 남긴다.
+    if "=" in pick:
+        pick = pick.split("=", 1)[0].strip()
+    return pick
+
+
 def _pick(payload: dict[str, Any], context: MatchContext) -> str | None:
     raw = payload.get("pick")
     if raw is None:
         return None
-    pick = str(raw).strip()
+    pick = _strip_label_echo(str(raw).strip())
     allowed = {option.pick for option in context.options}
     if pick in allowed:
         return pick

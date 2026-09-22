@@ -339,3 +339,46 @@ async def test_gives_up_after_max_attempts() -> None:
         await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
 
     assert len(generation.prompts) == MAX_ATTEMPTS
+
+
+@pytest.mark.asyncio
+async def test_a_pick_that_echoes_our_own_label_is_recovered() -> None:
+    """모델이 `describe_match`의 라벨을 값으로 되돌려 준 경우 (2026-09-22 운영 실측).
+
+    `wc26-cruiserweight`에서 `pick='코드 2'`가 와서 대조가 실패했고, 제대로 고른
+    의견이 통째로 버려졌다. 그 경기는 배당도 없어 폴백도 못 해 예측 0건으로 끝났다.
+    """
+    generation = FakeGeneration(_reply("코드 left"))
+
+    report = await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "left"
+
+
+@pytest.mark.asyncio
+async def test_a_pick_that_echoes_the_whole_line_is_recovered() -> None:
+    """`코드 left = Roman Reigns`처럼 줄 전체를 베낀 경우."""
+    generation = FakeGeneration(_reply("코드 left = Roman Reigns"))
+
+    report = await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "left"
+
+
+@pytest.mark.asyncio
+async def test_a_genuinely_unknown_pick_is_still_refused() -> None:
+    """**관대해진 것이 아니다.** 라벨을 걷어낸 뒤에도 카드에 없으면 의견 없음이다."""
+    generation = FakeGeneration(_reply("코드 nobody"))
+
+    report = await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick is None
+
+
+def test_the_prompt_label_and_the_stripper_share_one_string() -> None:
+    """한쪽만 바꾸면 되돌리기가 조용히 멈춘다 — 여기서 묶어 둔다."""
+    rendered = gemini_agent_support.describe_match(_CONTEXT)
+
+    assert (
+        f"- {gemini_agent_support._OPTION_LABEL_PREFIX}left = Roman Reigns" in rendered
+    )
