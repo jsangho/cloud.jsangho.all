@@ -30,6 +30,16 @@
 `--max-chunks`로 문서당 청크 수를 제한한다. 위키 인물 문서는 대부분이 타이틀 이력과
 각주라, 앞부분(요약·최근 활동)만 담아도 예측 근거로는 충분하고 임베딩 시간이 크게 준다.
 
+**`--no-event-doc`은 아직 안 열린 대회를 위한 것이다** (2026-09-22). 채점의
+`self_reference` 규칙은 "그 대회 문서를 인용했으면 결과를 읽었을 수 있다"고 보고
+**실격**시킨다. 그 전제는 **미래 대회에서는 거짓이다** — 아직 안 열렸으므로 결과가
+적혀 있을 수 없다. 그래도 규칙은 문서 URL만 보고 실격을 내므로, 대회 전에 만드는
+ex-ante 표본은 대회 문서를 코퍼스에 넣는 순간 통째로 실격될 수 있다.
+
+규칙을 고치는 대신 **넣지 않는 쪽**을 골랐다 — 규칙은 이미 11건을 막고 있고 그
+판정을 흔드는 것은 별개의 결정이다. 대회가 끝난 뒤 결과를 넣을 때 이 문서를 함께
+수집하면 그때는 규칙의 전제가 참이 된다.
+
 실행:
 
     cd fastapi
@@ -91,6 +101,39 @@ _WIKI = "https://en.wikipedia.org/wiki/"
 #:
 #: **다음 시즌에 이 표가 낡으면 관문이 소리를 낸다** — 연도가 어긋난 회차 문서는
 #: 조용히 통과하지 않고 `wrong_edition`으로 보고된다.
+#: 카드 표시 이름 → 위키 문서 제목. **`_EVENT_TITLES`의 선수판이다.**
+#:
+#: `WikiTitlePort`는 "이 이름이 무엇을 가리키나"만 답하지 **"어느 쪽을 가리켜야
+#: 하나"는 모른다.** 링네임은 짧고 겹쳐서 그 한계가 그대로 사고가 된다 —
+#: 2026-09-22 `worlds-collide` 드라이런 실측:
+#:
+#:     Axiom      → 수학의 공리 문서를 200으로 돌려준다 (레슬러가 아니다)
+#:     La Parka   → `L. A. Park`으로 넘어간다 (**다른 사람**이다)
+#:     Penta·Daga·Berto·Maravilla·Dragon Lee → 동음이의라 통째로 버려진다
+#:
+#: 앞의 둘이 더 위험하다. 동음이의는 관문이 잡아내지만 **엉뚱한 주제의 정상 문서는
+#: 아무 경보도 내지 않고** 근거 자리를 차지한다.
+#:
+#: 값의 출처는 추측이 아니라 **위키 대회 문서의 링크 마크업**이다 —
+#: `[[Pentagón Jr.|Penta]]`처럼 대상과 표시 이름이 같이 적혀 있다. 2026-09-22에
+#: 아홉 개를 `WikiTitlePort`로 전수 확인했다(전부 실재 · 동음이의 0).
+#:
+#: **여기 없는 이름은 그대로 보낸다** — 대부분은 표시 이름이 곧 문서 제목이다.
+_COMPETITOR_TITLES: dict[str, str] = {
+    "Penta": "Pentagón Jr.",
+    "Daga": "Daga (wrestler)",
+    "Berto": "Humberto Carrillo",
+    "Maravilla": "Lady Maravilla",
+    "Dragon Lee": "Dragon Lee (wrestler)",
+    "La Parka": "La Parka (wrestler, born 1999)",
+    "Axiom": "Axiom (wrestler)",
+    "The Vanity Project": "The Vanity Project (professional wrestling)",
+    # 카드는 `Mascarita Sagrada`로 적지만 위키 링크는 `[[Mascarita Dorada|…]]`다.
+    # `Mascarita Sagrada`도 실재하는 문서인데 **다른 사람**이라 더 위험하다.
+    "Mascarita Sagrada": "Mascarita Dorada",
+}
+
+
 _EVENT_TITLES: dict[str, str] = {
     "royal-rumble": "Royal Rumble (2026)",
     "elimination-chamber": "Elimination Chamber (2026)",
@@ -189,7 +232,7 @@ def _competitor_names(card_json: str) -> list[str]:
     return names
 
 
-async def _titles_for(slug: str) -> list[str]:
+async def _titles_for(slug: str, *, include_event: bool = True) -> list[str]:
     async with AsyncSessionLocal() as session:
         rows = (
             await session.execute(
@@ -203,13 +246,16 @@ async def _titles_for(slug: str) -> list[str]:
         ).all()
 
     titles: list[str] = []
-    event_title = _EVENT_TITLES.get(slug)
+    event_title = _EVENT_TITLES.get(slug) if include_event else None
     if event_title:
         titles.append(event_title)
     for (card_json,) in rows:
         for name in _competitor_names(card_json):
-            if name not in titles:
-                titles.append(name)
+            # 사람이 확인한 제목이 있으면 그것으로 바꿔 보낸다 — 링네임은 짧아서
+            # 위키에서 엉뚱한 주제를 가리키는 일이 잦다.
+            title = _COMPETITOR_TITLES.get(name, name)
+            if title not in titles:
+                titles.append(title)
     return titles
 
 
@@ -353,12 +399,13 @@ async def main(
     *,
     dry_run: bool,
     max_chunks: int | None,
+    include_event_doc: bool = True,
     titles_port: WikiTitlePort | None = None,
     editions_port: WikiEditionPort | None = None,
 ) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
-    titles = await _titles_for(slug)
+    titles = await _titles_for(slug, include_event=include_event_doc)
     if not titles:
         print(f"카드를 찾지 못했습니다: {slug}")
         return 1
@@ -372,7 +419,7 @@ async def main(
 
     # 회차는 **대회 문서 하나**에만 묻는다. 실재하지 않는 문서에는 물을 것이 없고,
     # 날짜를 모르면 비교할 기준이 없어 요청 자체가 낭비다.
-    event_title = _EVENT_TITLES.get(slug)
+    event_title = _EVENT_TITLES.get(slug) if include_event_doc else None
     event_entry = resolved.get(event_title) if event_title else None
     event_year: int | None = None
     edition: WikiEdition | None = None
@@ -420,7 +467,10 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     positional = [a for a in argv if not a.startswith("--")]
     if not positional:
-        print("사용법: ingest_event_knowledge.py <slug> [--dry-run] [--max-chunks=N]")
+        print(
+            "사용법: ingest_event_knowledge.py <slug> "
+            "[--dry-run] [--max-chunks=N] [--no-event-doc]"
+        )
         raise SystemExit(2)
 
     limit_arg = next((a for a in argv if a.startswith("--max-chunks=")), None)
@@ -430,6 +480,7 @@ if __name__ == "__main__":
                 positional[0],
                 dry_run="--dry-run" in argv,
                 max_chunks=int(limit_arg.split("=")[1]) if limit_arg else 25,
+                include_event_doc="--no-event-doc" not in argv,
             )
         )
     )

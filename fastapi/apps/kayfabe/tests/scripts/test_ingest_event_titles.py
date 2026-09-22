@@ -720,7 +720,7 @@ class TestRunAsksAboutTheEventOnly:
 
 
 def _titles_returning(titles: list[str]):
-    async def _stub(slug: str) -> list[str]:
+    async def _stub(slug: str, *, include_event: bool = True) -> list[str]:
         return titles
 
     return _stub
@@ -846,3 +846,60 @@ class TestCompetitorNames:
         )
 
         assert names == ["Penta"]
+
+
+class TestCompetitorTitleCatalog:
+    """링네임 → 위키 문서 제목 (2026-09-22).
+
+    **`WikiTitlePort`가 못 하는 일을 사람이 메우는 자리다.** 포트는 "이 이름이
+    무엇을 가리키나"만 답하므로, 엉뚱한 주제의 **정상** 문서는 아무 경보 없이
+    통과한다 — `Axiom`이 수학의 공리를, `La Parka`가 다른 레슬러를 가리켰다.
+    """
+
+    def test_every_entry_actually_changes_something(self, script: ModuleType) -> None:
+        """자기 자신으로 가는 항목은 죽은 무게다."""
+        same = [k for k, v in script._COMPETITOR_TITLES.items() if k == v]
+
+        assert same == []
+
+    def test_the_two_silent_failures_are_covered(self, script: ModuleType) -> None:
+        """동음이의는 관문이 잡지만 이 둘은 못 잡는다 — 정상 문서인데 주제가 다르다."""
+        catalog = script._COMPETITOR_TITLES
+
+        assert catalog["Axiom"] == "Axiom (wrestler)"
+        assert catalog["La Parka"] == "La Parka (wrestler, born 1999)"
+
+    def test_a_name_that_resolves_to_a_different_person_is_redirected(
+        self, script: ModuleType
+    ) -> None:
+        """`Mascarita Sagrada`도 실재하는 문서지만 **다른 사람**이다."""
+        assert script._COMPETITOR_TITLES["Mascarita Sagrada"] == "Mascarita Dorada"
+
+    def test_unlisted_names_pass_through(self, script: ModuleType) -> None:
+        """대부분은 표시 이름이 곧 문서 제목이다 — 표에 없으면 그대로 보낸다."""
+        catalog = script._COMPETITOR_TITLES
+
+        assert "CM Punk" not in catalog
+        assert catalog.get("Roxanne Perez", "Roxanne Perez") == "Roxanne Perez"
+
+
+class TestEventDocSwitch:
+    """`--no-event-doc` — 아직 안 열린 대회의 ex-ante 표본을 지키는 스위치.
+
+    `self_reference`는 대회 문서를 인용하면 실격시킨다. 그 전제("문서에 결과가
+    적혀 있다")가 **미래 대회에서는 거짓**인데 규칙은 URL만 보므로, 넣는 순간
+    대회 전에 만든 표본이 통째로 실격될 수 있다.
+    """
+
+    def test_the_flag_is_parsed(self, script: ModuleType) -> None:
+        """플래그가 사라지면 조용히 대회 문서가 다시 들어온다 — 여기서 못 박는다."""
+        source = _SCRIPT.read_text(encoding="utf-8")
+
+        assert "--no-event-doc" in source
+        assert 'include_event_doc="--no-event-doc" not in argv' in source
+
+    def test_main_and_titles_share_the_switch(self, script: ModuleType) -> None:
+        import inspect
+
+        assert "include_event_doc" in inspect.signature(script.main).parameters
+        assert "include_event" in inspect.signature(script._titles_for).parameters
