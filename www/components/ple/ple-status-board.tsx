@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, Radio } from "lucide-react";
 import { PleEventGrid } from "@/components/ple-event-grid";
 import { fetchPleEvents, type PleEventRow } from "@/lib/ple-events-api";
-import { formatPleSchedule, getPleBySlug, getPleCountdownDays, isPleListed } from "@/lib/wwe-ple";
+import {
+  formatPleSchedule,
+  getPleBySlug,
+  getPleCountdownDays,
+  isNxtPle,
+  isPleListed,
+  WWE_PLE_MAIN,
+  WWE_PLE_NXT,
+} from "@/lib/wwe-ple";
 import { cn } from "@/lib/utils";
 
 /**
@@ -133,27 +141,41 @@ export function PleStatusBoard() {
 
   // 서버 목록을 못 받았을 때만 예전 그리드로 되돌아간다.
   if (!rows || rows.length === 0) {
-    return <PleEventGrid variant="large" featured />;
+    return (
+      <div className="flex flex-col gap-8">
+        <PleEventGrid variant="large" featured events={WWE_PLE_MAIN} />
+        <section>
+          <h2 className="font-sport mb-3 text-lg text-foreground">NXT</h2>
+          <PleEventGrid variant="large" events={WWE_PLE_NXT} />
+        </section>
+      </div>
+    );
   }
+
+  // **NXT는 상태로 또 쪼개지 않는다.** 여섯 개뿐이라 진행중·예정·종료로 나누면
+  // 한두 장짜리 블록이 셋 더 생긴다. 메인 로스터 보드의 구조는 그대로 두고
+  // 아래에 날짜순 한 줄로 세운다.
+  const mainRows = rows.filter((r) => !isNxtPle(r.slug));
+  const nxtRows = rows.filter((r) => isNxtPle(r.slug));
 
   const groups: Group[] = [
     {
       key: "live",
       title: "진행 중",
       blurb: "지금 열리고 있는 대회입니다.",
-      rows: rows.filter((r) => r.status === "live"),
+      rows: mainRows.filter((r) => r.status === "live"),
     },
     {
       key: "upcoming",
       title: "예정",
       blurb: "아직 예측할 수 있습니다.",
-      rows: rows.filter((r) => r.status === "upcoming"),
+      rows: mainRows.filter((r) => r.status === "upcoming"),
     },
     {
       key: "finished",
       title: "종료",
       blurb: "결과와 AI 적중 여부를 확인할 수 있습니다.",
-      rows: rows.filter((r) => r.status === "finished"),
+      rows: mainRows.filter((r) => r.status === "finished"),
     },
   ];
 
@@ -178,6 +200,25 @@ export function PleStatusBoard() {
             </div>
           </section>
         ),
+      )}
+
+      {nxtRows.length > 0 && (
+        <section aria-labelledby="ple-group-nxt">
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 id="ple-group-nxt" className="font-sport text-lg text-foreground">
+              NXT
+            </h2>
+            <span className="text-sm tabular-nums text-muted-foreground">{nxtRows.length}개</span>
+            <span className="text-sm text-muted-foreground">
+              메인 로스터와 따로 도는 NXT 계열 대회입니다.
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {nxtRows.map((row) => (
+              <EventCard key={row.slug} row={row} group={row.status as Group["key"]} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -38,6 +38,17 @@ export type PleEventDetail = {
   predictionFocus: string[];
 };
 
+/** NXT 계열 공통 테마 — 브랜드 색(실버·블루)을 한 벌로 쓴다. */
+const NXT_THEME: PleTheme = {
+  pageBg: "bg-[#0a0a0c]",
+  heroGradient: "from-slate-900/25 via-transparent to-transparent",
+  accent: "text-slate-200",
+  accentMuted: "text-slate-300/70",
+  border: "border-slate-500/40",
+  badge: "bg-slate-900/50 text-slate-100 ring-slate-400/35",
+  glow: "shadow-[0_0_70px_-20px_rgba(148,163,184,0.3)]",
+};
+
 export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
   "royal-rumble": {
     slug: "royal-rumble",
@@ -301,6 +312,81 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     ],
     predictionFocus: ["셀 매치 승자", "테이블/체인 사용", "개입·DQ"],
   },
+  /**
+   * NXT 계열 다섯 (2026-09-22 추가). 대진은 전부 미발표라 경기 카드를 만들지 않았고
+   * "이벤트 정보"에도 확인된 개최 정보만 둔다. `stand-and-deliver`는 원래 있던
+   * 항목이라 손대지 않았다.
+   */
+  "vengeance-day": {
+    slug: "vengeance-day",
+    tagline: "NXT의 상반기를 가르는 복수의 날",
+    layout: "nxt",
+    signatureLabel: "Vengeance Day",
+    theme: NXT_THEME,
+    highlights: [
+      { title: "3월 7일", detail: "올랜도 · WWE Performance Center" },
+      { title: "NXT 단독", detail: "메인 로스터와 따로 도는 브랜드 대회" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
+  "great-american-bash": {
+    slug: "great-american-bash",
+    tagline: "여름의 문을 여는 NXT 야외 색채",
+    layout: "nxt",
+    signatureLabel: "The Great American Bash",
+    theme: NXT_THEME,
+    highlights: [
+      { title: "6월 28일", detail: "올랜도 · WWE Performance Center" },
+      { title: "NXT 단독", detail: "여름 시즌의 시작점" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
+  heatwave: {
+    slug: "heatwave",
+    tagline: "한여름의 NXT, 텍사스에서",
+    layout: "nxt",
+    signatureLabel: "Heatwave",
+    theme: NXT_THEME,
+    highlights: [
+      { title: "8월 30일", detail: "텍사스 에딘버그 · Bert Ogden Arena" },
+      { title: "NXT 단독", detail: "섬머슬램 직후의 브랜드 대회" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
+  "worlds-collide": {
+    slug: "worlds-collide",
+    tagline: "세 브랜드가 한 링에서 부딪힌다",
+    layout: "nxt",
+    signatureLabel: "Worlds Collide",
+    theme: NXT_THEME,
+    highlights: [
+      { title: "9월 26일", detail: "일리노이 로즈몬트 · Allstate Arena" },
+      { title: "Raw · SmackDown · NXT", detail: "세 브랜드 합동 크로스오버" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
+  "halloween-havoc": {
+    slug: "halloween-havoc",
+    tagline: "핼러윈 밤의 NXT 특집",
+    layout: "nxt",
+    signatureLabel: "Halloween Havoc",
+    theme: NXT_THEME,
+    highlights: [
+      { title: "10월 31일", detail: "장소 미발표 (TBA)" },
+      { title: "NXT 단독", detail: "핼러윈 기믹 매치 전통" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
   /**
    * 2026 Crown Jewel — 11.7 리야드 (위키 `Crown Jewel (2026)` rev 1372805732).
    *

@@ -94,7 +94,15 @@ _WIKI = "https://en.wikipedia.org/wiki/"
 _EVENT_TITLES: dict[str, str] = {
     "royal-rumble": "Royal Rumble (2026)",
     "elimination-chamber": "Elimination Chamber (2026)",
+    # NXT 계열은 문서 제목에 `NXT ` 접두사가 붙는다 — 단, `Worlds Collide`는
+    # 세 브랜드 합동이라 붙지 않는다. 앱 슬러그에는 접두사를 쓰지 않으므로
+    # 여기서만 갈린다.
+    "vengeance-day": "NXT Vengeance Day (2026)",
     "stand-and-deliver": "NXT Stand & Deliver (2026)",
+    "great-american-bash": "NXT The Great American Bash (2026)",
+    "heatwave": "NXT Heatwave (2026)",
+    "worlds-collide": "Worlds Collide (2026)",
+    "halloween-havoc": "NXT Halloween Havoc (2026)",
     "wrestlemania": "WrestleMania 42",
     "backlash": "Backlash (2026)",
     # **연도 접미사가 없다.** 첫 회차라 문서 제목이 대회 이름 그대로다
