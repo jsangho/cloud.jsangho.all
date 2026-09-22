@@ -73,12 +73,7 @@ function Overview({ data }: { data: AiLabOverview }) {
         <SectionTitle>Prediction Record</SectionTitle>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatTile value={p.total} label="AI Predictions" note="저장된 예측" />
-          <StatTile
-            value={p.graded}
-            label="Graded"
-            note="결과가 나온 경기"
-            tone="data"
-          />
+          <StatTile value={p.graded} label="Graded" note="결과가 나온 경기" tone="data" />
           <StatTile value={p.correct} label="Correct" note={`실패 ${p.incorrect}`} />
           <StatTile
             value={p.hitRate === null ? null : `${formatRatio(p.hitRate)}`}
@@ -96,10 +91,9 @@ function Overview({ data }: { data: AiLabOverview }) {
           />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          적중률은 점추정과 <strong className="font-semibold">윌슨 95% 신뢰구간</strong>을
-          함께 적습니다. 표본이 작을 때 점추정만 세우면 그 자체가 과장입니다
-          {p.bookmakerFallback > 0 && ` · 북메이커 폴백 ${p.bookmakerFallback}건은 채점에서 제외`}
-          .
+          적중률은 점추정과 <strong className="font-semibold">윌슨 95% 신뢰구간</strong>을 함께
+          적습니다. 표본이 작을 때 점추정만 세우면 그 자체가 과장입니다
+          {p.bookmakerFallback > 0 && ` · 북메이커 폴백 ${p.bookmakerFallback}건은 채점에서 제외`}.
         </p>
       </section>
 
@@ -112,8 +106,8 @@ function Overview({ data }: { data: AiLabOverview }) {
         </ul>
         <p className="mt-3 text-xs text-muted-foreground">
           이 화면은 LLM을 호출하지 않습니다 — 확인하지 않은 것은{" "}
-          <span className="text-foreground">unknown</span>으로 둡니다. 초록불을 채우려고
-          헬스체크를 부르면 화면 진입이 곧 비용이 됩니다.
+          <span className="text-foreground">unknown</span>으로 둡니다. 초록불을 채우려고 헬스체크를
+          부르면 화면 진입이 곧 비용이 됩니다.
         </p>
       </section>
 
@@ -126,10 +120,7 @@ function Overview({ data }: { data: AiLabOverview }) {
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {agents.map((agent) => (
-              <div
-                key={agent.agent}
-                className="rounded-xl border border-border bg-card px-4 py-3"
-              >
+              <div key={agent.agent} className="rounded-xl border border-border bg-card px-4 py-3">
                 <p className="font-sport text-base text-data">{agentLabel(agent.agent)}</p>
                 <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">
                   {agent.withPick}
@@ -143,8 +134,8 @@ function Overview({ data }: { data: AiLabOverview }) {
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          에이전트 이름은 코드의 이름 그대로입니다. 근거가 없으면 모델을 부르지 않고
-          &ldquo;의견 없음&rdquo;을 내며, 그것은 고장이 아니라 설계된 동작입니다.
+          에이전트 이름은 코드의 이름 그대로입니다. 근거가 없으면 모델을 부르지 않고 &ldquo;의견
+          없음&rdquo;을 내며, 그것은 고장이 아니라 설계된 동작입니다.
         </p>
       </section>
 
@@ -162,22 +153,16 @@ function Overview({ data }: { data: AiLabOverview }) {
                 className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl border border-border bg-card px-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {row.pickName}
-                  </p>
+                  <p className="truncate text-sm font-medium text-foreground">{row.pickName}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {row.eventLabel} · {row.matchTitle}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="text-xs tabular-nums text-muted-foreground">
-                    승률 {formatRatio(row.winProbability)} · 확신{" "}
-                    {formatRatio(row.confidence)}
+                    승률 {formatRatio(row.winProbability)} · 확신 {formatRatio(row.confidence)}
                   </span>
-                  <ResultBadge
-                    correct={row.correct}
-                    scoringExclusion={row.scoringExclusion}
-                  />
+                  <ResultBadge correct={row.correct} scoringExclusion={row.scoringExclusion} />
                 </div>
               </li>
             ))}
@@ -187,7 +172,6 @@ function Overview({ data }: { data: AiLabOverview }) {
     </div>
   );
 }
-
 
 const STATE_STYLE: Record<SystemState, { dot: string; text: string; label: string }> = {
   operational: { dot: "bg-chart-win", text: "text-chart-win", label: "operational" },
@@ -263,7 +247,5 @@ function ResultBadge({
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 font-sport text-base tracking-wide text-foreground">{children}</h2>
-  );
+  return <h2 className="mb-3 font-sport text-base tracking-wide text-foreground">{children}</h2>;
 }

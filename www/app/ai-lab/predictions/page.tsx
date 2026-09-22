@@ -6,10 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다.
-import {
-  DataUnavailable,
-  LoadingBlock,
-} from "@/components/data-center/data-center-shell";
+import { DataUnavailable, LoadingBlock } from "@/components/data-center/data-center-shell";
 // 근거 모달은 PLE 화면이 쓰던 것을 **그대로** 연다 — 같은 것을 두 벌 만들지 않는다.
 import { AiReportDialog } from "@/components/ple/ai-report-dialog";
 import {
@@ -70,9 +67,7 @@ function PredictionsView() {
   const data = state.status === "ready" ? state.data : null;
   const items = useMemo(() => {
     if (!data) return [];
-    return event === ALL
-      ? data.items
-      : data.items.filter((item) => item.eventSlug === event);
+    return event === ALL ? data.items : data.items.filter((item) => item.eventSlug === event);
   }, [data, event]);
 
   return (
@@ -85,10 +80,7 @@ function PredictionsView() {
       {data && (
         <div className="flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">
-            <span className="tabular-nums text-foreground">
-              {data.totals.total} predictions
-            </span>{" "}
-            ·{" "}
+            <span className="tabular-nums text-foreground">{data.totals.total} predictions</span> ·{" "}
             <span className="tabular-nums text-foreground">
               {data.integrity.eventsCovered} / {data.integrity.eventsTotal} PLE
             </span>
@@ -134,8 +126,8 @@ function AgentFilterNotice({ agent, shown }: { agent: string; shown: number }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-data-500/40 bg-data-surface px-4 py-2.5">
       <span className="text-sm text-foreground">
-        <span className="font-medium text-data">{agentLabel(agent)}</span> 에이전트가
-        리포트를 낸 예측 <span className="tabular-nums">{shown}</span>건
+        <span className="font-medium text-data">{agentLabel(agent)}</span> 에이전트가 리포트를 낸
+        예측 <span className="tabular-nums">{shown}</span>건
       </span>
       <Link
         href="/ai-lab/predictions"
@@ -227,9 +219,7 @@ function PredictionRow({ item }: { item: PredictionItem }) {
           <p className="text-xs text-muted-foreground">
             {item.eventLabel} · {item.matchTitle}
           </p>
-          <p className="mt-0.5 truncate text-sm font-medium text-foreground">
-            {item.pickName}
-          </p>
+          <p className="mt-0.5 truncate text-sm font-medium text-foreground">{item.pickName}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="text-xs tabular-nums text-muted-foreground">

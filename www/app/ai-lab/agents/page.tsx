@@ -101,23 +101,16 @@ function Agents({ data }: { data: AiLabAgents }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        정확도는 최종 예측이 아니라 <strong className="font-semibold">그 에이전트의
-        의견</strong>을 실제 승자와 대조한 값입니다. 의견 없음은 오답이 아니며 분모에
-        들어가지 않습니다 — 근거가 없을 때 판단하지 않는 것은 설계된 동작입니다.
+        정확도는 최종 예측이 아니라 <strong className="font-semibold">그 에이전트의 의견</strong>을
+        실제 승자와 대조한 값입니다. 의견 없음은 오답이 아니며 분모에 들어가지 않습니다 — 근거가
+        없을 때 판단하지 않는 것은 설계된 동작입니다.
       </p>
     </div>
   );
 }
 
-function AgentRow({
-  agent,
-  totals,
-}: {
-  agent: AgentAnalysis;
-  totals: AiLabAgents["totals"];
-}) {
-  const lowResponse =
-    agent.responseRate !== null && agent.reports < totals.totalPredictions;
+function AgentRow({ agent, totals }: { agent: AgentAnalysis; totals: AiLabAgents["totals"] }) {
+  const lowResponse = agent.responseRate !== null && agent.reports < totals.totalPredictions;
 
   return (
     <li className="rounded-xl border border-border bg-card px-4 py-3 sm:px-5 sm:py-4">
@@ -164,9 +157,7 @@ function AgentRow({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {!agent.usesKnowledge && (
-          <Note tone="neutral">
-            코퍼스 미사용 — 이 에이전트는 RAG 지식을 사용하지 않습니다.
-          </Note>
+          <Note tone="neutral">코퍼스 미사용 — 이 에이전트는 RAG 지식을 사용하지 않습니다.</Note>
         )}
         {agent.selfReferencingReports > 0 && (
           <Note tone="warn">
@@ -175,8 +166,8 @@ function AgentRow({
         )}
         {lowResponse && (
           <Note tone="neutral">
-            현재 데이터에서는 {agent.reports}/{totals.totalPredictions} 응답만 확인됩니다
-            — 기존 생성 로그상 Gemini 무료 등급 분당 호출 제한의 영향입니다.
+            현재 데이터에서는 {agent.reports}/{totals.totalPredictions} 응답만 확인됩니다 — 기존
+            생성 로그상 Gemini 무료 등급 분당 호출 제한의 영향입니다.
           </Note>
         )}
       </div>
@@ -184,36 +175,18 @@ function AgentRow({
   );
 }
 
-function Metric({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-}) {
+function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-sm font-medium tabular-nums text-foreground">
-        {value}
-      </dd>
+      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm font-medium tabular-nums text-foreground">{value}</dd>
       {note && <p className="text-xs tabular-nums text-muted-foreground">{note}</p>}
     </div>
   );
 }
 
 /** 사실만 적는다 — "어느 쪽이 더 믿을 만하다" 같은 해석은 화면이 하지 않는다. */
-function Note({
-  tone,
-  children,
-}: {
-  tone: "neutral" | "warn";
-  children: React.ReactNode;
-}) {
+function Note({ tone, children }: { tone: "neutral" | "warn"; children: React.ReactNode }) {
   return (
     <span
       className={cn(
