@@ -134,18 +134,32 @@ pre-commit run --all-files
 **로컬 개발 스택은 k3s로 돈다.** `docker-compose.yaml`은 제거됐다 — 매니페스트는 `k8s/`,
 진입점은 `scripts/k3s-up.sh`다. 전체 절차·명령 대응표는 [`_docs/k3s-rules.md`](_docs/k3s-rules.md).
 
-> **k3s에는 앱만 올린다.** 상태를 가진 것은 **외부 관리형 서비스(Neon)** 에 둔다. 로컬 도커에
+> **k3s에는 앱만 올린다.** 상태를 가진 것은 **외부 관리형 서비스**에 둔다. 로컬 도커에
 > DB 컨테이너를 두지 않으므로 클러스터가 그쪽을 가리키는 Service·EndpointSlice도 없다 —
 > 접속 주소는 전부 `fastapi/.env` 의 URL이 정한다. **DB를 클러스터 안으로 올리자거나 로컬
 > 컨테이너로 되돌리자고 먼저 제안하지 않는다** (`_docs/k3s-rules.md` §4-2).
 
-> **현재 더미 모드다.** Neon URL이 아직 없어 `.env` 의 `DATABASE_URL`·`PGVECTOR_URL`·
-> `REDIS_URL`·`NEO4J_URI` 가 빈 값이다. 빈 값이면 `engine` 이 `None` 이 되어 `init_db()` 가
-> 즉시 return 하므로 백엔드는 정상 기동하고, DB를 쓰는 엔드포인트만 503을 낸다.
-> URL을 받으면 `.env` 에 채우고 `scripts/k3s-up.sh --no-build` 로 Secret을 갱신한다.
+> **공급자는 Supabase로 정해졌다** (2026-09-22). 문서에 오래 적혀 있던 Neon은 **검토만 하고
+> 쓰지 않았다.** 운영(EC2)은 이미 옮겨졌다 — 자세한 절차·함정은 메모리 노트
+> `supabase-db-migration` 과 `_docs/k3s-rules.md` §4-2 참조.
+>
+> **대시보드가 주는 `db.<ref>.supabase.co` 를 그대로 쓰지 않는다.** 그 주소는 **IPv6 전용**이라
+> IPv4만 있는 호스트(EC2가 그렇다)에서 `Network is unreachable` 이 난다. **pooler**를 쓴다:
+> `postgresql+psycopg://postgres.<ref>:<PW>@aws-0-<region>.pooler.supabase.com:5432/postgres`
+> — 사용자명에 프로젝트 ref가 붙고 **포트는 5432(session)** 여야 한다. 6543(transaction)은
+> prepared statement를 못 써서 SQLAlchemy·alembic이 깨진다.
+
+> **로컬은 아직 더미 모드다.** 로컬 `.env` 의 `DATABASE_URL`·`PGVECTOR_URL`·`REDIS_URL`·
+> `NEO4J_URI` 가 빈 값이다. 빈 값이면 `engine` 이 `None` 이 되어 `init_db()` 가 즉시
+> return 하므로 백엔드는 정상 기동하고, DB를 쓰는 엔드포인트만 503을 낸다.
+>
+> **운영 URL을 로컬 `.env` 에 그대로 넣지 않는다** — 로컬에서 스크립트를 잘못 돌리면 운영
+> 데이터를 건드린다. 로컬을 붙이려면 개발용 프로젝트를 따로 파서 그 URL을 쓴다.
 
 > **EC2 운영은 아직 docker compose다.** 서버 배포는 [`.claude/skills/deploy/SKILL.md`](.claude/skills/deploy/SKILL.md)가 그대로다.
 > `aws` 브랜치의 `docker-compose.yaml`을 지우지 않는다 (`_docs/k3s-rules.md` §8).
+> **`pgvector` 컨테이너와 `pgvector_data` 볼륨은 이전 뒤에도 남겨 뒀다** — 되돌리려면
+> `fastapi/.env.bak.pgvector-20260922` 의 두 줄을 복사하고 재기동하면 된다.
 
 ### 원칙
 
@@ -166,7 +180,7 @@ pre-commit run --all-files
 
 5. **임시 설치 소멸 안내** — 파드가 재생성되면 exec로 설치한 패키지는 사라진다. 필요할 때 한 번 알려줘도 되지만, 그것을 이유로 먼저 빌드하지 않는다.
 
-6. **`kubectl delete ns jsangho`를 함부로 쓰지 않는다** — n8n·pgadmin PVC와 HF 모델 캐시(약 2.2GB 재다운로드)가 날아간다. Neon은 클러스터 밖이라 영향이 없다. 데이터를 남기고 내리려면 `kubectl -n jsangho scale deploy --all --replicas=0`.
+6. **`kubectl delete ns jsangho`를 함부로 쓰지 않는다** — n8n·pgadmin PVC와 HF 모델 캐시(약 2.2GB 재다운로드)가 날아간다. DB는 클러스터 밖(Supabase)이라 영향이 없다. 데이터를 남기고 내리려면 `kubectl -n jsangho scale deploy --all --replicas=0`.
 
 7. **`k8s/*.yaml`을 `kubectl apply -f`로 직접 적용하지 않는다** — `__REPO_ROOT__`·`__NODE_IP__` 자리표시자를 `k3s-up.sh`가 채운다. 자리표시자가 그대로 남은 채 apply되면 hostPath가 깨진다.
 

@@ -3,7 +3,15 @@
 > **메인 규칙.** 충돌 시 이 문서가 `fastapi/.cursorrules`보다 우선한다.  
 > 루트 `CLAUDE.md`가 최상위다.
 
-**스택:** FastAPI · Python 3.10+ · PostgreSQL (Neon) · SQLAlchemy 2.0 async · SQLModel · Alembic · Uvicorn
+**스택:** FastAPI · Python 3.10+ · PostgreSQL (Supabase) · SQLAlchemy 2.0 async · SQLModel · Alembic · Uvicorn
+
+> DB는 2026-09-22에 EC2 안의 `pgvector` 컨테이너에서 **Supabase**로 나갔다. 접속은
+> **pooler**(`aws-0-<region>.pooler.supabase.com:5432`)로 한다 — direct 주소는 IPv6
+> 전용이라 EC2에서 안 닿는다. 자세한 것은 루트 `CLAUDE.md`의 k3s 절과
+> [`../_docs/k3s-rules.md`](../_docs/k3s-rules.md) §4-2.
+>
+> **다른 문서에 남은 "Neon"은 DB를 가리키는 옛 표기다** (`apps/*/\_docs/*.md`). 공급자
+> 이름이지 다른 DB가 아니다.
 
 ---
 

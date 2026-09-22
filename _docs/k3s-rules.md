@@ -29,7 +29,7 @@
 
 자리표시자가 그대로 들어가면 hostPath가 없는 경로를 가리켜 파드가 뜨지 않는다.
 
-**DB 주소를 채우는 자리표시자는 없다.** 상태 저장소는 외부 관리형 서비스(Neon)이고, 접속
+**DB 주소를 채우는 자리표시자는 없다.** 상태 저장소는 외부 관리형 서비스(Supabase)이고, 접속
 주소는 전부 `fastapi/.env`의 URL이 정한다 (§4-2).
 
 ---
@@ -90,7 +90,7 @@ kubectl -n jsangho exec deploy/backend -- uv pip install <package>
 | `docker compose exec backend sh` | `kubectl -n jsangho exec -it deploy/backend -- sh` |
 | `docker compose up -d` | `scripts/k3s-up.sh --no-build` |
 | `docker compose restart backend` | `kubectl -n jsangho rollout restart deploy/backend` |
-| `docker compose down` | `kubectl delete ns jsangho` (**PVC까지 지운다** — n8n·pgadmin·HF 캐시. Neon은 밖이라 무사하다) |
+| `docker compose down` | `kubectl delete ns jsangho` (**PVC까지 지운다** — n8n·pgadmin·HF 캐시. DB는 밖이라 무사하다) |
 | `docker compose stop` | `kubectl -n jsangho scale deploy --all --replicas=0` |
 
 데이터를 남기고 내리려면 `down`이 아니라 `scale --replicas=0`을 쓴다.
@@ -115,33 +115,60 @@ kubectl -n jsangho exec deploy/backend -- sh -c 'cd /app/fastapi && alembic upgr
 | n8n | `localhost:5678` | |
 | pgadmin | `localhost:5050` | |
 | auth | 노출 안 함 | ClusterIP. `kubectl -n jsangho port-forward svc/auth 9000:9000` 로 본다 |
-| PostgreSQL(Neon) | 클러스터 밖 인터넷 | 파드가 `.env`의 URL로 직접 붙는다. 로컬 포트가 없다 (§4-2) |
+| PostgreSQL(Supabase) | 클러스터 밖 인터넷 | 파드가 `.env`의 URL로 직접 붙는다. 로컬 포트가 없다 (§4-2) |
 
 `auth`를 노출하지 않는 것은 compose와 같다. 서버의 고정 IP `172.28.0.2`(cloudflared 라우팅용)는
 EC2 전용 구성이라 로컬로 옮기지 않았다.
 
-### 4-2. 상태를 가진 것은 외부 관리형 서비스(Neon)에 있다
+### 4-2. 상태를 가진 것은 외부 관리형 서비스(Supabase)에 있다
 
-**k3s에는 앱만 올린다.** PostgreSQL은 **Neon**을 쓴다. 클러스터 안에도, 호스트 도커에도
-DB가 없다 — 파드가 인터넷 너머의 Neon 엔드포인트로 직접 붙는다.
+> **공급자는 Supabase다** (2026-09-22 확정). 이 문서가 오래 `Neon`이라고 적고 있었는데
+> **검토만 하고 쓰지 않았다.** 운영(EC2)은 2026-09-22에 EC2 안의 `pgvector` 컨테이너에서
+> Supabase로 옮겼다 — 28MB · 21개 테이블 · 임베딩 1024차원 전부 보존됐다.
 
-그래서 **DB용 Service도 EndpointSlice도 없다.** 이을 로컬 주소가 없기 때문이다. Neon은 DNS
-이름과 TLS로 접속하므로 파드는 CoreDNS의 업스트림 해석만으로 닿는다. 접속 주소를 정하는
-곳은 `fastapi/.env`의 URL 하나뿐이다.
+**k3s에는 앱만 올린다.** PostgreSQL은 **Supabase**를 쓴다. 클러스터 안에도, 호스트 도커에도
+DB가 없다 — 파드가 인터넷 너머의 엔드포인트로 직접 붙는다.
+
+그래서 **DB용 Service도 EndpointSlice도 없다.** 이을 로컬 주소가 없기 때문이다. DNS 이름과
+TLS로 접속하므로 파드는 CoreDNS의 업스트림 해석만으로 닿는다. 접속 주소를 정하는 곳은
+`fastapi/.env`의 URL 하나뿐이다.
 
 ```
-파드 → CoreDNS(업스트림) → <ep>.neon.tech:5432 (TLS)
+파드 → CoreDNS(업스트림) → aws-0-<region>.pooler.supabase.com:5432 (TLS)
 ```
+
+#### **direct 주소를 쓰지 않는다 — IPv6 전용이다**
+
+대시보드가 먼저 보여 주는 `db.<ref>.supabase.co`는 **IPv6 주소만** 갖는다. IPv4만 있는
+호스트에서는 `Network is unreachable`이 난다. EC2에서 실측한 값이다:
+
+```
+getent ahostsv4 db.<ref>.supabase.co   → 없음
+getent ahostsv6 db.<ref>.supabase.co   → 2406:da12:...
+```
+
+**pooler는 IPv4다.** UI에서 Session pooler 항목을 못 찾아도 리전과 프로젝트 ref만 알면
+조립할 수 있다. direct와 갈리는 곳은 **사용자명에 ref가 붙는 것**이다:
+
+```
+postgresql+psycopg://postgres.<ref>:<PW>@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+- **포트 5432(session)여야 한다.** 6543(transaction)은 prepared statement를 못 써서
+  SQLAlchemy asyncpg·alembic이 깨진다.
+- `aws-1-...`도 존재하지만 프로젝트에 따라 `tenant/user not found`가 난다 — 확인하고 쓴다.
+- 비밀번호에 `!` 같은 문자가 있으면 **URL 인코딩**해 둔다(`%21`).
 
 | 값 | 대상 | 비고 |
 |---|---|---|
-| `DATABASE_URL` · `PGVECTOR_URL` | Neon PostgreSQL | `sslmode=require` 필요 |
+| `DATABASE_URL` · `PGVECTOR_URL` | Supabase PostgreSQL (pooler) | 둘 다 **같은 DB**를 가리킨다 |
 | `REDIS_URL` | 미정 | 코드는 `REDIS_HOST`/`REDIS_PORT`를 읽고 **호출 시점에** 접속한다 — 없어도 기동은 된다 |
 | `NEO4J_URI` | 미정 | 드라이버가 지연 접속이라 없어도 기동은 된다 |
 
-#### 더미 모드 — 지금 상태다
+#### 더미 모드 — **로컬은** 지금도 이 상태다
 
-Neon URL이 아직 없어 네 값 모두 **빈 값**이다. 이게 의도된 통과 경로다:
+로컬 `.env`의 네 값이 모두 **빈 값**이다. 운영은 더 이상 더미가 아니지만 로컬은 그대로다.
+이게 의도된 통과 경로다:
 
 ```python
 # core/matrix/grid_oracle_database_manager.py:107
@@ -155,8 +182,12 @@ async def init_db():
 빈 값 → `engine is None` → `init_db()`가 즉시 return → **백엔드가 DB 없이 정상 기동한다.**
 DB를 쓰는 엔드포인트만 503(`DATABASE_URL이 .env 등에 설정되지 않았습니다`)을 낸다.
 
-URL을 받으면 `.env`에 채우고 `scripts/k3s-up.sh --no-build`로 Secret을 갱신한다.
-`.env` 파일만 고치는 것으로는 반영되지 않는다.
+URL을 채우면 `scripts/k3s-up.sh --no-build`로 Secret을 갱신한다. `.env` 파일만 고치는
+것으로는 반영되지 않는다.
+
+> **운영 URL을 로컬 `.env`에 그대로 넣지 않는다.** 로컬에서 스크립트를 잘못 돌리면 운영
+> 데이터를 건드린다. 바로 아래 `create_all` 항목이 그 위험을 구체적으로 말한다. 로컬을
+> 붙이려면 **개발용 프로젝트를 따로** 파서 그 URL을 쓴다.
 
 #### 잘못된 URL이 왜 위험한가 — `create_all`은 기동만 해도 나간다
 
@@ -169,7 +200,7 @@ async with engine.begin() as conn:
 ```
 
 **앱이 뜨기만 해도 DDL이 나간다.** 수동 단계가 없다. 그래서 URL을 잘못 넣으면 "확인 전에
-테이블이 생기는" 사고가 그대로 재현된다 — Neon 프로젝트를 여러 개 쓰면 더 쉽다.
+테이블이 생기는" 사고가 그대로 재현된다 — 프로젝트를 여러 개 쓰면 더 쉽다.
 
 | | 언제 | 무엇을 하나 |
 |---|---|---|
@@ -181,7 +212,7 @@ async with engine.begin() as conn:
 (문자열 검색이 아니라 호스트 추출인 이유: `redis://` 스킴 자체가 걸려 오탐한다.)
 
 **운영 DB를 로컬 `.env`에 넣지 않는다.** 로컬 backend가 뜨는 순간 그쪽에 DDL이 나간다.
-Neon은 브랜치를 뜰 수 있으니 개발용 브랜치를 따로 만들어 그 URL을 쓴다.
+Supabase는 프로젝트를 따로 팔 수 있으니 개발용 프로젝트를 만들어 그 URL을 쓴다.
 
 #### 확인
 
@@ -199,11 +230,11 @@ kubectl -n jsangho exec deploy/backend -- \
 `fastapi/.env` **한 파일 그대로다.** `k3s-up.sh`가 그 파일로 Secret `app-env`를 만들고,
 compose의 `env_file`과 같은 워크로드들(backend·auth·pgadmin·n8n)에 `envFrom`으로 주입한다.
 
-**`.env`의 DB 접속 문자열은 Neon 엔드포인트를 가리키거나, 비어 있어야 한다** (§4-2).
+**`.env`의 DB 접속 문자열은 Supabase 엔드포인트를 가리키거나, 비어 있어야 한다** (§4-2).
 `k3s-up.sh`가 적용 전에 검사하고 제거된 로컬 컨테이너 이름이면 멈춘다.
 
-자격증명은 이제 클러스터가 만드는 값이 아니라 **Neon 콘솔이 발급한 값**이다 — 이 스택은
-PostgreSQL을 띄우지 않으므로 `.env`에서 비밀번호를 바꿔도 Neon 쪽은 바뀌지 않는다.
+자격증명은 이제 클러스터가 만드는 값이 아니라 **Supabase 콘솔이 발급한 값**이다 — 이 스택은
+PostgreSQL을 띄우지 않으므로 `.env`에서 비밀번호를 바꿔도 Supabase 쪽은 바뀌지 않는다.
 맞추는 방향이 반대다. `POSTGRES_PASSWORD`·`NEO4J_AUTH`처럼 컨테이너 이미지가 직접 읽던
 키들은 이제 아무것도 구동하지 않는다.
 
@@ -228,7 +259,7 @@ root:root)을 쓰기 때문이다. 그래서 **빌드 경로는 사람이 직접
 
 ### 6-2. 도커 의존은 이 두 줄이 전부다
 
-DB가 Neon으로 나간 뒤, 이 스택이 도커를 쓰는 곳은 `k3s-up.sh`의 빌드 블록뿐이다.
+DB가 밖으로 나간 뒤, 이 스택이 도커를 쓰는 곳은 `k3s-up.sh`의 빌드 블록뿐이다.
 
 ```bash
 docker build -t jsangho/backend:dev -f fastapi/Dockerfile .
