@@ -47,6 +47,11 @@ King & Queen of the Ring)가 둘 남아 있고, 그 둘은 프론트에서도 `d
 - **`night-of-champions`** — 아래 "나머지"로 옮겨 적었던 값인데, 2026-09-22에
   `Night of Champions (2026)` 리비전 1375692907의 인포박스 `date = June 27, 2026`과
   **정확히 일치**함을 확인했다.
+- **`crown-jewel`** — `Crown Jewel (2026)` 리비전 1372805732의 인포박스
+  `date = November 7, 2026`(리야드 Riyadh Season Stadium at KAFD)으로 확인했다.
+- **`wrestlepalooza`** — `Wrestlepalooza (2026)` 리비전 1373256857의 인포박스
+  `date = December 12, 2026`(퍼스 RAC Arena)으로 확인했다. 북미 밖 개최는 처음이고,
+  메인 로스터의 12월 PLE 자체가 2020년 이후 처음이다.
 - **`clash-in-italy`** — 같은 날 `Clash in Italy` 리비전 1368715233의 인포박스
   `date = May 31, 2026`(토리노 Inalpi Arena)과 **정확히 일치**함을 확인했다.
   **문서 제목에 연도 접미사가 없다** — 첫 회차라 그렇고, `WWE Clash in Italy`로
@@ -74,8 +79,12 @@ PLE_EVENT_SCHEDULE: dict[str, tuple[date, date | None]] = {
     "summerslam": (date(2026, 8, 1), date(2026, 8, 2)),
     # 위키로 확인함. 9.6 → 10.10 변경분이 반영된 값이다(Phase 3-10).
     "money-in-the-bank": (date(2026, 10, 10), None),
+    # 위키 인포박스로 확인함 (리비전 1372805732). `ple_events`에 행이 아직 없다.
+    "crown-jewel": (date(2026, 11, 7), None),
     # 위키 인포박스로 확인함 (리비전 1376063302). `ple_events`에 행이 아직 없다.
     "survivor-series": (date(2026, 11, 28), None),
+    # 위키 인포박스로 확인함 (리비전 1373256857). `ple_events`에 행이 아직 없다.
+    "wrestlepalooza": (date(2026, 12, 12), None),
     # bad-blood 는 2026년에 열리지 않는다 — 목록에만 남기고 날짜는 영영 비운다.
     # king-queen-of-the-ring 은 대회 대응 관계가 미정이다. 둘 다 위 독스트링 참조.
 }

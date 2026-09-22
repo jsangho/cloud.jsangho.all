@@ -105,7 +105,9 @@ _EVENT_TITLES: dict[str, str] = {
     "night-of-champions": "Night of Champions (2026)",
     "summerslam": "SummerSlam (2026)",
     "money-in-the-bank": "Money in the Bank (2026)",
+    "crown-jewel": "Crown Jewel (2026)",
     "survivor-series": "Survivor Series (2026)",
+    "wrestlepalooza": "Wrestlepalooza (2026)",
     # `bad-blood`는 2026 회차가 **없다**(총론 회차 표는 2003·2004·2024 셋뿐).
     # 총론(`WWE Bad Blood`)을 대신 넣지 않는다 — 과거 회차 결과가 적힌 문서라
     # 근거가 아니라 오염이고, 그게 이 관문이 막으려는 바로 그것이다.
