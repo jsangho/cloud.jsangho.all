@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -744,3 +745,104 @@ def _never(ingestion: RecordingIngestion):
         raise AssertionError("확인되지 않은 목록으로 수집에 들어갔다")
 
     return _factory
+
+
+class TestCompetitorNames:
+    """카드 한 칸에서 이름을 뽑는 규칙.
+
+    **트리오스·워게임즈 카드가 이 규칙을 시험한다.** 예전에는 `&`만 봤으므로
+    `Las Tóxicas — Flammer, La Hiedra, Maravilla`가 통째로 한 이름이 되어
+    위키 확인에서 버려졌고, 그 경기에는 근거가 한 건도 안 잡혔다.
+    """
+
+    @staticmethod
+    def _names(script: ModuleType, card: dict) -> list[str]:
+        return script._competitor_names(json.dumps(card, ensure_ascii=False))
+
+    def test_ampersand_team_splits(self, script: ModuleType) -> None:
+        names = self._names(
+            script,
+            {
+                "format": "singles",
+                "left": {"name": "Rhodes & Reigns"},
+                "right": {"name": "Sikoa & Fatu"},
+            },
+        )
+
+        assert names == ["Rhodes", "Reigns", "Sikoa", "Fatu"]
+
+    def test_team_label_and_roster_both_survive(self, script: ModuleType) -> None:
+        """팀 이름을 버리지 않는다 — 스테이블 문서가 개인 문서보다 가까울 때가 있다."""
+        names = self._names(
+            script,
+            {
+                "format": "singles",
+                "left": {"name": "Las Tóxicas — Flammer, La Hiedra, Maravilla"},
+                "right": {"name": "Fatal Influence — Jacy Jayne, Fallon Henley"},
+            },
+        )
+
+        assert names == [
+            "Las Tóxicas",
+            "Flammer",
+            "La Hiedra",
+            "Maravilla",
+            "Fatal Influence",
+            "Jacy Jayne",
+            "Fallon Henley",
+        ]
+
+    def test_comma_and_ampersand_mix(self, script: ModuleType) -> None:
+        names = self._names(
+            script,
+            {
+                "format": "singles",
+                "left": {"name": "CM Punk, Rey Mysterio & El Grande Americano"},
+                "right": {"name": "Omos, Dominik Mysterio & JD McDonagh"},
+            },
+        )
+
+        assert names == [
+            "CM Punk",
+            "Rey Mysterio",
+            "El Grande Americano",
+            "Omos",
+            "Dominik Mysterio",
+            "JD McDonagh",
+        ]
+
+    def test_multi_format_reads_competitors(self, script: ModuleType) -> None:
+        names = self._names(
+            script,
+            {
+                "format": "multi",
+                "competitors": [{"name": "Axiom"}, {"name": "Mini Vikingo"}],
+            },
+        )
+
+        assert names == ["Axiom", "Mini Vikingo"]
+
+    def test_a_lone_name_is_left_whole(self, script: ModuleType) -> None:
+        """구분자가 없는 이름을 쪼개지 않는다."""
+        names = self._names(
+            script,
+            {
+                "format": "singles",
+                "left": {"name": "La Catalina"},
+                "right": {"name": "Roxanne Perez"},
+            },
+        )
+
+        assert names == ["La Catalina", "Roxanne Perez"]
+
+    def test_duplicates_collapse(self, script: ModuleType) -> None:
+        """같은 사람이 두 칸에 있어도 한 번만 — 두 번 보내면 저장 0건이 성공으로 보고된다."""
+        names = self._names(
+            script,
+            {
+                "format": "multi",
+                "competitors": [{"name": "Penta"}, {"name": "Penta"}],
+            },
+        )
+
+        assert names == ["Penta"]

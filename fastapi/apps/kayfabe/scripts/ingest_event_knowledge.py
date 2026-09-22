@@ -148,8 +148,23 @@ def _wiki_url(title: str) -> str:
     return _WIKI + quote(title.replace(" ", "_"), safe="_(),:")
 
 
+#: 한 칸에 여러 사람이 들어가는 구분자. `—`(em dash)는 **팀 이름과 명단을 가르고**,
+#: 나머지는 명단 안을 가른다.
+#:
+#: 셋으로 나누지 않으면 트리오스·워게임즈 카드에서 이름이 하나도 안 뽑힌다 —
+#: 예전에는 `&`만 봤으므로 `Las Tóxicas — Flammer, La Hiedra, Maravilla`가 통째로
+#: 한 이름이 되어 위키 확인에서 버려졌다.
+_NAME_SEPARATORS = ("—", "&", ",")
+
+
 def _competitor_names(card_json: str) -> list[str]:
-    """카드에서 사람 이름만 뽑는다. 팀 표기(`A & B`)는 각각으로 나눈다."""
+    """카드에서 이름을 뽑는다. `팀 — A, B & C`는 **팀까지 넷**으로 나눈다.
+
+    **팀 이름을 버리지 않는다.** 스테이블에는 문서가 있는 경우가 많고
+    (운영 코퍼스의 `Fatal Influence`·`The Bloodline`이 그것이다), 그 문서가
+    구성원 개인 문서보다 그 경기에 가까운 근거일 때가 있다. 문서가 없으면
+    위키 확인 단계에서 걸러지므로 **넣어 두는 쪽이 손해가 없다.**
+    """
     card = json.loads(card_json or "{}")
     raw: list[str] = []
     if card.get("format") == "multi":
@@ -162,7 +177,10 @@ def _competitor_names(card_json: str) -> list[str]:
 
     names: list[str] = []
     for entry in raw:
-        for part in entry.replace(" and ", " & ").split("&"):
+        parts = [entry.replace(" and ", " & ")]
+        for sep in _NAME_SEPARATORS:
+            parts = [piece for part in parts for piece in part.split(sep)]
+        for part in parts:
             name = part.strip()
             # 팀 이름·스테이블은 인물 문서가 없을 때가 많다. 없는 문서는 위키
             # 확인 단계에서 걸러지고 요청은 나가지 않는다.
