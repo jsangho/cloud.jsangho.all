@@ -30,10 +30,7 @@ export function IntegrityBanner({
       className="rounded-xl border border-live/40 bg-card px-4 py-4 sm:px-5"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2
-          id="integrity-heading"
-          className="font-sport text-base tracking-wide text-foreground"
-        >
+        <h2 id="integrity-heading" className="font-sport text-base tracking-wide text-foreground">
           Evaluation Integrity
         </h2>
         {!integrity.generalizable && (
@@ -81,9 +78,7 @@ export function IntegrityBanner({
       </dl>
 
       {leakageSuspected && (
-        <p className="mt-3 text-sm font-medium text-live">
-          Potential data leakage detected.
-        </p>
+        <p className="mt-3 text-sm font-medium text-live">Potential data leakage detected.</p>
       )}
       {!integrity.generalizable && totals && totals.hitRate !== null && (
         <p className="mt-1 text-sm text-foreground">
@@ -106,10 +101,10 @@ export function IntegrityBanner({
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        누수 없는 평가 표본을 따로 만드는 작업은 Phase 3-6으로 분리했습니다. 시간
-        검증이 보는 것은 발행일이 아니라 <strong className="font-semibold">인용한
-        문서가 어느 개정본에서 왔는가</strong>이고, 계보를 모르는 청크를 임의로 과거
-        문서로 간주하지 않습니다.
+        누수 없는 평가 표본을 따로 만드는 작업은 Phase 3-6으로 분리했습니다. 시간 검증이 보는 것은
+        발행일이 아니라{" "}
+        <strong className="font-semibold">인용한 문서가 어느 개정본에서 왔는가</strong>이고, 계보를
+        모르는 청크를 임의로 과거 문서로 간주하지 않습니다.
       </p>
     </section>
   );
@@ -126,15 +121,8 @@ function IntegrityFact({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "text-sm tabular-nums",
-          tone === "warn" ? "text-live" : "text-foreground",
-        )}
-      >
+      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dd className={cn("text-sm tabular-nums", tone === "warn" ? "text-live" : "text-foreground")}>
         {value}
       </dd>
     </div>
