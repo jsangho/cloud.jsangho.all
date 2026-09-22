@@ -10,6 +10,8 @@ export const BRACKET_LABELS = {
   participants: "참가자",
   /** 로얄 럼블 우승 예측 6번째 칸 */
   rumbleOther: "다른 선수",
+  /** 대진에 자리는 있는데 참가자가 아직 발표되지 않은 칸 (위키의 TBD) */
+  tbd: "미정",
   win: "승",
   loss: "패",
   liveResults: "실시간 결과",
