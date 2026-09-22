@@ -23,7 +23,12 @@ export type PleMatchCardSingles = PleMatchBase & {
   format: "singles";
   left: PleCompetitor;
   right: PleCompetitor;
-  bookmakerDecimal: { left: number; right: number };
+  /**
+   * 배당이 없을 수 있다 — multi와 같다. 시장이 아직 안 열린 대회가 있고
+   * (AAA 공동 개최 `worlds-collide`), 그 자리를 그럴듯한 숫자로 채우면
+   * 북메이커 승률 막대가 근거 없는 값을 사실처럼 그린다.
+   */
+  bookmakerDecimal?: { left: number; right: number };
 };
 
 export type PleMatchCardMulti = PleMatchBase & {
@@ -51,7 +56,7 @@ function m2(
   cardVariant: "sideA" | "sideB",
   left: PleCompetitor,
   right: PleCompetitor,
-  odds: { left: number; right: number },
+  odds?: { left: number; right: number },
 ): PleMatchCardSingles {
   return {
     id,
@@ -401,59 +406,27 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ),
   ],
 
+  // `Money in the Bank (2026)` rev 1376101948의 Matches 절 그대로 — **래더 둘뿐이다.**
+  // 이전 다섯 경기는 2025 카드를 베낀 픽스처였다(실재하지 않는 IC·여성IC·태그 셋이
+  // 섞여 있었다). 2026-09-22에 위키 대진으로 교체했다.
+  // 각 경기에 `TBD` 두 칸이 남아 있고 배당은 아직 없다 — 둘 다 지어내지 않는다.
   "money-in-the-bank": [
-    mm(
-      "mitb26-women",
-      "Women's Money in the Bank Ladder Match",
-      "sideA",
-      [
-        { name: "Naomi" },
-        { name: "Rhea Ripley" },
-        { name: "Stephanie Vaquer" },
-        { name: "Alexa Bliss" },
-        { name: "Roxanne Perez" },
-        { name: "Giulia" },
-      ],
-      [5.0, 4.0, 6.0, 7.0, 8.0, 9.0],
-    ),
-    m2(
-      "mitb26-ic",
-      "Intercontinental Championship",
-      "sideB",
-      { name: "Dominik Mysterio", isChampion: true },
-      { name: "Octagón Jr." },
-      { left: 1.45, right: 2.75 },
-    ),
-    m2(
-      "mitb26-women-ic",
-      "Women's Intercontinental Championship",
-      "sideA",
-      { name: "Becky Lynch" },
-      { name: "Lyra Valkyria", isChampion: true },
-      { left: 1.9, right: 1.92 },
-    ),
-    mm(
-      "mitb26-men",
-      "Men's Money in the Bank Ladder Match",
-      "sideB",
-      [
-        { name: "Seth Rollins" },
-        { name: "LA Knight" },
-        { name: "Penta" },
-        { name: "Solo Sikoa" },
-        { name: "El Grande Americano" },
-        { name: "Andrade" },
-      ],
-      [5.5, 4.5, 7.0, 6.0, 10.0, 12.0],
-    ),
-    m2(
-      "mitb26-tag",
-      "Tag Team Match",
-      "sideA",
-      { name: "Rhodes & Jey Uso" },
-      { name: "Cena & Logan Paul" },
-      { left: 1.85, right: 1.95 },
-    ),
+    mm("mitb26-men", "Men's Money in the Bank Ladder Match", "sideB", [
+      { name: "Bron Breakker" },
+      { name: "Je'Von Evans" },
+      { name: "Trick Williams" },
+      { name: "Penta" },
+      { name: BRACKET_LABELS.tbd },
+      { name: BRACKET_LABELS.tbd },
+    ]),
+    mm("mitb26-women", "Women's Money in the Bank Ladder Match", "sideA", [
+      { name: "Sol Ruca" },
+      { name: "Lola Vice" },
+      { name: "Jacy Jayne" },
+      { name: "Roxanne Perez" },
+      { name: BRACKET_LABELS.tbd },
+      { name: BRACKET_LABELS.tbd },
+    ]),
   ],
 
   "night-of-champions": [
@@ -710,6 +683,60 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "Rhodes & Reigns" },
       { name: "Sikoa & Fatu" },
       { left: 1.7, right: 2.15 },
+    ),
+  ],
+
+  // `Worlds Collide (2026)` rev 1376055676의 Matches 절 그대로 (2026-09-22 확인).
+  // **AAA 공동 개최**라 루차 선수가 절반이다. 배당은 어디에도 없어 넣지 않았다 —
+  // 그럴듯한 숫자를 채우면 북메이커 막대가 근거 없는 값을 사실처럼 그린다.
+  "worlds-collide": [
+    m2(
+      "wc26-reina",
+      "AAA Reina de Reinas Championship",
+      "sideA",
+      { name: "La Catalina", isChampion: true },
+      { name: "Roxanne Perez" },
+    ),
+    m2(
+      "wc26-tag",
+      "Tag Team Match",
+      "sideB",
+      { name: "Lucha Brothers — Penta & Rey Fénix" },
+      { name: "Los Perros del Mal — Daga & Berto" },
+    ),
+    m2(
+      "wc26-trios-women",
+      "Trios Match",
+      "sideA",
+      { name: "Las Tóxicas — Flammer, La Hiedra, Maravilla" },
+      { name: "Fatal Influence — Jacy Jayne, Fallon Henley, Lainey Reid" },
+    ),
+    m2(
+      "wc26-dragon-lee",
+      "Single Match",
+      "sideB",
+      { name: "Dragon Lee" },
+      { name: "Jack Cartwheel" },
+    ),
+    m2(
+      "wc26-atomicos",
+      "Relevos Atómicos de Locura",
+      "sideA",
+      { name: "Mr. Iguana, La Parka, Adelicious & Mascarita Sagrada" },
+      { name: "The Vanity Project & Mini Abismo Negro" },
+    ),
+    mm("wc26-cruiserweight", "AAA World Cruiserweight #1 Contender", "sideB", [
+      { name: "Axiom" },
+      { name: "Mini Vikingo" },
+      { name: "Je'Von Evans" },
+      { name: "EK Prosper" },
+    ]),
+    m2(
+      "wc26-trios-men",
+      "Trios Match",
+      "sideA",
+      { name: "CM Punk, Rey Mysterio & El Grande Americano" },
+      { name: "Omos, Dominik Mysterio & JD McDonagh" },
     ),
   ],
 

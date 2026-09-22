@@ -408,7 +408,10 @@ export function MatchBracketCard({
   }
 
   const singlesVotes = votes as SinglesVotes;
-  const book = normalizedTwoWayMarket(match.bookmakerDecimal.left, match.bookmakerDecimal.right);
+  // 배당이 없는 대회가 있다 — multi 쪽과 같이 막대를 통째로 접는다.
+  const book = match.bookmakerDecimal
+    ? normalizedTwoWayMarket(match.bookmakerDecimal.left, match.bookmakerDecimal.right)
+    : null;
 
   return (
     <article className="ple-match-card overflow-hidden rounded-xl">
@@ -446,14 +449,16 @@ export function MatchBracketCard({
             leftBarClass={leftStyle.voteBar}
             rightBarClass={rightStyle.voteBar}
           />
-          <DualStatBar
-            label={BRACKET_LABELS.bookmaker}
-            leftPercent={book.left}
-            rightPercent={book.right}
-            leftBarClass="bg-stone-500"
-            rightBarClass="bg-stone-400"
-            muted
-          />
+          {book && (
+            <DualStatBar
+              label={BRACKET_LABELS.bookmaker}
+              leftPercent={book.left}
+              rightPercent={book.right}
+              leftBarClass="bg-stone-500"
+              rightBarClass="bg-stone-400"
+              muted
+            />
+          )}
           <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
         </div>
       </div>

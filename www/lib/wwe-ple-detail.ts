@@ -368,9 +368,13 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     highlights: [
       { title: "9월 26일", detail: "일리노이 로즈몬트 · Allstate Arena" },
       { title: "Raw · SmackDown · NXT", detail: "세 브랜드 합동 크로스오버" },
-      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+      { title: "7경기", detail: "AAA 타이틀전과 트리오스가 절반을 채운다" },
     ],
-    predictionFocus: ["대진 발표 후 공개"],
+    predictionFocus: [
+      "레이나 데 레이나스 — 라 카탈리나의 방어전",
+      "CM 펑크·레이 미스테리오 트리오스",
+      "크루저웨이트 1위 도전자 4파전",
+    ],
   },
 
   "halloween-havoc": {
