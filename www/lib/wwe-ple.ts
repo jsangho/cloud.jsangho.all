@@ -116,6 +116,10 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     dateLabel: null,
     venue: null,
     highlight: "토너먼트 PLE",
+    // 2026년에는 독립 PLE가 아니었다 — 6/1~6/27 토너먼트였고 결승은 Night of
+    // Champions(6/27)에서 열렸다. **흡수는 이미 되어 있다**: 그 두 경기가
+    // `night-of-champions` 카드의 `noc26-kotr`·`noc26-qotr`다.
+    unlisted: true,
   },
   {
     month: null,

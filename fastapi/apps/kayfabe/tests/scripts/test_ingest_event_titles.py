@@ -5,7 +5,7 @@
 
     Royce Keys → Powerhouse Hobbs   리다이렉트 — 본문은 맞고 주소만 어긋난다
     Penta      → Penta              동음이의 — 200인데 본문이 "may refer to:"다
-    Clash…     → (없음)              404
+    WWE Clash… → (없음)              404 (접두사 뺀 `Clash in Italy`는 실재한다)
 
 여기서 붙드는 것은 넷이다.
 
@@ -422,6 +422,29 @@ class TestUrlEncoding:
         }
 
         assert overviews.isdisjoint(set(script._EVENT_TITLES.values()))
+
+    def test_events_that_do_not_happen_have_no_document(
+        self, script: ModuleType
+    ) -> None:
+        """**둘은 일부러 비어 있다** (2026-09-22 사용자 확정).
+
+        `bad-blood`는 2026 회차가 없고, `king-queen-of-the-ring`은
+        `night-of-champions`에 흡수됐다. 여기에 제목을 채우면 각각 총론이
+        들어오거나, 같은 경기가 두 문서로 검색된다.
+        """
+        assert "bad-blood" not in script._EVENT_TITLES
+        assert "king-queen-of-the-ring" not in script._EVENT_TITLES
+
+    def test_the_first_edition_keeps_a_title_without_a_year(
+        self, script: ModuleType
+    ) -> None:
+        """`Clash in Italy`는 첫 회차라 연도 접미사가 없다.
+
+        `WWE Clash in Italy`로 물으면 `missing`이라, 한때 "없는 대회"로 잘못
+        빠져 있던 자리다. 회차 관문은 제목이 아니라 선두 연도 카테고리를 보므로
+        이 제목도 그대로 통과한다.
+        """
+        assert script._EVENT_TITLES["clash-in-italy"] == "Clash in Italy"
 
 
 class TestRunStopsWhenUnsure:
