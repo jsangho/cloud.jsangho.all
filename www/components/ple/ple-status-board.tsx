@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, Radio } from "lucide-react";
 import { PleEventGrid } from "@/components/ple-event-grid";
 import { fetchPleEvents, type PleEventRow } from "@/lib/ple-events-api";
-import { formatPleSchedule, getPleBySlug, getPleCountdownDays } from "@/lib/wwe-ple";
+import { formatPleSchedule, getPleBySlug, getPleCountdownDays, isPleListed } from "@/lib/wwe-ple";
 import { cn } from "@/lib/utils";
 
 /**
@@ -111,7 +111,9 @@ export function PleStatusBoard() {
     void (async () => {
       const data = await fetchPleEvents();
       if (cancelled) return;
-      setRows(data);
+      // 감춘 대회는 DB에 그대로 있다 — 서버가 준 목록에서도 빼야 화면이 정적
+      // 목록(`PleEventGrid`)과 어긋나지 않는다.
+      setRows(data.filter((row) => isPleListed(row.slug)));
       setLoading(false);
     })();
     return () => {

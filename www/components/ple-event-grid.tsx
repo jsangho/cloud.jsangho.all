@@ -10,7 +10,7 @@ import {
   isPleTbd,
   pickFeaturedPle,
   type PleStatusBadge,
-  WWE_PLE_MONTHLY_ORDER,
+  WWE_PLE_LISTED,
 } from "@/lib/wwe-ple";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +57,7 @@ export function PleEventGrid({
 
   useEffect(() => {
     const next: Record<string, PleStatusBadge> = {};
-    for (const ple of WWE_PLE_MONTHLY_ORDER) {
+    for (const ple of WWE_PLE_LISTED) {
       next[ple.slug] = resolveBadge(ple.slug, getPleStatusBadge(ple));
     }
     setBadges(next);
@@ -65,8 +65,8 @@ export function PleEventGrid({
 
   const featuredPle = featured ? pickFeaturedPle() : null;
   const gridEvents = featuredPle
-    ? WWE_PLE_MONTHLY_ORDER.filter((ple) => ple.slug !== featuredPle.slug)
-    : WWE_PLE_MONTHLY_ORDER;
+    ? WWE_PLE_LISTED.filter((ple) => ple.slug !== featuredPle.slug)
+    : WWE_PLE_LISTED;
 
   return (
     <>

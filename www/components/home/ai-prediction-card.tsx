@@ -12,6 +12,7 @@ import {
   type AiPrediction,
 } from "@/lib/ple-ai-predictions";
 import { getPleMatches } from "@/lib/wwe-ple-matches";
+import { isPleListed } from "@/lib/wwe-ple";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,11 +37,16 @@ type CardState =
       prediction: AiPrediction;
     };
 
-/** 예측을 보여 줄 대회 하나 — 다가오는 대회가 먼저, 없으면 가장 마지막 대회다. */
+/** 예측을 보여 줄 대회 하나 — 다가오는 대회가 먼저, 없으면 가장 마지막 대회다.
+ *
+ * **감춘 대회는 후보에서 뺀다.** 예측은 DB에 남아 있으므로 거르지 않으면 목록에
+ * 없는 대회가 홈 히어로에 떠오른다.
+ */
 function pickEventOrder(rows: { slug: string; label: string; status: string }[]) {
-  const live = rows.filter((r) => r.status === "live");
-  const upcoming = rows.filter((r) => r.status === "upcoming");
-  const finished = rows.filter((r) => r.status === "finished").reverse();
+  const listed = rows.filter((r) => isPleListed(r.slug));
+  const live = listed.filter((r) => r.status === "live");
+  const upcoming = listed.filter((r) => r.status === "upcoming");
+  const finished = listed.filter((r) => r.status === "finished").reverse();
   return [...live, ...upcoming, ...finished];
 }
 
