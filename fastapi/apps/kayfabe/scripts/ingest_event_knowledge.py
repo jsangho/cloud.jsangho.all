@@ -97,14 +97,23 @@ _EVENT_TITLES: dict[str, str] = {
     "stand-and-deliver": "NXT Stand & Deliver (2026)",
     "wrestlemania": "WrestleMania 42",
     "backlash": "Backlash (2026)",
+    # **연도 접미사가 없다.** 첫 회차라 문서 제목이 대회 이름 그대로다
+    # (2026-05-31 · 토리노 Inalpi Arena, rev 1368715233). `WWE Clash in Italy`로
+    # 물으면 `missing`이 나온다 — 그래서 한때 "없는 대회"로 잘못 뺐던 자리다.
+    # 회차 관문은 선두 연도 카테고리로 보므로 이 제목도 그대로 통과한다.
+    "clash-in-italy": "Clash in Italy",
     "night-of-champions": "Night of Champions (2026)",
     "summerslam": "SummerSlam (2026)",
     "money-in-the-bank": "Money in the Bank (2026)",
-    "king-queen-of-the-ring": "King and Queen of the Ring (2026)",
     "survivor-series": "Survivor Series (2026)",
-    # `bad-blood`·`clash-in-italy`는 2026 회차 문서가 위키에 **없다**(실측).
+    # `bad-blood`는 2026 회차가 **없다**(총론 회차 표는 2003·2004·2024 셋뿐).
     # 총론(`WWE Bad Blood`)을 대신 넣지 않는다 — 과거 회차 결과가 적힌 문서라
     # 근거가 아니라 오염이고, 그게 이 관문이 막으려는 바로 그것이다.
+    #
+    # `king-queen-of-the-ring`은 **`night-of-champions`에 흡수됐다.** 2026년에는
+    # 독립 PLE가 아니라 6/1~6/27 토너먼트였고 결승이 거기서 열렸다. 그 경기의
+    # 근거 문서는 `Night of Champions (2026)` 하나면 된다 — 토너먼트 문서를 따로
+    # 넣으면 같은 경기가 두 문서로 검색된다.
 }
 
 

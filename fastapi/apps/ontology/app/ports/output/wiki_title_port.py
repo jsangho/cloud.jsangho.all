@@ -7,10 +7,15 @@
 (`ingest_event_knowledge.py`). 그 조립은 추측이고, 빗나가면 404로 걸러진다고 믿어
 왔는데 **실측이 그 믿음을 깼다.** 빗나간 이름은 세 갈래로 흩어진다.
 
-    Rhea Ripley   → Rhea Ripley          맞는 문서
-    Royce Keys    → Powerhouse Hobbs     리다이렉트 — 본문은 맞고 주소만 어긋난다
-    Penta         → Penta                **동음이의** — 본문이 "Penta may refer to:"다
-    Clash in Italy→ (없음)                404
+    Rhea Ripley        → Rhea Ripley        맞는 문서
+    Royce Keys         → Powerhouse Hobbs   리다이렉트 — 본문은 맞고 주소만 어긋난다
+    Penta              → Penta              **동음이의** — 본문이 "Penta may refer to:"다
+    WWE Clash in Italy → (없음)              404
+
+마지막 줄이 이 관문의 한계도 같이 말한다. **`WWE ` 접두사를 뺀 `Clash in Italy`는
+실재한다**(2026-05-31 · 토리노). 이 포트는 "이 이름이 가리키는 것이 무엇인가"만
+답하지 "이름을 어떻게 고쳐야 하는가"는 모른다 — 그건 부르는 쪽의 카탈로그가
+사람 손으로 들고 있어야 하는 앎이다.
 
 가운데 둘이 조용한 사고다. 동음이의 문서는 200으로 돌아와 청크가 되고, 검색에
 잡히면 아무 내용도 없는 목록이 근거 자리를 차지한다(운영 코퍼스에 `Paige`·`Penta`
