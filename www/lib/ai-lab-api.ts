@@ -246,6 +246,7 @@ export type EvaluationStatus =
   | "disqualified"
   | "held"
   | "pending"
+  | "withdrawn_match"
   | "ex_post"
   | "not_applicable";
 
@@ -273,12 +274,14 @@ export type EvaluationRule = {
   blocked: number;
 };
 
-/** 여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다. */
+/** 일곱 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다. */
 export type EvaluationTotals = {
   predictions: number;
   fallback: number;
   /** 생성 전에 결과가 시스템 밖에서 알려져 있던 표본. **실격과 다른 상태다.** */
   exPost: number;
+  /** 가리키는 경기가 카드에서 사라진 표본. **실격과 다른 상태다.** */
+  withdrawn: number;
   pending: number;
   disqualified: number;
   /** 누수를 증명도 반증도 못 한 예측. **실격과 다른 상태다.** */

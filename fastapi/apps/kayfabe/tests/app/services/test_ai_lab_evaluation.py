@@ -63,6 +63,7 @@ def _prediction(
     outcome_known_externally: bool | None = None,
     provenance_note: str | None = None,
     event_start_date: date | None = _EVENT_START,
+    match_exists: bool = True,
 ) -> PredictionRow:
     return PredictionRow(
         event_slug="summerslam",
@@ -82,6 +83,7 @@ def _prediction(
         outcome_known_externally=outcome_known_externally,
         provenance_note=provenance_note,
         event_start_date=event_start_date,
+        match_exists=match_exists,
     )
 
 
@@ -436,6 +438,7 @@ class TestTotals:
         assert [rule.code for rule in rules] == [
             "not_applicable",
             "external_outcome_known",
+            "withdrawn_match",
             "pending",
             "temporal_inversion",
             "self_reference",
@@ -456,3 +459,103 @@ class TestTotals:
         assert by_code["self_reference"].blocked == 1
         assert by_code["temporal_inversion"].severity == "disqualify"
         assert by_code["unverifiable_corpus"].severity == "hold"
+
+
+class TestWithdrawnMatch:
+    """카드에서 사라진 경기를 가리키는 예측 (Stage 9).
+
+    예측은 경기를 **문자열로** 가리킬 뿐 외래키가 아니다. 그래서 카드가 교체되면
+    경기 행만 사라지고 예측은 남는다. 그것을 `pending`이라 부르면 거짓이다 —
+    결과를 기다리는 것이 아니라 물음이 회수된 것이다.
+    """
+
+    def test_missing_match_is_withdrawn_not_pending(self) -> None:
+        _, _, items, _ = summarize_evaluation(
+            [_prediction(match_exists=False, winner_pick=None, finished_at=None)],
+            [],
+            [],
+        )
+
+        assert [i.status for i in items] == ["withdrawn_match"]
+
+    def test_withdrawn_is_excluded_not_disqualified(self) -> None:
+        """실격이 아니다 — 누수가 아니라 물음이 사라진 것이다."""
+        totals, rules, _, performance = summarize_evaluation(
+            [_prediction(match_exists=False, winner_pick=None, finished_at=None)],
+            [],
+            [],
+        )
+        by_code = {rule.code: rule for rule in rules}
+
+        assert totals.withdrawn == 1
+        assert totals.disqualified == 0
+        assert totals.pending == 0
+        assert by_code["withdrawn_match"].severity == "exclude"
+        assert by_code["withdrawn_match"].blocked == 1
+        assert performance is None
+
+    def test_it_is_judged_before_pending(self) -> None:
+        """경기가 없으면 `winner_pick`도 없다 — 순서가 뒤집히면 전부 pending이 된다."""
+        _, _, items, _ = summarize_evaluation(
+            [
+                _prediction(match_key="gone", match_exists=False, winner_pick=None),
+                _prediction(match_key="waiting", winner_pick=None),
+            ],
+            [],
+            [],
+        )
+        by_key = {i.match_key: i.status for i in items}
+
+        assert by_key == {"gone": "withdrawn_match", "waiting": "pending"}
+
+    def test_declared_ex_post_still_wins(self) -> None:
+        """표본의 성격은 선언이 정한다 — 경기 행의 유무보다 앞선다."""
+        _, _, items, _ = summarize_evaluation(
+            [
+                _prediction(
+                    match_exists=False,
+                    winner_pick=None,
+                    outcome_known_externally=True,
+                    provenance_note="사후 재현",
+                )
+            ],
+            [],
+            [],
+        )
+
+        assert [i.status for i in items] == ["ex_post"]
+
+    def test_existing_match_is_untouched(self) -> None:
+        """기본값이 `True`라 기존 판정 경로가 한 줄도 바뀌지 않는다."""
+        _, _, items, _ = summarize_evaluation([_prediction()], [_report()], [])
+
+        assert [i.status for i in items] != ["withdrawn_match"]
+
+
+class TestTotalsCoverEverything:
+    def test_the_seven_buckets_sum_to_the_prediction_count(self) -> None:
+        """일곱 칸은 겹치지 않고 전체를 덮는다 — 어디로도 새지 않는다."""
+        totals, _, _, _ = summarize_evaluation(
+            [
+                _prediction(match_key="gone", match_exists=False, winner_pick=None),
+                _prediction(match_key="waiting", winner_pick=None),
+                _prediction(match_key="fallback", source="bookmaker_fallback"),
+                _prediction(match_key="late", generated_at=_AFTER),
+            ],
+            [],
+            [],
+        )
+
+        assert (
+            (
+                totals.fallback
+                + totals.ex_post
+                + totals.withdrawn
+                + totals.pending
+                + totals.disqualified
+                + totals.held
+                + totals.eligible
+            )
+            == totals.predictions
+            == 4
+        )
