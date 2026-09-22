@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PleResultsBoard } from "@/components/results/ple-results-board";
-import { formatPleMonth, getPleBySlug, WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
+import { formatPleMonth, getPleBySlug, WWE_PLE_LISTED, WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
 import type { PleSlug } from "@/lib/wwe-ple";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -15,10 +15,10 @@ export default async function ResultsEventPage({ params }: Props) {
   const ple = getPleBySlug(slug);
   if (!ple) notFound();
 
-  const idx = WWE_PLE_MONTHLY_ORDER.findIndex((e) => e.slug === slug);
-  const prev = idx > 0 ? WWE_PLE_MONTHLY_ORDER[idx - 1] : undefined;
-  const next =
-    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1 ? WWE_PLE_MONTHLY_ORDER[idx + 1] : undefined;
+  // 감춘 대회는 이전/다음에 끼지 않는다 (`ple-event-detail`과 같은 규약).
+  const idx = WWE_PLE_LISTED.findIndex((e) => e.slug === slug);
+  const prev = idx > 0 ? WWE_PLE_LISTED[idx - 1] : undefined;
+  const next = idx >= 0 && idx < WWE_PLE_LISTED.length - 1 ? WWE_PLE_LISTED[idx + 1] : undefined;
 
   return (
     <main className="min-h-[calc(100dvh-5.5rem)] w-full min-w-0 bg-stone-50 dark:bg-stone-900 px-4 py-10 text-stone-900 dark:text-stone-100">

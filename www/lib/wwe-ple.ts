@@ -9,6 +9,17 @@ export type PleEvent = {
   dateLabel: string | null;
   venue: string | null;
   highlight: string;
+  /**
+   * 목록·내비게이션에서 **감춘다**. 기본은 노출(`undefined`)이다.
+   *
+   * 올해 열리지 않는 대회를 지우는 대신 감추는 자리다. 지워 버리면 경기 카드·테마·
+   * 상세와 그 대회에 달린 예측이 함께 사라지고, 나중에 열릴 때 전부 다시 만들어야
+   * 한다. 데이터는 그대로 두고 화면에서만 빼면 **한 줄로 되돌릴 수 있다.**
+   *
+   * `undefined`(노출)와 `true`(감춤) 둘뿐이다 — `false`를 쓰지 않는 이유는 열한
+   * 대회에 같은 줄을 붙이지 않기 위해서다.
+   */
+  unlisted?: true;
 };
 
 export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
@@ -114,6 +125,9 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     dateLabel: null,
     venue: null,
     highlight: "Hell in a Cell 중심",
+    // 2026년에는 열리지 않는다(2026-09-22 확인). 데이터는 남기고 화면에서만 뺀다 —
+    // 추후 열리면 이 한 줄을 지우면 된다.
+    unlisted: true,
   },
   {
     month: null,
@@ -127,6 +141,26 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
 ] as const;
 
 export type PleSlug = (typeof WWE_PLE_MONTHLY_ORDER)[number]["slug"];
+
+/**
+ * 화면에 내놓는 대회만. **목록·내비게이션은 전부 이것을 쓴다.**
+ *
+ * `WWE_PLE_MONTHLY_ORDER`는 데이터이고 이쪽이 표시용이다. 둘을 가르지 않으면
+ * 감춘 대회가 어느 목록 하나에 남아 그 화면만 어긋난다.
+ */
+export const WWE_PLE_LISTED: readonly PleEvent[] = WWE_PLE_MONTHLY_ORDER.filter(
+  (event) => !event.unlisted,
+);
+
+/**
+ * 서버가 준 대회 행을 걸러낼 때 쓴다 — DB에는 감춘 대회도 그대로 있다.
+ *
+ * **카탈로그에 없는 slug는 노출로 본다.** 서버가 우리가 모르는 대회를 새로 알려
+ * 왔다면 그것을 감추는 것이 아니라 보여 주는 쪽이 맞다.
+ */
+export function isPleListed(slug: string): boolean {
+  return getPleBySlug(slug)?.unlisted !== true;
+}
 
 export function isPleTbd(ple: PleEvent): boolean {
   return ple.month === null;
@@ -221,9 +255,7 @@ export function getPleThemeClass(slug: string): string | undefined {
 }
 
 /** 그리드 상단에 크게 강조할 이벤트 — 마감임박 우선, 없으면 가장 가까운 예측 가능 이벤트 */
-export function pickFeaturedPle(
-  events: readonly PleEvent[] = WWE_PLE_MONTHLY_ORDER,
-): PleEvent | null {
+export function pickFeaturedPle(events: readonly PleEvent[] = WWE_PLE_LISTED): PleEvent | null {
   const upcoming = events
     .map((event) => ({ event, badge: getPleStatusBadge(event) }))
     .filter(({ badge }) => badge.variant === "deadline" || badge.variant === "open");

@@ -2,7 +2,12 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { PleEventDetail, PleLayoutVariant } from "@/lib/wwe-ple-detail";
 import type { PleSlug } from "@/lib/wwe-ple";
-import { formatPleMonth, formatPleSchedule, WWE_PLE_MONTHLY_ORDER } from "@/lib/wwe-ple";
+import {
+  formatPleMonth,
+  formatPleSchedule,
+  WWE_PLE_LISTED,
+  WWE_PLE_MONTHLY_ORDER,
+} from "@/lib/wwe-ple";
 import { PleMatchBracket } from "@/components/ple/ple-match-bracket";
 import { WweArenaShell } from "@/components/wwe-arena-shell";
 
@@ -21,10 +26,12 @@ type PleEventDetailViewProps = {
 
 export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
   const { theme } = detail;
-  const idx = WWE_PLE_MONTHLY_ORDER.findIndex((e) => e.slug === ple.slug);
-  const prev = idx > 0 ? WWE_PLE_MONTHLY_ORDER[idx - 1] : undefined;
-  const next =
-    idx >= 0 && idx < WWE_PLE_MONTHLY_ORDER.length - 1 ? WWE_PLE_MONTHLY_ORDER[idx + 1] : undefined;
+  // 감춘 대회는 이전/다음에 끼지 않는다. 그 대회 자신의 페이지에서는 `idx`가 -1이라
+  // 양쪽 모두 `undefined`가 되고, 링크 없이 본문만 뜬다 — 주소를 아는 사람은 계속
+  // 볼 수 있다(사후 재현 예측이 이 대회를 가리킨다).
+  const idx = WWE_PLE_LISTED.findIndex((e) => e.slug === ple.slug);
+  const prev = idx > 0 ? WWE_PLE_LISTED[idx - 1] : undefined;
+  const next = idx >= 0 && idx < WWE_PLE_LISTED.length - 1 ? WWE_PLE_LISTED[idx + 1] : undefined;
 
   const bannerModifier = HERO_BANNER_CLASS[detail.layout];
 
