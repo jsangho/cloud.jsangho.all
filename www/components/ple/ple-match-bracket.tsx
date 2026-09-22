@@ -82,6 +82,11 @@ function boardMatchFingerprint(board: PleBoard): string {
 }
 
 function needsStaticResync(board: PleBoard | null, staticCards: PleMatchCard[]): boolean {
+  // **보낼 카드가 없으면 맞출 것도 없다.** 이 줄이 없으면 대진이 아직 발표되지
+  // 않은 대회(카드 0건)에서 아래 `board.matches.length === 0`이 항상 참이 되어,
+  // 페이지를 열 때마다 운영에 동기화 POST가 나간다. 그 쓰기는 아무것도 바꾸지
+  // 않으면서 `updated_at`만 계속 새로 찍는다.
+  if (staticCards.length === 0) return false;
   if (!board || board.matches.length === 0) return true;
   return boardMatchFingerprint(board) !== staticMatchFingerprint(staticCards);
 }

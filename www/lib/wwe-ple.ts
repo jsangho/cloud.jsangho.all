@@ -109,6 +109,35 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     highlight: "MITB 래더",
   },
   {
+    month: 11,
+    year: WWE_PLE_YEAR,
+    slug: "crown-jewel",
+    label: "Crown Jewel",
+    dateLabel: "11.7",
+    venue: "사우디 리야드",
+    highlight: "리야드 시즌 스타디움",
+  },
+  {
+    // 11.28 — 위키 인포박스로 확인했다(`Survivor Series: WarGames (2026)`
+    // rev 1376063302). 예전에는 일정 미정이라 `month: null`이었다.
+    month: 11,
+    year: WWE_PLE_YEAR,
+    slug: "survivor-series",
+    label: "Survivor Series",
+    dateLabel: "11.28",
+    venue: "휴스턴",
+    highlight: "팀 대항 시즌 피날레",
+  },
+  {
+    month: 12,
+    year: WWE_PLE_YEAR,
+    slug: "wrestlepalooza",
+    label: "Wrestlepalooza",
+    dateLabel: "12.12",
+    venue: "호주 퍼스",
+    highlight: "첫 북미 밖 개최",
+  },
+  {
     month: null,
     year: WWE_PLE_YEAR,
     slug: "king-queen-of-the-ring",
@@ -132,15 +161,6 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     // 2026년에는 열리지 않는다(2026-09-22 확인). 데이터는 남기고 화면에서만 뺀다 —
     // 추후 열리면 이 한 줄을 지우면 된다.
     unlisted: true,
-  },
-  {
-    month: null,
-    year: WWE_PLE_YEAR,
-    slug: "survivor-series",
-    label: "Survivor Series",
-    dateLabel: null,
-    venue: null,
-    highlight: "팀 대항 시즌 피날레",
   },
 ] as const;
 

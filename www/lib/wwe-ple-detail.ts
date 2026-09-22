@@ -301,6 +301,63 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     ],
     predictionFocus: ["셀 매치 승자", "테이블/체인 사용", "개입·DQ"],
   },
+  /**
+   * 2026 Crown Jewel — 11.7 리야드 (위키 `Crown Jewel (2026)` rev 1372805732).
+   *
+   * **대진이 아직 발표되지 않았다.** 그래서 `highlights`에 경기를 적지 않고
+   * 확인된 개최 정보만 둔다. 없는 카드를 그럴싸하게 채우면 화면이 거짓을 말한다
+   * (DESIGN.md §7 "숫자를 지어내지 않는다"와 같은 이유다).
+   */
+  "crown-jewel": {
+    slug: "crown-jewel",
+    tagline: "리야드의 밤, 사우디에서 열리는 메인 로스터 대회",
+    layout: "international",
+    signatureLabel: "Crown Jewel",
+    theme: {
+      pageBg: "bg-[#0a0a0c]",
+      heroGradient: "from-amber-950/15 via-transparent to-transparent",
+      accent: "text-amber-300",
+      accentMuted: "text-amber-200/70",
+      border: "border-amber-600/40",
+      badge: "bg-amber-950/40 text-amber-100 ring-amber-500/35",
+      glow: "shadow-[0_0_70px_-20px_rgba(251,191,36,0.32)]",
+    },
+    highlights: [
+      { title: "11월 7일", detail: "사우디 리야드 · Riyadh Season Stadium (KAFD)" },
+      { title: "Raw · SmackDown", detail: "메인 로스터 두 브랜드 합동" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
+  /**
+   * 2026 Wrestlepalooza — 12.12 퍼스 (위키 `Wrestlepalooza (2026)` rev 1373256857).
+   * 통산 6번째·WWE 체제 2번째이고 **북미 밖 개최는 처음**이다. WWE 메인 로스터의
+   * 12월 PLE 자체가 2020년 이후 처음이다. 대진은 아직 발표되지 않았다.
+   */
+  wrestlepalooza: {
+    slug: "wrestlepalooza",
+    tagline: "퍼스에서 여는 연말 — 북미를 처음 벗어난 레슬팔루자",
+    layout: "international",
+    signatureLabel: "Wrestlepalooza",
+    theme: {
+      pageBg: "bg-[#0a0a0c]",
+      heroGradient: "from-sky-950/15 via-transparent to-transparent",
+      accent: "text-sky-300",
+      accentMuted: "text-sky-200/70",
+      border: "border-sky-600/40",
+      badge: "bg-sky-950/40 text-sky-100 ring-sky-500/35",
+      glow: "shadow-[0_0_70px_-20px_rgba(56,189,248,0.32)]",
+    },
+    highlights: [
+      { title: "12월 12일", detail: "호주 퍼스 · RAC Arena" },
+      { title: "첫 북미 밖 개최", detail: "통산 6번째 · WWE 체제로는 2번째" },
+      { title: "6년 만의 12월 PLE", detail: "메인 로스터 기준 2020년 이후 처음" },
+      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+    ],
+    predictionFocus: ["대진 발표 후 공개"],
+  },
+
   "survivor-series": {
     slug: "survivor-series",
     tagline: "팀 대 팀, 생존과 브랜드 우위가 걸린 11월",

@@ -213,6 +213,46 @@ export const PLE_BRACKET_THEMES: Record<PleSlug, PleBracketTheme> = {
       voteBar: "bg-stone-700",
     },
   },
+  // 대진이 발표되면 대진표가 이 테마로 그려진다. `getBracketTheme`는 폴백이 없어
+  // 슬러그가 빠지면 `undefined`가 나가므로, 경기가 0건이어도 미리 둔다.
+  "crown-jewel": {
+    sideA: {
+      headerBg: "bg-amber-600",
+      headerText: "text-white",
+      border: "border-amber-600",
+      nameText: "text-amber-800",
+      selectedBg: "bg-amber-50",
+      voteBar: "bg-amber-500",
+    },
+    sideB: {
+      headerBg: "bg-stone-700",
+      headerText: "text-white",
+      border: "border-stone-600",
+      nameText: "text-stone-800",
+      selectedBg: "bg-stone-100",
+      voteBar: "bg-stone-500",
+    },
+  },
+
+  wrestlepalooza: {
+    sideA: {
+      headerBg: "bg-sky-600",
+      headerText: "text-white",
+      border: "border-sky-600",
+      nameText: "text-sky-800",
+      selectedBg: "bg-sky-50",
+      voteBar: "bg-sky-500",
+    },
+    sideB: {
+      headerBg: "bg-violet-700",
+      headerText: "text-white",
+      border: "border-violet-700",
+      nameText: "text-violet-800",
+      selectedBg: "bg-violet-50",
+      voteBar: "bg-violet-600",
+    },
+  },
+
   "survivor-series": {
     sideA: {
       headerBg: "bg-blue-600",
