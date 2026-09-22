@@ -406,10 +406,10 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ),
   ],
 
-  // `Money in the Bank (2026)` rev 1376101948의 Matches 절 그대로 — **래더 둘뿐이다.**
+  // `Money in the Bank (2026)` rev 1376101948의 Matches 절 그대로 — 래더 둘 + 타이틀전 하나.
   // 이전 다섯 경기는 2025 카드를 베낀 픽스처였다(실재하지 않는 IC·여성IC·태그 셋이
   // 섞여 있었다). 2026-09-22에 위키 대진으로 교체했다.
-  // 각 경기에 `TBD` 두 칸이 남아 있고 배당은 아직 없다 — 둘 다 지어내지 않는다.
+  // 래더 두 경기에 `TBD` 두 칸이 남아 있고 배당은 아직 없다 — 둘 다 지어내지 않는다.
   "money-in-the-bank": [
     mm("mitb26-men", "Men's Money in the Bank Ladder Match", "sideB", [
       { name: "Bron Breakker" },
@@ -427,6 +427,13 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: BRACKET_LABELS.tbd },
       { name: BRACKET_LABELS.tbd },
     ]),
+    m2(
+      "mitb26-whc",
+      "World Heavyweight Championship",
+      "sideB",
+      { name: "Roman Reigns", isChampion: true },
+      { name: "LA Knight" },
+    ),
   ],
 
   "night-of-champions": [
