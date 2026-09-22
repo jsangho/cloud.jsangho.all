@@ -361,13 +361,13 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
 
   "worlds-collide": {
     slug: "worlds-collide",
-    tagline: "세 브랜드가 한 링에서 부딪힌다",
+    tagline: "WWE와 AAA가 한 링에서 만난다",
     layout: "nxt",
     signatureLabel: "Worlds Collide",
     theme: NXT_THEME,
     highlights: [
       { title: "9월 26일", detail: "일리노이 로즈몬트 · Allstate Arena" },
-      { title: "Raw · SmackDown · NXT", detail: "세 브랜드 합동 크로스오버" },
+      { title: "WWE × AAA", detail: "루차 리브레 AAA와 공동 개최 · Raw·SmackDown·NXT 합동" },
       { title: "7경기", detail: "AAA 타이틀전과 트리오스가 절반을 채운다" },
     ],
     predictionFocus: [
