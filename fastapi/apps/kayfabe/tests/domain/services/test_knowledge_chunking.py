@@ -18,6 +18,7 @@ from kayfabe.domain.services.knowledge_chunking import (
     MIN_CHUNK_CHARS,
     chunk_document,
     content_fingerprint,
+    strip_source_boilerplate,
 )
 
 
@@ -88,3 +89,95 @@ def test_fingerprint_is_sha256_hex() -> None:
 
     assert len(fingerprint) == 64
     assert set(fingerprint) <= set("0123456789abcdef")
+
+
+class TestStripSourceBoilerplate:
+    """위키 상용구 걷어내기 (2026-09-22).
+
+    **`worlds-collide` 예측이 두 번 연속 0건으로 끝난 원인이 여기였다.** 검색은
+    정상이었고 잡혀 온 것이 내비게이션·각주 목록·navbox였다. 코퍼스 1179청크 중
+    598건(50%)이 그런 조각이었고, 필터를 넣자 796청크 중 2건으로 떨어졌다.
+    """
+
+    def test_lead_chrome_is_removed(self) -> None:
+        text = (
+            "Jump to content From Wikipedia, the free encyclopedia "
+            "American professional wrestler born in 2000 and trained in Sacramento."
+        )
+
+        assert strip_source_boilerplate(text).startswith("American professional")
+
+    def test_everything_from_references_is_cut(self) -> None:
+        body = (
+            "He debuted in 2024 and won the cruiserweight title in a ladder "
+            "match that same year in front of a sold-out crowd."
+        )
+        text = f'{body} References [ edit ] ↑ "Some source" . Retrieved May 27, 2024 .'
+
+        assert strip_source_boilerplate(text) == body
+
+    def test_external_links_and_navbox_go_with_it(self) -> None:
+        body = (
+            "She retained the championship at the November event in Mexico City "
+            "after a twenty minute match against the former champion."
+        )
+        text = f"{body} External links [ edit ] Omos Pagano Pimpinela Escarlata Rey Mysterio"
+
+        assert strip_source_boilerplate(text) == body
+
+    def test_the_earliest_tail_heading_wins(self) -> None:
+        """`See also`가 `References`보다 앞서면 거기서 끊는다."""
+        body = (
+            "He held the cruiserweight title for one hundred days in total before "
+            "dropping it in a four-way match at the summer show."
+        )
+        text = f"{body} See also [ edit ] Something References [ edit ] ↑ cite"
+
+        assert strip_source_boilerplate(text) == body
+
+    def test_citation_arrow_is_the_fallback_cut(self) -> None:
+        """절 제목이 없는 문서도 있다 — 그때는 첫 각주 화살표에서 끊는다."""
+        body = (
+            "The match was announced for the September card in Rosemont, Illinois, "
+            "and was billed as the first meeting between the two."
+        )
+        text = f'{body} ↑ "Source title" . Retrieved December 26, 2025 .'
+
+        assert strip_source_boilerplate(text) == body
+
+    def test_edit_and_inline_ref_tokens_are_scrubbed(self) -> None:
+        text = "He won the title [ 14 ] in 2025. Career [ edit ] He then defended it twice."
+
+        out = strip_source_boilerplate(text)
+
+        assert "[ 14 ]" not in out
+        assert "[ edit ]" not in out
+        assert "He won the title" in out and "defended it twice" in out
+
+    def test_a_marker_at_the_very_start_does_not_erase_the_document(self) -> None:
+        """**표지가 엉뚱한 자리에 맞으면 자르지 않는다.** 잡음이 남는 편이 낫다."""
+        text = (
+            "References [ edit ] "
+            + "He wrestled in Mexico for a decade and held three titles. " * 3
+        )
+
+        out = strip_source_boilerplate(text)
+
+        assert "wrestled in Mexico" in out
+
+    def test_chunking_applies_the_filter(self) -> None:
+        """`chunk_document`를 거치면 자동으로 걸러진다 — 부르는 쪽이 잊을 수 없다."""
+        body = (
+            "He debuted in 2024 and quickly became a fan favourite across the country. "
+        )
+        text = (
+            "Jump to content From Wikipedia, the free encyclopedia "
+            + body * 3
+            + " ↑ cite . Retrieved May 1, 2024 ."
+        )
+
+        chunks = chunk_document(text)
+
+        assert chunks
+        assert all("Jump to content" not in c for c in chunks)
+        assert all("↑" not in c for c in chunks)

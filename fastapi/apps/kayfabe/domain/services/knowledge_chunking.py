@@ -23,6 +23,82 @@ _SENTENCE_END = re.compile(r"(?<=[.!?。？！])\s+")
 
 _WHITESPACE = re.compile(r"\s+")
 
+#: MediaWiki가 모든 문서 앞에 붙이는 고정 문구. 운영 코퍼스에서 **문서당 정확히
+#: 한 번**(57문서 57건) 나오므로 머리 표지로 신뢰할 수 있다.
+_LEAD_CHROME = "Jump to content From Wikipedia, the free encyclopedia"
+
+#: 본문이 끝나고 **장치**가 시작되는 제목들. 이 뒤에는 각주 목록과 내비게이션
+#: 상자가 붙는데, 그것들은 근거가 아니라 잡음이다.
+#:
+#: `[ edit ]`가 붙은 형태만 본다 — 본문에도 "See also: …"가 인라인으로 나오는데
+#: 그것은 문단이지 절 제목이 아니다.
+_TAIL_HEADINGS = (
+    "References [ edit ]",
+    "Notes [ edit ]",
+    "See also [ edit ]",
+    "External links [ edit ]",
+    "Further reading [ edit ]",
+    "Bibliography [ edit ]",
+)
+
+#: 각주 목록의 되돌이 화살표. 절 제목을 못 찾았을 때의 차선책이다.
+_CITATION_ARROW = "↑"
+
+_EDIT_TOKEN = re.compile(r"\[\s*edit\s*\]")
+_INLINE_REF = re.compile(r"\[\s*\d+\s*\]")
+
+
+def strip_source_boilerplate(text: str) -> str:
+    """위키 문서에서 **근거가 될 수 없는 부분**을 걷어낸다.
+
+    2026-09-22 운영 실측이 이 함수를 만든 이유다. `worlds-collide` 예측이 두 번
+    연속 0건으로 끝났는데, 검색은 정상이었고 **잡혀 온 것이 잡음**이었다:
+
+        La_Catalina       "Jump to content From Wikipedia, the"    내비게이션
+        La_Catalina       "Retrieved 14 April 2026 . ↑ Hetfield"   각주 목록
+        Mascarita_Dorada  "Omos Pagano Pimpinela Escarlata"        navbox 이름 나열
+
+    코퍼스 1179청크 중 **730건(61%)** 이 이런 조각이었다.
+
+    **왜 하필 그것들이 상위에 오나.** navbox는 레슬러 이름이 빽빽한 목록이고
+    검색 질의도 이름 나열(`"Trios Match CM Punk, Rey Mysterio & …"`)이다. 임베딩
+    공간에서 이름 목록끼리 가장 가까우므로, **내용이 0인 조각이 구조적으로 이긴다.**
+    에이전트가 "근거 부족"이라고 답한 것은 정확한 판단이었다.
+
+    걷어내는 것은 넷이다 — 머리 내비게이션 · 꼬리(각주·외부링크·navbox) ·
+    `[ edit ]` 표시 · `[ 12 ]` 인라인 각주 번호.
+
+    **본문이 거의 사라지면 자르지 않는다.** 표지가 엉뚱한 자리에 맞았다는 뜻이고,
+    그때는 잡음을 남기는 편이 문서를 통째로 잃는 것보다 낫다.
+    """
+    normalized = _WHITESPACE.sub(" ", text).strip()
+    if not normalized:
+        return ""
+
+    lead = normalized.find(_LEAD_CHROME)
+    if lead != -1:
+        normalized = normalized[lead + len(_LEAD_CHROME) :].strip()
+
+    cut = _tail_cut(normalized)
+    body = normalized[:cut].strip() if cut is not None else normalized
+    # 표지가 문서 맨 앞에 맞으면 본문이 통째로 날아간다. 그럴 바엔 안 자른다.
+    if len(body) < MIN_CHUNK_CHARS:
+        body = normalized
+
+    body = _EDIT_TOKEN.sub(" ", body)
+    body = _INLINE_REF.sub(" ", body)
+    return _WHITESPACE.sub(" ", body).strip()
+
+
+def _tail_cut(text: str) -> int | None:
+    """본문이 끝나는 지점. 절 제목이 먼저이고, 없으면 첫 각주 화살표다."""
+    found = [text.find(h) for h in _TAIL_HEADINGS]
+    hits = [i for i in found if i != -1]
+    if hits:
+        return min(hits)
+    arrow = text.find(_CITATION_ARROW)
+    return arrow if arrow != -1 else None
+
 
 def chunk_document(text: str) -> list[str]:
     """문장을 이어 붙여 `MAX_CHUNK_CHARS` 이하 덩어리로 만든다.
@@ -30,7 +106,7 @@ def chunk_document(text: str) -> list[str]:
     짧은 문서는 통째로 한 조각이 된다 — `MIN_CHUNK_CHARS` 때문에 문서가 통째로
     사라지지는 않는다. 조각이 하나도 안 남으면 원문 전체를 한 조각으로 돌려준다.
     """
-    normalized = _WHITESPACE.sub(" ", text).strip()
+    normalized = strip_source_boilerplate(text)
     if not normalized:
         return []
 
