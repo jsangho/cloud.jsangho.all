@@ -326,6 +326,41 @@ class PleEventsPgRepository(PleEventsRepository):
         )
         return True
 
+    async def set_event_status(self, *, slug: str, status: str) -> bool:
+        """`status` 한 칸만 쓰는 좁은 문 (Phase 3-13 Stage 8).
+
+        `set_event_schedule`과 같은 이유로 ORM이 아니라 Core `update()`다 — 엔티티를
+        세션에 올리면 `PleEventModel.matches`(`cascade="all, delete-orphan"`)가 딸려
+        오고, 그 뒤로는 관계 하나를 잘못 만지면 경기와 사용자 예측이 함께 사라진다.
+        여기서는 행을 **읽지 않고** 컬럼 하나만 지정해 보낸다.
+
+        **`finished_at`을 함께 쓰지 않는 것이 이 메소드의 요점이다.** 기존
+        `finished` 대회의 `finished_at`은 전부 카드 동기화가 돌던 시각, 즉 "결과가
+        기록된 시각"이다. 결과가 없는 대회에 그것을 박으면 거짓이다.
+        """
+        result = await self.db.execute(
+            update(PleEventModel)
+            .where(PleEventModel.slug == slug)
+            .values(status=status)
+        )
+        if result.rowcount > 1:
+            raise RuntimeError(
+                f"set_event_status가 {result.rowcount}행을 바꿨습니다: slug={slug!r}"
+            )
+        if result.rowcount == 0:
+            logger.info(
+                "[PleEventsPgRepository] set_event_status 대상 없음 | slug=%s", slug
+            )
+            return False
+
+        await self.db.flush()
+        logger.info(
+            "[PleEventsPgRepository] set_event_status -> Neon | slug=%s status=%s",
+            slug,
+            status,
+        )
+        return True
+
     async def upsert_event_from_sync(
         self, payload: PleEventSyncCommand
     ) -> PleEventSnapshotQuery:

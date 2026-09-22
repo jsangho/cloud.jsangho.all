@@ -91,6 +91,31 @@ class PleEventsRepository(ABC):
         ...
 
     @abstractmethod
+    async def set_event_status(self, *, slug: str, status: str) -> bool:
+        """**이미 있는 대회 행의 `status` 한 칸만** 고친다 (Phase 3-13 Stage 8).
+
+        `mark_event_finished`가 이미 있지만 그것은 `status`만 쓰지 않는다 —
+        `finished_at`을 함께 박고, `winner_pick`이 있는 경기를 `FINISHED`로 넘긴다.
+        **결과가 기록되지 않은 대회에는 그 둘 다 거짓이다.** 날짜가 지났다는 사실만
+        가지고 "결과가 기록된 시각"을 지어낼 수 없고, 경기 상태도 알 수 없다.
+        그래서 `set_event_schedule`과 같은 모양의 좁은 문을 하나 더 낸다.
+
+        계약:
+
+        - 없는 slug면 `False`. **행을 만들지 않는다.** `UPDATE`라 구조적으로 불가능하다.
+        - 정확히 한 행이 바뀌면 `True`.
+        - 두 행 이상이면 예외 (`slug` UNIQUE가 사라진 것이므로 멈춘다).
+        - `ple_matches`·`ple_predictions`·`ple_agent_predictions`·`ple_agent_reports`
+          를 읽지도 쓰지도 않는다.
+        - `label`·`month`·`year`·`start_date`·`end_date`·**`finished_at`**은
+          건드리지 않는다. `finished` + `finished_at IS NULL`이 "끝났지만 결과
+          미기록"을 정확히 말한다.
+
+        커밋하지 않는다 — 트랜잭션 경계는 부르는 쪽이 정한다(`flush`까지만 한다).
+        """
+        ...
+
+    @abstractmethod
     async def upsert_prediction(
         self, match_id: int, client_id: str, pick: str, user_id: int
     ) -> None:
