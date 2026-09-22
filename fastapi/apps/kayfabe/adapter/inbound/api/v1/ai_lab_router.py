@@ -146,6 +146,7 @@ def evaluation_to_schema(response: AiLabEvaluationResponse) -> AiLabEvaluationSc
             predictions=response.totals.predictions,
             fallback=response.totals.fallback,
             ex_post=response.totals.ex_post,
+            withdrawn=response.totals.withdrawn,
             pending=response.totals.pending,
             disqualified=response.totals.disqualified,
             held=response.totals.held,

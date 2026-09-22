@@ -49,6 +49,9 @@ class AiLabPgRepository(AiLabRepository):
                 PleEventModel.label,
                 AgentPredictionModel.match_key,
                 PleMatchModel.title,
+                # 경기 행이 아직 있는가 (Stage 9). `title`이 비었는지로 대신 볼 수도
+                # 있지만 그것은 값의 성질이고, 여기서 묻는 것은 **행의 존재**다.
+                PleMatchModel.id.label("match_id"),
                 AgentPredictionModel.pick,
                 AgentPredictionModel.pick_name,
                 AgentPredictionModel.win_probability,
@@ -98,6 +101,7 @@ class AiLabPgRepository(AiLabRepository):
                 outcome_known_externally=row.outcome_known_externally,
                 provenance_note=row.provenance_note,
                 event_start_date=row.start_date,
+                match_exists=row.match_id is not None,
             )
             for row in result.all()
         ]

@@ -11,11 +11,11 @@
 생성됐다. 그것은 예측이 아니라 사후 재현이고, 어떤 통계 처리로도 예측 능력을 복원할
 수 없다. 신뢰구간을 넓히는 문제가 아니라 **분모에 들어가면 안 되는 문제**다.
 
-판정 규칙은 여섯이고 무게가 셋으로 갈린다.
+판정 규칙은 일곱이고 무게가 셋으로 갈린다.
 
 * **제외**(`exclude`) — 애초에 평가 대상이 아니다. 실격이 아니다.
   `not_applicable`(북메이커 폴백) · `external_outcome_known`(사후 재현 표본) ·
-  `pending`(결과 없음)
+  `withdrawn_match`(경기가 카드에서 사라짐) · `pending`(결과 없음)
 * **실격**(`disqualify`) — 누수가 확정됐다.
   `temporal_inversion`(결과 기록 이후 생성) · `self_reference`(자기 대회 문서 인용)
 * **보류**(`hold`) — 누수를 **증명도 반증도 못 한다.**
@@ -61,9 +61,10 @@ from kayfabe.app.services.ai_lab_integrity import (
 # 서로 다른 문서를 같은 문서라고 말하게 된다.
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow, _canonical
 
-#: 자격 상태. 여섯은 **서로 겹치지 않고 전체를 덮는다** — 합이 예측 수와 같아야 한다.
+#: 자격 상태. 일곱은 **서로 겹치지 않고 전체를 덮는다** — 합이 예측 수와 같아야 한다.
 STATUS_NOT_APPLICABLE = "not_applicable"
 STATUS_EX_POST = "ex_post"
+STATUS_WITHDRAWN = "withdrawn_match"
 STATUS_PENDING = "pending"
 STATUS_DISQUALIFIED = "disqualified"
 STATUS_HELD = "held"
@@ -104,6 +105,16 @@ RULES: tuple[Rule, ...] = (
             "예측을 만들 때 결과가 이 시스템 밖에서 이미 알려져 있었다고 기록된 "
             "표본입니다. 사후 재현이므로 채점 대상이 아닙니다 — 누수가 확정된 "
             "실격과 달리, 표본의 성격이 처음부터 다릅니다."
+        ),
+    ),
+    Rule(
+        code=STATUS_WITHDRAWN,
+        label="경기가 카드에서 사라짐",
+        severity=SEVERITY_EXCLUDE,
+        description=(
+            "예측이 가리키는 경기가 더 이상 이 대회의 카드에 없습니다. 대진이 "
+            "바뀌면서 빠졌거나, 애초에 잘못 올라간 경기였습니다. 결과를 기다리는 "
+            "것이 아니라 물음 자체가 회수된 것이므로 채점 대상이 아닙니다."
         ),
     ),
     Rule(
@@ -246,12 +257,14 @@ class RuleTally:
 
 @dataclass(frozen=True)
 class EvaluationTotals:
-    """여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
+    """일곱 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
 
     predictions: int
     fallback: int
     #: 생성 전에 결과가 시스템 밖에서 알려져 있던 표본 (Phase 3-7). **실격이 아니다.**
     ex_post: int
+    #: 가리키는 경기가 카드에서 사라진 표본 (Stage 9). **실격이 아니다.**
+    withdrawn: int
     pending: int
     disqualified: int
     held: int
@@ -320,6 +333,7 @@ def summarize_evaluation(
         predictions=len(items),
         fallback=_count(items, STATUS_NOT_APPLICABLE),
         ex_post=_count(items, STATUS_EX_POST),
+        withdrawn=_count(items, STATUS_WITHDRAWN),
         pending=_count(items, STATUS_PENDING),
         disqualified=_count(items, STATUS_DISQUALIFIED),
         held=_count(items, STATUS_HELD),
@@ -373,8 +387,9 @@ _STATUS_ORDER = {
     STATUS_HELD: 1,
     STATUS_DISQUALIFIED: 2,
     STATUS_PENDING: 3,
-    STATUS_EX_POST: 4,
-    STATUS_NOT_APPLICABLE: 5,
+    STATUS_WITHDRAWN: 4,
+    STATUS_EX_POST: 5,
+    STATUS_NOT_APPLICABLE: 6,
 }
 
 
@@ -428,6 +443,23 @@ def _judge(
                     # 선언의 근거는 사람이 쓴 문장이다. 여기서 지어내지 않는다.
                     detail=row.provenance_note
                     or "생성 시점에 결과가 시스템 밖에서 이미 알려져 있었습니다.",
+                ),
+            ),
+        )
+
+    if not row.match_exists:
+        # **`pending`보다 먼저 본다.** 경기 행이 없으면 `winner_pick`도 없으므로
+        # 순서를 바꾸면 이 표본이 전부 "결과 없음"으로 빨려 들어간다 — 결과를
+        # 기다리는 것과 물음이 회수된 것은 다른 사실이다.
+        return _item(
+            row,
+            STATUS_WITHDRAWN,
+            (
+                _verdict(
+                    STATUS_WITHDRAWN,
+                    failed=True,
+                    applicable=True,
+                    detail="이 경기가 대회 카드에 더 이상 없습니다.",
                 ),
             ),
         )

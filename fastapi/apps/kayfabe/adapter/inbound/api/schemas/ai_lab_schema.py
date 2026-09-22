@@ -241,12 +241,14 @@ class EvaluationRuleSchema(_Camel):
 
 
 class EvaluationTotalsSchema(_Camel):
-    """여섯 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
+    """일곱 칸의 합이 `predictions`와 같다 — 어디로도 새지 않는다."""
 
     predictions: int
     fallback: int
     ex_post: int = Field(alias="exPost")
     """생성 전에 결과가 시스템 밖에서 알려져 있던 표본. **실격과 다른 상태다.**"""
+    withdrawn: int
+    """가리키는 경기가 카드에서 사라진 표본. **실격과 다른 상태다.**"""
     pending: int
     disqualified: int
     held: int

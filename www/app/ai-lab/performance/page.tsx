@@ -127,6 +127,7 @@ function Eligibility({ data }: { data: AiLabEvaluation }) {
         <StatTile value={totals.disqualified} label="Disqualified" note="누수 확정" />
         <StatTile value={totals.held} label="Held" note="증명도 반증도 불가" />
         <StatTile value={totals.exPost} label="Ex-post" note="사후 재현 표본" />
+        <StatTile value={totals.withdrawn} label="Withdrawn" note="경기가 카드에서 사라짐" />
         <StatTile value={totals.pending} label="Pending" note="결과 없음" />
         <StatTile value={totals.fallback} label="N/A" note="배당 폴백" />
       </div>
@@ -262,6 +263,8 @@ function StatusBadge({ status }: { status: EvaluationStatus }) {
     held: "보류",
     // 실격이 아니다 — 누수가 확정된 것과 표본의 성격이 다른 것은 다른 사실이다.
     ex_post: "사후 재현",
+    // 결과를 기다리는 것이 아니라 물음이 회수된 것이다 — pending과 다른 사실이다.
+    withdrawn_match: "경기 사라짐",
     pending: "결과 없음",
     not_applicable: "평가 대상 아님",
   };

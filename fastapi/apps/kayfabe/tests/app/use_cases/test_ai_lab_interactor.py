@@ -481,6 +481,7 @@ class TestEvaluation:
         assert [rule.code for rule in schema.rules] == [
             "not_applicable",
             "external_outcome_known",
+            "withdrawn_match",
             "pending",
             "temporal_inversion",
             "self_reference",
