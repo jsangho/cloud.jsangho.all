@@ -50,7 +50,7 @@
 - **prefix:** `/championship`
 - **HTTP 메서드:** GET
 - **역할:** 브랜드별 현역 WWE 챔피언 보드 제공
-- **접근 테이블:** 없음 (카탈로그 전용 · Neon 미사용)
+- **접근 테이블:** 없음 (카탈로그 전용 · DB 미사용)
 - **엔드포인트:**
   - `GET /championship` — 브랜드별 현역 챔피언 (메인·2선·태그·기타)
 - **의존:** `ChampionshipUseCase` → `ChampionshipInteractor` → `CurrentChampionshipCatalogRepository`
@@ -95,7 +95,7 @@
 - **접근 테이블:** TITLE_ACQUISITIONS (`title_acquisitions` · FK → PLE_MATCHES)
 - **엔드포인트:**
   - `GET /title-history/competitors/{name}` — 선수별 실제 타이틀 획득 이력
-  - `POST /title-history/sync` — 실제 WWE 타이틀 카탈로그로 Neon 재생성
+  - `POST /title-history/sync` — 실제 WWE 타이틀 카탈로그로 DB 재생성
 - **의존:** `TitleHistoryUseCase` → `TitleHistoryInteractor` → `TitleHistoryPgRepository`
 
 ---
@@ -104,12 +104,12 @@
 
 | 파일 | prefix | 메서드 | 테이블 | DB |
 |------|--------|--------|--------|-----|
-| `ple_router` | `/ple` | POST | PLE_EVENTS, PLE_MATCHES, PLE_MATCH_PICK | Neon |
-| `pleinfo_router` | `/ple` | GET, SSE | PLE_EVENTS, PLE_MATCHES, PLE_MATCH_PICK | Neon |
+| `ple_router` | `/ple` | POST | PLE_EVENTS, PLE_MATCHES, PLE_MATCH_PICK | PostgreSQL |
+| `pleinfo_router` | `/ple` | GET, SSE | PLE_EVENTS, PLE_MATCHES, PLE_MATCH_PICK | PostgreSQL |
 | `championship_router` | `/championship` | GET | — | Catalog |
-| `ranking_router` | `/rankings` | GET | PLE_MATCH_PICK, USERS | Neon |
-| `records_router` | `/records` | GET | PLE_MATCHES | Neon |
-| `title_history_router` | `/title-history` | GET, POST | TITLE_ACQUISITIONS | Neon |
+| `ranking_router` | `/rankings` | GET | PLE_MATCH_PICK, USERS | PostgreSQL |
+| `records_router` | `/records` | GET | PLE_MATCHES | PostgreSQL |
+| `title_history_router` | `/title-history` | GET, POST | TITLE_ACQUISITIONS | PostgreSQL |
 
 ---
 

@@ -165,7 +165,7 @@ erDiagram
 
 ### `championship_titles` (정적 카탈로그)
 > DB 테이블 아님. `app/services/current_championship_catalog.py` 에서 메모리 로딩.  
-> Neon에 저장 시: `adapter/outbound/orm/championship_orm.py` → `championship_titles` 테이블.
+> DB에 저장 시: `adapter/outbound/orm/championship_orm.py` → `championship_titles` 테이블.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|

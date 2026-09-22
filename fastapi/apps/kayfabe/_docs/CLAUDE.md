@@ -58,7 +58,7 @@ CQRS 분리는 **UseCase 레이어**에서 유지한다 (`PleUseCase` vs `PleInf
 |------|------|------|
 | Championship | 정적 카탈로그 | `app/services/current_championship_catalog.py` |
 | Records | `ple_matches.card_json` 집계 | `app/services/records_scoring.py` |
-| Title History | Neon DB (`title_history` 테이블) | `adapter/outbound/pg/title_history_pg_repository.py` |
+| Title History | PostgreSQL (`title_history` 테이블) | `adapter/outbound/pg/title_history_pg_repository.py` |
 
 ### UserModel 출처
 `from superstar.domain.entities.user_model import UserModel`  
@@ -88,7 +88,7 @@ app/use_cases/                 ← Interactor (비즈니스 로직)
 app/ports/output/              ← Repository 인터페이스
 app/dtos/                      ← DTO
 app/services/                  ← 도메인 서비스 (scoring, catalog)
-adapter/outbound/pg/           ← PG Repository (Neon)
+adapter/outbound/pg/           ← PG Repository (PostgreSQL)
 adapter/outbound/catalog/      ← Catalog Repository (정적 데이터)
 adapter/outbound/orm/          ← SQLAlchemy ORM 모델
 ```
