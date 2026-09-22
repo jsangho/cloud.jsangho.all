@@ -213,6 +213,103 @@ export const PLE_BRACKET_THEMES: Record<PleSlug, PleBracketTheme> = {
       voteBar: "bg-stone-700",
     },
   },
+  // NXT 계열 다섯 — 경기 카드가 들어오는 날 대진표가 이 테마로 그려진다.
+  // `getBracketTheme`는 폴백이 없어 슬러그가 빠지면 `undefined`가 나간다.
+  "vengeance-day": {
+    sideA: {
+      headerBg: "bg-slate-600",
+      headerText: "text-white",
+      border: "border-slate-600",
+      nameText: "text-slate-800",
+      selectedBg: "bg-slate-50",
+      voteBar: "bg-slate-500",
+    },
+    sideB: {
+      headerBg: "bg-indigo-700",
+      headerText: "text-white",
+      border: "border-indigo-700",
+      nameText: "text-indigo-800",
+      selectedBg: "bg-indigo-50",
+      voteBar: "bg-indigo-600",
+    },
+  },
+
+  "great-american-bash": {
+    sideA: {
+      headerBg: "bg-slate-600",
+      headerText: "text-white",
+      border: "border-slate-600",
+      nameText: "text-slate-800",
+      selectedBg: "bg-slate-50",
+      voteBar: "bg-slate-500",
+    },
+    sideB: {
+      headerBg: "bg-indigo-700",
+      headerText: "text-white",
+      border: "border-indigo-700",
+      nameText: "text-indigo-800",
+      selectedBg: "bg-indigo-50",
+      voteBar: "bg-indigo-600",
+    },
+  },
+
+  heatwave: {
+    sideA: {
+      headerBg: "bg-slate-600",
+      headerText: "text-white",
+      border: "border-slate-600",
+      nameText: "text-slate-800",
+      selectedBg: "bg-slate-50",
+      voteBar: "bg-slate-500",
+    },
+    sideB: {
+      headerBg: "bg-indigo-700",
+      headerText: "text-white",
+      border: "border-indigo-700",
+      nameText: "text-indigo-800",
+      selectedBg: "bg-indigo-50",
+      voteBar: "bg-indigo-600",
+    },
+  },
+
+  "worlds-collide": {
+    sideA: {
+      headerBg: "bg-slate-600",
+      headerText: "text-white",
+      border: "border-slate-600",
+      nameText: "text-slate-800",
+      selectedBg: "bg-slate-50",
+      voteBar: "bg-slate-500",
+    },
+    sideB: {
+      headerBg: "bg-indigo-700",
+      headerText: "text-white",
+      border: "border-indigo-700",
+      nameText: "text-indigo-800",
+      selectedBg: "bg-indigo-50",
+      voteBar: "bg-indigo-600",
+    },
+  },
+
+  "halloween-havoc": {
+    sideA: {
+      headerBg: "bg-slate-600",
+      headerText: "text-white",
+      border: "border-slate-600",
+      nameText: "text-slate-800",
+      selectedBg: "bg-slate-50",
+      voteBar: "bg-slate-500",
+    },
+    sideB: {
+      headerBg: "bg-indigo-700",
+      headerText: "text-white",
+      border: "border-indigo-700",
+      nameText: "text-indigo-800",
+      selectedBg: "bg-indigo-50",
+      voteBar: "bg-indigo-600",
+    },
+  },
+
   // 대진이 발표되면 대진표가 이 테마로 그려진다. `getBracketTheme`는 폴백이 없어
   // 슬러그가 빠지면 `undefined`가 나가므로, 경기가 0건이어도 미리 둔다.
   "crown-jewel": {

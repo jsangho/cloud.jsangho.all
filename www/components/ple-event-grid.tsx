@@ -9,6 +9,7 @@ import {
   getPleThemeClass,
   isPleTbd,
   pickFeaturedPle,
+  type PleEvent,
   type PleStatusBadge,
   WWE_PLE_LISTED,
 } from "@/lib/wwe-ple";
@@ -22,6 +23,13 @@ type PleEventGridProps = {
   hrefPrefix?: string;
   /** 가장 임박한 이벤트를 상단에 큰 피처드 카드로 분리 표시 */
   featured?: boolean;
+  /**
+   * 그릴 대회 목록. 기본은 노출 대회 전부다.
+   *
+   * 브랜드별로 칸을 나눠 세우는 쪽(`/results`)이 `WWE_PLE_MAIN`·`WWE_PLE_NXT`를
+   * 따로 넘긴다. 이 컴포넌트는 나누는 규칙을 모르고 받은 것만 그린다.
+   */
+  events?: readonly PleEvent[];
 };
 
 const STATUS_CLASS: Record<PleStatusBadge["variant"], string> = {
@@ -51,22 +59,23 @@ export function PleEventGrid({
   onNavigate,
   hrefPrefix = "/ple",
   featured = false,
+  events = WWE_PLE_LISTED,
 }: PleEventGridProps) {
   const isLarge = variant === "large";
   const [badges, setBadges] = useState<Record<string, PleStatusBadge>>({});
 
   useEffect(() => {
     const next: Record<string, PleStatusBadge> = {};
-    for (const ple of WWE_PLE_LISTED) {
+    for (const ple of events) {
       next[ple.slug] = resolveBadge(ple.slug, getPleStatusBadge(ple));
     }
     setBadges(next);
-  }, []);
+  }, [events]);
 
-  const featuredPle = featured ? pickFeaturedPle() : null;
-  const gridEvents = featuredPle
-    ? WWE_PLE_LISTED.filter((ple) => ple.slug !== featuredPle.slug)
-    : WWE_PLE_LISTED;
+  // 피처드는 받은 목록 안에서 고른다 — 넘기지 않은 대회를 맨 위에 세우면
+  // 브랜드별로 나눠 부른 쪽에서 남의 칸 대회가 올라온다.
+  const featuredPle = featured ? pickFeaturedPle(events) : null;
+  const gridEvents = featuredPle ? events.filter((ple) => ple.slug !== featuredPle.slug) : events;
 
   return (
     <>

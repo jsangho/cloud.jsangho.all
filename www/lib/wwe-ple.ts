@@ -20,6 +20,17 @@ export type PleEvent = {
    * 대회에 같은 줄을 붙이지 않기 위해서다.
    */
   unlisted?: true;
+  /**
+   * NXT 계열 대회. 기본은 메인 로스터(`undefined`)다.
+   *
+   * 로스터도 규모도 다른 대회가 레슬매니아·섬머슬램과 한 줄에 서면 목록이
+   * 무엇을 말하는지 흐려진다. 그래서 `/ple`에서 **따로 선다** — 데이터는 한
+   * 목록이고, 가르는 것은 화면이다(`unlisted`와 같은 방식).
+   *
+   * `undefined`(메인)와 `"nxt"` 둘뿐이다. 값을 늘리려면 먼저 그 칸이 화면 어디에
+   * 설 자리가 있는지 정해야 한다 — 브랜드를 늘리는 것은 섹션을 늘리는 것이다.
+   */
+  brand?: "nxt";
 };
 
 export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
@@ -42,13 +53,64 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     highlight: "챔버 우승자의 Mania 각",
   },
   {
+    month: 3,
+    year: WWE_PLE_YEAR,
+    slug: "vengeance-day",
+    label: "Vengeance Day",
+    dateLabel: "3.7",
+    venue: "올랜도 WWE PC",
+    highlight: "NXT 상반기 분기점",
+    brand: "nxt",
+  },
+  {
     month: 4,
     year: WWE_PLE_YEAR,
     slug: "stand-and-deliver",
     label: "Stand & Deliver",
     dateLabel: "4.4",
-    venue: null,
+    venue: "미주리 체스터필드",
     highlight: "NXT 플래그십 PLE",
+    brand: "nxt",
+  },
+  {
+    month: 6,
+    year: WWE_PLE_YEAR,
+    slug: "great-american-bash",
+    label: "The Great American Bash",
+    dateLabel: "6.28",
+    venue: "올랜도 WWE PC",
+    highlight: "NXT 여름 시즌 개막",
+    brand: "nxt",
+  },
+  {
+    month: 8,
+    year: WWE_PLE_YEAR,
+    slug: "heatwave",
+    label: "Heatwave",
+    dateLabel: "8.30",
+    venue: "텍사스 에딘버그",
+    highlight: "NXT 한여름 대회",
+    brand: "nxt",
+  },
+  {
+    month: 9,
+    year: WWE_PLE_YEAR,
+    slug: "worlds-collide",
+    label: "Worlds Collide",
+    dateLabel: "9.26",
+    venue: "일리노이 로즈몬트",
+    highlight: "Raw·SmackDown·NXT 합동",
+    brand: "nxt",
+  },
+  {
+    month: 10,
+    year: WWE_PLE_YEAR,
+    slug: "halloween-havoc",
+    label: "Halloween Havoc",
+    dateLabel: "10.31",
+    venue: null,
+    highlight: "NXT 핼러윈 특집",
+    brand: "nxt",
   },
   {
     month: 4,
@@ -177,6 +239,26 @@ export const WWE_PLE_LISTED: readonly PleEvent[] = WWE_PLE_MONTHLY_ORDER.filter(
 );
 
 /**
+ * 메인 로스터(Raw·SmackDown) 대회. `/ple` 본 보드와 피처드 카드가 이것을 쓴다.
+ *
+ * **둘은 `WWE_PLE_LISTED`를 나눠 가진다** — 합치면 원래 목록이고, 어느 쪽에도
+ * 안 드는 대회는 없다. `brand` 값을 늘리면 이 자리에 세 번째 목록이 생긴다.
+ */
+export const WWE_PLE_MAIN: readonly PleEvent[] = WWE_PLE_LISTED.filter(
+  (event) => event.brand !== "nxt",
+);
+
+/** NXT 계열 대회. `/ple` 아래 별도 섹션이 이것을 쓴다. */
+export const WWE_PLE_NXT: readonly PleEvent[] = WWE_PLE_LISTED.filter(
+  (event) => event.brand === "nxt",
+);
+
+/** 서버가 준 대회 행이 NXT 계열인가 — DB에는 브랜드 칸이 없다. */
+export function isNxtPle(slug: string): boolean {
+  return getPleBySlug(slug)?.brand === "nxt";
+}
+
+/**
  * 서버가 준 대회 행을 걸러낼 때 쓴다 — DB에는 감춘 대회도 그대로 있다.
  *
  * **카탈로그에 없는 slug는 노출로 본다.** 서버가 우리가 모르는 대회를 새로 알려
@@ -278,8 +360,12 @@ export function getPleThemeClass(slug: string): string | undefined {
   return PLE_THEME_CLASS[slug];
 }
 
-/** 그리드 상단에 크게 강조할 이벤트 — 마감임박 우선, 없으면 가장 가까운 예측 가능 이벤트 */
-export function pickFeaturedPle(events: readonly PleEvent[] = WWE_PLE_LISTED): PleEvent | null {
+/** 그리드 상단에 크게 강조할 이벤트 — 마감임박 우선, 없으면 가장 가까운 예측 가능 이벤트.
+ *
+ * **기본값이 메인 로스터다.** NXT 대회가 더 가깝다는 이유로 본 보드 맨 위에 서면
+ * 따로 세워 둔 섹션이 무의미해진다.
+ */
+export function pickFeaturedPle(events: readonly PleEvent[] = WWE_PLE_MAIN): PleEvent | null {
   const upcoming = events
     .map((event) => ({ event, badge: getPleStatusBadge(event) }))
     .filter(({ badge }) => badge.variant === "deadline" || badge.variant === "open");

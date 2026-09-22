@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PleEventGrid } from "@/components/ple-event-grid";
+import { WWE_PLE_MAIN, WWE_PLE_NXT } from "@/lib/wwe-ple";
 
 export default function ResultsPage() {
   return (
@@ -14,7 +15,9 @@ export default function ResultsPage() {
             예측·순위 화면에 반영됩니다.
           </p>
         </header>
-        <PleEventGrid variant="large" hrefPrefix="/results" />
+        <PleEventGrid variant="large" hrefPrefix="/results" events={WWE_PLE_MAIN} />
+        <h2 className="font-sport mt-10 mb-3 text-lg text-stone-200">NXT</h2>
+        <PleEventGrid variant="large" hrefPrefix="/results" events={WWE_PLE_NXT} />
         <p className="mt-8 text-center text-sm text-stone-500">
           <Link
             href="/ple"

@@ -47,6 +47,14 @@ King & Queen of the Ring)가 둘 남아 있고, 그 둘은 프론트에서도 `d
 - **`night-of-champions`** — 아래 "나머지"로 옮겨 적었던 값인데, 2026-09-22에
   `Night of Champions (2026)` 리비전 1375692907의 인포박스 `date = June 27, 2026`과
   **정확히 일치**함을 확인했다.
+- **NXT 계열 다섯** — 2026-09-22에 인포박스로 확인했다.
+  `NXT Vengeance Day (2026)` 3/7(rev 1374830448) ·
+  `NXT The Great American Bash (2026)` 6/28(rev 1366584485) ·
+  `NXT Heatwave (2026)` 8/30(rev 1375542249) ·
+  `Worlds Collide (2026)` 9/26(rev 1376055676) ·
+  `NXT Halloween Havoc (2026)` 10/31(rev 1375893302, 장소는 TBA).
+  `stand-and-deliver` 4/4도 같은 날 `NXT Stand & Deliver (2026)`
+  리비전 1375463482로 확인했다(미주리 체스터필드).
 - **`crown-jewel`** — `Crown Jewel (2026)` 리비전 1372805732의 인포박스
   `date = November 7, 2026`(리야드 Riyadh Season Stadium at KAFD)으로 확인했다.
 - **`wrestlepalooza`** — `Wrestlepalooza (2026)` 리비전 1373256857의 인포박스
@@ -70,7 +78,13 @@ from datetime import date
 PLE_EVENT_SCHEDULE: dict[str, tuple[date, date | None]] = {
     "royal-rumble": (date(2026, 1, 31), None),
     "elimination-chamber": (date(2026, 2, 28), None),
+    # --- NXT 계열 (2026-09-22 추가, 전부 위키 인포박스로 확인) ---
+    "vengeance-day": (date(2026, 3, 7), None),
     "stand-and-deliver": (date(2026, 4, 4), None),
+    "great-american-bash": (date(2026, 6, 28), None),
+    "heatwave": (date(2026, 8, 30), None),
+    "worlds-collide": (date(2026, 9, 26), None),
+    "halloween-havoc": (date(2026, 10, 31), None),
     "wrestlemania": (date(2026, 4, 18), date(2026, 4, 19)),
     "backlash": (date(2026, 5, 9), None),
     "clash-in-italy": (date(2026, 5, 31), None),
