@@ -47,7 +47,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from kayfabe.app.services.ai_lab_integrity import (
     BOOKMAKER_FALLBACK,
@@ -153,6 +153,18 @@ RULES: tuple[Rule, ...] = (
             "과거로 간주하지 않으므로 통과도 실격도 아닌 보류입니다."
         ),
     ),
+    Rule(
+        code="revision_after_prediction",
+        label="예측보다 나중에 생긴 글을 읽었다고 기록됨",
+        severity=SEVERITY_HOLD,
+        description=(
+            "예측이 읽었다고 기록된 글 중에 예측보다 **나중에** 고쳐진 개정본이 "
+            "있습니다. 그 글은 예측을 만들 때 아직 존재하지 않았으므로 기록이 "
+            "사실일 수 없습니다 — 기록을 뒤늦게 채웠거나 시각이 어긋난 것입니다. "
+            "누수가 확인된 것은 아니므로 실격이 아니라, 증거를 믿을 수 없어 "
+            "보류입니다."
+        ),
+    ),
 )
 
 _RULE_BY_CODE = {rule.code: rule for rule in RULES}
@@ -175,6 +187,16 @@ class RetrievalRow:
     source_url: str | None
     #: 그때 읽은 개정본의 시각. 모르면 `None` — 레거시 청크를 읽었을 때다.
     source_revised_at: datetime | None
+    #: 아래 넷은 **판정이 보지 않는다.** 감사 화면(Phase 9)이 증거를 늘어놓을 때만
+    #: 쓴다. 기본값을 둔 이유는 판정만 재는 호출자를 그대로 두기 위해서다 — 이
+    #: 값들이 없어도 판정은 한 글자도 달라지지 않는다.
+    #:
+    #: 프롬프트에 들어간 순서. 검색 순위가 아니라 **읽은 순서**다.
+    rank: int = 0
+    source_revision_id: str | None = None
+    published_at: datetime | None = None
+    #: 코사인 거리. 작을수록 가깝다. 못 구하면 `None` — 0.0으로 채우지 않는다.
+    distance: float | None = None
 
 
 @dataclass(frozen=True)
@@ -488,6 +510,13 @@ def _judge(
         if retrievals
         else _corpus(sources, provenance_by_url, row.event_start_date),
     )
+    if retrievals:
+        # **기록이 없으면 이 규칙은 아예 묻지 않는다** (Phase 2). 물음의 주어가
+        # "읽었다고 기록된 글"이라, 기록이 없으면 참도 거짓도 아닌 무의미다.
+        # `applicable=False`로 적으면 그건 "재려 했는데 못 쟀다"는 다른 말이 되고,
+        # 기록이 생기기 전(Stage 4 이전)의 예측 전부를 소급해서 보류로 떨어뜨린다 —
+        # 그건 이 단계가 하려는 일이 아니다.
+        verdicts = (*verdicts, _revision_after_prediction(retrievals, row.generated_at))
     return _item(row, _status_of(verdicts), verdicts)
 
 
@@ -550,6 +579,135 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
     )
 
 
+#: 증거 하나가 **시간 규칙에서 차지하는 자리** (Phase 6·9). 판정 문장을 만들어 내는
+#: 대신 이 값으로 내보내는 이유는, 화면이 색과 문구를 고를 때 한국어 문장을 파싱하지
+#: 않게 하기 위해서다.
+EVIDENCE_BEFORE_EVENT = "before_event"
+EVIDENCE_NOT_BEFORE_EVENT = "not_before_event"
+EVIDENCE_UNKNOWN_REVISION = "unknown_revision"
+EVIDENCE_UNKNOWN_EVENT_DATE = "unknown_event_date"
+
+
+def _temporal_position(
+    revised_at: datetime | None, event_start_date: date | None
+) -> str:
+    """읽은 글이 경기보다 앞선 것인가. **판정과 설명이 함께 쓰는 단 하나의 정의다.**
+
+    `_corpus_from_retrievals`(판정)와 `explain_evidence`(감사 화면)가 둘 다 여기를
+    지난다. 따로 적으면 언젠가 한쪽만 바뀌어, **화면이 판정과 다른 이야기를 한다** —
+    감사 시스템에서 그것은 버그가 아니라 신뢰의 붕괴다.
+
+    **날짜끼리 비교한다.** 대회 날짜는 `DATE`라 시각이 없고, 없는 정밀도를 지어내지
+    않는다. 같은 날은 앞선 것이 아니다 — 경기 당일 개정본에 결과가 없다는 보장이 없다.
+    """
+    if event_start_date is None:
+        return EVIDENCE_UNKNOWN_EVENT_DATE
+    if revised_at is None:
+        return EVIDENCE_UNKNOWN_REVISION
+    if revised_at.date() >= event_start_date:
+        return EVIDENCE_NOT_BEFORE_EVENT
+    return EVIDENCE_BEFORE_EVENT
+
+
+#: 읽었다고 기록된 글이 **예측 시점에 이미 있던 글인가** (Phase 2). 위의 `EVIDENCE_*`와
+#: 묻는 것이 다르다 — 저쪽은 "결과가 적혀 있을 수 있나"(경기일 기준)이고, 이쪽은
+#: "그때 읽는 것이 가능하긴 했나"(생성 시각 기준)다. 둘을 한 값으로 접으면 서로 다른
+#: 두 고장이 같은 이름으로 보고된다.
+REVISION_BEFORE_PREDICTION = "before_prediction"
+REVISION_AFTER_PREDICTION = "after_prediction"
+REVISION_UNKNOWN = "unknown_revision"
+
+
+def _to_utc(moment: datetime) -> datetime:
+    """비교 전에 표시대(tz)를 맞춘다. **시각을 옮기지 않는다.**
+
+    PG는 aware를 돌려주지만 SQLite는 naive를 돌려준다. 표시가 빠진 값을 그대로
+    비교하면 `TypeError`로 터지고, 그것은 "판정할 수 없다"가 아니라 그냥 사고다.
+    빠진 표시는 **UTC로 읽는다** — 이 저장소가 시각을 저장하는 유일한 기준이다.
+    """
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=UTC)
+    return moment.astimezone(UTC)
+
+
+def _revision_position(revised_at: datetime | None, generated_at: datetime) -> str:
+    """그 개정본은 예측보다 **먼저** 있던 것인가 (Phase 2).
+
+    **같은 시각은 미래가 아니다.** 여기서는 `>`를 쓰고 `_temporal_position`은 `>=`를
+    쓰는데, 다른 규칙을 적용한 것이 아니라 **재는 값의 정밀도가 다르기** 때문이다.
+    대회 날짜는 `DATE`라 "같은 날"이 하루 전체를 뜻하고 그 안에 경기가 들어 있지만,
+    여기 둘은 초 단위 시각이라 "같은 순간"은 말 그대로 한 점이다. 없는 정밀도를
+    지어내지 않는 것과 있는 정밀도를 버리지 않는 것은 같은 원칙의 양면이다.
+    """
+    if revised_at is None:
+        return REVISION_UNKNOWN
+    if _to_utc(revised_at) > _to_utc(generated_at):
+        return REVISION_AFTER_PREDICTION
+    return REVISION_BEFORE_PREDICTION
+
+
+@dataclass(frozen=True)
+class EvidenceVerdict:
+    """증거 한 조각 + **그것이 판정에서 한 역할** (Phase 6·9).
+
+    감사 화면이 "왜 실격인가"를 설명할 때 쓰는 단위다. **LLM에게 설명시키지
+    않는다** — 여기 담긴 것은 전부 결정적 규칙 엔진이 실제로 본 값이고, `temporal`과
+    `self_reference`는 판정이 쓴 것과 같은 함수에서 나온다.
+    """
+
+    rank: int
+    source_url: str | None
+    source_revision_id: str | None
+    source_revised_at: datetime | None
+    published_at: datetime | None
+    distance: float | None
+    #: `EVIDENCE_*` 넷 중 하나.
+    temporal: str
+    #: `REVISION_*` 셋 중 하나 (Phase 2). **`temporal`과 다른 물음이다** — 저쪽은
+    #: 경기일, 이쪽은 예측 생성 시각을 기준으로 잰다.
+    revision_vs_prediction: str
+    #: 이 글이 **그 대회 자체**를 다룬 문서인가. 자기참조 규칙이 보는 것과 같은 대조다.
+    self_reference: bool
+
+
+def explain_evidence(
+    retrievals: Sequence[RetrievalRow],
+    *,
+    event_label: str,
+    event_start_date: date | None,
+    generated_at: datetime,
+) -> tuple[EvidenceVerdict, ...]:
+    """읽은 청크 하나하나에 **판정에서의 역할**을 붙인다 (Phase 9).
+
+    **새 판정을 하지 않는다.** 규칙의 결론은 이미 `summarize_evaluation`이 냈고, 이
+    함수는 그 결론의 근거를 조각 단위로 펼칠 뿐이다. 그래서 여기서 나온 값이 규칙의
+    판정과 어긋날 수 없다 — 같은 `_temporal_position`·`cites_own_event`를 지난다.
+
+    **읽은 순서를 지킨다.** 순서가 곧 "무엇을 먼저 읽었는가"이고, 정렬을 바꾸면
+    그 사실이 사라진다.
+    """
+    return tuple(
+        EvidenceVerdict(
+            rank=item.rank,
+            source_url=item.source_url,
+            source_revision_id=item.source_revision_id,
+            source_revised_at=item.source_revised_at,
+            published_at=item.published_at,
+            distance=item.distance,
+            temporal=_temporal_position(item.source_revised_at, event_start_date),
+            revision_vs_prediction=_revision_position(
+                item.source_revised_at, generated_at
+            ),
+            self_reference=(
+                # 출처가 없으면 대조할 것이 없다. **모름을 자기참조라고 하지 않는다.**
+                bool(item.source_url)
+                and cites_own_event((item.source_url or "",), event_label)
+            ),
+        )
+        for item in sorted(retrievals, key=lambda r: r.rank)
+    )
+
+
 def _corpus_from_retrievals(
     retrievals: tuple[RetrievalRow, ...], event_start_date: date | None
 ) -> RuleVerdict:
@@ -574,13 +732,14 @@ def _corpus_from_retrievals(
             ),
         )
 
-    unknown = [item for item in retrievals if item.source_revised_at is None]
-    too_late = [
-        item
+    # **감사 화면과 같은 함수를 지난다**(`_temporal_position`). 여기서 비교를 따로
+    # 적으면 언젠가 한쪽만 바뀌어, 화면이 판정과 다른 이야기를 하게 된다.
+    positions = [
+        _temporal_position(item.source_revised_at, event_start_date)
         for item in retrievals
-        if item.source_revised_at is not None
-        and item.source_revised_at.date() >= event_start_date
     ]
+    unknown = [p for p in positions if p == EVIDENCE_UNKNOWN_REVISION]
+    too_late = [p for p in positions if p == EVIDENCE_NOT_BEFORE_EVENT]
 
     if too_late:
         return _verdict(
@@ -608,6 +767,68 @@ def _corpus_from_retrievals(
         applicable=True,
         detail=(
             f"읽은 청크 {len(retrievals)}건 모두 경기 시작일보다 앞선 개정본입니다."
+        ),
+    )
+
+
+def _revision_after_prediction(
+    retrievals: tuple[RetrievalRow, ...], generated_at: datetime
+) -> RuleVerdict:
+    """읽었다고 기록된 글이 **예측보다 나중에 생긴 글은 아닌가** (Phase 2).
+
+    코퍼스 규칙과 묻는 것이 다르다. 저쪽은 "그 글에 결과가 적혀 있을 수 있나"를
+    경기일로 재고, 여기서는 **그 기록이 애초에 성립하는가**를 생성 시각으로 잰다.
+    예측이 읽을 수 없었던 글이 증거 목록에 있다면 그 목록은 사실이 아니다 — 기록을
+    뒤늦게 채웠거나, 개정본 시각이 엉뚱한 문서 것이거나, 시계가 어긋난 것이다.
+
+    **`temporal_inversion`과 섞지 않는다.** 그쪽은 `generated_at`과 `finished_at`,
+    즉 *결과*와 예측의 선후다. 여기는 *근거*와 예측의 선후다. 한쪽이 참이어도
+    다른 쪽은 거짓일 수 있으므로 한 규칙으로 접으면 화면이 원인을 틀리게 말한다.
+
+    **실격이 아니라 보류다.** 이 기록이 거짓이라는 것은 이 예측이 결과를 봤다는
+    뜻이 아니다. 증명할 수 없게 됐다는 뜻이고, 그것이 `hold`의 정의다.
+
+    **개정본 시각을 모르는 청크는 여기서 막지 않는다.** 모름을 괜찮다고 접는 것이
+    아니라, 기록이 있는 경로에서는 `unverifiable_corpus`가 모름을 반드시 `failed`로
+    내어 그 예측을 이미 붙잡고 있기 때문이다. 같은 결손을 두 규칙이 각각 세면
+    "왜 막혔나"가 두 배로 부풀어 보인다. 대신 사유 문장이 **아는 것만 봤다**고
+    분명히 적는다 — 전량을 확인했다고 말하지 않는다.
+    """
+    positions = [
+        _revision_position(item.source_revised_at, generated_at) for item in retrievals
+    ]
+    future = [p for p in positions if p == REVISION_AFTER_PREDICTION]
+    unknown = [p for p in positions if p == REVISION_UNKNOWN]
+
+    if future:
+        return _verdict(
+            "revision_after_prediction",
+            failed=True,
+            applicable=True,
+            detail=(
+                f"읽은 청크 {len(future)}/{len(retrievals)}건이 예측 생성 "
+                f"{generated_at.isoformat()}보다 나중 개정본입니다. 그 글은 예측을 "
+                "만들 때 아직 없었으므로 이 기록은 사실일 수 없습니다."
+            ),
+        )
+    if unknown:
+        return _verdict(
+            "revision_after_prediction",
+            failed=False,
+            applicable=True,
+            detail=(
+                f"시각을 아는 {len(retrievals) - len(unknown)}건 중 예측보다 나중인 "
+                f"개정본은 없습니다. 나머지 {len(unknown)}건은 시각이 없어 "
+                "`unverifiable_corpus`가 따로 잡습니다."
+            ),
+        )
+    return _verdict(
+        "revision_after_prediction",
+        failed=False,
+        applicable=True,
+        detail=(
+            f"읽은 청크 {len(retrievals)}건 모두 예측 생성 이전 개정본입니다 — "
+            "그때 실제로 읽을 수 있던 글입니다."
         ),
     )
 

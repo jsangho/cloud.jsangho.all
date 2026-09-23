@@ -141,6 +141,9 @@ class PredictionRow:
     #: 물음 자체가 회수된 것이다. 기본값이 `True`인 이유는 이 필드를 모르는 기존
     #: 호출자를 그대로 두기 위해서다 — 모르면 "있다"로 보던 지금까지와 같다.
     match_exists: bool = True
+    #: 지식 검색에 던진 질의 (Phase 3). **감사 화면만 쓰고 판정은 보지 않는다.**
+    #: `None`은 기록 전이라는 뜻이고, 경기 행이 사라진 예측에서는 영영 복원되지 않는다.
+    knowledge_query: str | None = None
 
 
 @dataclass(frozen=True)
@@ -155,6 +158,14 @@ class ReportRow:
     #: 에이전트가 쓴 판단 요약. 의견이 없어도 이유가 적혀 있어 근거로 쓸 만하다.
     summary: str
     sources: tuple[str, ...]
+    #: 아래 둘은 이 의견을 만든 **판**이다 (Phase 4). 감사 화면만 쓰고 집계는 보지
+    #: 않는다. `None`은 Phase 4 이전에 저장된 리포트라 기록이 없다는 뜻이다 —
+    #: 백필하지 않았으므로 빈 것이 정직한 상태다.
+    #:
+    #: **모델 이름은 여기 없다.** 그 값은 DB에만 두고 응답으로 내보내지 않는다
+    #: (하네스 §11-6). 판을 가리키는 데는 아래 둘로 충분하다.
+    agent_version: str | None = None
+    prompt_version: str | None = None
 
 
 @dataclass(frozen=True)

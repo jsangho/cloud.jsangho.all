@@ -41,6 +41,39 @@ def _check_ratio(value: float, name: str) -> float:
 
 
 @dataclass(frozen=True)
+class AgentRuntime:
+    """리포트 하나가 **어떤 조건에서 만들어졌는가** (Phase 4).
+
+    의견(`AgentReport`)과 분리해 두는 이유는 둘이 다른 것을 말하기 때문이다. 의견은
+    "누가 이긴다고 봤는가"이고, 이 값은 "그 의견을 낸 것이 무엇이었는가"다. 프롬프트를
+    고치거나 모델을 갈아 끼우면 같은 경기에서 다른 의견이 나오는데, 그 기록이 없으면
+    **두 예측이 왜 다른지 사후에 물을 수 없다.**
+
+    세 칸의 성격이 서로 다르다. 그 차이를 감추지 않는다:
+
+    * `model` — 그 호출이 **실제로 지정한** 모델 이름. 벤더가 따로 주는 버전 문자열이
+      아니라 모델 id 자체다(Gemini는 그런 값을 주지 않으므로 지어내지 않는다).
+      LLM을 쓰지 않는 오즈 에이전트, 그리고 모델을 지정하지 않아 허브 기본값
+      (`GEMINI_MODEL`)에 맡긴 호출은 `None`이다 — **`None`은 "모른다"가 아니라
+      "우리가 고정하지 않았다"는 사실이다.** 예비 모델로 넘어간 호출은 예비 쪽
+      이름이 들어간다. 주 모델 이름을 적으면 그 기록이 거짓이 된다.
+    * `prompt_version` — 지시문에서 **파생된** 해시라 손으로 못 속인다.
+      덮는 범위는 페르소나 · 조립 틀 · 출력 규칙이다. 모델을 부르지 않았으면 `None`.
+    * `agent_version` — **사람이 선언하는** 값이다. 판독·의견 강등·무게 계산처럼
+      해시로 잡히지 않는 로직의 판을 가리킨다. 파생값이 아니므로 올리는 것을 잊으면
+      **틀린 값이 된다** — 그 한계를 알고 쓴다. 대신 항상 존재한다.
+    """
+
+    agent_version: str
+    model: str | None = None
+    prompt_version: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.agent_version:
+            raise ValueError("agent_version은 비어 있을 수 없습니다.")
+
+
+@dataclass(frozen=True)
 class AgentReport:
     """에이전트 한 명의 의견.
 
@@ -53,6 +86,10 @@ class AgentReport:
     weight: float
     summary: str
     sources: tuple[str, ...] = ()
+    #: 이 의견을 만든 조건 (Phase 4). **`None`은 기록이 없다는 뜻이다** — Phase 4
+    #: 이전에 저장된 리포트가 그렇다. 사후에 지금 값으로 채우지 않는다. 그때 어떤
+    #: 프롬프트였는지는 아무도 모르고, 지금 것을 적으면 거짓 기록이 된다.
+    runtime: AgentRuntime | None = None
 
     def __post_init__(self) -> None:
         _check_ratio(self.weight, "weight")
@@ -86,6 +123,15 @@ class KnowledgeRetrieval:
     source_url: str | None = None
     #: 본문 sha256. 재수집 뒤에도 같은 글인지 대조할 수 있는 유일한 값이다.
     content_hash: str | None = None
+    #: **그때 프롬프트에 들어간 본문 그대로** (Phase 3). 해시만으로는 같은 글인지
+    #: *대조*만 되고 무엇을 읽었는지는 복원되지 않는다 — 재수집이 옛 청크를 지우면
+    #: (`replace_document_chunks`) 그 글은 어디에도 남지 않는다. 다른 칸과 같은
+    #: 이유로 값을 베껴 둔다: 증거가 필요한 시점에 증거가 있어야 한다.
+    #:
+    #: **수집 허용 도메인의 글만 여기 온다.** 코퍼스에 넣을 수 없는 글은 애초에
+    #: 검색되지 않으므로, 이 칸이 하네스 §4-8(유료 기사 본문 저장 금지)을 새로
+    #: 건드리지 않는다. `None`은 기록 전(Phase 3 이전)이라는 뜻이다.
+    content: str | None = None
     source_revision_id: str | None = None
     source_revised_at: datetime | None = None
     published_at: datetime | None = None
@@ -119,6 +165,12 @@ class AgentPrediction:
     #: 이 예측을 만들 때 읽은 청크들 (Phase 3-13). **비어 있는 것은 정상이다** —
     #: 코퍼스에 맞는 글이 없었거나 검색이 실패한 경우이고, 옛 예측에는 아예 없다.
     retrievals: tuple[KnowledgeRetrieval, ...] = field(default_factory=tuple)
+    #: 그 청크들을 찾을 때 **실제로 던진 질의** (Phase 3). 경기 제목과 선택지
+    #: 이름에서 만들어지는데, **카드가 바뀌면 다시 만들 수 없다** — 경기 행이
+    #: 사라진 예측(`withdrawn_match`)이 이미 있고, 그런 예측은 질의를 영영 잃는다.
+    #: 파생 가능해 보이는 값이라도 파생의 재료가 사라지면 기록해 둔 쪽만 남는다.
+    #: `None`은 기록 전이라는 뜻이다.
+    knowledge_query: str | None = None
 
     def __post_init__(self) -> None:
         if not self.event_slug or not self.match_key:

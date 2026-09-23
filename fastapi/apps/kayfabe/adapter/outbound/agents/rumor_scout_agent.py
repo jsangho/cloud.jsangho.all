@@ -15,16 +15,19 @@ from collections.abc import Sequence
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
     RateGate,
     ask_for_report,
-    describe_knowledge,
-    describe_match,
-    json_rule,
+    build_prompt,
+    prompt_version,
     shared_rate_gate,
     silent,
     usable_knowledge,
 )
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
 from kayfabe.app.ports.output.rumor_scout_port import RumorScoutPort
-from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
+from kayfabe.domain.entities.agent_prediction import (
+    AgentKind,
+    AgentReport,
+    AgentRuntime,
+)
 from ontology.app.ports.input.gemini_generation_use_case import GeminiGenerationUseCase
 
 _NO_KNOWLEDGE = "참고할 소식이 없습니다."
@@ -36,6 +39,13 @@ _PERSONA = (
     "그런 사실이 없으면 pick을 null로 두세요. "
     "각본의 인기나 인상만으로 승자를 고르지 마세요 — 그것은 당신의 일이 아닙니다."
 )
+
+#: 이 에이전트 **로직**의 판 (Phase 4). 선언값이라 손으로 올린다 — 자세한 것은
+#: `AgentRuntime` 독스트링.
+AGENT_VERSION = "rumor@1"
+
+#: 지시문에서 파생된다. 서사와 페르소나가 달라 값도 다르다.
+PROMPT_VERSION = prompt_version(_PERSONA)
 
 
 class GeminiRumorScout(RumorScoutPort):
@@ -60,18 +70,19 @@ class GeminiRumorScout(RumorScoutPort):
     ) -> AgentReport:
         chunks = usable_knowledge(knowledge)
         if not chunks:
-            return silent(AgentKind.RUMOR, _NO_KNOWLEDGE)
+            # 모델을 부르지 않았다 — 모델·프롬프트 칸은 비우고 판만 남긴다.
+            return silent(
+                AgentKind.RUMOR,
+                _NO_KNOWLEDGE,
+                AgentRuntime(agent_version=AGENT_VERSION),
+            )
 
-        prompt = (
-            f"{_PERSONA}\n\n"
-            f"[경기]\n{describe_match(context)}\n\n"
-            f"[자료]\n{describe_knowledge(chunks)}\n\n"
-            f"{json_rule()}"
-        )
         return await ask_for_report(
             self._generation_use_case,
             agent=AgentKind.RUMOR,
-            prompt=prompt,
+            agent_version=AGENT_VERSION,
+            prompt_version=PROMPT_VERSION,
+            prompt=build_prompt(_PERSONA, context, chunks),
             context=context,
             chunks=chunks,
             gate=self._rate_gate,

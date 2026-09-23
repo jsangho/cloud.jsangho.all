@@ -494,3 +494,85 @@ class TestRetrievalRecord:
         saved = repo.saved[0]
         assert saved.source is PredictionSource.BOOKMAKER_FALLBACK
         assert [item.rank for item in saved.retrievals] == [1, 2]
+
+
+class TestQueryAndSnapshot:
+    """무엇을 물었고 무엇을 읽었는가 (Phase 3).
+
+    앞의 `TestRetrievalRecord`가 "어느 청크를 읽었는지"를 봤다면, 여기서 보는 것은
+    **그 청크를 찾은 질의**와 **그 청크의 본문**이다. 둘 다 생성 시점에만 존재하는
+    값이라, 그때 안 남기면 나중에 만들어 낼 수 없다.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_recorded_query_is_the_one_that_was_sent(self) -> None:
+        """**검색에 쓴 문자열과 기록된 문자열이 같은 값이어야** 기록이 증거가 된다.
+
+        저장할 때 질의를 다시 만드는 구조였다면 그 사이에 조립 규칙이 바뀌어도
+        아무도 모른다 — 기록은 그대로인데 실제로 던진 것은 다른 문자열이 된다.
+        """
+        knowledge = FakeKnowledge()
+        interactor, repo = build(knowledge=knowledge)
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        assert repo.saved[0].knowledge_query == knowledge.queries[0]
+
+    @pytest.mark.asyncio
+    async def test_the_chunk_text_is_snapshotted_not_just_hashed(self) -> None:
+        """해시는 **대조**만 해 준다. 재수집이 옛 청크를 지우면 원문은 사라진다."""
+        interactor, repo = build(knowledge=FakeKnowledge(chunks=self._chunks()))
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        assert [item.content for item in repo.saved[0].retrievals] == [
+            "먼저 읽은 글",
+            "나중에 읽은 글",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_failed_search_still_records_what_was_asked(self) -> None:
+        """**던진 것은 던진 것이다.**
+
+        읽은 것이 없다고 물은 것까지 없던 일이 되지는 않는다. 무엇으로 찾았는데
+        아무것도 안 나왔는지가 그 자체로 기록이다 — 코퍼스를 의심할 때 필요한 값이다.
+        """
+        interactor, repo = build(
+            knowledge=FakeKnowledge(error=KnowledgeSourceUnavailableError("down"))
+        )
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        saved = repo.saved[0]
+        assert saved.retrievals == ()
+        assert saved.knowledge_query is not None
+        assert "Roman Reigns" in saved.knowledge_query
+
+    @pytest.mark.asyncio
+    async def test_a_bookmaker_fallback_records_the_query_too(self) -> None:
+        """폴백도 같은 질의로 검색했다. 기록에서 빼면 그 사실이 사라진다."""
+        dead = AgentUnavailableError("quota")
+        knowledge = FakeKnowledge(chunks=self._chunks())
+        interactor, repo = build(
+            knowledge=knowledge,
+            storyline=FakeStoryline(error=dead),
+            odds=FakeOdds(error=dead),
+            rumor=FakeRumor(error=dead),
+        )
+
+        await interactor.generate(GeneratePredictionCommand(event_slug="summerslam"))
+
+        saved = repo.saved[0]
+        assert saved.source is PredictionSource.BOOKMAKER_FALLBACK
+        assert saved.knowledge_query == knowledge.queries[0]
+
+    @staticmethod
+    def _chunks() -> list[KnowledgeChunk]:
+        return [
+            KnowledgeChunk(
+                text="먼저 읽은 글", source_url="https://en.wikipedia.org/wiki/A"
+            ),
+            KnowledgeChunk(
+                text="나중에 읽은 글", source_url="https://en.wikipedia.org/wiki/B"
+            ),
+        ]

@@ -13,9 +13,12 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
     AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
+    AiLabLeakageResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    AiLabReadinessResponse,
+    PredictionAuditResponse,
 )
 
 
@@ -59,6 +62,23 @@ class AiLabUseCase(ABC):
         ...
 
     @abstractmethod
+    async def get_audit(
+        self, *, event_slug: str, match_key: str
+    ) -> PredictionAuditResponse | None:
+        """예측 **한 건**의 전체 계보 (Phase 9).
+
+        언제 만들었는지 · 어느 판의 에이전트였는지 · 무엇을 읽었는지 · 그 글이 어느
+        개정본인지 · 그 개정본이 경기보다 앞서는지 · 왜 이 판정인지를 한자리에 모은다.
+
+        **판정을 다시 하지 않는다.** `get_evaluation()`과 같은 계산에서 뽑아 오므로
+        두 화면이 같은 예측을 두고 다른 말을 할 수 없다.
+
+        없는 예측이면 `None`이다 — 없음은 예외가 아니고, HTTP 상태로 옮기는 것은
+        라우터의 일이다(도메인·포트에서 `HTTPException`을 던지지 않는다, §4-6).
+        """
+        ...
+
+    @abstractmethod
     async def get_performance(self) -> AiLabPerformanceResponse:
         """최종 승률이 세 의견에서 **어떻게 접혔는지** (Phase 3-5).
 
@@ -66,6 +86,31 @@ class AiLabUseCase(ABC):
         정확도는 `get_agents()`가 이미 낸다. 여기서 또 세면 같은 숫자가 세 번 나온다.
 
         새 쿼리를 쓰지 않는다 — 이미 읽는 예측·리포트 목록을 잇는다.
+        """
+        ...
+
+    @abstractmethod
+    async def get_leakage(self) -> AiLabLeakageResponse:
+        """**어느 문서가 어느 예측을 막았는가** (Phase 10).
+
+        평가 화면은 "몇 건이 실격인가"를 내고, 지식 화면은 "어느 문서가 쓰였는가"를
+        낸다. 그 둘을 잇는 간선이 여기서 나온다 — 판정은 다시 하지 않고
+        `get_evaluation()`과 같은 계산의 결론을 문서로 나눌 뿐이다.
+
+        새 쿼리를 쓰지 않는다 — 평가 화면이 이미 읽는 네 목록을 그대로 쓴다.
+        """
+        ...
+
+    @abstractmethod
+    async def get_readiness(self) -> AiLabReadinessResponse:
+        """**지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가** (Phase 8).
+
+        다른 화면이 전부 뒤를 보는데 이것만 앞을 본다. 누수는 판정에서가 아니라
+        수집에서 생기므로, 예측을 만들기 전에 코퍼스를 보는 자리가 필요하다.
+
+        **판정하지 않는다.** 여기 나오는 것은 위험이고, 자격은 예측이 생긴 뒤에
+        `get_evaluation()`이 정한다. 검색도 돌리지 않으므로 지뢰가 실제로 뽑힐지는
+        모른다 — 그래서 과대평가 쪽으로 틀린다.
         """
         ...
 

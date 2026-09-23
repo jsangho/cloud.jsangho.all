@@ -30,6 +30,7 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentKind,
     AgentPrediction,
     AgentReport,
+    AgentRuntime,
     KnowledgeRetrieval,
     PredictionSource,
 )
@@ -114,6 +115,8 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
             rationale=prediction.rationale,
             source=str(prediction.source),
             generated_at=prediction.generated_at,
+            # 검색 질의 (Phase 3). 카드가 바뀌면 다시 만들 수 없는 값이다.
+            knowledge_query=prediction.knowledge_query,
             reports=[
                 AgentReportModel(
                     agent=str(report.agent),
@@ -121,6 +124,15 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
                     weight=report.weight,
                     summary=report.summary,
                     sources=SOURCE_SEPARATOR.join(report.sources),
+                    # 실행 조건 (Phase 4). 기록이 없는 리포트는 세 칸 모두 NULL로
+                    # 남는다 — 비어 있는 것이 "기록하지 않았다"는 정직한 상태다.
+                    model_version=report.runtime.model if report.runtime else None,
+                    prompt_version=(
+                        report.runtime.prompt_version if report.runtime else None
+                    ),
+                    agent_version=(
+                        report.runtime.agent_version if report.runtime else None
+                    ),
                 )
                 for report in prediction.reports
             ],
@@ -132,6 +144,8 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
                     chunk_id=item.chunk_id,
                     source_url=item.source_url,
                     content_hash=item.content_hash,
+                    # 본문 스냅샷 (Phase 3). 해시는 대조만 되고 복원은 안 된다.
+                    content=item.content,
                     source_revision_id=item.source_revision_id,
                     source_revised_at=item.source_revised_at,
                     published_at=item.published_at,
@@ -170,6 +184,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
                 weight=report.weight,
                 summary=report.summary,
                 sources=tuple(s for s in report.sources.split(SOURCE_SEPARATOR) if s),
+                runtime=_to_runtime(report),
             )
             for report in row.reports
         ),
@@ -180,6 +195,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
                 chunk_id=item.chunk_id,
                 source_url=item.source_url,
                 content_hash=item.content_hash,
+                content=item.content,
                 source_revision_id=item.source_revision_id,
                 source_revised_at=item.source_revised_at,
                 published_at=item.published_at,
@@ -187,6 +203,23 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
             )
             for item in row.retrievals
         ),
+        knowledge_query=row.knowledge_query,
+    )
+
+
+def _to_runtime(report: AgentReportModel) -> AgentRuntime | None:
+    """실행 조건 기록 (Phase 4). **`agent_version`이 있는지로 판단한다.**
+
+    셋 중 이 칸만 기록된 모든 리포트에 존재한다 — 모델과 프롬프트는 LLM을 부른
+    리포트에만 있다. `model_version`을 기준으로 삼으면 오즈 에이전트의 기록이
+    통째로 "기록 없음"이 되어, 기록하지 않은 옛 행과 구분되지 않는다.
+    """
+    if report.agent_version is None:
+        return None
+    return AgentRuntime(
+        agent_version=report.agent_version,
+        model=report.model_version,
+        prompt_version=report.prompt_version,
     )
 
 
@@ -196,7 +229,7 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     except (TypeError, ValueError):
         return None
 
-    options = _options_from_card(card)
+    options = options_from_card(card)
     if not options:
         return None
 
@@ -211,8 +244,12 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     )
 
 
-def _options_from_card(card: dict[str, Any]) -> tuple[MatchOption, ...]:
-    """카드 JSON → 선택지. `pick` 값은 `ple_matches.winner_pick`과 같은 형식이다."""
+def options_from_card(card: dict[str, Any]) -> tuple[MatchOption, ...]:
+    """카드 JSON → 선택지. `pick` 값은 `ple_matches.winner_pick`과 같은 형식이다.
+
+    **공개 함수다** — 감사의 재현(Phase 5)도 같은 카드를 같은 규칙으로 읽어야
+    한다. 두 벌로 두면 한쪽만 고친 날 재현이 생성과 다른 선택지를 본다.
+    """
     if card.get("format") == "singles":
         sides = []
         for pick in ("left", "right"):

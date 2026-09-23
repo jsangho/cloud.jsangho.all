@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
+import { SeverityBadge, StatusBadge } from "@/components/ai-lab/eligibility-badges";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다.
 import {
@@ -20,7 +22,6 @@ import {
   type AiLabPerformance,
   type ConsensusLevel,
   type EvaluationItem,
-  type EvaluationStatus,
   type PerformanceItem,
 } from "@/lib/ai-lab-api";
 import { cn } from "@/lib/utils";
@@ -212,75 +213,36 @@ function EligiblePerformanceBlock({
 
 function EligibilityRow({ item }: { item: EvaluationItem }) {
   const blocking = item.verdicts.filter((v) => v.failed || !v.applicable);
+  const href = `/ai-lab/audit/${encodeURIComponent(item.eventSlug)}/${encodeURIComponent(item.matchKey)}`;
 
   return (
-    <li className="rounded-xl border border-border bg-card px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{item.eventLabel}</p>
-          <p className="mt-0.5 truncate text-sm font-medium text-foreground">{item.matchTitle}</p>
+    <li className="rounded-xl border border-border bg-card transition-colors hover:border-data-500/50">
+      {/* 줄 전체가 감사 화면으로 가는 입구다 (Phase 9). 사유만 읽고 끝나지 않고
+          "그래서 무엇을 읽었길래"까지 갈 수 있어야 한다. */}
+      <Link href={href} className="block px-4 py-3 focus-visible:outline-2">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">{item.eventLabel}</p>
+            <p className="mt-0.5 truncate text-sm font-medium text-foreground">{item.matchTitle}</p>
+          </div>
+          <StatusBadge status={item.status} />
         </div>
-        <StatusBadge status={item.status} />
-      </div>
-      {blocking.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1">
-          {blocking.map((verdict) => (
-            <li key={verdict.code} className="flex gap-2 text-xs text-muted-foreground">
-              <span aria-hidden className="select-none">
-                ·
-              </span>
-              {/* 사유는 서버가 낸 문장 그대로다. */}
-              <span>{verdict.detail}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+        {blocking.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-1">
+            {blocking.map((verdict) => (
+              <li key={verdict.code} className="flex gap-2 text-xs text-muted-foreground">
+                <span aria-hidden className="select-none">
+                  ·
+                </span>
+                {/* 사유는 서버가 낸 문장 그대로다. */}
+                <span>{verdict.detail}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-xs text-data">판정 근거 보기 →</p>
+      </Link>
     </li>
-  );
-}
-
-/** **보류를 실격으로 적지 않는다.** 색만으로 말하지 않고 글자를 함께 단다. */
-function SeverityBadge({ severity }: { severity: string }) {
-  const label = severity === "disqualify" ? "실격" : severity === "hold" ? "보류" : "제외";
-  return (
-    <span
-      className={cn(
-        "rounded border px-1.5 py-0.5 text-xs",
-        severity === "disqualify"
-          ? "border-live/50 bg-live/10 text-live"
-          : "border-border text-muted-foreground",
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status: EvaluationStatus }) {
-  const label: Record<EvaluationStatus, string> = {
-    eligible: "자격 있음",
-    disqualified: "실격",
-    held: "보류",
-    // 실격이 아니다 — 누수가 확정된 것과 표본의 성격이 다른 것은 다른 사실이다.
-    ex_post: "사후 재현",
-    // 결과를 기다리는 것이 아니라 물음이 회수된 것이다 — pending과 다른 사실이다.
-    withdrawn_match: "경기 사라짐",
-    pending: "결과 없음",
-    not_applicable: "평가 대상 아님",
-  };
-  return (
-    <span
-      className={cn(
-        "shrink-0 rounded border px-1.5 py-0.5 text-xs",
-        status === "eligible"
-          ? "border-data-500/50 bg-data-surface text-data"
-          : status === "disqualified"
-            ? "border-live/50 bg-live/10 text-live"
-            : "border-border text-muted-foreground",
-      )}
-    >
-      {label[status]}
-    </span>
   );
 }
 

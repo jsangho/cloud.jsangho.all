@@ -21,18 +21,23 @@ repos:
         pass_filenames: false
 
       # ── Python ───────────────────────────────────────────────
+      #
+      # **셋 다 `uv run`으로 부른다.** 맨 이름으로 부르면 둘 중 하나가 난다 —
+      # 실행 파일을 아예 못 찾거나(훅을 설치하기 전까지 아무도 몰랐다), PATH에
+      # 걸린 다른 파이썬(Anaconda 등)의 전역 설치가 먼저 잡혀 엉뚱한 버전이
+      # 돈다. 루트 `CLAUDE.md` §5가 같은 이유로 `uv run`을 못 박고 있다.
       - id: ruff-lint
         name: "Python: ruff lint"
-        entry: ruff
-        args: [check, fastapi/, --config, pyproject.toml]
+        entry: uv
+        args: [run, ruff, check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false
 
       - id: ruff-format-check
         name: "Python: ruff format check"
-        entry: ruff
-        args: [format, --check, fastapi/, --config, pyproject.toml]
+        entry: uv
+        args: [run, ruff, format, --check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false
@@ -40,7 +45,41 @@ repos:
       - id: import-linter
         name: "Python: import-linter (star topology)"
         entry: bash
-        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps lint-imports"]
+        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports"]
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      # KAYFABE 자격 판정 골든 세트 (Phase 11).
+      #
+      # **테스트 전체가 아니라 이 파일만 돌린다.** 0.1초라 커밋 흐름을 느리게 하지
+      # 않으면서, 판정 규칙의 의미가 바뀌는 것만 잡는다. 이 엔진은 "어떤 예측을
+      # 채점해도 되는가"를 정하므로, 여기가 조용히 느슨해지면 그 뒤의 모든 숫자가
+      # 뜻을 잃는다.
+      #
+      # 나머지 테스트는 여전히 손으로 돌린다 — 넓히려면 경로를 늘리면 된다.
+      - id: kayfabe-eligibility-golden
+        name: "KAYFABE: eligibility golden set"
+        entry: bash
+        args:
+          - -c
+          - "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run pytest
+            apps/kayfabe/tests/app/services/test_eligibility_golden_set.py -q"
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      # 계보 사슬 E2E (Phase 12). 골든 세트가 **규칙의 의미**를 붙든다면 이쪽은
+      # **마디 사이의 매핑**을 붙든다 — 카드 JSON → 선택지, 엔티티 → 행, 행 → 읽기
+      # DTO. 조각별 테스트는 전부 초록인데 사슬만 끊어지는 고장이 여기서 잡힌다.
+      # 2.5초라 커밋 흐름에 얹을 만하다.
+      - id: kayfabe-provenance-chain
+        name: "KAYFABE: provenance chain e2e"
+        entry: bash
+        args:
+          - -c
+          - "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run pytest
+            apps/kayfabe/tests/test_provenance_chain_e2e.py -q"
         language: system
         always_run: true
         pass_filenames: false

@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
+from kayfabe.app.dtos.agent_prediction_dto import MatchOption
 from kayfabe.app.dtos.ai_lab_dto import AiLabOverviewResponse
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
 from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
@@ -20,6 +21,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     ReportRow,
 )
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow
+from kayfabe.app.services.ai_lab_readiness import EventRow
 from kayfabe.app.use_cases.ai_lab_interactor import AiLabInteractor
 
 _NOW = datetime(2026, 8, 5, tzinfo=UTC)
@@ -63,8 +65,13 @@ class FakeAiLabRepository(AiLabRepository):
         corpus: CorpusFacts | None = None,
         documents: list[DocumentRow] | None = None,
         retrievals: list[RetrievalRow] | None = None,
+        options: tuple[MatchOption, ...] = (),
         events: int = 11,
+        event_rows: list[EventRow] | None = None,
     ) -> None:
+        self._options = options
+        # 준비도(Phase 8)만 읽는다 — 비어 있는 것이 기본값이어야 기존 테스트가 산다.
+        self._event_rows = event_rows or []
         self._predictions = predictions or []
         self._reports = reports or []
         self._corpus = corpus or CorpusFacts(0, 0, 0, 0, 0, 0, None)
@@ -90,6 +97,14 @@ class FakeAiLabRepository(AiLabRepository):
 
     async def count_events(self) -> int:
         return self._events
+
+    async def list_events(self) -> list[EventRow]:
+        return self._event_rows
+
+    async def load_match_options(
+        self, *, event_slug: str, match_key: str
+    ) -> tuple[MatchOption, ...]:
+        return self._options
 
 
 class CountingAiLabRepository(FakeAiLabRepository):
@@ -125,6 +140,10 @@ class CountingAiLabRepository(FakeAiLabRepository):
     async def count_events(self) -> int:
         self._record("count_events")
         return await super().count_events()
+
+    async def list_events(self) -> list[EventRow]:
+        self._record("list_events")
+        return await super().list_events()
 
 
 def _interactor(**kwargs) -> AiLabInteractor:
@@ -235,6 +254,10 @@ class TestNoGeneration:
             # Stage 4-B에서 늘었다 — 읽기 전용이라는 이 테스트의 주장은 그대로다.
             "list_retrievals",
             "count_events",
+            # Phase 5에서 늘었다. 재현이 쓰는 **지금 카드**의 선택지이고, 역시 읽기다.
+            "load_match_options",
+            # Phase 8에서 늘었다. 준비도가 보는 **아직 예측이 없는 대회**이고, 역시 읽기다.
+            "list_events",
         }
 
     def test_the_ai_lab_modules_do_not_import_any_model_client(self) -> None:
@@ -486,10 +509,13 @@ class TestEvaluation:
             "temporal_inversion",
             "self_reference",
             "unverifiable_corpus",
+            "revision_after_prediction",
         ]
         # 보류를 실격으로 적지 않도록 severity를 함께 낸다.
         by_code = {rule.code: rule.severity for rule in schema.rules}
         assert by_code["unverifiable_corpus"] == "hold"
+        # 증거가 성립하지 않는 것과 누수가 확정된 것은 다른 사실이다 (Phase 2).
+        assert by_code["revision_after_prediction"] == "hold"
         assert by_code["temporal_inversion"] == "disqualify"
         # 사후 재현 표본은 **실격이 아니라 제외다.**
         assert by_code["external_outcome_known"] == "exclude"
@@ -901,3 +927,177 @@ class TestListPredictions:
         assert by_key["pending"].correct is None
         assert by_key["miss"].correct is False
         assert by_key["pending"].rationale != ""
+
+
+class TestLeakage:
+    """Phase 10 — 누수 그래프. **새 쿼리도 새 판정도 없다.**"""
+
+    @pytest.mark.asyncio
+    async def test_the_leakage_endpoint_reads_only_the_existing_queries(self) -> None:
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", ())],
+        )
+
+        await AiLabInteractor(repository=repository).get_leakage()
+
+        # 평가 화면이 이미 읽는 목록만 쓴다 — 그래프 전용 쿼리를 만들지 않았다.
+        assert repository.calls == {
+            "list_predictions": 1,
+            "list_reports": 1,
+            "list_documents": 1,
+            "list_retrievals": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_the_graph_and_the_evaluation_agree_on_every_status(self) -> None:
+        """**같은 예측을 두고 두 화면이 다른 상태를 말할 수 없다.**"""
+        own = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
+        repository = FakeAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            reports=[ReportRow("summerslam", "m1", "odds", "left", 0.6, "…", (own,))],
+            documents=[
+                DocumentRow(
+                    source_url=own,
+                    source_domain="en.wikipedia.org",
+                    title=None,
+                    chunks=1,
+                    chunks_embedded=1,
+                    chunks_with_published_at=0,
+                    first_published_at=None,
+                    last_collected_at=datetime(2026, 8, 20, tzinfo=UTC),
+                    chunks_with_revision=1,
+                    latest_revised_at=datetime(2026, 8, 1, tzinfo=UTC),
+                )
+            ],
+        )
+        interactor = AiLabInteractor(repository=repository)
+
+        leakage = await interactor.get_leakage()
+        evaluation = await interactor.get_evaluation()
+
+        by_key = {(i.event_slug, i.match_key): i.status for i in evaluation.items}
+        edges = [
+            edge for document in leakage.documents for edge in document.predictions
+        ]
+        assert edges
+        assert all(by_key[(e.event_slug, e.match_key)] == e.status for e in edges)
+
+    @pytest.mark.asyncio
+    async def test_only_document_rules_are_carried(self) -> None:
+        """**나머지 다섯은 문서 옆에 세울 자리가 없다.** 내보내면 화면이 자리를 만든다."""
+        leakage = await AiLabInteractor(
+            repository=FakeAiLabRepository(predictions=[_prediction(match_key="m1")])
+        ).get_leakage()
+
+        assert {rule.code for rule in leakage.rules} == {
+            "self_reference",
+            "unverifiable_corpus",
+            "revision_after_prediction",
+        }
+
+
+class TestReadiness:
+    """Phase 8 — 코퍼스 준비도. **판정이 아니라 위험이다.**"""
+
+    @pytest.mark.asyncio
+    async def test_it_adds_exactly_one_query(self) -> None:
+        """대회 쪽에서 읽어야 하므로 쿼리가 하나 는다 — **하나만** 는다.
+
+        나머지 화면은 대회를 예측을 통해서만 보기 때문에 아직 예측이 없는 대회가
+        어디에도 안 나온다. 그 반대편을 묻는 화면이라 `list_events`가 필요하다.
+        """
+        repository = CountingAiLabRepository(
+            predictions=[_prediction(match_key="m1")],
+            event_rows=[EventRow("mitb", "Money in the Bank", None, "upcoming", 3)],
+        )
+
+        await AiLabInteractor(repository=repository).get_readiness()
+
+        assert repository.calls == {
+            "list_events": 1,
+            "list_documents": 1,
+            "list_predictions": 1,
+            "list_reports": 1,
+            "corpus_facts": 1,
+            "count_events": 1,
+        }
+
+    @pytest.mark.asyncio
+    async def test_only_the_two_foreseeable_rules_are_carried(self) -> None:
+        """`revision_after_prediction`은 견줄 예측 시각이 아직 없다.
+
+        내보내면 화면이 물을 수 없는 것을 물은 척 세울 자리를 만든다.
+        """
+        readiness = await _interactor().get_readiness()
+
+        assert [rule.code for rule in readiness.rules] == [
+            "self_reference",
+            "unverifiable_corpus",
+        ]
+        # 무게가 다르다는 것도 함께 나가야 실격 위험과 보류 위험을 화면이 가른다.
+        by_code = {rule.code: rule.severity for rule in readiness.rules}
+        assert by_code["self_reference"] == "disqualify"
+        assert by_code["unverifiable_corpus"] == "hold"
+
+    @pytest.mark.asyncio
+    async def test_it_shares_the_integrity_verdict(self) -> None:
+        """화면마다 다른 무결성이 나오면 어느 쪽도 못 믿는다."""
+        interactor = _interactor(predictions=[_prediction(match_key="m1")])
+
+        readiness = await interactor.get_readiness()
+        overview = await interactor.get_overview()
+
+        assert readiness.integrity == overview.integrity
+
+    @pytest.mark.asyncio
+    async def test_a_past_event_is_dropped_by_todays_date(self) -> None:
+        """오늘은 유스케이스가 읽어 넘긴다 — 판정 안에서 시계를 읽지 않는다."""
+        readiness = await _interactor(
+            event_rows=[
+                EventRow("old", "Old Event", date(2020, 1, 1), "finished", 5),
+                EventRow("none", "No Date", None, "upcoming", 5),
+            ]
+        ).get_readiness()
+
+        assert readiness.events == []
+        assert readiness.totals.undated_events == 1
+
+    @pytest.mark.asyncio
+    async def test_the_boundary_keeps_the_risk_words_and_camel_case(self) -> None:
+        """경계를 지나도 위험이 상태로 둔갑하지 않는다."""
+        from kayfabe.adapter.inbound.api.v1.ai_lab_router import readiness_to_schema
+
+        own = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
+        schema = readiness_to_schema(
+            await _interactor(
+                event_rows=[
+                    EventRow(
+                        "summerslam", "SummerSlam", date(2099, 8, 1), "upcoming", 7
+                    )
+                ],
+                documents=[
+                    DocumentRow(
+                        source_url=own,
+                        source_domain="en.wikipedia.org",
+                        title="SummerSlam (2026)",
+                        chunks=2,
+                        chunks_embedded=2,
+                        chunks_with_published_at=0,
+                        first_published_at=None,
+                        last_collected_at=datetime(2026, 8, 20, tzinfo=UTC),
+                        chunks_with_revision=2,
+                        latest_revised_at=datetime(2026, 8, 1, tzinfo=UTC),
+                    )
+                ],
+            ).get_readiness()
+        )
+
+        assert schema.events[0].risk == "disqualify_risk"
+        assert schema.events[0].mines[0].source_url == own
+        payload = schema.model_dump(by_alias=True)
+        assert payload["totals"]["mineDocuments"] == 1
+        assert payload["events"][0]["unverifiableDocuments"] == 0
+        assert payload["corpus"]["incompleteLineage"] == 0
