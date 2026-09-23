@@ -13,6 +13,8 @@ import {
   type Evidence,
   type EvidenceTemporal,
   type PredictionAudit,
+  type PredictionReplay,
+  type ReplayStatus,
   type RuleDefinition,
   type RuleVerdict,
 } from "@/lib/ai-lab-api";
@@ -36,8 +38,9 @@ type PageState =
  * 쓴다. LLM에게 "왜 실격인지 설명해"라고 시킨 것이 아니라, 결정적 규칙 엔진이 실제로
  * 본 값을 그대로 펼친 것이다 — 그 구분이 이 화면의 존재 이유다.
  *
- * **Replay 칸이 없다.** Phase 5가 아직이고, 보장할 수 없는 것을 빈칸으로 세워 두면
- * 그 빈칸이 "재현 가능한데 안 했다"로 읽힌다.
+ * **Replay 칸은 재현된 것만 말한다** (Phase 5). 다섯 단계 중 실제로 다시 돌아가는
+ * 것은 질의 조립과 리포트 합성 둘뿐이고, 나머지 셋은 왜 못 돌리는지를 문장으로
+ * 세운다 — 보이지 않는 것은 "재현 가능한데 안 했다"로 읽히기 때문이다.
  */
 export default function PredictionAuditPage({
   params,
@@ -89,6 +92,7 @@ function Audit({ data }: { data: PredictionAudit }) {
         eventStartDate={data.eventStartDate}
         knowledgeQuery={data.knowledgeQuery}
       />
+      <Replay replay={data.replay} />
     </div>
   );
 }
@@ -409,6 +413,136 @@ function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate:
       </div>
     </li>
   );
+}
+
+/* ── 5. 다시 돌리면 같은 답이 나오나 (Phase 5) ──────────────────── */
+
+/** 어긋난 칸의 이름. 서버가 내는 것은 식별자이고 화면 문구는 여기서 붙인다. */
+const REPLAY_FIELD_LABEL: Record<string, string> = {
+  pick: "선택",
+  win_probability: "승률",
+  confidence: "확신",
+  knowledge_query: "검색 질의",
+};
+
+/**
+ * 저장된 재료로 합성을 **다시 돌린** 결과 (Phase 5).
+ *
+ * **예측이 맞았는지를 묻는 칸이 아니다.** 저장된 리포트만으로 저장된 결론이 다시
+ * 나오는지, 즉 기록이 스스로를 설명하는지를 본다.
+ *
+ * 다섯 단계 중 둘만 실제로 돌아간다. 나머지 셋을 목록에서 빼지 않는 이유는 Phase 9가
+ * 이 칸을 아예 만들지 않았던 이유와 같다 — 보이지 않는 것은 "재현됐다"로 읽힌다.
+ */
+function Replay({ replay }: { replay: PredictionReplay }) {
+  return (
+    <section
+      aria-labelledby="replay-heading"
+      className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="replay-heading" className="font-sport text-base tracking-wide text-foreground">
+          Replay
+        </h2>
+        <ReplayBadge status={replay.status} />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        저장된 리포트를 생성 때와 같은 함수에 다시 넣어 같은 결론이 나오는지 봅니다. 적중 여부와는
+        무관합니다.
+      </p>
+
+      <p className="mt-3 text-sm text-foreground">
+        {replay.status === "reproduced" && "같은 재료에서 같은 결론이 다시 나왔습니다."}
+        {replay.status === "diverged" &&
+          "다시 돌렸더니 값이 달라졌습니다. 그 사이 합성 규칙이 바뀌었거나 카드가 바뀌었다는 뜻입니다."}
+        {/* **사유는 서버가 낸 문장 그대로다.** 화면이 "재현 실패"로 뭉뚱그리지 않는다. */}
+        {replay.status === "unreplayable" && (replay.reason ?? "다시 돌릴 재료가 없습니다.")}
+      </p>
+
+      {replay.mismatches.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-2">
+          {replay.mismatches.map((item) => (
+            <li key={item.field} className="rounded-lg border border-border px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">
+                {REPLAY_FIELD_LABEL[item.field] ?? item.field}
+              </p>
+              {/* **두 값을 다 세운다.** "다르다"만으로는 아무것도 못 한다. */}
+              <div className="mt-1 grid grid-cols-1 gap-1 font-mono text-xs sm:grid-cols-2">
+                <p className="break-words text-muted-foreground">기록 {item.stored}</p>
+                <p className="break-words text-foreground">재현 {item.replayed}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <CardDrift unchanged={replay.cardUnchanged} />
+
+      <ul className="mt-4 flex flex-col gap-1.5 border-t border-border/60 pt-3">
+        {replay.stages.map((stage) => (
+          <li key={stage.stage} className="flex items-start gap-2 text-xs">
+            <span
+              className={cn(
+                "mt-0.5 shrink-0 rounded border px-1.5 py-0.5",
+                stage.replayable
+                  ? "border-data-500/50 bg-data-surface text-data"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {stage.replayable ? "재현" : "불가"}
+            </span>
+            <span className="min-w-0">
+              <span className="text-foreground">{stage.label}</span>
+              <span className="text-muted-foreground"> — {stage.note}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * 카드가 그때와 같은가.
+ *
+ * 합성은 **지금 카드**의 선택지로 돌아간다. 카드가 바뀌었으면 결과가 달라진 이유를
+ * 합성 규칙에 돌릴 수 없으므로, 그 사실을 같은 칸에 세운다.
+ */
+function CardDrift({ unchanged }: { unchanged: boolean | null }) {
+  if (unchanged === null) {
+    /* **`null`은 "같다"가 아니다.** 견줄 질의 기록이 없는 상태다. */
+    return (
+      <p className="mt-3 text-xs text-muted-foreground">
+        카드가 그때와 같은지는 판단할 수 없습니다 — 견줄 질의 기록이 없습니다.
+      </p>
+    );
+  }
+  if (unchanged) {
+    return (
+      <p className="mt-3 text-xs text-muted-foreground">
+        저장된 질의가 지금 카드로 다시 만든 질의와 같습니다 — 경기 제목과 선택지 이름이 그때와
+        같습니다.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-3 rounded-lg border border-live/50 bg-live/5 px-3 py-2 text-xs text-live">
+      경기 카드가 그때와 다릅니다. 합성은 지금 카드의 선택지로 돌아갔으므로, 값이 달라졌다면 그
+      원인을 합성 규칙에만 돌릴 수 없습니다.
+    </p>
+  );
+}
+
+function ReplayBadge({ status }: { status: ReplayStatus }) {
+  const style =
+    status === "reproduced"
+      ? "border-data-500/50 bg-data-surface text-data"
+      : status === "diverged"
+        ? "border-live/50 bg-live/10 text-live"
+        : "border-border text-muted-foreground";
+  const label =
+    status === "reproduced" ? "재현됨" : status === "diverged" ? "값이 달라짐" : "재현 불가";
+  return <span className={cn("rounded border px-2 py-0.5 text-xs", style)}>{label}</span>;
 }
 
 /** 초 단위까지 적는다 — 시간 규칙이 같은 시각도 실격으로 보기 때문이다. */

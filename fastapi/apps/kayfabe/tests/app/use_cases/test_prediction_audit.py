@@ -26,6 +26,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
+from kayfabe.app.dtos.agent_prediction_dto import MatchOption
 from kayfabe.app.dtos.ai_lab_dto import AuditReport
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
 from kayfabe.app.services.ai_lab_evaluation import (
@@ -42,6 +43,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     ReportRow,
 )
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow
+from kayfabe.app.services.ai_lab_replay import REPLAY_STAGES, ReplayStatus
 from kayfabe.app.use_cases.ai_lab_interactor import AiLabInteractor
 
 _SLUG = "summerslam"
@@ -56,6 +58,12 @@ _AFTER = datetime(2026, 8, 14, 7, tzinfo=UTC)
 
 _DOC = "https://en.wikipedia.org/wiki/Cody_Rhodes"
 _OWN = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
+
+#: 그 경기의 **지금 카드** 선택지 (Phase 5). 재현이 여기서 선택지를 읽는다.
+_OPTIONS = (
+    MatchOption(pick="left", name="Cody Rhodes"),
+    MatchOption(pick="right", name="Gunther"),
+)
 
 
 def _prediction(**overrides) -> PredictionRow:
@@ -130,11 +138,13 @@ class FakeRepository(AiLabRepository):
         reports=None,
         documents=None,
         retrievals=None,
+        options=None,
     ) -> None:
         self._predictions = predictions if predictions is not None else [_prediction()]
         self._reports = reports if reports is not None else [_report()]
         self._documents = documents if documents is not None else [_document()]
         self._retrievals = retrievals or []
+        self._options = _OPTIONS if options is None else options
 
     async def list_predictions(self) -> list[PredictionRow]:
         return self._predictions
@@ -153,6 +163,13 @@ class FakeRepository(AiLabRepository):
 
     async def count_events(self) -> int:
         return 11
+
+    async def list_events(self):
+        # 감사 화면은 대회 목록을 읽지 않는다 (Phase 8은 준비도 화면만 쓴다).
+        return []
+
+    async def load_match_options(self, *, event_slug: str, match_key: str):
+        return self._options
 
 
 async def _audit(repository: FakeRepository):
@@ -398,3 +415,57 @@ async def test_only_this_matchs_reports_and_evidence_are_included() -> None:
     assert audit is not None
     assert [r.agent for r in audit.reports] == ["storyline"]
     assert len(audit.evidence) == 1
+
+
+# ---------------------------------------------------------------------------
+# 6. 재현은 계보 옆에 붙지만 판정을 건드리지 않는다 (Phase 5)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_audit_carries_a_replay_of_the_synthesis() -> None:
+    """감사 응답에 **저장된 재료로 다시 돌린 결과**가 함께 실린다."""
+    audit = await _audit(FakeRepository())
+
+    assert audit is not None
+    assert audit.replay.status in {
+        ReplayStatus.REPRODUCED,
+        ReplayStatus.DIVERGED,
+        ReplayStatus.UNREPLAYABLE,
+    }
+    assert audit.replay.stages == REPLAY_STAGES
+
+
+@pytest.mark.asyncio
+async def test_a_vanished_card_leaves_the_replay_empty_but_the_verdict_intact() -> None:
+    """**재현이 판정을 인질로 잡지 않는다.**
+
+    카드가 사라지면 다시 돌릴 재료가 없지만, 그 예측의 자격 판정은 코퍼스와 시각이
+    정하는 것이라 한 칸도 움직이지 않는다.
+    """
+    with_card = await _audit(FakeRepository(retrievals=[_retrieval(1)]))
+    without = await _audit(FakeRepository(retrievals=[_retrieval(1)], options=()))
+
+    assert with_card is not None and without is not None
+    assert without.replay.status is ReplayStatus.UNREPLAYABLE
+    assert without.evaluation == with_card.evaluation
+
+
+@pytest.mark.asyncio
+async def test_the_replay_reads_the_same_reports_the_screen_shows() -> None:
+    """화면에 세운 리포트와 **다른 목록**으로 재현하면 그 결과는 설명이 되지 않는다."""
+    other = "ss26-n2-whc"
+    repository = FakeRepository(
+        predictions=[_prediction(), _prediction(match_key=other)],
+        reports=[
+            _report(),
+            _report(match_key=other, agent="rumor", pick="right", weight=0.9),
+        ],
+    )
+
+    audit = await _audit(repository)
+
+    assert audit is not None
+    # 옆 경기의 의견이 섞였다면 pick이 뒤집혀 다른 재현 결과가 나온다.
+    assert [r.agent for r in audit.reports] == ["storyline"]
+    assert all(item.field != "pick" for item in audit.replay.mismatches)

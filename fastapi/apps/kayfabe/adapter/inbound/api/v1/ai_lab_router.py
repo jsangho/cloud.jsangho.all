@@ -22,9 +22,11 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AiLabAgentsSchema,
     AiLabEvaluationSchema,
     AiLabKnowledgeSchema,
+    AiLabLeakageSchema,
     AiLabOverviewSchema,
     AiLabPerformanceSchema,
     AiLabPredictionsSchema,
+    AiLabReadinessSchema,
     AuditReportSchema,
     ConsensusLevelSchema,
     EligiblePerformanceSchema,
@@ -37,13 +39,23 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     KnowledgeDocumentSchema,
     KnowledgeDomainSchema,
     KnowledgeTotalsSchema,
+    LeakageDocumentSchema,
+    LeakageEdgeSchema,
+    LeakageTotalsSchema,
     PerformanceItemSchema,
     PerformanceTotalsSchema,
     PredictionAuditSchema,
     PredictionEventSchema,
     PredictionItemSchema,
+    PredictionReplaySchema,
     PredictionTotalsSchema,
+    ReadinessCorpusSchema,
+    ReadinessEventSchema,
+    ReadinessMineSchema,
+    ReadinessTotalsSchema,
     RecentPredictionSchema,
+    ReplayMismatchSchema,
+    ReplayStageSchema,
     ReportContributionSchema,
     RuleDefinitionSchema,
     RuleVerdictSchema,
@@ -53,9 +65,11 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabAgentsResponse,
     AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
+    AiLabLeakageResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    AiLabReadinessResponse,
     PredictionAuditResponse,
 )
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
@@ -314,6 +328,28 @@ def audit_to_schema(response: PredictionAuditResponse) -> PredictionAuditSchema:
             )
             for item in response.evidence
         ],
+        replay=PredictionReplaySchema(
+            status=str(response.replay.status),
+            reason=response.replay.reason,
+            mismatches=[
+                ReplayMismatchSchema(
+                    field=item.field,
+                    stored=item.stored,
+                    replayed=item.replayed,
+                )
+                for item in response.replay.mismatches
+            ],
+            card_unchanged=response.replay.card_unchanged,
+            stages=[
+                ReplayStageSchema(
+                    stage=stage.stage,
+                    label=stage.label,
+                    replayable=stage.replayable,
+                    note=stage.note,
+                )
+                for stage in response.replay.stages
+            ],
+        ),
         knowledge_query=response.knowledge_query,
     )
 
@@ -467,6 +503,153 @@ def knowledge_to_schema(response: AiLabKnowledgeResponse) -> AiLabKnowledgeSchem
                 used_documents=item.used_documents,
             )
             for item in response.domains
+        ],
+    )
+
+
+@ai_lab_router.get(
+    "/leakage",
+    response_model=AiLabLeakageSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_leakage(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """**어느 문서가 어느 예측을 막았는가** (Phase 10).
+
+    `/evaluation`은 "몇 건이 실격인가"를, `/knowledge`는 "어느 문서가 쓰였는가"를
+    낸다. 그 둘을 잇는 간선이 여기 있다 — 실격 12건이 **무엇 때문에** 12건인지가
+    문서 단위로는 어디에도 없었다.
+
+    **새 판정을 하지 않는다.** 예측의 상태는 `/evaluation`이 내는 것과 같은 계산에서
+    나온다. 문서 기여(`codes`)는 규칙이 쓰는 것과 같은 함수로 읽고, `soleCause`만
+    반사실이다 — 그 문서를 뺀 입력으로 **같은 판정**을 다시 돌린 결과다.
+
+    **`unattributed`를 감추지 않는다.** 시간 역전처럼 근거의 성질이 아닌 이유로 막힌
+    예측은 문서로 돌릴 수 없고, 그 수를 따로 세지 않으면 합이 맞지 않는다.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_leakage")
+    return leakage_to_schema(await use_case.get_leakage())
+
+
+@ai_lab_router.get(
+    "/readiness",
+    response_model=AiLabReadinessSchema,
+    response_model_by_alias=True,
+)
+async def get_ai_lab_readiness(use_case: AiLabUseCase = Depends(get_ai_lab)):
+    """**지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가** (Phase 8).
+
+    다른 `/ai-lab/*` 는 전부 뒤를 본다 — 무엇을 예측했고 무엇이 막혔는가. 이것만
+    앞을 본다. 누수는 판정에서 생기지 않고 **수집에서** 생기므로, 예측을 만들기 전에
+    코퍼스를 보는 자리가 필요하다.
+
+    **앞서 볼 수 있는 규칙은 둘뿐이다.** `self_reference`(그 대회 문서가 코퍼스에
+    있는가)와 `unverifiable_corpus`(계보가 불완전한 문서가 있는가). 셋째
+    `revision_after_prediction`은 개정본과 **예측 생성 시각**을 견주는데 예측이 아직
+    없으므로 물을 수 없다.
+
+    **판정하지 않는다.** 여기 나오는 것은 위험이고 자격은 `/ai-lab/evaluation`이
+    예측이 생긴 뒤에 정한다. 검색도 돌리지 않으므로(§3-D1) 지뢰가 실제로 뽑힐지는
+    모른다 — 그래서 **과대평가 쪽으로 틀린다**.
+    """
+    logger.info("[AiLabRouter] get_ai_lab_readiness")
+    return readiness_to_schema(await use_case.get_readiness())
+
+
+def readiness_to_schema(response: AiLabReadinessResponse) -> AiLabReadinessSchema:
+    return AiLabReadinessSchema(
+        totals=ReadinessTotalsSchema(
+            events=response.totals.events,
+            clear=response.totals.clear,
+            hold_risk=response.totals.hold_risk,
+            disqualify_risk=response.totals.disqualify_risk,
+            undated_events=response.totals.undated_events,
+            matches=response.totals.matches,
+            predicted_matches=response.totals.predicted_matches,
+            mine_documents=response.totals.mine_documents,
+        ),
+        corpus=ReadinessCorpusSchema(
+            documents=response.corpus.documents,
+            incomplete_lineage=response.corpus.incomplete_lineage,
+            unembedded_documents=response.corpus.unembedded_documents,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        events=[
+            ReadinessEventSchema(
+                slug=item.slug,
+                label=item.label,
+                start_date=item.start_date,
+                status=item.status,
+                days_until=item.days_until,
+                matches=item.matches,
+                predicted=item.predicted,
+                mines=[
+                    ReadinessMineSchema(
+                        source_url=mine.source_url,
+                        source_domain=mine.source_domain,
+                        title=mine.title,
+                        chunks=mine.chunks,
+                        chunks_with_revision=mine.chunks_with_revision,
+                    )
+                    for mine in item.mines
+                ],
+                unverifiable_documents=item.unverifiable_documents,
+                risk=item.risk,
+            )
+            for item in response.events
+        ],
+        rules=[
+            RuleDefinitionSchema(
+                code=rule.code,
+                label=rule.label,
+                severity=rule.severity,
+                description=rule.description,
+            )
+            for rule in response.rules
+        ],
+    )
+
+
+def leakage_to_schema(response: AiLabLeakageResponse) -> AiLabLeakageSchema:
+    return AiLabLeakageSchema(
+        totals=LeakageTotalsSchema(
+            blocked_predictions=response.totals.blocked_predictions,
+            attributed=response.totals.attributed,
+            unattributed=response.totals.unattributed,
+            documents=response.totals.documents,
+            sole_cause_predictions=response.totals.sole_cause_predictions,
+        ),
+        integrity=integrity_to_schema(response.integrity),
+        documents=[
+            LeakageDocumentSchema(
+                source_url=item.source_url,
+                source_domain=item.source_domain,
+                blocked=item.blocked,
+                sole_cause=item.sole_cause,
+                codes=list(item.codes),
+                predictions=[
+                    LeakageEdgeSchema(
+                        event_slug=edge.event_slug,
+                        event_label=edge.event_label,
+                        match_key=edge.match_key,
+                        match_title=edge.match_title,
+                        status=edge.status,
+                        codes=list(edge.codes),
+                        sole_cause=edge.sole_cause,
+                        sole_evidence=edge.sole_evidence,
+                    )
+                    for edge in item.predictions
+                ],
+            )
+            for item in response.documents
+        ],
+        rules=[
+            RuleDefinitionSchema(
+                code=rule.code,
+                label=rule.label,
+                severity=rule.severity,
+                description=rule.description,
+            )
+            for rule in response.rules
         ],
     )
 

@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 from sqlalchemy import func, select
@@ -26,6 +27,10 @@ from kayfabe.adapter.outbound.orm.agent_prediction_orm import (
 )
 from kayfabe.adapter.outbound.orm.knowledge_chunk_orm import KnowledgeChunkModel
 from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
+from kayfabe.adapter.outbound.pg.agent_prediction_pg_repository import (
+    options_from_card,
+)
+from kayfabe.app.dtos.agent_prediction_dto import MatchOption
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
 from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
 from kayfabe.app.services.ai_lab_integrity import (
@@ -34,6 +39,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     ReportRow,
 )
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow
+from kayfabe.app.services.ai_lab_readiness import EventRow
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -287,6 +293,66 @@ class AiLabPgRepository(AiLabRepository):
     async def count_events(self) -> int:
         result = await self.db.execute(select(func.count()).select_from(PleEventModel))
         return int(result.scalar_one())
+
+    async def list_events(self) -> list[EventRow]:
+        """대회 전체 + 경기 수 (Phase 8). **한 번의 SELECT다.**
+
+        경기 수는 `outerjoin` + `count(match_id)`로 센다 — 경기가 없는 대회도 0으로
+        남아야 하기 때문이다. `count(*)`로 세면 그런 대회가 1이 된다.
+        """
+        result = await self.db.execute(
+            select(
+                PleEventModel.slug,
+                PleEventModel.label,
+                PleEventModel.start_date,
+                PleEventModel.status,
+                func.count(PleMatchModel.id),
+            )
+            .outerjoin(PleMatchModel, PleMatchModel.event_id == PleEventModel.id)
+            .group_by(
+                PleEventModel.slug,
+                PleEventModel.label,
+                PleEventModel.start_date,
+                PleEventModel.status,
+            )
+        )
+        rows = [
+            EventRow(
+                slug=slug,
+                label=label,
+                start_date=start_date,
+                status=status,
+                matches=int(matches or 0),
+            )
+            for slug, label, start_date, status, matches in result.all()
+        ]
+        logger.info("[AiLabPgRepository] list_events <- count=%d", len(rows))
+        return rows
+
+    async def load_match_options(
+        self, *, event_slug: str, match_key: str
+    ) -> tuple[MatchOption, ...]:
+        """감사 화면 한 건에만 붙는 쿼리다 (Phase 5).
+
+        `list_predictions`에 `card_json`을 얹지 않은 이유는 그쪽이 목록·개요·평가가
+        함께 쓰는 전량 조회라서다 — 화면이 쓰지도 않는 카드 원문을 모든 행에
+        딸려 보내게 된다. 재현은 한 건짜리 화면에만 있으므로 그 자리에서만 읽는다.
+        """
+        result = await self.db.execute(
+            select(PleMatchModel.card_json)
+            .join(PleEventModel, PleMatchModel.event_id == PleEventModel.id)
+            .where(PleEventModel.slug == event_slug)
+            .where(PleMatchModel.match_key == match_key)
+        )
+        raw = result.scalar_one_or_none()
+        if raw is None:
+            # 경기 행이 사라졌다. 재현 불가로 남을 뿐 오류가 아니다.
+            return ()
+        try:
+            card = json.loads(raw)
+        except (TypeError, ValueError):
+            return ()
+        return options_from_card(card) if isinstance(card, dict) else ()
 
 
 def _split_sources(raw: str | None) -> tuple[str, ...]:

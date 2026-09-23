@@ -69,6 +69,21 @@ repos:
         always_run: true
         pass_filenames: false
 
+      # 계보 사슬 E2E (Phase 12). 골든 세트가 **규칙의 의미**를 붙든다면 이쪽은
+      # **마디 사이의 매핑**을 붙든다 — 카드 JSON → 선택지, 엔티티 → 행, 행 → 읽기
+      # DTO. 조각별 테스트는 전부 초록인데 사슬만 끊어지는 고장이 여기서 잡힌다.
+      # 2.5초라 커밋 흐름에 얹을 만하다.
+      - id: kayfabe-provenance-chain
+        name: "KAYFABE: provenance chain e2e"
+        entry: bash
+        args:
+          - -c
+          - "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run pytest
+            apps/kayfabe/tests/test_provenance_chain_e2e.py -q"
+        language: system
+        always_run: true
+        pass_filenames: false
+
       # ── Next.js ──────────────────────────────────────────────
       - id: eslint
         name: "Next.js: ESLint"

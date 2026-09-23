@@ -121,8 +121,8 @@ class AiPredictionInteractor(AiPredictionUseCase):
         """경기 하나. 실패는 이 경기에서 끝나고 다음 경기로 넘어간다."""
         # **질의를 여기서 만들어 내려보낸다** (Phase 3). 검색에 쓴 문자열과 기록에
         # 남는 문자열이 같은 값이어야 기록이 증거가 된다 — 저장할 때 다시 만들면
-        # 그 사이에 `_knowledge_query`가 바뀌어도 아무도 모른다.
-        query = _knowledge_query(context)
+        # 그 사이에 `build_knowledge_query`가 바뀌어도 아무도 모른다.
+        query = build_knowledge_query(context.title, context.options)
         knowledge = await self._search_knowledge(context, query)
         reports = await self._collect_reports(context, knowledge)
 
@@ -277,9 +277,18 @@ def _retrievals(
     )
 
 
-def _knowledge_query(context: MatchContext) -> str:
-    names = " ".join(option.name for option in context.options)
-    return f"{context.title} {names}".strip()
+def build_knowledge_query(title: str, options: Sequence[MatchOption]) -> str:
+    """검색 질의. **공개 함수인 이유는 감사가 같은 함수를 써야 하기 때문이다**(Phase 5).
+
+    저장된 질의와 지금 카드로 다시 만든 질의를 견주면 카드가 그때와 같은지 알 수
+    있는데, 그 대조가 성립하려면 조립이 한 곳에만 있어야 한다. 베껴 두면 한쪽을
+    고친 날 대조가 조용히 거짓말을 시작한다.
+
+    `MatchContext`가 아니라 쓰는 두 값만 받는다 — 감사 쪽에는 문맥 전체가 없고,
+    이 조립이 실제로 보는 것도 제목과 선택지 이름뿐이다.
+    """
+    names = " ".join(option.name for option in options)
+    return f"{title} {names}".strip()
 
 
 def _option_for(context: MatchContext, pick: str) -> MatchOption | None:

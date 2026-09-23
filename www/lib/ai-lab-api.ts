@@ -404,14 +404,57 @@ export type AuditReport = {
   promptVersion: string | null;
 };
 
+/** 재현에서 어긋난 칸 하나 (Phase 5). **두 값을 다 싣는다.** */
+export type ReplayMismatch = {
+  field: string;
+  stored: string;
+  replayed: string;
+};
+
 /**
- * 예측 한 건의 전체 계보 (Phase 9).
+ * 생성 파이프라인 한 단계와 그것을 다시 돌릴 수 있는지 (Phase 5).
+ *
+ * **못 돌리는 단계도 목록에 온다.** 빠지면 화면이 "전부 재현됐다"로 읽힌다.
+ */
+export type ReplayStage = {
+  stage: string;
+  label: string;
+  replayable: boolean;
+  note: string;
+};
+
+/** "reproduced" | "diverged" | "unreplayable". */
+export type ReplayStatus = "reproduced" | "diverged" | "unreplayable";
+
+/**
+ * 저장된 재료로 합성을 다시 돌린 결과 (Phase 5).
+ *
+ * **채점이 아니다.** 예측이 맞았는지가 아니라 "저장된 재료로 저장된 결론이 다시
+ * 나오는가"를 묻는다.
+ */
+export type PredictionReplay = {
+  status: ReplayStatus;
+  /** `unreplayable`의 사유. 돌아갔으면 `null`. */
+  reason: string | null;
+  mismatches: ReplayMismatch[];
+  /**
+   * 저장된 질의와 **지금 카드로 다시 만든 질의**가 같은가.
+   *
+   * **`null`은 "같다"가 아니라 "판단할 수 없다"는 뜻이다** — 질의 기록이 없거나
+   * 경기 행이 사라져 견줄 상대가 없는 경우다.
+   */
+  cardUnchanged: boolean | null;
+  stages: ReplayStage[];
+};
+
+/**
+ * 예측 한 건의 전체 계보 (Phase 9 · Phase 5).
  *
  * `evaluation`은 목록 화면이 받는 것과 **같은 판정**이다 — 두 화면이 같은 예측을
  * 두고 다른 말을 할 수 없다.
  *
- * **`replay` 칸이 없다.** Phase 5가 아직이고, 보장할 수 없는 것을 빈칸으로 만들어
- * 두면 그 빈칸이 "재현 가능한데 안 했다"로 읽힌다.
+ * `replay`는 **재현된 것만 말한다.** 다섯 단계 중 둘만 다시 돌아가고, 나머지 셋은
+ * 왜 못 돌리는지를 `stages`가 문장으로 싣는다.
  */
 export type PredictionAudit = {
   eventSlug: string;
@@ -437,6 +480,8 @@ export type PredictionAudit = {
   reports: AuditReport[];
   /** **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다. */
   evidence: Evidence[];
+  /** 저장된 재료로 합성을 다시 돌린 결과 (Phase 5). 채점과 무관하다. */
+  replay: PredictionReplay;
   /**
    * 그 청크들을 찾을 때 던진 질의 (Phase 3). 증거 **앞**의 한 단계다.
    *
@@ -629,6 +674,161 @@ export type AiLabKnowledge = {
   documents: KnowledgeDocument[];
   domains: KnowledgeDomain[];
 };
+
+/** 문서 하나가 예측 하나를 막은 간선 (Phase 10). */
+export type LeakageEdge = {
+  eventSlug: string;
+  eventLabel: string;
+  matchKey: string;
+  matchTitle: string;
+  /** 판정이 낸 그 예측의 상태. **그래프가 다시 정하지 않는다.** */
+  status: EvaluationStatus;
+  /** 이 문서가 실패시킨 규칙 코드. 비어 있지 않다. */
+  codes: string[];
+  /** 이 문서만 없었다면 자격을 얻었는가 (반사실). */
+  soleCause: boolean;
+  /**
+   * 이 문서가 그 예측의 **유일한 근거**였는가.
+   *
+   * 유일했다면 빼는 순간 근거가 0건이 되어 코퍼스 규칙이 통과시킨다. 그 통과는
+   * `soleCause`로 세지 않는다 — "근거가 사라져서 통과"이지 "혼자 막았다"가 아니다.
+   */
+  soleEvidence: boolean;
+};
+
+export type LeakageDocument = {
+  sourceUrl: string;
+  sourceDomain: string;
+  blocked: number;
+  soleCause: number;
+  codes: string[];
+  predictions: LeakageEdge[];
+};
+
+/** **합이 맞아야 한다**: `blockedPredictions === attributed + unattributed`. */
+export type LeakageTotals = {
+  blockedPredictions: number;
+  attributed: number;
+  /** 문서로 돌릴 수 없는 수 — 시간 역전처럼 근거의 성질이 아닌 이유로 막힌 예측. */
+  unattributed: number;
+  documents: number;
+  soleCausePredictions: number;
+};
+
+/**
+ * 어느 문서가 어느 예측을 막았는가 (Phase 10).
+ *
+ * **새 판정이 아니다.** 예측의 상태는 평가 화면이 내는 것과 같은 계산에서 나온다.
+ */
+export type AiLabLeakage = {
+  totals: LeakageTotals;
+  integrity: Integrity;
+  documents: LeakageDocument[];
+  /** **문서로 돌릴 수 있는 셋만.** 건수는 오지 않는다 — 전체 집계는 평가 화면 몫이다. */
+  rules: RuleDefinition[];
+};
+
+/**
+ * 대회 하나의 위험도 (Phase 8).
+ *
+ * **판정이 아니라 위험이다.** 자격은 예측이 생긴 뒤에 평가 화면이 정한다.
+ */
+export type ReadinessRisk = "clear" | "hold_risk" | "disqualify_risk";
+
+/** 그 대회를 막을 문서 하나. **자기참조 지뢰만 온다.** */
+export type ReadinessMine = {
+  sourceUrl: string;
+  sourceDomain: string;
+  title: string | null;
+  chunks: number;
+  /** 계보를 아는 청크 수. `chunks`보다 작으면 시간 확인도 함께 막힌다. */
+  chunksWithRevision: number;
+};
+
+export type ReadinessEvent = {
+  slug: string;
+  label: string;
+  startDate: string;
+  /** 대회 행에 적힌 상태. **위험도와 무관하다** — 사람이 닫으므로 드리프트한다. */
+  status: string;
+  daysUntil: number;
+  matches: number;
+  /** 이미 예측이 만들어진 경기 수. **자격은 보지 않는다.** */
+  predicted: number;
+  mines: ReadinessMine[];
+  /**
+   * 이 대회 날짜 기준으로 시간을 확인할 수 없는 문서 수.
+   *
+   * 목록이 아닌 이유는 그것이 대회가 아니라 **문서의 성질**이라 대회마다 같은
+   * 목록이 반복되기 때문이다 — 그 목록은 코퍼스 칸에 한 번 선다.
+   */
+  unverifiableDocuments: number;
+  risk: ReadinessRisk;
+};
+
+export type ReadinessCorpus = {
+  documents: number;
+  /** 계보가 불완전한 문서 수. **어느 대회를 예측하든** 인용되면 보류를 만든다. */
+  incompleteLineage: number;
+  /** 임베딩이 하나도 없는 문서 수. 지뢰가 아니라 **없는 것**이다. */
+  unembeddedDocuments: number;
+};
+
+/** **합이 맞아야 한다**: `events === clear + holdRisk + disqualifyRisk`. */
+export type ReadinessTotals = {
+  events: number;
+  clear: number;
+  holdRisk: number;
+  disqualifyRisk: number;
+  /** 날짜가 없어 앞에 있는지조차 모르는 대회 수. 0이 아니면 그만큼 못 보고 있다. */
+  undatedEvents: number;
+  matches: number;
+  predictedMatches: number;
+  mineDocuments: number;
+};
+
+/**
+ * 지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가 (Phase 8).
+ *
+ * **다른 화면과 보는 방향이 반대다.** 나머지는 이미 만들어진 예측을 놓고 무엇이
+ * 막혔는지 묻고, 이 화면은 아직 없는 예측을 놓고 무엇이 막을지 묻는다.
+ */
+export type AiLabReadiness = {
+  totals: ReadinessTotals;
+  corpus: ReadinessCorpus;
+  integrity: Integrity;
+  events: ReadinessEvent[];
+  /** **앞서 볼 수 있는 둘만.** `revision_after_prediction`은 견줄 예측 시각이 없다. */
+  rules: RuleDefinition[];
+};
+
+export async function fetchAiLabReadiness(): Promise<AiLabReadiness | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/readiness`, { signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabReadiness;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function fetchAiLabLeakage(): Promise<AiLabLeakage | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${aiLabBaseUrl}/leakage`, { signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as AiLabLeakage;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function fetchAiLabKnowledge(): Promise<AiLabKnowledge | null> {
   const controller = new AbortController();

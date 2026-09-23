@@ -32,6 +32,11 @@ from kayfabe.app.services.ai_lab_evaluation import (
     EvidenceVerdict,
     RuleVerdict,
 )
+from kayfabe.app.services.ai_lab_replay import (
+    PredictionReplay,
+    ReplayMismatch,
+    ReplayStatus,
+)
 from kayfabe.dependencies.ai_lab_provider import get_ai_lab
 
 _GENERATED_AT = datetime(2026, 8, 9, 7, tzinfo=UTC)
@@ -97,6 +102,11 @@ _AUDIT = PredictionAuditResponse(
             self_reference=True,
         ),
     ),
+    replay=PredictionReplay(
+        status=ReplayStatus.DIVERGED,
+        mismatches=(ReplayMismatch(field="confidence", stored="0.6", replayed="0.4"),),
+        card_unchanged=True,
+    ),
     knowledge_query="Undisputed WWE Championship Cody Rhodes Drew McIntyre",
 )
 
@@ -128,6 +138,12 @@ class FakeUseCase(AiLabUseCase):
         raise NotImplementedError
 
     async def get_knowledge(self):
+        raise NotImplementedError
+
+    async def get_leakage(self):
+        raise NotImplementedError
+
+    async def get_readiness(self):
         raise NotImplementedError
 
 

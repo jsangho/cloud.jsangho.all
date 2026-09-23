@@ -515,14 +515,51 @@ class RuleDefinitionSchema(_Camel):
     description: str
 
 
+class ReplayMismatchSchema(_Camel):
+    """재현에서 어긋난 칸 하나 (Phase 5). **두 값을 다 싣는다.**"""
+
+    field: str
+    stored: str
+    replayed: str
+
+
+class ReplayStageSchema(_Camel):
+    """생성 파이프라인 한 단계와 그것을 다시 돌릴 수 있는지 (Phase 5).
+
+    **못 돌리는 단계도 목록에 남는다** — 빠지면 화면이 "전부 재현됐다"로 읽힌다.
+    """
+
+    stage: str
+    label: str
+    replayable: bool
+    note: str
+
+
+class PredictionReplaySchema(_Camel):
+    """저장된 재료로 다시 돌려 본 결과 (Phase 5)."""
+
+    status: str
+    """"reproduced" | "diverged" | "unreplayable"."""
+    reason: str | None = None
+    """`unreplayable`의 사유. 돌아갔으면 `null`."""
+    mismatches: list[ReplayMismatchSchema] = Field(default_factory=list)
+    card_unchanged: bool | None = Field(default=None, alias="cardUnchanged")
+    """저장된 질의와 지금 카드로 다시 만든 질의가 같은가.
+
+    **`null`은 "같다"가 아니라 "판단할 수 없다"**는 뜻이다 — 질의 기록이 없거나
+    경기 행이 사라져 견줄 상대가 없는 경우다.
+    """
+    stages: list[ReplayStageSchema] = Field(default_factory=list)
+
+
 class PredictionAuditSchema(_Camel):
-    """예측 한 건의 전체 계보 (Phase 9).
+    """예측 한 건의 전체 계보 (Phase 9 · Phase 5).
 
     `evaluation`은 목록 화면(`/ai-lab/evaluation`)이 내는 것과 **같은 판정**이다 —
     두 화면이 같은 예측을 두고 다른 말을 할 수 없다.
 
-    **`replay` 칸이 없다.** Phase 5가 아직이고, 보장할 수 없는 것을 빈칸으로 만들어
-    두면 그 빈칸이 "재현 가능한데 안 했다"로 읽힌다.
+    `replay`는 **재현된 것만 말한다.** 다섯 단계 중 둘만 다시 돌아가고, 나머지 셋은
+    왜 못 돌리는지를 `stages`가 문장으로 싣는다.
     """
 
     event_slug: str = Field(alias="eventSlug")
@@ -549,9 +586,135 @@ class PredictionAuditSchema(_Camel):
     reports: list[AuditReportSchema]
     evidence: list[EvidenceSchema]
     """**비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다."""
+    replay: PredictionReplaySchema
+    """저장된 재료로 합성을 다시 돌린 결과 (Phase 5). 채점과 무관하다."""
     knowledge_query: str | None = Field(default=None, alias="knowledgeQuery")
     """검색에 던진 질의 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
 
     `null`은 기록 전이라는 뜻이다. 경기 행이 사라진 예측에서는 영영 복원되지 않는다 —
     질의가 경기 제목과 선택지 이름에서 만들어지기 때문이다.
     """
+
+
+class LeakageEdgeSchema(_Camel):
+    """문서 하나가 예측 하나를 막은 간선 (Phase 10)."""
+
+    event_slug: str = Field(alias="eventSlug")
+    event_label: str = Field(alias="eventLabel")
+    match_key: str = Field(alias="matchKey")
+    match_title: str = Field(alias="matchTitle")
+    status: str
+    """판정이 낸 그 예측의 상태. **여기서 다시 정하지 않는다.**"""
+    codes: list[str]
+    """이 문서가 실패시킨 규칙 코드. 비어 있지 않다."""
+    sole_cause: bool = Field(alias="soleCause")
+    """이 문서만 없었다면 자격을 얻었는가 (반사실)."""
+    sole_evidence: bool = Field(alias="soleEvidence")
+    """이 문서가 그 예측의 **유일한 근거**였는가.
+
+    유일했다면 빼는 순간 근거가 0건이 되어 코퍼스 규칙이 통과시킨다. 그 통과는
+    `soleCause`로 세지 않는다 — "근거가 사라져서 통과"이지 "이 문서가 혼자
+    막았다"가 아니다.
+    """
+
+
+class LeakageDocumentSchema(_Camel):
+    source_url: str = Field(alias="sourceUrl")
+    source_domain: str = Field(alias="sourceDomain")
+    blocked: int
+    sole_cause: int = Field(alias="soleCause")
+    codes: list[str]
+    predictions: list[LeakageEdgeSchema]
+
+
+class LeakageTotalsSchema(_Camel):
+    """**합이 맞아야 한다**: `blockedPredictions == attributed + unattributed`."""
+
+    blocked_predictions: int = Field(alias="blockedPredictions")
+    attributed: int
+    unattributed: int
+    """문서로 돌릴 수 없는 수. 시간 역전처럼 근거의 성질이 아닌 이유로 막힌 예측이다."""
+    documents: int
+    sole_cause_predictions: int = Field(alias="soleCausePredictions")
+
+
+class ReadinessMineSchema(_Camel):
+    """그 대회를 막을 문서 하나 (Phase 8). **자기참조 지뢰만 여기 온다.**"""
+
+    source_url: str = Field(alias="sourceUrl")
+    source_domain: str = Field(alias="sourceDomain")
+    title: str | None = None
+    chunks: int
+    chunks_with_revision: int = Field(alias="chunksWithRevision")
+
+
+class ReadinessEventSchema(_Camel):
+    """아직 열리지 않은 대회 하나와 그 앞에 놓인 위험 (Phase 8)."""
+
+    slug: str
+    label: str
+    start_date: date = Field(alias="startDate")
+    status: str
+    """대회 행에 적힌 상태. **위험도와 무관하다** — 사람이 스크립트로 닫으므로 드리프트한다."""
+    days_until: int = Field(alias="daysUntil")
+    matches: int
+    predicted: int
+    """이미 예측이 만들어진 경기 수. **자격은 보지 않는다.**"""
+    mines: list[ReadinessMineSchema]
+    unverifiable_documents: int = Field(alias="unverifiableDocuments")
+    """이 대회 날짜 기준으로 시간을 확인할 수 없는 문서 수. 목록이 아닌 이유는
+    그것이 대회가 아니라 **문서의 성질**이라 대회마다 같은 목록이 반복되기 때문이다."""
+    risk: str
+    """`clear` · `hold_risk` · `disqualify_risk`. **판정이 아니라 위험이다.**"""
+
+
+class ReadinessCorpusSchema(_Camel):
+    documents: int
+    incomplete_lineage: int = Field(alias="incompleteLineage")
+    """계보가 불완전한 문서 수. **어느 대회를 예측하든** 인용되면 보류를 만든다."""
+    unembedded_documents: int = Field(alias="unembeddedDocuments")
+    """임베딩이 하나도 없는 문서 수. 지뢰가 아니라 **없는 것**이다 — 검색에 안 잡힌다."""
+
+
+class ReadinessTotalsSchema(_Camel):
+    """**합이 맞아야 한다**: `events == clear + holdRisk + disqualifyRisk`."""
+
+    events: int
+    clear: int
+    hold_risk: int = Field(alias="holdRisk")
+    disqualify_risk: int = Field(alias="disqualifyRisk")
+    undated_events: int = Field(alias="undatedEvents")
+    """날짜가 없어 앞에 있는지조차 모르는 대회 수. 0이 아니면 이 화면이 그만큼 못 본다."""
+    matches: int
+    predicted_matches: int = Field(alias="predictedMatches")
+    mine_documents: int = Field(alias="mineDocuments")
+
+
+class AiLabReadinessSchema(_Camel):
+    """지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가 (Phase 8).
+
+    **다른 화면과 보는 방향이 반대다.** 나머지는 이미 만들어진 예측을 놓고 무엇이
+    막혔는지 묻고, 이 화면은 아직 없는 예측을 놓고 무엇이 막을지 묻는다. 그래서 여기
+    실린 것은 판정이 아니라 **위험**이다.
+    """
+
+    totals: ReadinessTotalsSchema
+    corpus: ReadinessCorpusSchema
+    integrity: IntegritySchema
+    events: list[ReadinessEventSchema]
+    rules: list[RuleDefinitionSchema]
+    """**앞서 볼 수 있는 둘만.** `revision_after_prediction`은 견줄 예측 시각이 없다."""
+
+
+class AiLabLeakageSchema(_Camel):
+    """어느 문서가 어느 예측을 막았는가 (Phase 10).
+
+    **새 판정이 아니다.** 예측의 상태는 `/ai-lab/evaluation`이 내는 것과 같은
+    계산에서 나오고, 여기서는 그 결론을 문서로 나눌 뿐이다.
+    """
+
+    totals: LeakageTotalsSchema
+    integrity: IntegritySchema
+    documents: list[LeakageDocumentSchema]
+    rules: list[RuleDefinitionSchema]
+    """**문서로 돌릴 수 있는 셋만.** 건수는 싣지 않는다 — 전체 집계는 평가 화면 몫이다."""

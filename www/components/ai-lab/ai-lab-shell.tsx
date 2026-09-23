@@ -21,6 +21,13 @@ export const AI_LAB_TABS = [
   { href: "/ai-lab/predictions", label: "Predictions", ready: true },
   { href: "/ai-lab/agents", label: "Agents", ready: true },
   { href: "/ai-lab/knowledge", label: "Knowledge", ready: true },
+  // Knowledge 바로 옆이다. 저쪽이 "어느 문서가 쓰였는가"를 세고 이쪽이 "그중 어느
+  // 문서가 판정을 막았는가"를 세므로, 두 화면은 같은 목록을 다른 각도로 본다.
+  { href: "/ai-lab/leakage", label: "Leakage", ready: true },
+  // Leakage 바로 옆이다. 저쪽이 **이미 만들어진** 예측을 놓고 무엇이 막았는지를 세고,
+  // 이쪽이 **아직 없는** 예측을 놓고 무엇이 막을지를 센다 — 같은 코퍼스를 과거와
+  // 미래에서 본다. 순서를 바꾸면 화면이 원인보다 대책을 먼저 말하게 된다.
+  { href: "/ai-lab/readiness", label: "Readiness", ready: true },
   // 라우트는 `performance`, 라벨은 `Synthesis`다. 이 화면은 정확도를 재지 않고 최종
   // 승률이 어떻게 만들어졌는지를 해부한다 — 이름이 재지 않는 것을 약속하면 화면이
   // 아무리 정직해도 탭이 먼저 거짓말을 한다. "Performance"라는 이름은 누수 없는 표본이

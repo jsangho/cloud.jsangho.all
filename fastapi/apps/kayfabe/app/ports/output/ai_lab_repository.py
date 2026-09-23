@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from kayfabe.app.dtos.agent_prediction_dto import MatchOption
 from kayfabe.app.services.ai_lab_evaluation import RetrievalRow
 from kayfabe.app.services.ai_lab_integrity import (
     CorpusFacts,
@@ -19,6 +20,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     ReportRow,
 )
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow
+from kayfabe.app.services.ai_lab_readiness import EventRow
 
 
 class AiLabRepository(ABC):
@@ -60,4 +62,32 @@ class AiLabRepository(ABC):
     @abstractmethod
     async def count_events(self) -> int:
         """전체 대회 수. 예측 커버리지의 분모다."""
+        ...
+
+    @abstractmethod
+    async def list_events(self) -> list[EventRow]:
+        """대회 전체 + 그 카드의 경기 수 (Phase 8).
+
+        **다른 화면은 대회를 예측을 통해서만 본다** — `list_predictions()`가 조인으로
+        끌어오는 것은 예측이 있는 대회뿐이다. 준비도는 그 반대편, **아직 예측이 없는
+        대회**를 묻기 때문에 대회 쪽에서 읽어야 한다. 그래서 쿼리가 하나 는다.
+
+        거르지 않고 전부 준다 — "아직 열리지 않았는가"는 오늘이 입력인 판정이라
+        `summarize_readiness`가 `as_of`를 받아서 한다. 여기서 `WHERE`로 걸러 버리면
+        그 판정을 시험할 수 없다.
+        """
+        ...
+
+    @abstractmethod
+    async def load_match_options(
+        self, *, event_slug: str, match_key: str
+    ) -> tuple[MatchOption, ...]:
+        """그 경기의 **지금 카드** 선택지 (Phase 5).
+
+        **그때 카드의 스냅샷이 아니다.** 카드는 판본을 남기지 않으므로 여기서 오는
+        것은 언제나 최신 하나이고, 재현은 그 사실을 감추지 않고 함께 내보낸다.
+
+        경기 행이 사라졌거나 카드에서 선택지를 읽지 못하면 빈 튜플이다 — 예외가
+        아니다. 카드가 없는 것은 오류가 아니라 재현할 수 없는 상태다.
+        """
         ...

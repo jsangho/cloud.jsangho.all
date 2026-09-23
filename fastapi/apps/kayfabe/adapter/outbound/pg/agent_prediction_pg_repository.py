@@ -229,7 +229,7 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     except (TypeError, ValueError):
         return None
 
-    options = _options_from_card(card)
+    options = options_from_card(card)
     if not options:
         return None
 
@@ -244,8 +244,12 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     )
 
 
-def _options_from_card(card: dict[str, Any]) -> tuple[MatchOption, ...]:
-    """카드 JSON → 선택지. `pick` 값은 `ple_matches.winner_pick`과 같은 형식이다."""
+def options_from_card(card: dict[str, Any]) -> tuple[MatchOption, ...]:
+    """카드 JSON → 선택지. `pick` 값은 `ple_matches.winner_pick`과 같은 형식이다.
+
+    **공개 함수다** — 감사의 재현(Phase 5)도 같은 카드를 같은 규칙으로 읽어야
+    한다. 두 벌로 두면 한쪽만 고친 날 재현이 생성과 다른 선택지를 본다.
+    """
     if card.get("format") == "singles":
         sides = []
         for pick in ("left", "right"):

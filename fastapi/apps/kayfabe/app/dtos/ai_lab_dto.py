@@ -34,12 +34,19 @@ from kayfabe.app.services.ai_lab_knowledge import (
     KnowledgeDocument,
     KnowledgeTotals,
 )
+from kayfabe.app.services.ai_lab_leakage import LeakageDocument, LeakageTotals
 from kayfabe.app.services.ai_lab_performance import (
     AgentContribution,
     ConsensusLevel,
     PerformanceItem,
     PerformanceTotals,
 )
+from kayfabe.app.services.ai_lab_readiness import (
+    ReadinessCorpus,
+    ReadinessEvent,
+    ReadinessTotals,
+)
+from kayfabe.app.services.ai_lab_replay import PredictionReplay
 
 
 @dataclass(frozen=True)
@@ -146,8 +153,9 @@ class PredictionAuditResponse:
     (`get_evaluation`)이 내는 것과 **같은 호출**에서 나온다 — 두 화면이 같은 예측을
     두고 다른 말을 하는 일이 구조적으로 불가능해야 한다.
 
-    `replay`는 **없다.** Phase 5가 아직이고, 보장할 수 없는 것을 화면에 칸으로
-    만들어 두면 빈칸이 곧 "재현 가능한데 안 했다"로 읽힌다.
+    `replay`는 **재현된 것만 말한다** (Phase 5). 다섯 단계 중 둘만 다시 돌아가고,
+    나머지 셋은 왜 못 돌리는지를 `stages`가 문장으로 싣는다 — 빈칸으로 두면 그것이
+    "재현 가능한데 안 했다"로 읽히기 때문이다.
     """
 
     event_slug: str
@@ -175,6 +183,8 @@ class PredictionAuditResponse:
     #: 그때 실제로 읽은 청크 + 각 조각이 판정에서 한 역할.
     #: **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 기록이 없다.
     evidence: tuple[EvidenceVerdict, ...]
+    #: 저장된 재료로 다시 돌려 본 결과 (Phase 5). 채점이 아니라 **기록의 자기 대조**다.
+    replay: PredictionReplay
     #: 그 청크들을 찾을 때 던진 질의 (Phase 3). 증거 **앞**의 한 단계다 —
     #: 무엇이 검색됐는지보다 무엇을 물었는지가 먼저다. `None`은 기록 전이다.
     knowledge_query: str | None = None
@@ -257,6 +267,48 @@ class AiLabKnowledgeResponse:
     integrity: IntegrityFacts
     documents: list[KnowledgeDocument]
     domains: list[DomainFacts]
+
+
+@dataclass(frozen=True)
+class AiLabLeakageResponse:
+    """어느 문서가 어느 예측을 막았는가 (Phase 10).
+
+    **새 판정이 아니다.** 예측의 상태는 평가 화면이 내는 것과 같은 계산에서 나오고,
+    여기서는 그 결론을 문서로 나눌 뿐이다.
+
+    무결성을 같은 응답에 담는 이유는 다른 화면과 같다 — 이 그래프가 보여 주는 누수가
+    곧 그 경고의 원인이고, 따로 받아 가면 같은 판정을 두 번 계산하게 된다.
+    """
+
+    totals: LeakageTotals
+    integrity: IntegrityFacts
+    documents: list[LeakageDocument]
+    #: 판정 규칙의 정의. **문서로 돌릴 수 있는 셋만** 싣는다 — 나머지 다섯은
+    #: 예측 자체의 사실이라 이 화면에서 문서 옆에 세울 자리가 없다.
+    rules: tuple[Rule, ...]
+
+
+@dataclass(frozen=True)
+class AiLabReadinessResponse:
+    """지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가 (Phase 8).
+
+    **다른 화면과 보는 방향이 반대다.** 나머지는 이미 만들어진 예측을 놓고 무엇이
+    막혔는지 묻고, 이 화면은 아직 없는 예측을 놓고 무엇이 막을지 묻는다.
+
+    그래서 여기 실린 것은 **판정이 아니라 위험**이다. 자격은 예측이 생긴 뒤에
+    정해진다 — 이 응답의 어떤 값도 `/ai-lab/evaluation`의 상태를 미리 말하지 않는다.
+
+    무결성을 같은 응답에 담는 이유는 다른 화면과 같다. 다만 여기서는 시제가
+    뒤집힌다 — 그 경고가 **이 코퍼스를 손보지 않으면 다음에도 같다**는 뜻이 된다.
+    """
+
+    totals: ReadinessTotals
+    corpus: ReadinessCorpus
+    integrity: IntegrityFacts
+    events: list[ReadinessEvent]
+    #: 앞서 볼 수 있는 규칙의 정의. **둘뿐이다** — `revision_after_prediction`은
+    #: 견줄 예측 시각이 아직 없어 이 화면에서 물을 수 없다.
+    rules: tuple[Rule, ...]
 
 
 @dataclass(frozen=True)

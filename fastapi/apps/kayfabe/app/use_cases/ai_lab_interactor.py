@@ -12,15 +12,18 @@ LLM을 부르지 않기로 했으므로(§3-D1) 그 칸은 `unknown`으로 나�
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from kayfabe.app.dtos.ai_lab_dto import (
     AgentReportItem,
     AiLabAgentsResponse,
     AiLabEvaluationResponse,
     AiLabKnowledgeResponse,
+    AiLabLeakageResponse,
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    AiLabReadinessResponse,
     AuditReport,
     InferentialAvailability,
     PredictionAuditResponse,
@@ -48,7 +51,13 @@ from kayfabe.app.services.ai_lab_integrity import (
     summarize_predictions,
 )
 from kayfabe.app.services.ai_lab_knowledge import summarize_knowledge
+from kayfabe.app.services.ai_lab_leakage import DOCUMENT_RULES, summarize_leakage
 from kayfabe.app.services.ai_lab_performance import summarize_performance
+from kayfabe.app.services.ai_lab_readiness import (
+    FORESEEABLE_RULES,
+    summarize_readiness,
+)
+from kayfabe.app.services.ai_lab_replay import replay_prediction
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -189,6 +198,11 @@ class AiLabInteractor(AiLabUseCase):
         reports = await self._repository.list_reports()
         documents = await self._repository.list_documents()
         retrievals = await self._repository.list_retrievals()
+        # 재현에만 쓰는 한 건짜리 조회다 (Phase 5). 판정은 이 값을 보지 않으므로
+        # 카드가 바뀌어도 자격 판정은 흔들리지 않는다.
+        options = await self._repository.load_match_options(
+            event_slug=event_slug, match_key=match_key
+        )
 
         _, _, items, _ = summarize_evaluation(
             predictions, reports, documents, retrievals
@@ -202,6 +216,13 @@ class AiLabInteractor(AiLabUseCase):
         mine = [
             r
             for r in retrievals
+            if r.event_slug == event_slug and r.match_key == match_key
+        ]
+        # 합성에 들어갔던 순서 그대로다 — 재현과 화면이 **같은 목록**을 봐야
+        # "이 리포트들로 이 결론이 나왔다"가 성립한다.
+        my_reports = [
+            r
+            for r in reports
             if r.event_slug == event_slug and r.match_key == match_key
         ]
         logger.info(
@@ -240,8 +261,7 @@ class AiLabInteractor(AiLabUseCase):
                     agent_version=report.agent_version,
                     prompt_version=report.prompt_version,
                 )
-                for report in reports
-                if report.event_slug == event_slug and report.match_key == match_key
+                for report in my_reports
             ),
             evidence=explain_evidence(
                 mine,
@@ -249,6 +269,9 @@ class AiLabInteractor(AiLabUseCase):
                 event_start_date=row.event_start_date,
                 generated_at=row.generated_at,
             ),
+            # 저장된 재료로 합성을 다시 돌린다 (Phase 5). **판정과 무관하다** —
+            # 여기서 어긋나도 자격 판정은 한 칸도 움직이지 않는다.
+            replay=replay_prediction(row, my_reports, options),
             # 무엇을 물었는가 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
             knowledge_query=row.knowledge_query,
         )
@@ -290,6 +313,76 @@ class AiLabInteractor(AiLabUseCase):
             consensus=consensus,
             contributions=contributions,
             items=items,
+        )
+
+    async def get_leakage(self) -> AiLabLeakageResponse:
+        """막힌 예측을 문서로 나눈다 (Phase 10). **새 쿼리도 새 판정도 없다.**
+
+        평가 화면과 **같은 네 목록**을 읽고, 상태는 `summarize_evaluation`이 낸 것을
+        그대로 쓴다 — 두 화면이 같은 예측을 두고 다른 말을 할 수 없다.
+        """
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        documents = await self._repository.list_documents()
+        retrievals = await self._repository.list_retrievals()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, items = summarize_leakage(predictions, reports, documents, retrievals)
+        logger.info(
+            "[AiLabInteractor] get_leakage | 막힘=%d 문서설명=%d 설명불가=%d 문서=%d",
+            totals.blocked_predictions,
+            totals.attributed,
+            totals.unattributed,
+            totals.documents,
+        )
+
+        return AiLabLeakageResponse(
+            totals=totals,
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            documents=items,
+            # **문서로 돌릴 수 있는 셋만.** 나머지를 함께 내보내면 화면이 그 규칙도
+            # 문서 탓이라고 세울 자리를 찾게 된다.
+            rules=tuple(rule for rule in RULES if rule.code in DOCUMENT_RULES),
+        )
+
+    async def get_readiness(self) -> AiLabReadinessResponse:
+        """지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는가 (Phase 8).
+
+        **오늘을 여기서 읽어 서비스에 넘긴다.** 판정 안에서 시계를 읽으면 같은
+        데이터가 날짜마다 다른 답을 내는데 그것을 시험할 수 없다 — 시각을 얻는
+        일은 바깥의 몫이고 판정은 받은 값으로만 한다.
+        """
+        events = await self._repository.list_events()
+        documents = await self._repository.list_documents()
+        predictions = await self._repository.list_predictions()
+        reports = await self._repository.list_reports()
+        corpus = await self._repository.corpus_facts()
+        events_total = await self._repository.count_events()
+
+        totals, corpus_state, items = summarize_readiness(
+            events, documents, predictions, as_of=datetime.now(UTC).date()
+        )
+        logger.info(
+            "[AiLabInteractor] get_readiness | 대회=%d 실격위험=%d 보류위험=%d 지뢰문서=%d",
+            totals.events,
+            totals.disqualify_risk,
+            totals.hold_risk,
+            totals.mine_documents,
+        )
+
+        return AiLabReadinessResponse(
+            totals=totals,
+            corpus=corpus_state,
+            integrity=summarize_integrity(
+                predictions, reports, corpus, events_total=events_total
+            ),
+            events=items,
+            # **앞서 볼 수 있는 둘만.** 셋째를 함께 보내면 화면이 물을 수 없는 것을
+            # 물은 척 세울 자리를 찾게 된다.
+            rules=tuple(rule for rule in RULES if rule.code in FORESEEABLE_RULES),
         )
 
     async def get_knowledge(self) -> AiLabKnowledgeResponse:
