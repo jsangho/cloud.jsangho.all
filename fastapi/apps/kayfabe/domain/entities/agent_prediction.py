@@ -123,6 +123,15 @@ class KnowledgeRetrieval:
     source_url: str | None = None
     #: 본문 sha256. 재수집 뒤에도 같은 글인지 대조할 수 있는 유일한 값이다.
     content_hash: str | None = None
+    #: **그때 프롬프트에 들어간 본문 그대로** (Phase 3). 해시만으로는 같은 글인지
+    #: *대조*만 되고 무엇을 읽었는지는 복원되지 않는다 — 재수집이 옛 청크를 지우면
+    #: (`replace_document_chunks`) 그 글은 어디에도 남지 않는다. 다른 칸과 같은
+    #: 이유로 값을 베껴 둔다: 증거가 필요한 시점에 증거가 있어야 한다.
+    #:
+    #: **수집 허용 도메인의 글만 여기 온다.** 코퍼스에 넣을 수 없는 글은 애초에
+    #: 검색되지 않으므로, 이 칸이 하네스 §4-8(유료 기사 본문 저장 금지)을 새로
+    #: 건드리지 않는다. `None`은 기록 전(Phase 3 이전)이라는 뜻이다.
+    content: str | None = None
     source_revision_id: str | None = None
     source_revised_at: datetime | None = None
     published_at: datetime | None = None
@@ -156,6 +165,12 @@ class AgentPrediction:
     #: 이 예측을 만들 때 읽은 청크들 (Phase 3-13). **비어 있는 것은 정상이다** —
     #: 코퍼스에 맞는 글이 없었거나 검색이 실패한 경우이고, 옛 예측에는 아예 없다.
     retrievals: tuple[KnowledgeRetrieval, ...] = field(default_factory=tuple)
+    #: 그 청크들을 찾을 때 **실제로 던진 질의** (Phase 3). 경기 제목과 선택지
+    #: 이름에서 만들어지는데, **카드가 바뀌면 다시 만들 수 없다** — 경기 행이
+    #: 사라진 예측(`withdrawn_match`)이 이미 있고, 그런 예측은 질의를 영영 잃는다.
+    #: 파생 가능해 보이는 값이라도 파생의 재료가 사라지면 기록해 둔 쪽만 남는다.
+    #: `None`은 기록 전이라는 뜻이다.
+    knowledge_query: str | None = None
 
     def __post_init__(self) -> None:
         if not self.event_slug or not self.match_key:

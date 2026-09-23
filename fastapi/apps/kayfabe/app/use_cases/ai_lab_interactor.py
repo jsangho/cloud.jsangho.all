@@ -249,6 +249,8 @@ class AiLabInteractor(AiLabUseCase):
                 event_start_date=row.event_start_date,
                 generated_at=row.generated_at,
             ),
+            # 무엇을 물었는가 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
+            knowledge_query=row.knowledge_query,
         )
 
     async def get_performance(self) -> AiLabPerformanceResponse:

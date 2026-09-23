@@ -97,6 +97,7 @@ _AUDIT = PredictionAuditResponse(
             self_reference=True,
         ),
     ),
+    knowledge_query="Undisputed WWE Championship Cody Rhodes Drew McIntyre",
 )
 
 
@@ -172,6 +173,11 @@ def test_response_is_camel_case(payload: dict) -> None:
     # 결과가 없으면 `null`이다 — 오답(false)과 다른 상태다.
     assert payload["correct"] is None
     assert payload["resultRecordedAt"] is None
+    # 무엇을 물었는가 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
+    assert (
+        payload["knowledgeQuery"]
+        == "Undisputed WWE Championship Cody Rhodes Drew McIntyre"
+    )
 
 
 def test_verdict_and_evidence_tell_the_same_story(payload: dict) -> None:

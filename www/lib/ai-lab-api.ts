@@ -437,6 +437,13 @@ export type PredictionAudit = {
   reports: AuditReport[];
   /** **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다. */
   evidence: Evidence[];
+  /**
+   * 그 청크들을 찾을 때 던진 질의 (Phase 3). 증거 **앞**의 한 단계다.
+   *
+   * `null`은 기록 전이라는 뜻이다. 질의는 경기 제목과 선택지 이름에서 만들어지므로,
+   * 경기가 카드에서 사라진 예측은 기록해 두지 않았으면 영영 복원되지 않는다.
+   */
+  knowledgeQuery: string | null;
 };
 
 /**

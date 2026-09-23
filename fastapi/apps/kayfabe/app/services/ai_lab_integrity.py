@@ -141,6 +141,9 @@ class PredictionRow:
     #: 물음 자체가 회수된 것이다. 기본값이 `True`인 이유는 이 필드를 모르는 기존
     #: 호출자를 그대로 두기 위해서다 — 모르면 "있다"로 보던 지금까지와 같다.
     match_exists: bool = True
+    #: 지식 검색에 던진 질의 (Phase 3). **감사 화면만 쓰고 판정은 보지 않는다.**
+    #: `None`은 기록 전이라는 뜻이고, 경기 행이 사라진 예측에서는 영영 복원되지 않는다.
+    knowledge_query: str | None = None
 
 
 @dataclass(frozen=True)

@@ -314,6 +314,7 @@ def audit_to_schema(response: PredictionAuditResponse) -> PredictionAuditSchema:
             )
             for item in response.evidence
         ],
+        knowledge_query=response.knowledge_query,
     )
 
 

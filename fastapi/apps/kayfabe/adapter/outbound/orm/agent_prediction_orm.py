@@ -58,6 +58,10 @@ class AgentPredictionModel(Base):
     )
     #: 위 선언의 근거. **사실만 적는다** — 추정한 경기 날짜나 승자를 넣지 않는다.
     provenance_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: 지식 검색에 실제로 쓴 질의 (Phase 3). 경기 제목 + 선택지 이름으로 만들어지므로
+    #: 파생값처럼 보이지만, **카드가 바뀌면 재료가 사라진다** — 경기 행이 없어진
+    #: 예측이 이미 있다. `NULL`은 기록 전이며 백필하지 않는다.
+    knowledge_query: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -146,6 +150,10 @@ class PredictionRetrievalModel(Base):
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     #: 본문 sha256. 재수집 뒤에도 같은 글인지 대조할 수 있는 유일한 값이다.
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 그때 프롬프트에 들어간 **본문 그대로** (Phase 3). 해시는 *대조*만 되고
+    #: 복원은 안 된다 — 재수집이 옛 청크를 지우면 그 글은 어디에도 없다.
+    #: `NULL`은 기록 전이다. 허용 도메인 글만 코퍼스에 들어오므로 §4-8과 무관하다.
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
     #: 그때 읽은 개정본. **URL이 같아도 개정본이 다르면 다른 글이다.**
     source_revision_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_revised_at: Mapped[datetime | None] = mapped_column(

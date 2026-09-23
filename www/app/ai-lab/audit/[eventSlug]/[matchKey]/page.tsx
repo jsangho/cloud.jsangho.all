@@ -84,7 +84,11 @@ function Audit({ data }: { data: PredictionAudit }) {
       <Header data={data} />
       <Verdict data={data} />
       <Agents reports={data.reports} />
-      <EvidenceList evidence={data.evidence} eventStartDate={data.eventStartDate} />
+      <EvidenceList
+        evidence={data.evidence}
+        eventStartDate={data.eventStartDate}
+        knowledgeQuery={data.knowledgeQuery}
+      />
     </div>
   );
 }
@@ -283,9 +287,11 @@ const TEMPORAL_LABEL: Record<EvidenceTemporal, string> = {
 function EvidenceList({
   evidence,
   eventStartDate,
+  knowledgeQuery,
 }: {
   evidence: Evidence[];
   eventStartDate: string | null;
+  knowledgeQuery: string | null;
 }) {
   return (
     <section
@@ -299,6 +305,15 @@ function EvidenceList({
         예측을 만들 때 프롬프트에 **실제로 들어간** 청크입니다. 순서는 검색 순위가 아니라 읽은
         순서입니다.
       </p>
+
+      {/* **무엇을 물었는가가 무엇이 나왔는가보다 앞선다** (Phase 3). 기록이 없으면
+          칸을 세우지 않는다 — 빈칸은 "질의가 없었다"로 읽히는데 그건 거짓이다. */}
+      {knowledgeQuery && (
+        <div className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+          <p className="text-xs text-muted-foreground">검색 질의</p>
+          <p className="mt-1 break-words font-mono text-sm text-foreground">{knowledgeQuery}</p>
+        </div>
+      )}
 
       {evidence.length === 0 ? (
         /* **빈 것이 정직한 상태다.** 지금 코퍼스에서 다시 검색해 채우면 "그때 읽은

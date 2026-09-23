@@ -175,6 +175,9 @@ class PredictionAuditResponse:
     #: 그때 실제로 읽은 청크 + 각 조각이 판정에서 한 역할.
     #: **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 기록이 없다.
     evidence: tuple[EvidenceVerdict, ...]
+    #: 그 청크들을 찾을 때 던진 질의 (Phase 3). 증거 **앞**의 한 단계다 —
+    #: 무엇이 검색됐는지보다 무엇을 물었는지가 먼저다. `None`은 기록 전이다.
+    knowledge_query: str | None = None
 
 
 @dataclass(frozen=True)

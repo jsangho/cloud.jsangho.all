@@ -119,7 +119,11 @@ class AiPredictionInteractor(AiPredictionUseCase):
 
     async def _predict_one(self, context: MatchContext) -> AgentPrediction | None:
         """경기 하나. 실패는 이 경기에서 끝나고 다음 경기로 넘어간다."""
-        knowledge = await self._search_knowledge(context)
+        # **질의를 여기서 만들어 내려보낸다** (Phase 3). 검색에 쓴 문자열과 기록에
+        # 남는 문자열이 같은 값이어야 기록이 증거가 된다 — 저장할 때 다시 만들면
+        # 그 사이에 `_knowledge_query`가 바뀌어도 아무도 모른다.
+        query = _knowledge_query(context)
+        knowledge = await self._search_knowledge(context, query)
         reports = await self._collect_reports(context, knowledge)
 
         try:
@@ -133,7 +137,7 @@ class AiPredictionInteractor(AiPredictionUseCase):
             # 북메이커 배당으로 강등한다. 대신 source에 그 사실을 남긴다.
             # **읽은 것은 읽은 것이다** — 아무도 답하지 못했어도 그 청크들은
             # 프롬프트에 들어갔으므로 기록에서 빼지 않는다.
-            return self._bookmaker_fallback(context, knowledge)
+            return self._bookmaker_fallback(context, knowledge, query)
 
         option = _option_for(context, synthesis.pick)
         if option is None:
@@ -158,9 +162,12 @@ class AiPredictionInteractor(AiPredictionUseCase):
             generated_at=self._clock(),
             reports=tuple(reports),
             retrievals=_retrievals(knowledge),
+            knowledge_query=query,
         )
 
-    async def _search_knowledge(self, context: MatchContext) -> list[KnowledgeChunk]:
+    async def _search_knowledge(
+        self, context: MatchContext, query: str
+    ) -> list[KnowledgeChunk]:
         """지식 조회 실패는 이 경기의 실패가 아니다.
 
         서사·루머 에이전트는 근거가 없으면 의견 없음을 내고, 오즈 에이전트는 애초에
@@ -168,9 +175,7 @@ class AiPredictionInteractor(AiPredictionUseCase):
         지식이 없어서 확신이 낮다는 사실이 숫자에 그대로 드러난다.
         """
         try:
-            return await self._knowledge.search(
-                query=_knowledge_query(context), top_k=KNOWLEDGE_TOP_K
-            )
+            return await self._knowledge.search(query=query, top_k=KNOWLEDGE_TOP_K)
         except KnowledgeSourceUnavailableError as exc:
             logger.warning(
                 "[kayfabe.ai_prediction] 지식 조회 실패 | match=%s | %s",
@@ -204,7 +209,10 @@ class AiPredictionInteractor(AiPredictionUseCase):
         return reports
 
     def _bookmaker_fallback(
-        self, context: MatchContext, knowledge: Sequence[KnowledgeChunk] = ()
+        self,
+        context: MatchContext,
+        knowledge: Sequence[KnowledgeChunk] = (),
+        knowledge_query: str | None = None,
     ) -> AgentPrediction | None:
         favorite = _bookmaker_favorite(context)
         if favorite is None or (probability := _implied_probability(context)) is None:
@@ -236,6 +244,9 @@ class AiPredictionInteractor(AiPredictionUseCase):
             generated_at=self._clock(),
             reports=(),
             retrievals=_retrievals(knowledge),
+            # **질의는 검색이 실패했어도 남긴다** — 던진 것은 던진 것이고, 무엇으로
+            # 찾았는데 아무것도 안 나왔는지가 그 자체로 기록이다.
+            knowledge_query=knowledge_query,
         )
 
 
@@ -255,6 +266,8 @@ def _retrievals(
             chunk_id=chunk.chunk_id,
             source_url=chunk.source_url,
             content_hash=chunk.content_hash,
+            # 본문 스냅샷 (Phase 3). 에이전트가 읽은 것과 **같은 문자열**이다.
+            content=chunk.text,
             source_revision_id=chunk.source_revision_id,
             source_revised_at=chunk.source_revised_at,
             published_at=chunk.published_at,

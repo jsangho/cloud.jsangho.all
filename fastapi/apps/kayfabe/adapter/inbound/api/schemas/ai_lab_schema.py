@@ -549,3 +549,9 @@ class PredictionAuditSchema(_Camel):
     reports: list[AuditReportSchema]
     evidence: list[EvidenceSchema]
     """**비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다."""
+    knowledge_query: str | None = Field(default=None, alias="knowledgeQuery")
+    """검색에 던진 질의 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
+
+    `null`은 기록 전이라는 뜻이다. 경기 행이 사라진 예측에서는 영영 복원되지 않는다 —
+    질의가 경기 제목과 선택지 이름에서 만들어지기 때문이다.
+    """

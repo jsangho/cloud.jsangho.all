@@ -115,6 +115,8 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
             rationale=prediction.rationale,
             source=str(prediction.source),
             generated_at=prediction.generated_at,
+            # 검색 질의 (Phase 3). 카드가 바뀌면 다시 만들 수 없는 값이다.
+            knowledge_query=prediction.knowledge_query,
             reports=[
                 AgentReportModel(
                     agent=str(report.agent),
@@ -142,6 +144,8 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
                     chunk_id=item.chunk_id,
                     source_url=item.source_url,
                     content_hash=item.content_hash,
+                    # 본문 스냅샷 (Phase 3). 해시는 대조만 되고 복원은 안 된다.
+                    content=item.content,
                     source_revision_id=item.source_revision_id,
                     source_revised_at=item.source_revised_at,
                     published_at=item.published_at,
@@ -191,6 +195,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
                 chunk_id=item.chunk_id,
                 source_url=item.source_url,
                 content_hash=item.content_hash,
+                content=item.content,
                 source_revision_id=item.source_revision_id,
                 source_revised_at=item.source_revised_at,
                 published_at=item.published_at,
@@ -198,6 +203,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
             )
             for item in row.retrievals
         ),
+        knowledge_query=row.knowledge_query,
     )
 
 
