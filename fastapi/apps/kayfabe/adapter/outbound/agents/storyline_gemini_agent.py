@@ -14,16 +14,19 @@ from collections.abc import Sequence
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
     RateGate,
     ask_for_report,
-    describe_knowledge,
-    describe_match,
-    json_rule,
+    build_prompt,
+    prompt_version,
     shared_rate_gate,
     silent,
     usable_knowledge,
 )
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
 from kayfabe.app.ports.output.storyline_analyst_port import StorylineAnalystPort
-from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
+from kayfabe.domain.entities.agent_prediction import (
+    AgentKind,
+    AgentReport,
+    AgentRuntime,
+)
 from ontology.app.ports.input.gemini_generation_use_case import GeminiGenerationUseCase
 
 _NO_KNOWLEDGE = "참고할 서사 자료가 없습니다."
@@ -34,6 +37,16 @@ _PERSONA = (
     "판단 기준은 대립 각본의 진행 방향, 타이틀의 명분, 최근 푸시 흐름입니다. "
     "[자료]에 없는 내용을 지어내지 마세요."
 )
+
+#: 이 에이전트 **로직**의 판 (Phase 4). 프롬프트가 아니라 코드가 바뀔 때 올린다 —
+#: 어떤 자료를 고르는지, 의견 없음으로 언제 낮추는지 같은 것들이다. 프롬프트 쪽은
+#: `PROMPT_VERSION`이 알아서 따라가므로 여기 손대지 않는다.
+#:
+#: **파생값이 아니라 선언이다.** 올리는 것을 잊으면 틀린 값이 남는다.
+AGENT_VERSION = "storyline@1"
+
+#: 지시문에서 파생된다. 페르소나를 고치면 다음 예측부터 저절로 달라진다.
+PROMPT_VERSION = prompt_version(_PERSONA)
 
 
 class GeminiStorylineAnalyst(StorylineAnalystPort):
@@ -58,18 +71,21 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
     ) -> AgentReport:
         chunks = usable_knowledge(knowledge)
         if not chunks:
-            return silent(AgentKind.STORYLINE, _NO_KNOWLEDGE)
+            # 모델을 부르지 않았으므로 모델·프롬프트 칸은 비운다. 그래도 어느 판의
+            # 에이전트가 "자료 없음"이라고 판단했는지는 남긴다 — 선별 규칙이 바뀌면
+            # 같은 코퍼스에서도 이 결과가 달라진다.
+            return silent(
+                AgentKind.STORYLINE,
+                _NO_KNOWLEDGE,
+                AgentRuntime(agent_version=AGENT_VERSION),
+            )
 
-        prompt = (
-            f"{_PERSONA}\n\n"
-            f"[경기]\n{describe_match(context)}\n\n"
-            f"[자료]\n{describe_knowledge(chunks)}\n\n"
-            f"{json_rule()}"
-        )
         return await ask_for_report(
             self._generation_use_case,
             agent=AgentKind.STORYLINE,
-            prompt=prompt,
+            agent_version=AGENT_VERSION,
+            prompt_version=PROMPT_VERSION,
+            prompt=build_prompt(_PERSONA, context, chunks),
             context=context,
             chunks=chunks,
             gate=self._rate_gate,

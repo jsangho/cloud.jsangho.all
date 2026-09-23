@@ -95,6 +95,19 @@ class AgentReportModel(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     #: 출처 URL 목록. 줄바꿈으로 잇는다 — 조회 시 통째로 읽고 쓰기만 해서 배열 타입이 필요 없다.
     sources: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    #: 아래 셋은 **이 의견이 만들어진 조건**이다 (Phase 4). 셋 다 nullable인 이유가
+    #: 서로 다르므로 한 덩어리로 읽지 않는다 — 자세한 것은 `AgentRuntime` 독스트링.
+    #:
+    #: 실제로 답한 모델 이름. 예비 모델로 넘어갔으면 예비 쪽이 들어간다. LLM을 쓰지
+    #: 않는 오즈 에이전트와, 모델을 고정하지 않아 허브 기본값에 맡긴 호출은 `NULL`이다.
+    model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    #: 지시문 sha256 앞 16자리. **프롬프트 원문은 저장하지 않는다** — 되돌릴 수 없는
+    #: 해시만 남긴다(§11-6). 모델을 부르지 않았으면 `NULL`.
+    prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 에이전트 로직의 판. 사람이 선언하는 값이라 해시와 달리 틀릴 수 있다.
+    #: **Phase 4 이전 행은 `NULL`이고 백필하지 않는다** — 그 리포트가 어느 판에서
+    #: 나왔는지 아무도 모르고, 지금 값을 적으면 없던 사실을 만드는 것이 된다.
+    agent_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

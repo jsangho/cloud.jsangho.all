@@ -6,13 +6,21 @@
 여기서 정한 원칙 둘.
 1. **출처 있는 지식이 없으면 모델을 부르지 않는다.** 근거 없는 예측은 만들지 않는다
    (하네스 §3-D6). 부르지 않으면 비용도 들지 않는다.
-2. **모델 이름·프롬프트 원문은 리포트로 나가지 않는다**(§4-10 · §11-6). 나가는 것은
-   pick·확신·요약·출처 URL뿐이다.
+2. **모델 이름·프롬프트 원문은 API 응답으로 나가지 않는다**(§4-10 · §11-6). 응답에
+   실리는 것은 pick·확신·요약·출처 URL뿐이다.
+
+**Phase 4가 2번의 경계를 정확히 했다.** 모델 이름과 프롬프트 해시는 이제
+`AgentRuntime`으로 리포트에 붙어 **DB까지 간다** — 어떤 조건에서 나온 의견인지
+사후에 물을 수 있어야 하기 때문이다. §11-6이 막는 것은 *응답*이지 *기록*이 아니고,
+경계는 경계 DTO(`AgentReportDto`)가 지킨다: 그쪽에는 이 값들이 없어서 라우터가
+실수로도 내보낼 수 없다. **프롬프트 원문은 어디에도 저장하지 않는다** — 남는 것은
+되돌릴 수 없는 해시뿐이다.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -21,7 +29,11 @@ from typing import Any
 
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
 from kayfabe.app.ports.output.agent_errors import AgentUnavailableError
-from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
+from kayfabe.domain.entities.agent_prediction import (
+    AgentKind,
+    AgentReport,
+    AgentRuntime,
+)
 from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
 from ontology.app.ports.input.gemini_generation_use_case import GeminiGenerationUseCase
 
@@ -134,15 +146,57 @@ def json_rule() -> str:
     return _JSON_RULE
 
 
-def silent(agent: AgentKind, summary: str) -> AgentReport:
+#: 지시문과 자료를 잇는 **조립 틀**. 상수로 꺼내 둔 이유는 하나다 — `prompt_version`이
+#: 이 문자열까지 해시에 넣어야 "[자료]를 [경기] 앞에 두도록 바꿨다" 같은 변경이
+#: 버전에 잡힌다. f-string 안에 흩어 두면 해시가 그 변경을 못 본다.
+_PROMPT_LAYOUT = "{persona}\n\n[경기]\n{match}\n\n[자료]\n{knowledge}\n\n{rule}"
+
+
+def build_prompt(
+    persona: str, context: MatchContext, chunks: Sequence[KnowledgeChunk]
+) -> str:
+    """두 LLM 에이전트가 **같은 틀로** 묻는다. 다른 것은 페르소나뿐이다."""
+    return _PROMPT_LAYOUT.format(
+        persona=persona,
+        match=describe_match(context),
+        knowledge=describe_knowledge(chunks),
+        rule=_JSON_RULE,
+    )
+
+
+def prompt_version(persona: str) -> str:
+    """지시문에서 **파생되는** 판 식별자 (Phase 4). 손으로 올리지 않는다.
+
+    덮는 것은 셋이다: 페르소나 · 조립 틀(`_PROMPT_LAYOUT`) · 출력 규칙(`_JSON_RULE`).
+    셋 중 한 글자만 달라도 값이 바뀐다.
+
+    **덮지 못하는 것이 있다.** `describe_match`·`describe_knowledge`가 경기와 자료를
+    적는 *방식*은 함수 안에 있어서 이 해시가 보지 못한다. 그 구멍은 조립된 프롬프트
+    전문을 고정한 테스트(`test_gemini_agents.py`의 프롬프트 골든)가 막는다 — 형식을
+    건드리면 그쪽이 먼저 깨지고, 그때 무엇이 바뀌었는지 사람이 본다.
+
+    앞 16자리만 쓴다. 사람이 눈으로 두 값을 대조하는 용도이고, 서로 다른 지시문이
+    16자리까지 같을 일은 실질적으로 없다.
+    """
+    material = "\x00".join((persona, _PROMPT_LAYOUT, _JSON_RULE))
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+
+
+def silent(
+    agent: AgentKind, summary: str, runtime: AgentRuntime | None = None
+) -> AgentReport:
     """의견 없음. **실패가 아니라 판단할 근거가 없는 정상 상태다.**"""
-    return AgentReport(agent=agent, pick=None, weight=0.0, summary=summary)
+    return AgentReport(
+        agent=agent, pick=None, weight=0.0, summary=summary, runtime=runtime
+    )
 
 
 async def ask_for_report(
     use_case: GeminiGenerationUseCase,
     *,
     agent: AgentKind,
+    agent_version: str,
+    prompt_version: str,
     prompt: str,
     context: MatchContext,
     chunks: Sequence[KnowledgeChunk],
@@ -151,9 +205,19 @@ async def ask_for_report(
     fallback_model: str | None = None,
 ) -> AgentReport:
     """모델에 묻고 리포트로 옮긴다. 엔진이 죽었으면 `AgentUnavailableError`."""
-    raw = await _generate(use_case, agent, prompt, gate, model, fallback_model)
+    raw, model_used = await _generate(
+        use_case, agent, prompt, gate, model, fallback_model
+    )
+    runtime = AgentRuntime(
+        agent_version=agent_version,
+        # **실제로 답한 모델**이다. 예비로 넘어갔으면 예비 쪽 이름이 들어간다.
+        model=model_used,
+        prompt_version=prompt_version,
+    )
     payload = _parse(raw, agent)
-    return _to_report(payload, agent=agent, context=context, chunks=chunks)
+    return _to_report(
+        payload, agent=agent, context=context, chunks=chunks, runtime=runtime
+    )
 
 
 async def _generate(
@@ -163,18 +227,22 @@ async def _generate(
     gate: RateGate,
     model: str | None,
     fallback_model: str | None = None,
-) -> str:
+) -> tuple[str, str | None]:
     """일시 장애면 다시 묻고, 그래도 안 되면 예비 모델로 한 번 더 묻는다.
 
     같은 모델만 두드리면 그 모델이 혼잡한 동안 계속 실패한다. 마지막 시도를 다른
     모델로 돌리는 이유이고, 한도가 모델 단위라 예비 모델은 자기 몫을 따로 갖는다.
+
+    **응답과 함께 그 응답을 낸 모델을 돌려준다** (Phase 4). 호출자가 설정값을 적으면
+    예비 모델이 답한 날의 기록이 거짓이 된다 — 주 모델이 혼잡해 예비가 답했는데
+    기록에는 주 모델이 남는 상황이고, 그 예측이 왜 달랐는지 영영 설명되지 않는다.
     """
     last: Exception | None = None
     for attempt in range(MAX_ATTEMPTS):
         is_last = attempt == MAX_ATTEMPTS - 1
         target = fallback_model if (is_last and fallback_model) else model
         try:
-            return await _stream_once(use_case, gate, prompt, target)
+            return await _stream_once(use_case, gate, prompt, target), target
         except Exception as exc:  # 네트워크·한도 초과·인증 실패·일시 혼잡
             last = exc
             # 모델 이름과 프롬프트는 로그에도 원문으로 남기지 않는다.
@@ -236,12 +304,14 @@ def _to_report(
     agent: AgentKind,
     context: MatchContext,
     chunks: Sequence[KnowledgeChunk],
+    runtime: AgentRuntime,
 ) -> AgentReport:
     summary = _summary(payload)
     pick = _pick(payload, context)
     if pick is None:
         # 요약은 살린다 — "왜 못 골랐는지"도 화면에 쓸 근거다.
-        return silent(agent, summary)
+        # **실행 조건도 살린다** — 모델은 실제로 불렸고, 못 고른 것이 그 판의 결과다.
+        return silent(agent, summary, runtime)
 
     return AgentReport(
         agent=agent,
@@ -249,6 +319,7 @@ def _to_report(
         weight=_weight(payload),
         summary=summary,
         sources=_sources(chunks),
+        runtime=runtime,
     )
 
 

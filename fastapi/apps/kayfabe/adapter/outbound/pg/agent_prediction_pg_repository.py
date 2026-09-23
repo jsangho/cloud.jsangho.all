@@ -30,6 +30,7 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentKind,
     AgentPrediction,
     AgentReport,
+    AgentRuntime,
     KnowledgeRetrieval,
     PredictionSource,
 )
@@ -121,6 +122,15 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
                     weight=report.weight,
                     summary=report.summary,
                     sources=SOURCE_SEPARATOR.join(report.sources),
+                    # 실행 조건 (Phase 4). 기록이 없는 리포트는 세 칸 모두 NULL로
+                    # 남는다 — 비어 있는 것이 "기록하지 않았다"는 정직한 상태다.
+                    model_version=report.runtime.model if report.runtime else None,
+                    prompt_version=(
+                        report.runtime.prompt_version if report.runtime else None
+                    ),
+                    agent_version=(
+                        report.runtime.agent_version if report.runtime else None
+                    ),
                 )
                 for report in prediction.reports
             ],
@@ -170,6 +180,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
                 weight=report.weight,
                 summary=report.summary,
                 sources=tuple(s for s in report.sources.split(SOURCE_SEPARATOR) if s),
+                runtime=_to_runtime(report),
             )
             for report in row.reports
         ),
@@ -187,6 +198,22 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
             )
             for item in row.retrievals
         ),
+    )
+
+
+def _to_runtime(report: AgentReportModel) -> AgentRuntime | None:
+    """실행 조건 기록 (Phase 4). **`agent_version`이 있는지로 판단한다.**
+
+    셋 중 이 칸만 기록된 모든 리포트에 존재한다 — 모델과 프롬프트는 LLM을 부른
+    리포트에만 있다. `model_version`을 기준으로 삼으면 오즈 에이전트의 기록이
+    통째로 "기록 없음"이 되어, 기록하지 않은 옛 행과 구분되지 않는다.
+    """
+    if report.agent_version is None:
+        return None
+    return AgentRuntime(
+        agent_version=report.agent_version,
+        model=report.model_version,
+        prompt_version=report.prompt_version,
     )
 
 

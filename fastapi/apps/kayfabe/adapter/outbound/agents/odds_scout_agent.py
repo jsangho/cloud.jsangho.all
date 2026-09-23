@@ -12,9 +12,21 @@ from __future__ import annotations
 
 from kayfabe.app.dtos.agent_prediction_dto import MatchContext
 from kayfabe.app.ports.output.odds_scout_port import OddsScoutPort
-from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
+from kayfabe.domain.entities.agent_prediction import (
+    AgentKind,
+    AgentReport,
+    AgentRuntime,
+)
 
 _NO_ODDS = "배당 정보가 없어 판단하지 않았습니다."
+
+#: 이 에이전트 **로직**의 판 (Phase 4). 오버라운드 제거 방식이나 선택 기준이 바뀌면
+#: 올린다 — 같은 배당에서 다른 확신도가 나오기 때문이다.
+AGENT_VERSION = "odds@1"
+
+#: **모델도 프롬프트도 없다.** 이 에이전트는 LLM을 쓰지 않으므로 두 칸은 영구히
+#: 비어 있고, 그것이 이 축의 사실이다. 셋을 다 채우려고 없는 값을 만들지 않는다.
+_RUNTIME = AgentRuntime(agent_version=AGENT_VERSION)
 
 
 class BookmakerOddsScout(OddsScoutPort):
@@ -22,7 +34,11 @@ class BookmakerOddsScout(OddsScoutPort):
         probabilities = _implied_probabilities(context.bookmaker_decimal)
         if probabilities is None or len(probabilities) != len(context.options):
             return AgentReport(
-                agent=AgentKind.ODDS, pick=None, weight=0.0, summary=_NO_ODDS
+                agent=AgentKind.ODDS,
+                pick=None,
+                weight=0.0,
+                summary=_NO_ODDS,
+                runtime=_RUNTIME,
             )
 
         best = max(range(len(probabilities)), key=lambda i: probabilities[i])
@@ -42,6 +58,7 @@ class BookmakerOddsScout(OddsScoutPort):
             ),
             # 배당은 카드에 이미 실려 온 값이라 인용할 외부 URL이 없다.
             sources=(),
+            runtime=_RUNTIME,
         )
 
 

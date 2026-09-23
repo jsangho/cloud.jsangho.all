@@ -310,7 +310,7 @@ robots.txt는 **실행 시점에 확인한다**(`HttpxRobotsPolicy`). 사람이 
 | 테이블 | 용도 | 비고 |
 |---|---|---|
 | `ple_agent_predictions` | 경기별 최종 예측 | PK `id: int` auto-increment. `(event_id, match_key)` 유니크 |
-| `ple_agent_reports` | 에이전트별 리포트 | FK `prediction_id` |
+| `ple_agent_reports` | 에이전트별 리포트 | FK `prediction_id` · 실행 조건 `model_version`·`prompt_version`·`agent_version`(Phase 4, 전부 nullable) |
 | `ple_knowledge_chunks` | RAG 지식 청크 | `embedding Vector(EMBEDDING_DIM)` · `source_url` · `published_at` |
 
 Alembic 마이그레이션은 자동 생성 후 손대지 않는다(루트 `CLAUDE.md` 주의사항).
@@ -472,6 +472,7 @@ cd www && pnpm lint && pnpm type-check && pnpm format
 
 | 날짜 | 단위 | 내용 | 검증 |
 |---|---|---|---|
+| 2026-09-23 | Phase 4 | **실행 조건 기록.** 예측이 무엇으로 만들어졌는지가 어디에도 없어서, 프롬프트를 고친 뒤 같은 경기의 예측이 달라져도 코퍼스가 바뀐 것인지 우리가 질문을 바꾼 것인지 구분되지 않았다. `AgentRuntime`(모델·`prompt_version`·`agent_version`)을 리포트에 붙이고 `ple_agent_reports`에 세 칸을 더했다(`c1a9e4d8f523`). **예측 행이 아니라 리포트 행인 이유**는 모델·지시문이 에이전트마다 다르기 때문이다 — 예측에 한 벌만 두면 둘 중 하나가 거짓이 된다. `prompt_version`은 페르소나·조립 틀·출력 규칙에서 **파생**되고, 해시가 못 보는 조립 형식은 프롬프트 골든이 막는다. `model`은 **실제로 답한 모델**이다(예비로 넘어갔으면 예비 쪽) — 설정값을 적으면 주 모델이 혼잡했던 날의 기록이 거짓이 된다. §11-6은 유지된다: 경계 DTO(`AgentReportDto`)에 이 칸들이 없어 응답으로 나갈 수 없고, 프롬프트 원문은 어디에도 저장하지 않는다. **기존 20건은 백필하지 않는다** — 세 칸 NULL이 정직한 상태이고, 판정 규칙이 이 칸을 보지 않으므로 자격 판정은 한 건도 안 움직인다 | `pytest apps/kayfabe apps/ontology` 650 passed(신규 17건) · ruff · lint-imports 4 KEPT · alembic 헤드 1개 · **운영 미적용** |
 | 2026-08-05 | Q6 결정 | 지식 적재를 **문서 단위 교체**로 바꿨다(`replace_document_chunks`). 같은 URL을 다시 수집하면 옛 청크를 지우고 새로 넣는다 — 위키가 갱신되면 해시가 달라져 작년 판본과 올해 판본이 함께 검색되고, 부상·복귀처럼 뒤집히는 사실에서 옛 판본은 그냥 틀린 근거다. **문서를 못 가져오면 호출되지 않으므로** 수집 실패로 기존 지식을 잃지 않는다. 문서 사이에 겹치는 문단은 종전대로 `content_hash`로 흘려보낸다 | `pytest` 186 passed(신규 1건) · 삭제→삽입 순서를 컴파일된 SQL로 검증 · 운영은 아직 문서별 1판본뿐이라 정리할 잔재 없음 |
 | 2026-08-05 | 지표 정리 | **적중률 집계를 `ple_agent_predictions`로 옮겼다**(§13-Q4). 카드 동기화가 배당으로 `ai_pick`을 파생하던 코드를 제거하고, `ple_matches`의 `ai_pick`·`ai_pick_name`·`ai_correct` 값을 운영에서 비웠다. 북메이커 폴백도 집계에서 제외한다. 화면의 '근거 버튼 없는 N경기' 안내는 그런 행이 존재할 수 없게 되어 삭제 | `pytest` 181 passed(신규 5건, SQLite로 실쿼리 검증) · 운영 `UPDATE ple_matches` 후 `/api/ple_events/ai-stats` 재확인 |
 | 2026-08-05 | 모델 분리 | Gemini **모델 ID를 코드 상수에서 환경변수로** 옮기고, 서사·루머가 서로 다른 모델을 쓰게 했다. 무료 등급의 일일 한도가 모델 단위라(`...PerProjectPerModel`) 같은 모델을 공유하면 한쪽이 쓴 만큼 다른 쪽이 못 쓴다. 실측으로 확인: `gemini-3.5-flash`가 429인 상태에서 `-lite`와 `3.6-flash`는 정상 응답했다. 허브 DTO에 `model` 필드를 **선택 인자로** 추가해 기존 호출부(선수 챗)는 한 줄도 바뀌지 않는다. §9 갱신 | `pytest` 176 passed(신규 2건) · lint-imports 4 KEPT · 모델 목록·한도 분리를 운영 키로 실측 |
