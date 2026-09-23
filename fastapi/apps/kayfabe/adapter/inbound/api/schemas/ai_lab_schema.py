@@ -490,6 +490,12 @@ class EvidenceSchema(_Camel):
     """코사인 거리. 작을수록 가깝다. 못 구했으면 `null` — 0.0으로 채우지 않는다."""
     temporal: str
     """"before_event" | "not_before_event" | "unknown_revision" | "unknown_event_date"."""
+    revision_vs_prediction: str = Field(alias="revisionVsPrediction")
+    """"before_prediction" | "after_prediction" | "unknown_revision" (Phase 2).
+
+    `temporal`과 **기준이 다르다** — 저쪽은 경기 시작일, 이쪽은 예측 생성 시각이다.
+    `after_prediction`은 그때 존재하지도 않던 글이 증거 목록에 있다는 뜻이다.
+    """
     self_reference: bool = Field(alias="selfReference")
     """이 글이 **그 대회 자체**를 다룬 문서인가."""
 

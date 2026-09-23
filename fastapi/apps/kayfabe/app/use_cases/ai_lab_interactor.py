@@ -247,6 +247,7 @@ class AiLabInteractor(AiLabUseCase):
                 mine,
                 event_label=row.event_label,
                 event_start_date=row.event_start_date,
+                generated_at=row.generated_at,
             ),
         )
 

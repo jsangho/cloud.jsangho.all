@@ -443,6 +443,7 @@ class TestTotals:
             "temporal_inversion",
             "self_reference",
             "unverifiable_corpus",
+            "revision_after_prediction",
         ]
 
     def test_each_rule_reports_how_many_it_blocked(self) -> None:

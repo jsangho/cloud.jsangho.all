@@ -309,6 +309,7 @@ def audit_to_schema(response: PredictionAuditResponse) -> PredictionAuditSchema:
                 published_at=item.published_at,
                 distance=item.distance,
                 temporal=item.temporal,
+                revision_vs_prediction=item.revision_vs_prediction,
                 self_reference=item.self_reference,
             )
             for item in response.evidence

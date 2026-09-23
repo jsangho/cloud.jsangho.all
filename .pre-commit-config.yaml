@@ -21,18 +21,23 @@ repos:
         pass_filenames: false
 
       # ── Python ───────────────────────────────────────────────
+      #
+      # **셋 다 `uv run`으로 부른다.** 맨 이름으로 부르면 둘 중 하나가 난다 —
+      # 실행 파일을 아예 못 찾거나(훅을 설치하기 전까지 아무도 몰랐다), PATH에
+      # 걸린 다른 파이썬(Anaconda 등)의 전역 설치가 먼저 잡혀 엉뚱한 버전이
+      # 돈다. 루트 `CLAUDE.md` §5가 같은 이유로 `uv run`을 못 박고 있다.
       - id: ruff-lint
         name: "Python: ruff lint"
-        entry: ruff
-        args: [check, fastapi/, --config, pyproject.toml]
+        entry: uv
+        args: [run, ruff, check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false
 
       - id: ruff-format-check
         name: "Python: ruff format check"
-        entry: ruff
-        args: [format, --check, fastapi/, --config, pyproject.toml]
+        entry: uv
+        args: [run, ruff, format, --check, fastapi/, --config, pyproject.toml]
         language: system
         always_run: true
         pass_filenames: false
@@ -40,7 +45,7 @@ repos:
       - id: import-linter
         name: "Python: import-linter (star topology)"
         entry: bash
-        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps lint-imports"]
+        args: [-c, "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports"]
         language: system
         always_run: true
         pass_filenames: false

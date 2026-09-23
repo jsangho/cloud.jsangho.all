@@ -276,7 +276,12 @@ def test_evidence_temporal_positions_cover_the_four_cases() -> None:
         _retrieval(3, revised_at=None),
     )
 
-    verdicts = explain_evidence(rows, event_label=_LABEL, event_start_date=_EVENT_DAY)
+    verdicts = explain_evidence(
+        rows,
+        event_label=_LABEL,
+        event_start_date=_EVENT_DAY,
+        generated_at=_GENERATED_AT,
+    )
     assert [v.temporal for v in verdicts] == [
         EVIDENCE_BEFORE_EVENT,
         EVIDENCE_NOT_BEFORE_EVENT,
@@ -284,7 +289,12 @@ def test_evidence_temporal_positions_cover_the_four_cases() -> None:
     ]
 
     # 대회 날짜를 모르면 비교 자체가 불가능하다 — 개정본 시각이 있어도 그렇다.
-    blind = explain_evidence(rows, event_label=_LABEL, event_start_date=None)
+    blind = explain_evidence(
+        rows,
+        event_label=_LABEL,
+        event_start_date=None,
+        generated_at=_GENERATED_AT,
+    )
     assert {v.temporal for v in blind} == {EVIDENCE_UNKNOWN_EVENT_DATE}
 
 
@@ -294,6 +304,7 @@ def test_event_day_revision_is_not_before_the_event() -> None:
         (_retrieval(1, revised_at=datetime(2026, 8, 10, 3, tzinfo=UTC)),),
         event_label=_LABEL,
         event_start_date=_EVENT_DAY,
+        generated_at=_GENERATED_AT,
     )
 
     assert verdict.temporal == EVIDENCE_NOT_BEFORE_EVENT
@@ -313,6 +324,7 @@ def test_evidence_without_a_url_is_not_called_self_reference() -> None:
         ),
         event_label=_LABEL,
         event_start_date=_EVENT_DAY,
+        generated_at=_GENERATED_AT,
     )
 
     assert verdict.self_reference is False

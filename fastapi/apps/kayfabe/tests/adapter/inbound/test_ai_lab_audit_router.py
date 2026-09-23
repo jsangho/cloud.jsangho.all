@@ -93,6 +93,7 @@ _AUDIT = PredictionAuditResponse(
             published_at=None,
             distance=0.12,
             temporal="before_event",
+            revision_vs_prediction="before_prediction",
             self_reference=True,
         ),
     ),

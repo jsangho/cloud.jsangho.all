@@ -351,6 +351,18 @@ export type EvidenceTemporal =
   | "unknown_event_date";
 
 /**
+ * 증거 한 조각이 **예측 시각 기준으로** 차지하는 자리 (Phase 2).
+ *
+ * `EvidenceTemporal`과 갈라 둔 이유는 두 축이 서로 독립이기 때문이다 — 경기보다
+ * 앞선 글이면서 동시에 예측보다 나중일 수 있다. 한 값으로 접으면 그 조합을
+ * 말할 방법이 없어진다.
+ */
+export type EvidenceRevisionPosition =
+  | "before_prediction"
+  | "after_prediction"
+  | "unknown_revision";
+
+/**
  * 예측이 **그때 실제로 읽은** 청크 하나 + 판정에서 한 역할 (Phase 6·9).
  *
  * `temporal`과 `selfReference`는 **결정적 규칙 엔진이 낸 값이다.** LLM에게 왜
@@ -368,6 +380,14 @@ export type Evidence = {
   /** 코사인 거리. 작을수록 가깝다. 못 구했으면 `null`. */
   distance: number | null;
   temporal: EvidenceTemporal;
+  /**
+   * 그 글이 **예측 시점에 이미 있던 글인가** (Phase 2).
+   *
+   * `temporal`과 기준이 다르다 — 저쪽은 경기 시작일, 이쪽은 예측 생성 시각이다.
+   * `after_prediction`은 그때 존재하지도 않던 글이 증거 목록에 있다는 뜻이고,
+   * 그러면 기록 자체가 성립하지 않는다.
+   */
+  revisionVsPrediction: EvidenceRevisionPosition;
   selfReference: boolean;
 };
 

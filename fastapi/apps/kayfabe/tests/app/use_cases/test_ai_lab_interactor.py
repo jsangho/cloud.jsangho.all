@@ -486,10 +486,13 @@ class TestEvaluation:
             "temporal_inversion",
             "self_reference",
             "unverifiable_corpus",
+            "revision_after_prediction",
         ]
         # 보류를 실격으로 적지 않도록 severity를 함께 낸다.
         by_code = {rule.code: rule.severity for rule in schema.rules}
         assert by_code["unverifiable_corpus"] == "hold"
+        # 증거가 성립하지 않는 것과 누수가 확정된 것은 다른 사실이다 (Phase 2).
+        assert by_code["revision_after_prediction"] == "hold"
         assert by_code["temporal_inversion"] == "disqualify"
         # 사후 재현 표본은 **실격이 아니라 제외다.**
         assert by_code["external_outcome_known"] == "exclude"

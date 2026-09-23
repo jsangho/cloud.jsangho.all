@@ -66,7 +66,20 @@ REVISED_ON_EVENT_DAY = datetime(2026, 8, 10, 3, tzinfo=UTC)
 #: 대회 뒤 개정본. 결과가 실려 있을 수 있다.
 REVISED_AFTER_EVENT = datetime(2026, 8, 14, 3, tzinfo=UTC)
 
-COLLECTED_AT = datetime(2026, 8, 15, 7, tzinfo=UTC)
+#: 대회 뒤 개정본을 **읽을 수 있었던** 생성 시각 (Phase 2). `REVISED_AFTER_EVENT`를
+#: 읽었다고 말하려면 예측이 그 뒤여야 한다 — 아니면 `revision_after_prediction`이
+#: 그 기록을 불가능하다고 잡는다. 결과 기록은 그보다 더 뒤로 미뤄 시간 규칙을 지난다.
+GENERATED_AFTER_EVENT = datetime(2026, 8, 15, 7, tzinfo=UTC)
+LATE_RESULT_RECORDED_AT = datetime(2026, 8, 16, 7, tzinfo=UTC)
+
+#: 예측을 **일찍** 만든 시각. 아래 둘과 짝을 이뤄 "예측보다 나중 개정본"을 만든다.
+EARLY_GENERATED_AT = datetime(2026, 8, 5, 7, tzinfo=UTC)
+
+#: 예측보다 나중이지만 **대회보다는 앞선** 개정본. 코퍼스 규칙은 지나고
+#: `revision_after_prediction`만 걸리게 하는 값이다 — 한 케이스가 한 규칙만 재도록.
+REVISED_AFTER_PREDICTION = datetime(2026, 8, 7, 3, tzinfo=UTC)
+
+COLLECTED_AT = datetime(2026, 8, 18, 7, tzinfo=UTC)
 
 EVENT_SLUG = "summerslam"
 EVENT_LABEL = "SummerSlam"
@@ -342,10 +355,13 @@ GOLDEN_SET: tuple[GoldenCase, ...] = (
         expected_severity="hold",
     ),
     GoldenCase(
-        name="future_corpus_revision",
+        name="corpus_revision_after_the_event",
         guards=(
             "대회 **이후** 개정본을 인용하고도 통과하는 회귀. 그 글에는 결과가 "
-            "실려 있을 수 있고, 없다는 것을 우리가 증명하지 못한다."
+            "실려 있을 수 있고, 없다는 것을 우리가 증명하지 못한다. "
+            "(이름이 `future_corpus_revision`이었는데, Phase 2가 **예측** 기준의 "
+            "같은 이름 규칙을 들이면서 기준이 헷갈리지 않게 바꿨다 — 여기는 경기일 "
+            "기준이다.)"
         ),
         prediction=_prediction("g09"),
         reports=(_report("g09"),),
@@ -372,12 +388,67 @@ GOLDEN_SET: tuple[GoldenCase, ...] = (
             "**그때 읽은 기록이 있는데 지금 코퍼스로 판정하는** 회귀 (Stage 4-B). "
             "문서 쪽은 깨끗한데 스냅샷은 경기 뒤 개정본을 읽었다고 말한다 — 기록이 "
             "이겨야 한다. 문서 단위 판정은 코퍼스의 *지금* 상태라 재수집이 과거 "
-            "판정을 바꿔 버린다."
+            "판정을 바꿔 버린다.\n\n"
+            "**시각을 Phase 2에서 뒤로 미뤘다.** 원래는 8/9에 만든 예측이 8/14 "
+            "개정본을 읽었다고 적혀 있었는데, 그건 물리적으로 불가능한 기록이라 "
+            "새 규칙이 함께 걸렸다. 재던 것(스냅샷이 문서를 이긴다)은 그대로 두고 "
+            "**입력만 가능한 이야기로** 고쳤다 — 규칙을 느슨하게 한 것이 아니다."
         ),
-        prediction=_prediction("g11"),
+        prediction=_prediction(
+            "g11",
+            generated_at=GENERATED_AFTER_EVENT,
+            finished_at=LATE_RESULT_RECORDED_AT,
+        ),
         reports=(_report("g11"),),
         documents=(_document(_doc_url("g11"), latest_revised_at=REVISED_BEFORE_EVENT),),
         retrievals=(_retrieval("g11", source_revised_at=REVISED_AFTER_EVENT),),
+        expected_status="held",
+        expected_rule="unverifiable_corpus",
+        expected_severity="hold",
+    ),
+    GoldenCase(
+        name="revision_after_prediction",
+        guards=(
+            "**예측이 읽을 수 없었던 글**이 증거 목록에 있는데 통과하는 회귀 "
+            "(Phase 2). 개정본이 예측보다 나중이면 그 글은 그때 존재하지 않았고, "
+            "기록이 사실일 수 없다. 누수가 확정된 것은 아니므로 실격이 아니라 "
+            "**보류** — 증명할 수 없게 된 것이 이 규칙이 말하는 전부다.\n\n"
+            "개정본을 대회보다는 앞에 둬서 코퍼스 규칙은 지나게 했다. 한 케이스가 "
+            "한 규칙만 재야 '무엇이 막았는가'가 뜻을 갖는다."
+        ),
+        prediction=_prediction("g21", generated_at=EARLY_GENERATED_AT),
+        reports=(_report("g21"),),
+        retrievals=(_retrieval("g21", source_revised_at=REVISED_AFTER_PREDICTION),),
+        expected_status="held",
+        expected_rule="revision_after_prediction",
+        expected_severity="hold",
+    ),
+    GoldenCase(
+        name="revision_at_the_same_instant_is_not_after",
+        guards=(
+            "**경계값** (Phase 2). `>`를 `>=`로 바꾸면 여기가 막힌다. 같은 순간은 "
+            "미래가 아니다 — 경기일 비교가 `>=`인 것과 달라 보이지만, 그쪽은 날짜라 "
+            "'같은 날'이 하루 전체를 뜻하고 이쪽은 초 단위 한 점이다."
+        ),
+        prediction=_prediction("g19", generated_at=EARLY_GENERATED_AT),
+        reports=(_report("g19"),),
+        retrievals=(_retrieval("g19", source_revised_at=EARLY_GENERATED_AT),),
+        expected_status="eligible",
+        expected_rule=None,
+        expected_severity=None,
+    ),
+    GoldenCase(
+        name="unknown_revision_is_held_by_the_corpus_rule_alone",
+        guards=(
+            "**같은 결손을 두 규칙이 각각 세는** 회귀 (Phase 2). 개정본 시각이 없는 "
+            "청크는 `unverifiable_corpus` 하나가 잡는다. `revision_after_prediction`이 "
+            "여기서 함께 걸리면 '왜 막혔나'가 두 배로 부풀고, 새 규칙이 실제로 "
+            "잡는 것(불가능한 기록)이 무엇인지 흐려진다. 이 케이스가 그 결합을 "
+            "고정하므로, 코퍼스 규칙이 모름을 통과시키게 바뀌면 여기가 먼저 깨진다."
+        ),
+        prediction=_prediction("g20"),
+        reports=(_report("g20"),),
+        retrievals=(_retrieval("g20", source_revised_at=None),),
         expected_status="held",
         expected_rule="unverifiable_corpus",
         expected_severity="hold",

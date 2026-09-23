@@ -320,12 +320,16 @@ function EvidenceList({
 
 function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate: string | null }) {
   const leaks = item.selfReference || item.temporal === "not_before_event";
+  /* **누수와 다른 고장이다** (Phase 2). 결과를 봤을 수 있다는 것이 아니라, 예측이
+     읽을 수 없던 글이 증거에 있다는 뜻 — 기록 자체가 성립하지 않는다. 줄을 같은
+     색으로 세우되 배지 문구로 둘을 구분한다. */
+  const impossible = item.revisionVsPrediction === "after_prediction";
 
   return (
     <li
       className={cn(
         "rounded-lg border px-3 py-2.5",
-        leaks ? "border-live/50 bg-live/5" : "border-border",
+        leaks || impossible ? "border-live/50 bg-live/5" : "border-border",
       )}
     >
       <div className="flex items-start gap-2.5">
@@ -373,6 +377,13 @@ function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate:
                 eventStartDate &&
                 ` (대회 ${eventStartDate})`}
             </span>
+            {/* **정상일 때는 달지 않는다** (Phase 2). 모든 줄에 "예측 이전 개정본"을
+                붙이면 그 배지가 배경이 되어, 정작 이상한 줄이 눈에 안 띈다. */}
+            {impossible && (
+              <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-xs text-live">
+                예측보다 나중 개정본 ← 그때 없던 글
+              </span>
+            )}
             {item.selfReference && (
               <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-xs text-live">
                 대회 자체 문서 ← 자기참조
