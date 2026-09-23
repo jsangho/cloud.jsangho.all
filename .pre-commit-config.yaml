@@ -45,6 +45,25 @@ repos:
         always_run: true
         pass_filenames: false
 
+      # KAYFABE 자격 판정 골든 세트 (Phase 11).
+      #
+      # **테스트 전체가 아니라 이 파일만 돌린다.** 0.1초라 커밋 흐름을 느리게 하지
+      # 않으면서, 판정 규칙의 의미가 바뀌는 것만 잡는다. 이 엔진은 "어떤 예측을
+      # 채점해도 되는가"를 정하므로, 여기가 조용히 느슨해지면 그 뒤의 모든 숫자가
+      # 뜻을 잃는다.
+      #
+      # 나머지 테스트는 여전히 손으로 돌린다 — 넓히려면 경로를 늘리면 된다.
+      - id: kayfabe-eligibility-golden
+        name: "KAYFABE: eligibility golden set"
+        entry: bash
+        args:
+          - -c
+          - "cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run pytest
+            apps/kayfabe/tests/app/services/test_eligibility_golden_set.py -q"
+        language: system
+        always_run: true
+        pass_filenames: false
+
       # ── Next.js ──────────────────────────────────────────────
       - id: eslint
         name: "Next.js: ESLint"
