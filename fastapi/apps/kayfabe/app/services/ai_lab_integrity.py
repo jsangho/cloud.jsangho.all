@@ -155,6 +155,14 @@ class ReportRow:
     #: 에이전트가 쓴 판단 요약. 의견이 없어도 이유가 적혀 있어 근거로 쓸 만하다.
     summary: str
     sources: tuple[str, ...]
+    #: 아래 둘은 이 의견을 만든 **판**이다 (Phase 4). 감사 화면만 쓰고 집계는 보지
+    #: 않는다. `None`은 Phase 4 이전에 저장된 리포트라 기록이 없다는 뜻이다 —
+    #: 백필하지 않았으므로 빈 것이 정직한 상태다.
+    #:
+    #: **모델 이름은 여기 없다.** 그 값은 DB에만 두고 응답으로 내보내지 않는다
+    #: (하네스 §11-6). 판을 가리키는 데는 아래 둘로 충분하다.
+    agent_version: str | None = None
+    prompt_version: str | None = None
 
 
 @dataclass(frozen=True)

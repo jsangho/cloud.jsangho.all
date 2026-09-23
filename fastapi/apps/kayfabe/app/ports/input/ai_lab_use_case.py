@@ -16,6 +16,7 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    PredictionAuditResponse,
 )
 
 
@@ -55,6 +56,23 @@ class AiLabUseCase(ABC):
         자격 있는 표본이 0건이면 `performance`는 `None`으로 나간다 — 0%를 만들지 않는다.
 
         새 쿼리를 쓰지 않는다 — 이미 읽는 예측·리포트·문서 목록을 잇는다.
+        """
+        ...
+
+    @abstractmethod
+    async def get_audit(
+        self, *, event_slug: str, match_key: str
+    ) -> PredictionAuditResponse | None:
+        """예측 **한 건**의 전체 계보 (Phase 9).
+
+        언제 만들었는지 · 어느 판의 에이전트였는지 · 무엇을 읽었는지 · 그 글이 어느
+        개정본인지 · 그 개정본이 경기보다 앞서는지 · 왜 이 판정인지를 한자리에 모은다.
+
+        **판정을 다시 하지 않는다.** `get_evaluation()`과 같은 계산에서 뽑아 오므로
+        두 화면이 같은 예측을 두고 다른 말을 할 수 없다.
+
+        없는 예측이면 `None`이다 — 없음은 예외가 아니고, HTTP 상태로 옮기는 것은
+        라우터의 일이다(도메인·포트에서 `HTTPException`을 던지지 않는다, §4-6).
         """
         ...
 

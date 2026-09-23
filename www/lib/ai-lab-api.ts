@@ -325,6 +325,126 @@ export async function fetchAiLabEvaluation(): Promise<AiLabEvaluation | null> {
   }
 }
 
+/**
+ * 규칙 하나의 **정의**. 건수가 없다 (Phase 9).
+ *
+ * `EvaluationRule`의 `blocked`는 **전체 집계**라 한 건짜리 감사 화면에서 뜻이 없다.
+ * 0으로 받으면 화면은 그것을 "이 규칙이 아무것도 막지 않았다"로 읽게 된다.
+ */
+export type RuleDefinition = {
+  code: string;
+  label: string;
+  severity: EvaluationSeverity;
+  description: string;
+};
+
+/**
+ * 증거 한 조각이 **시간 규칙에서 차지하는 자리** (Phase 6·9).
+ *
+ * 한국어 문장이 아니라 값으로 온다 — 화면이 색과 문구를 고르려고 서버 문장을
+ * 파싱하는 일이 없어야 한다.
+ */
+export type EvidenceTemporal =
+  | "before_event"
+  | "not_before_event"
+  | "unknown_revision"
+  | "unknown_event_date";
+
+/**
+ * 예측이 **그때 실제로 읽은** 청크 하나 + 판정에서 한 역할 (Phase 6·9).
+ *
+ * `temporal`과 `selfReference`는 **결정적 규칙 엔진이 낸 값이다.** LLM에게 왜
+ * 실격인지 설명시킨 것이 아니라, 판정이 쓴 것과 같은 함수를 지난 결과다.
+ */
+export type Evidence = {
+  /** 프롬프트에 들어간 순서. 검색 순위가 아니라 **읽은 순서**다. */
+  rank: number;
+  sourceUrl: string | null;
+  /** 그때 읽은 개정본. **URL이 같아도 개정본이 다르면 다른 글이다.** */
+  sourceRevisionId: string | null;
+  sourceRevisedAt: string | null;
+  /** 위키는 이 값을 안 내보내므로 대개 `null`이다 — 판정은 이것을 보지 않는다. */
+  publishedAt: string | null;
+  /** 코사인 거리. 작을수록 가깝다. 못 구했으면 `null`. */
+  distance: number | null;
+  temporal: EvidenceTemporal;
+  selfReference: boolean;
+};
+
+/** 감사 화면이 보는 리포트 한 건 (Phase 9). **모델 이름은 오지 않는다**(§11-6). */
+export type AuditReport = {
+  agent: string;
+  pick: string | null;
+  weight: number;
+  summary: string;
+  sources: string[];
+  /** 에이전트 로직의 판. `null`이면 **기록이 없는 옛 리포트**다 — 백필하지 않았다. */
+  agentVersion: string | null;
+  /** 지시문 해시 앞 16자리. 모델을 부르지 않은 리포트는 `null`. */
+  promptVersion: string | null;
+};
+
+/**
+ * 예측 한 건의 전체 계보 (Phase 9).
+ *
+ * `evaluation`은 목록 화면이 받는 것과 **같은 판정**이다 — 두 화면이 같은 예측을
+ * 두고 다른 말을 할 수 없다.
+ *
+ * **`replay` 칸이 없다.** Phase 5가 아직이고, 보장할 수 없는 것을 빈칸으로 만들어
+ * 두면 그 빈칸이 "재현 가능한데 안 했다"로 읽힌다.
+ */
+export type PredictionAudit = {
+  eventSlug: string;
+  eventLabel: string;
+  matchKey: string;
+  matchTitle: string;
+  pick: string;
+  pickName: string;
+  winProbability: number;
+  confidence: number;
+  rationale: string;
+  source: string;
+  generatedAt: string;
+  /** 결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다. */
+  resultRecordedAt: string | null;
+  /** 대회가 열린 날. 증거의 개정본 시각을 이 날과 견준다. */
+  eventStartDate: string | null;
+  winnerName: string | null;
+  /** 결과가 없으면 `null` — 오답(false)과 다른 상태다. */
+  correct: boolean | null;
+  evaluation: EvaluationItem;
+  rules: RuleDefinition[];
+  reports: AuditReport[];
+  /** **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다. */
+  evidence: Evidence[];
+};
+
+/**
+ * 예측 한 건의 계보를 받는다 (Phase 9).
+ *
+ * 없는 예측이면 서버가 404를 내고 여기서는 `null`이 된다 — 화면은 그것을 오류가
+ * 아니라 "그런 예측이 없다"로 세운다.
+ */
+export async function fetchPredictionAudit(
+  eventSlug: string,
+  matchKey: string,
+): Promise<PredictionAudit | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const path = `${encodeURIComponent(eventSlug)}/${encodeURIComponent(matchKey)}`;
+    const res = await fetch(`${aiLabBaseUrl}/audit/${path}`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PredictionAudit;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** 예측 하나에 실린 에이전트 한 명의 몫 (Phase 3-5). */
 export type ReportContribution = {
   agent: string;

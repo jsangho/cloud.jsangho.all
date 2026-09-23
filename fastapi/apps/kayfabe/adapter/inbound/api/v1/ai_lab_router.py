@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentActivitySchema,
     AgentAnalysisSchema,
@@ -25,11 +25,13 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AiLabOverviewSchema,
     AiLabPerformanceSchema,
     AiLabPredictionsSchema,
+    AuditReportSchema,
     ConsensusLevelSchema,
     EligiblePerformanceSchema,
     EvaluationItemSchema,
     EvaluationRuleSchema,
     EvaluationTotalsSchema,
+    EvidenceSchema,
     InferentialSchema,
     IntegritySchema,
     KnowledgeDocumentSchema,
@@ -37,11 +39,13 @@ from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     KnowledgeTotalsSchema,
     PerformanceItemSchema,
     PerformanceTotalsSchema,
+    PredictionAuditSchema,
     PredictionEventSchema,
     PredictionItemSchema,
     PredictionTotalsSchema,
     RecentPredictionSchema,
     ReportContributionSchema,
+    RuleDefinitionSchema,
     RuleVerdictSchema,
     SystemComponentSchema,
 )
@@ -52,6 +56,7 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    PredictionAuditResponse,
 )
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
 from kayfabe.app.services.ai_lab_integrity import IntegrityFacts, PredictionTotals
@@ -199,6 +204,115 @@ def evaluation_to_schema(response: AiLabEvaluationResponse) -> AiLabEvaluationSc
                 events_covered=response.performance.events_covered,
             )
         ),
+    )
+
+
+@ai_lab_router.get(
+    "/audit/{event_slug}/{match_key}",
+    response_model=PredictionAuditSchema,
+    response_model_by_alias=True,
+)
+async def get_prediction_audit(
+    event_slug: str,
+    match_key: str,
+    use_case: AiLabUseCase = Depends(get_ai_lab),
+):
+    """예측 **한 건**의 전체 계보 (Phase 9).
+
+    답하는 물음이 아홉이다 — 언제 만들었는가 · 어느 판의 에이전트였는가 · 무엇을
+    읽었는가 · 그 글은 어느 개정본인가 · 그 개정본이 경기보다 앞서는가 · 대회 자체의
+    문서를 읽었는가 · 왜 이 판정인가 · 그 근거를 DB에서 다시 확인할 수 있는가.
+
+    `evaluation`은 `/ai-lab/evaluation`이 내는 것과 **같은 판정**이다. 여기서 한 건만
+    따로 재지 않는다 — 두 화면이 같은 예측을 두고 다른 말을 하면 감사 시스템으로서
+    쓸모가 없다.
+
+    **`evidence`가 비어 있는 것은 정상이다.** Stage 4 이전에 만들어진 예측에는 검색
+    기록이 아예 없고, 지금 코퍼스에서 다시 검색해 채우면 "그때 읽은 것"이 아니라
+    "지금 검색되는 것"을 적는 것이 된다.
+
+    **모델 이름은 나가지 않는다**(§11-6). 판을 가리키는 것은 `agentVersion`·
+    `promptVersion`이고 둘 다 벤더를 드러내지 않는다.
+    """
+    logger.info(
+        "[AiLabRouter] get_prediction_audit | event=%s match=%s", event_slug, match_key
+    )
+    response = await use_case.get_audit(event_slug=event_slug, match_key=match_key)
+    if response is None:
+        raise HTTPException(status_code=404, detail="예측을 찾을 수 없습니다.")
+    return audit_to_schema(response)
+
+
+def audit_to_schema(response: PredictionAuditResponse) -> PredictionAuditSchema:
+    return PredictionAuditSchema(
+        event_slug=response.event_slug,
+        event_label=response.event_label,
+        match_key=response.match_key,
+        match_title=response.match_title,
+        pick=response.pick,
+        pick_name=response.pick_name,
+        win_probability=response.win_probability,
+        confidence=response.confidence,
+        rationale=response.rationale,
+        source=response.source,
+        generated_at=response.generated_at,
+        result_recorded_at=response.result_recorded_at,
+        event_start_date=response.event_start_date,
+        winner_name=response.winner_name,
+        correct=response.correct,
+        evaluation=EvaluationItemSchema(
+            event_slug=response.evaluation.event_slug,
+            event_label=response.evaluation.event_label,
+            match_key=response.evaluation.match_key,
+            match_title=response.evaluation.match_title,
+            generated_at=response.evaluation.generated_at,
+            result_recorded_at=response.evaluation.result_recorded_at,
+            status=response.evaluation.status,
+            eligible=response.evaluation.eligible,
+            verdicts=[
+                RuleVerdictSchema(
+                    code=verdict.code,
+                    failed=verdict.failed,
+                    applicable=verdict.applicable,
+                    detail=verdict.detail,
+                )
+                for verdict in response.evaluation.verdicts
+            ],
+        ),
+        rules=[
+            RuleDefinitionSchema(
+                code=rule.code,
+                label=rule.label,
+                severity=rule.severity,
+                description=rule.description,
+            )
+            for rule in response.rules
+        ],
+        reports=[
+            AuditReportSchema(
+                agent=report.agent,
+                pick=report.pick,
+                weight=report.weight,
+                summary=report.summary,
+                sources=list(report.sources),
+                agent_version=report.agent_version,
+                prompt_version=report.prompt_version,
+            )
+            for report in response.reports
+        ],
+        evidence=[
+            EvidenceSchema(
+                rank=item.rank,
+                source_url=item.source_url,
+                source_revision_id=item.source_revision_id,
+                source_revised_at=item.source_revised_at,
+                published_at=item.published_at,
+                distance=item.distance,
+                temporal=item.temporal,
+                self_reference=item.self_reference,
+            )
+            for item in response.evidence
+        ],
     )
 
 

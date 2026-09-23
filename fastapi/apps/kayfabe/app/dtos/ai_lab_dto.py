@@ -12,12 +12,14 @@ adapter를 향하게 되어 의존성이 바깥으로 뒤집힌다(CLAUDE.md §0
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from kayfabe.app.services.ai_lab_evaluation import (
     EligiblePerformance,
     EvaluationItem,
     EvaluationTotals,
+    EvidenceVerdict,
+    Rule,
     RuleTally,
 )
 from kayfabe.app.services.ai_lab_integrity import (
@@ -110,6 +112,69 @@ class PredictionItem:
     #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
     #: 이 목록도 재고라 폴백을 싣는다 — 같은 화면의 `totals`가 안 세는 줄이 있다.
     scoring_exclusion: str | None = None
+
+
+@dataclass(frozen=True)
+class AuditReport:
+    """감사 화면이 보는 리포트 한 건 (Phase 9).
+
+    `AgentReportItem`과 갈라 놓은 이유는 **실행 조건이 붙기 때문**이다. 목록 화면은
+    그 값을 쓰지 않고, 한 타입에 몰아 두면 목록 응답에도 딸려 나간다.
+    """
+
+    agent: str
+    pick: str | None
+    weight: float
+    summary: str
+    sources: tuple[str, ...]
+    #: 이 의견을 만든 판 (Phase 4). `None`은 기록이 없는 옛 리포트다.
+    #: **모델 이름은 담지 않는다** — DB에만 두고 응답으로 내보내지 않는다(§11-6).
+    agent_version: str | None
+    prompt_version: str | None
+
+
+@dataclass(frozen=True)
+class PredictionAuditResponse:
+    """예측 **한 건**의 전체 계보 (Phase 9).
+
+    이 응답이 답해야 하는 물음은 아홉이다 — 언제 만들었는가, 어느 판의 에이전트가
+    만들었는가, 무엇을 읽었는가, 그 글은 어느 개정본인가, 그 개정본이 경기보다
+    앞서는가, 대회 자체의 문서를 읽었는가, 왜 이 판정인가, 그 근거를 DB에서 다시
+    확인할 수 있는가.
+
+    **여기서 새로 판정하지 않는다.** `status`와 `verdicts`는 목록 화면
+    (`get_evaluation`)이 내는 것과 **같은 호출**에서 나온다 — 두 화면이 같은 예측을
+    두고 다른 말을 하는 일이 구조적으로 불가능해야 한다.
+
+    `replay`는 **없다.** Phase 5가 아직이고, 보장할 수 없는 것을 화면에 칸으로
+    만들어 두면 빈칸이 곧 "재현 가능한데 안 했다"로 읽힌다.
+    """
+
+    event_slug: str
+    event_label: str
+    match_key: str
+    match_title: str
+    pick: str
+    pick_name: str
+    win_probability: float
+    confidence: float
+    rationale: str
+    source: str
+    generated_at: datetime
+    #: 결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다.
+    result_recorded_at: datetime | None
+    #: 그 대회가 열린 날. 증거의 개정본 시각을 이 날과 견준다.
+    event_start_date: date | None
+    winner_name: str | None
+    correct: bool | None
+    #: 자격 판정. 목록 화면과 **같은 판정**이다.
+    evaluation: EvaluationItem
+    #: 판정에 쓰인 규칙 정의(라벨·무게·설명). 화면이 문구를 지어내지 않게 서버가 낸다.
+    rules: tuple[Rule, ...]
+    reports: tuple[AuditReport, ...]
+    #: 그때 실제로 읽은 청크 + 각 조각이 판정에서 한 역할.
+    #: **비어 있는 것은 정상이다** — Stage 4 이전 예측에는 기록이 없다.
+    evidence: tuple[EvidenceVerdict, ...]
 
 
 @dataclass(frozen=True)

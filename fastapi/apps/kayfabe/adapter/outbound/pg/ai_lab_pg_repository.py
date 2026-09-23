@@ -118,6 +118,9 @@ class AiLabPgRepository(AiLabRepository):
                 AgentReportModel.weight,
                 AgentReportModel.summary,
                 AgentReportModel.sources,
+                # 실행 조건 (Phase 4). 감사 화면만 읽는다 — 집계는 보지 않는다.
+                AgentReportModel.agent_version,
+                AgentReportModel.prompt_version,
             )
             .join(
                 AgentPredictionModel,
@@ -135,6 +138,8 @@ class AiLabPgRepository(AiLabRepository):
                 weight=row.weight,
                 summary=row.summary,
                 sources=_split_sources(row.sources),
+                agent_version=row.agent_version,
+                prompt_version=row.prompt_version,
             )
             for row in result.all()
         ]
@@ -144,7 +149,13 @@ class AiLabPgRepository(AiLabRepository):
     async def list_retrievals(self) -> list[RetrievalRow]:
         """예측이 그때 읽은 청크 기록 (Phase 3-13 Stage 4-B).
 
-        판정에 쓰는 두 칸만 뽑는다 — 거리·해시·본문은 감사용이고 여기서는 안 본다.
+        **판정이 보는 것은 여전히 두 칸뿐이다**(`source_url`·`source_revised_at`).
+        나머지는 감사 화면(Phase 9)이 증거를 늘어놓을 때 쓰고, 그 값이 판정을
+        바꾸지 않는다 — `RetrievalRow`의 주석이 그 경계를 적어 두고 있다.
+
+        본문과 해시는 여전히 뽑지 않는다. 화면에 원문을 싣지 않기로 했고(§4-8),
+        해시는 대조할 상대가 있을 때 필요한 값이다.
+
         옛 예측에는 행이 아예 없어서 결과가 비는 것이 정상이다.
         """
         result = await self.db.execute(
@@ -153,6 +164,10 @@ class AiLabPgRepository(AiLabRepository):
                 AgentPredictionModel.match_key,
                 PredictionRetrievalModel.source_url,
                 PredictionRetrievalModel.source_revised_at,
+                PredictionRetrievalModel.rank,
+                PredictionRetrievalModel.source_revision_id,
+                PredictionRetrievalModel.published_at,
+                PredictionRetrievalModel.distance,
             )
             .join(
                 AgentPredictionModel,
@@ -169,6 +184,10 @@ class AiLabPgRepository(AiLabRepository):
                 match_key=row.match_key,
                 source_url=row.source_url,
                 source_revised_at=row.source_revised_at,
+                rank=row.rank,
+                source_revision_id=row.source_revision_id,
+                published_at=row.published_at,
+                distance=row.distance,
             )
             for row in result.all()
         ]

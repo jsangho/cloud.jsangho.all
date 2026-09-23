@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -451,3 +451,95 @@ class AiLabPredictionsSchema(_Camel):
     integrity: IntegritySchema
     events: list[PredictionEventSchema]
     items: list[PredictionItemSchema]
+
+
+class AuditReportSchema(_Camel):
+    """감사 화면이 보는 리포트 한 건 (Phase 9).
+
+    **모델 이름이 없다.** 그 값은 DB에만 두고 응답으로 내보내지 않는다(하네스 §11-6).
+    판을 가리키는 데는 아래 두 식별자로 충분하고, 둘 다 벤더를 드러내지 않는다.
+    """
+
+    agent: str
+    pick: str | None = None
+    weight: float
+    summary: str
+    sources: list[str]
+    agent_version: str | None = Field(default=None, alias="agentVersion")
+    """에이전트 로직의 판. `null`이면 **기록이 없는 옛 리포트**다 — 백필하지 않았다."""
+    prompt_version: str | None = Field(default=None, alias="promptVersion")
+    """지시문 해시 앞 16자리. 모델을 부르지 않은 리포트는 `null`."""
+
+
+class EvidenceSchema(_Camel):
+    """예측이 **그때 실제로 읽은** 청크 하나 + 그것이 판정에서 한 역할 (Phase 6·9).
+
+    `temporal`과 `selfReference`는 **결정적 규칙 엔진이 낸 값이다.** LLM에게 왜
+    실격인지 설명시킨 것이 아니라, 판정이 쓴 것과 같은 함수를 지난 결과다.
+    """
+
+    rank: int
+    """프롬프트에 들어간 순서. 검색 순위가 아니라 **읽은 순서**다."""
+    source_url: str | None = Field(default=None, alias="sourceUrl")
+    source_revision_id: str | None = Field(default=None, alias="sourceRevisionId")
+    """그때 읽은 개정본. **URL이 같아도 개정본이 다르면 다른 글이다.**"""
+    source_revised_at: datetime | None = Field(default=None, alias="sourceRevisedAt")
+    published_at: datetime | None = Field(default=None, alias="publishedAt")
+    """원문 게시 시각. 위키는 이 값을 안 내보내므로 대개 `null`이다 — 판정은 이것을 안 본다."""
+    distance: float | None = None
+    """코사인 거리. 작을수록 가깝다. 못 구했으면 `null` — 0.0으로 채우지 않는다."""
+    temporal: str
+    """"before_event" | "not_before_event" | "unknown_revision" | "unknown_event_date"."""
+    self_reference: bool = Field(alias="selfReference")
+    """이 글이 **그 대회 자체**를 다룬 문서인가."""
+
+
+class RuleDefinitionSchema(_Camel):
+    """규칙 하나의 **정의**. 건수가 없다 (Phase 9).
+
+    `EvaluationRuleSchema`를 재사용하지 않는 이유는 그쪽의 `blocked`가 **전체 집계**라
+    한 건짜리 감사 화면에서 뜻이 없기 때문이다. 0으로 채워 보내면 화면은 그것을
+    "이 규칙이 아무것도 막지 않았다"로 읽는데, 그것은 사실이 아니다.
+    """
+
+    code: str
+    label: str
+    severity: str
+    """"exclude" | "disqualify" | "hold"."""
+    description: str
+
+
+class PredictionAuditSchema(_Camel):
+    """예측 한 건의 전체 계보 (Phase 9).
+
+    `evaluation`은 목록 화면(`/ai-lab/evaluation`)이 내는 것과 **같은 판정**이다 —
+    두 화면이 같은 예측을 두고 다른 말을 할 수 없다.
+
+    **`replay` 칸이 없다.** Phase 5가 아직이고, 보장할 수 없는 것을 빈칸으로 만들어
+    두면 그 빈칸이 "재현 가능한데 안 했다"로 읽힌다.
+    """
+
+    event_slug: str = Field(alias="eventSlug")
+    event_label: str = Field(alias="eventLabel")
+    match_key: str = Field(alias="matchKey")
+    match_title: str = Field(alias="matchTitle")
+    pick: str
+    pick_name: str = Field(alias="pickName")
+    win_probability: float = Field(alias="winProbability")
+    confidence: float
+    rationale: str
+    source: str
+    generated_at: datetime = Field(alias="generatedAt")
+    result_recorded_at: datetime | None = Field(default=None, alias="resultRecordedAt")
+    """결과가 **시스템에 기록된** 시각. 경기가 끝난 시각이 아니다."""
+    event_start_date: date | None = Field(default=None, alias="eventStartDate")
+    """대회가 열린 날. 증거의 개정본 시각을 이 날과 견준다."""
+    winner_name: str | None = Field(default=None, alias="winnerName")
+    correct: bool | None = None
+    """결과가 없으면 `null` — 오답(false)과 다른 상태다."""
+    evaluation: EvaluationItemSchema
+    rules: list[RuleDefinitionSchema]
+    """규칙 정의. **건수는 싣지 않는다** — 한 건짜리 화면에서 전체 집계는 오해만 만든다."""
+    reports: list[AuditReportSchema]
+    evidence: list[EvidenceSchema]
+    """**비어 있는 것은 정상이다** — Stage 4 이전 예측에는 검색 기록이 없다."""

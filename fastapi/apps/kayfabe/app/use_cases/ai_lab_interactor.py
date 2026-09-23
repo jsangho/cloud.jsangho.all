@@ -21,7 +21,9 @@ from kayfabe.app.dtos.ai_lab_dto import (
     AiLabOverviewResponse,
     AiLabPerformanceResponse,
     AiLabPredictionsResponse,
+    AuditReport,
     InferentialAvailability,
+    PredictionAuditResponse,
     PredictionEvent,
     PredictionItem,
     RecentPrediction,
@@ -29,7 +31,11 @@ from kayfabe.app.dtos.ai_lab_dto import (
 )
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository
-from kayfabe.app.services.ai_lab_evaluation import summarize_evaluation
+from kayfabe.app.services.ai_lab_evaluation import (
+    RULES,
+    explain_evidence,
+    summarize_evaluation,
+)
 from kayfabe.app.services.ai_lab_integrity import (
     AgentActivity,
     CorpusFacts,
@@ -146,6 +152,102 @@ class AiLabInteractor(AiLabUseCase):
             rules=rules,
             items=items,
             performance=performance,
+        )
+
+    async def get_audit(
+        self, *, event_slug: str, match_key: str
+    ) -> PredictionAuditResponse | None:
+        """예측 한 건의 전체 계보 (Phase 9). **새 쿼리를 쓰지 않는다.**
+
+        판정을 **다시 하지 않고** `get_evaluation`과 같은 호출에서 뽑아 온다. 여기서
+        한 건만 따로 판정하면 언젠가 두 화면이 같은 예측을 두고 다른 말을 하게 되고,
+        감사 시스템에서 그것은 기능 결함이 아니라 신뢰의 붕괴다.
+
+        **전체를 읽고 한 건을 고르는 것이 낭비처럼 보이지만 아니다.** 판정은 코퍼스
+        전체를 봐야 성립한다 — 인용 문서의 계보는 URL 단위 전역이라, 한 예측만 떼어
+        내면 그 문서의 계보를 알 수 없다.
+
+        없는 예측이면 `None`이다. **예외가 아니다** — 라우터가 404로 옮긴다.
+        """
+        predictions = await self._repository.list_predictions()
+        row = next(
+            (
+                p
+                for p in predictions
+                if p.event_slug == event_slug and p.match_key == match_key
+            ),
+            None,
+        )
+        if row is None:
+            logger.info(
+                "[AiLabInteractor] get_audit | 없음 | event=%s match=%s",
+                event_slug,
+                match_key,
+            )
+            return None
+
+        reports = await self._repository.list_reports()
+        documents = await self._repository.list_documents()
+        retrievals = await self._repository.list_retrievals()
+
+        _, _, items, _ = summarize_evaluation(
+            predictions, reports, documents, retrievals
+        )
+        evaluation = next(
+            item
+            for item in items
+            if item.event_slug == event_slug and item.match_key == match_key
+        )
+
+        mine = [
+            r
+            for r in retrievals
+            if r.event_slug == event_slug and r.match_key == match_key
+        ]
+        logger.info(
+            "[AiLabInteractor] get_audit | event=%s match=%s 판정=%s 증거=%d건",
+            event_slug,
+            match_key,
+            evaluation.status,
+            len(mine),
+        )
+
+        return PredictionAuditResponse(
+            event_slug=row.event_slug,
+            event_label=row.event_label,
+            match_key=row.match_key,
+            match_title=row.match_title,
+            pick=row.pick,
+            pick_name=row.pick_name,
+            win_probability=row.win_probability,
+            confidence=row.confidence,
+            rationale=row.rationale,
+            source=row.source,
+            generated_at=row.generated_at,
+            result_recorded_at=row.finished_at,
+            event_start_date=row.event_start_date,
+            winner_name=row.winner_name,
+            correct=_correct(row),
+            evaluation=evaluation,
+            rules=RULES,
+            reports=tuple(
+                AuditReport(
+                    agent=report.agent,
+                    pick=report.pick,
+                    weight=report.weight,
+                    summary=report.summary,
+                    sources=report.sources,
+                    agent_version=report.agent_version,
+                    prompt_version=report.prompt_version,
+                )
+                for report in reports
+                if report.event_slug == event_slug and report.match_key == match_key
+            ),
+            evidence=explain_evidence(
+                mine,
+                event_label=row.event_label,
+                event_start_date=row.event_start_date,
+            ),
         )
 
     async def get_performance(self) -> AiLabPerformanceResponse:

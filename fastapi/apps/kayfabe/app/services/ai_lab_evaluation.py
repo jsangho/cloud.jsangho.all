@@ -175,6 +175,16 @@ class RetrievalRow:
     source_url: str | None
     #: 그때 읽은 개정본의 시각. 모르면 `None` — 레거시 청크를 읽었을 때다.
     source_revised_at: datetime | None
+    #: 아래 넷은 **판정이 보지 않는다.** 감사 화면(Phase 9)이 증거를 늘어놓을 때만
+    #: 쓴다. 기본값을 둔 이유는 판정만 재는 호출자를 그대로 두기 위해서다 — 이
+    #: 값들이 없어도 판정은 한 글자도 달라지지 않는다.
+    #:
+    #: 프롬프트에 들어간 순서. 검색 순위가 아니라 **읽은 순서**다.
+    rank: int = 0
+    source_revision_id: str | None = None
+    published_at: datetime | None = None
+    #: 코사인 거리. 작을수록 가깝다. 못 구하면 `None` — 0.0으로 채우지 않는다.
+    distance: float | None = None
 
 
 @dataclass(frozen=True)
@@ -550,6 +560,91 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
     )
 
 
+#: 증거 하나가 **시간 규칙에서 차지하는 자리** (Phase 6·9). 판정 문장을 만들어 내는
+#: 대신 이 값으로 내보내는 이유는, 화면이 색과 문구를 고를 때 한국어 문장을 파싱하지
+#: 않게 하기 위해서다.
+EVIDENCE_BEFORE_EVENT = "before_event"
+EVIDENCE_NOT_BEFORE_EVENT = "not_before_event"
+EVIDENCE_UNKNOWN_REVISION = "unknown_revision"
+EVIDENCE_UNKNOWN_EVENT_DATE = "unknown_event_date"
+
+
+def _temporal_position(
+    revised_at: datetime | None, event_start_date: date | None
+) -> str:
+    """읽은 글이 경기보다 앞선 것인가. **판정과 설명이 함께 쓰는 단 하나의 정의다.**
+
+    `_corpus_from_retrievals`(판정)와 `explain_evidence`(감사 화면)가 둘 다 여기를
+    지난다. 따로 적으면 언젠가 한쪽만 바뀌어, **화면이 판정과 다른 이야기를 한다** —
+    감사 시스템에서 그것은 버그가 아니라 신뢰의 붕괴다.
+
+    **날짜끼리 비교한다.** 대회 날짜는 `DATE`라 시각이 없고, 없는 정밀도를 지어내지
+    않는다. 같은 날은 앞선 것이 아니다 — 경기 당일 개정본에 결과가 없다는 보장이 없다.
+    """
+    if event_start_date is None:
+        return EVIDENCE_UNKNOWN_EVENT_DATE
+    if revised_at is None:
+        return EVIDENCE_UNKNOWN_REVISION
+    if revised_at.date() >= event_start_date:
+        return EVIDENCE_NOT_BEFORE_EVENT
+    return EVIDENCE_BEFORE_EVENT
+
+
+@dataclass(frozen=True)
+class EvidenceVerdict:
+    """증거 한 조각 + **그것이 판정에서 한 역할** (Phase 6·9).
+
+    감사 화면이 "왜 실격인가"를 설명할 때 쓰는 단위다. **LLM에게 설명시키지
+    않는다** — 여기 담긴 것은 전부 결정적 규칙 엔진이 실제로 본 값이고, `temporal`과
+    `self_reference`는 판정이 쓴 것과 같은 함수에서 나온다.
+    """
+
+    rank: int
+    source_url: str | None
+    source_revision_id: str | None
+    source_revised_at: datetime | None
+    published_at: datetime | None
+    distance: float | None
+    #: `EVIDENCE_*` 넷 중 하나.
+    temporal: str
+    #: 이 글이 **그 대회 자체**를 다룬 문서인가. 자기참조 규칙이 보는 것과 같은 대조다.
+    self_reference: bool
+
+
+def explain_evidence(
+    retrievals: Sequence[RetrievalRow],
+    *,
+    event_label: str,
+    event_start_date: date | None,
+) -> tuple[EvidenceVerdict, ...]:
+    """읽은 청크 하나하나에 **판정에서의 역할**을 붙인다 (Phase 9).
+
+    **새 판정을 하지 않는다.** 규칙의 결론은 이미 `summarize_evaluation`이 냈고, 이
+    함수는 그 결론의 근거를 조각 단위로 펼칠 뿐이다. 그래서 여기서 나온 값이 규칙의
+    판정과 어긋날 수 없다 — 같은 `_temporal_position`·`cites_own_event`를 지난다.
+
+    **읽은 순서를 지킨다.** 순서가 곧 "무엇을 먼저 읽었는가"이고, 정렬을 바꾸면
+    그 사실이 사라진다.
+    """
+    return tuple(
+        EvidenceVerdict(
+            rank=item.rank,
+            source_url=item.source_url,
+            source_revision_id=item.source_revision_id,
+            source_revised_at=item.source_revised_at,
+            published_at=item.published_at,
+            distance=item.distance,
+            temporal=_temporal_position(item.source_revised_at, event_start_date),
+            self_reference=(
+                # 출처가 없으면 대조할 것이 없다. **모름을 자기참조라고 하지 않는다.**
+                bool(item.source_url)
+                and cites_own_event((item.source_url or "",), event_label)
+            ),
+        )
+        for item in sorted(retrievals, key=lambda r: r.rank)
+    )
+
+
 def _corpus_from_retrievals(
     retrievals: tuple[RetrievalRow, ...], event_start_date: date | None
 ) -> RuleVerdict:
@@ -574,13 +669,14 @@ def _corpus_from_retrievals(
             ),
         )
 
-    unknown = [item for item in retrievals if item.source_revised_at is None]
-    too_late = [
-        item
+    # **감사 화면과 같은 함수를 지난다**(`_temporal_position`). 여기서 비교를 따로
+    # 적으면 언젠가 한쪽만 바뀌어, 화면이 판정과 다른 이야기를 하게 된다.
+    positions = [
+        _temporal_position(item.source_revised_at, event_start_date)
         for item in retrievals
-        if item.source_revised_at is not None
-        and item.source_revised_at.date() >= event_start_date
     ]
+    unknown = [p for p in positions if p == EVIDENCE_UNKNOWN_REVISION]
+    too_late = [p for p in positions if p == EVIDENCE_NOT_BEFORE_EVENT]
 
     if too_late:
         return _verdict(
