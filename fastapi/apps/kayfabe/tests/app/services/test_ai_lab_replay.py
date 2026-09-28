@@ -58,6 +58,11 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentPrediction,
     AgentReport,
 )
+from kayfabe.domain.services.prediction_synthesis import (
+    SYNTHESIS_V1,
+    SYNTHESIS_V2,
+    synthesize,
+)
 
 _SLUG = "summerslam"
 _MATCH = "ss26-n2-whc"
@@ -179,6 +184,9 @@ def _as_rows(
         winner_name=None,
         event_start_date=date(2026, 8, 10),
         knowledge_query=prediction.knowledge_query,
+        # **판본을 빠뜨리면 재현이 옛 산식으로 돌아간다.** 기권이 없는 픽스처에서는
+        # 두 산식의 값이 같아 그 누락이 초록으로 보이므로, 매핑을 진짜와 맞춰 둔다.
+        synthesis_version=prediction.synthesis_version,
     )
     reports = [
         ReportRow(
@@ -445,3 +453,77 @@ class TestSharedWithGeneration:
         from kayfabe.domain.services import prediction_synthesis
 
         assert ai_lab_replay.synthesize is prediction_synthesis.synthesize
+
+
+# ---------------------------------------------------------------------------
+# 7. 산식 판본 — 옛 예측은 옛 산식으로 재현한다 (2026-09-28)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_prediction_with_an_abstention_still_replays_to_itself() -> None:
+    """**기권이 있어야 두 산식의 값이 갈린다.**
+
+    기존 픽스처는 셋 다 답해서 `v1`·`v2`가 같은 값을 냈다 — 판본을 안 실어도 초록이
+    떴다는 뜻이다. 기권 하나를 넣어 그 초록이 진짜인지 확인한다.
+    """
+    prediction = await _generate(rumor=(None, 0.0))
+    row, reports = _as_rows(prediction)
+
+    assert prediction.synthesis_version == SYNTHESIS_V2
+    result = replay_prediction(row, reports, _OPTIONS)
+
+    assert result.status is ReplayStatus.REPRODUCED
+    assert result.mismatches == ()
+
+
+@pytest.mark.asyncio
+async def test_a_row_without_a_recorded_version_is_replayed_as_v1() -> None:
+    """`NULL`은 모름이 아니라 **`v1`** 이다 — 칼럼이 `v2`와 함께 생겼다.
+
+    옛 예측 16건이 여기 걸린다. 지금 산식으로 견주면 전부 `diverged`가 되고, 화면은
+    우리가 함수를 바꾼 일을 "값이 드리프트했다"로 읽는다.
+    """
+    prediction = await _generate(rumor=(None, 0.0))
+    v1 = synthesize(
+        list(prediction.reports),
+        agent_count=ai_prediction_interactor.AGENT_COUNT,
+        options=[option.pick for option in _OPTIONS],
+        version=SYNTHESIS_V1,
+    )
+    # 그때의 산식이 만든 값을 가진, 판본 기록이 없는 행
+    row, reports = _as_rows(prediction)
+    legacy = dataclasses.replace(
+        row,
+        win_probability=v1.win_probability,
+        confidence=v1.confidence,
+        synthesis_version=None,
+    )
+
+    assert v1.win_probability != pytest.approx(prediction.win_probability)
+    assert (
+        replay_prediction(legacy, reports, _OPTIONS).status is ReplayStatus.REPRODUCED
+    )
+
+
+@pytest.mark.asyncio
+async def test_v1_numbers_labelled_v2_are_reported_as_diverged() -> None:
+    """판본을 바꿔 붙이면 어긋남으로 드러나야 한다 — 판본이 장식이 아니라는 확인이다."""
+    prediction = await _generate(rumor=(None, 0.0))
+    v1 = synthesize(
+        list(prediction.reports),
+        agent_count=ai_prediction_interactor.AGENT_COUNT,
+        options=[option.pick for option in _OPTIONS],
+        version=SYNTHESIS_V1,
+    )
+    row, reports = _as_rows(prediction)
+    mislabelled = dataclasses.replace(
+        row,
+        win_probability=v1.win_probability,
+        synthesis_version=SYNTHESIS_V2,
+    )
+
+    result = replay_prediction(mislabelled, reports, _OPTIONS)
+
+    assert result.status is ReplayStatus.DIVERGED
+    assert {item.field for item in result.mismatches} == {"win_probability"}

@@ -41,6 +41,7 @@ from kayfabe.domain.entities.agent_prediction import (
     PredictionSource,
 )
 from kayfabe.domain.services.prediction_synthesis import (
+    SYNTHESIS_VERSION,
     ReportsUnavailableError,
     synthesize,
 )
@@ -163,6 +164,8 @@ class AiPredictionInteractor(AiPredictionUseCase):
             reports=tuple(reports),
             retrievals=_retrievals(knowledge),
             knowledge_query=query,
+            # 어느 산식이 이 승률을 만들었는가. 재현이 이 값으로 산식을 고른다.
+            synthesis_version=SYNTHESIS_VERSION,
         )
 
     async def _search_knowledge(

@@ -117,6 +117,8 @@ class AgentPredictionPgRepository(AgentPredictionRepository):
             generated_at=prediction.generated_at,
             # 검색 질의 (Phase 3). 카드가 바뀌면 다시 만들 수 없는 값이다.
             knowledge_query=prediction.knowledge_query,
+            # 승률을 만든 산식의 판본. 재현이 이 값으로 그때의 산식을 고른다.
+            synthesis_version=prediction.synthesis_version,
             reports=[
                 AgentReportModel(
                     agent=str(report.agent),
@@ -204,6 +206,7 @@ def _to_entity(row: AgentPredictionModel, event_slug: str) -> AgentPrediction:
             for item in row.retrievals
         ),
         knowledge_query=row.knowledge_query,
+        synthesis_version=row.synthesis_version,
     )
 
 
