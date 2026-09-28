@@ -44,7 +44,6 @@ export const MORE_GROUPS: readonly MoreGroup[] = [
     title: "킥오프",
     items: [
       { label: "대화", description: "슈퍼스타와 이야기하기", href: "/chat" },
-      { label: "커리어 시뮬레이터", description: "20세 데뷔, 30년", href: "/career" },
     ],
   },
   {

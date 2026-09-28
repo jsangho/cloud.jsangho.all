@@ -1,14 +1,12 @@
 [importlinter]
 root_packages =
     ontology
-    titanic
     kayfabe
     superstar
     admin
     heyman
     soccer
     lion_king
-    wwe_game
     auth
 
 # 하네스 계약 목록 — 위반 시 CI 차단
@@ -28,24 +26,20 @@ contracts =
 name = Spoke modules must not import each other directly
 type = forbidden
 source_modules =
-    titanic
     kayfabe
     superstar
     admin
     heyman
     soccer
     lion_king
-    wwe_game
     auth
 forbidden_modules =
-    titanic
     kayfabe
     superstar
     admin
     heyman
     soccer
     lion_king
-    wwe_game
     auth
 exclude_type_checking_imports = True
 
@@ -60,7 +54,7 @@ exclude_type_checking_imports = True
 name = Only hub (ontology) may import spoke modules
 type = layers
 layers =
-    titanic | kayfabe | superstar | admin | heyman | soccer | lion_king | wwe_game
+    kayfabe | superstar | admin | heyman | soccer | lion_king
     ontology
 
 
@@ -73,14 +67,12 @@ layers =
 name = Clean Architecture layer ordering within each app
 type = layers
 containers =
-    titanic
     kayfabe
     superstar
     admin
     heyman
     soccer
     lion_king
-    wwe_game
     auth
 layers =
     adapter
@@ -98,13 +90,11 @@ name = auth is not importable by any other app (including the hub)
 type = forbidden
 source_modules =
     ontology
-    titanic
     kayfabe
     superstar
     admin
     heyman
     soccer
     lion_king
-    wwe_game
 forbidden_modules =
     auth

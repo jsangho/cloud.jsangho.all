@@ -125,7 +125,6 @@ ignore = [
 known-first-party = [
     "jsangho",
     "ontology",
-    "titanic",
     "kayfabe",
     "superstar",
     "auth",

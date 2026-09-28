@@ -6,38 +6,22 @@ import { useEffect, useState } from "react";
 import { ChevronRight, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const TITANIC_HREF = "/lesson/titanic";
-const DATA_COLLECTION_HREF = "/lesson/titanic/data-collection";
-const TITANIC_LIST_HREF = "/lesson/titanic/titaniclist";
-const SMITH_SAILOR_HREF = "/lesson/titanic/smith-sailor";
-const VISION_HREF = "/lesson/titanic/vision";
-const OBJECT_DETECTION_HREF = "/lesson/titanic/vision/object-detection";
+const VISION_HREF = "/lesson/vision";
+const OBJECT_DETECTION_HREF = "/lesson/vision/object-detection";
 const RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
 const CRAWLER_SCRAPER_HREF = "/lesson/dataset-collection/crawler-scraper";
 const LEDGER_HREF = "/lesson/ledger";
 export default function LessonLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isTitanic = pathname === TITANIC_HREF;
-  const isDataCollection = pathname === DATA_COLLECTION_HREF;
-  const isTitanicList = pathname === TITANIC_LIST_HREF;
-  const isSmithSailor = pathname === SMITH_SAILOR_HREF;
   const isVision = pathname === VISION_HREF;
   const isObjectDetection = pathname === OBJECT_DETECTION_HREF;
   const isRagChat = pathname === RAG_CHAT_HREF;
   const isCrawlerScraper = pathname === CRAWLER_SCRAPER_HREF;
   const isLedger = pathname === LEDGER_HREF;
-  const isLessonSection = isTitanic || isDataCollection || isTitanicList || isSmithSailor;
   const isVisionSection = isVision || isObjectDetection;
 
-  const [expanded, setExpanded] = useState(false);
   const [visionExpanded, setVisionExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    if (isDataCollection || isTitanicList || isSmithSailor) {
-      setExpanded(true);
-    }
-  }, [isDataCollection, isTitanicList, isSmithSailor]);
 
   useEffect(() => {
     if (isObjectDetection) {
@@ -51,84 +35,6 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
 
   const nav = (
     <nav className="flex flex-col gap-1" aria-label="수업 메뉴">
-      <div
-        className={cn(
-          "flex items-center rounded-lg text-sm font-medium transition-colors",
-          isLessonSection ? "bg-stone-100 text-stone-950" : "text-stone-600 dark:text-stone-300",
-        )}
-      >
-        <Link
-          href={TITANIC_HREF}
-          aria-current={isTitanic ? "page" : undefined}
-          className={cn(
-            "min-w-0 flex-1 rounded-l-lg px-3 py-2.5 transition-colors",
-            !isLessonSection &&
-              "hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            isLessonSection && "hover:bg-stone-50",
-          )}
-        >
-          타이타닉
-        </Link>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-label={expanded ? "하위 메뉴 접기" : "하위 메뉴 펼치기"}
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-r-lg px-2 py-2.5 transition-colors",
-            !isLessonSection &&
-              "hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            isLessonSection && "hover:bg-stone-50",
-          )}
-        >
-          <ChevronRight
-            className={cn("size-4 transition-transform duration-200", expanded && "rotate-90")}
-            aria-hidden
-          />
-        </button>
-      </div>
-
-      {expanded && (
-        <>
-          <Link
-            href={DATA_COLLECTION_HREF}
-            aria-current={isDataCollection ? "page" : undefined}
-            className={cn(
-              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-              isDataCollection
-                ? "bg-stone-100/90 font-semibold text-stone-950"
-                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            )}
-          >
-            1. 데이터 수집
-          </Link>
-          <Link
-            href={TITANIC_LIST_HREF}
-            aria-current={isTitanicList ? "page" : undefined}
-            className={cn(
-              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-              isTitanicList
-                ? "bg-stone-100/90 font-semibold text-stone-950"
-                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            )}
-          >
-            2. DB 리스트
-          </Link>
-          <Link
-            href={SMITH_SAILOR_HREF}
-            aria-current={isSmithSailor ? "page" : undefined}
-            className={cn(
-              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-              isSmithSailor
-                ? "bg-stone-100/90 font-semibold text-stone-950"
-                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            )}
-          >
-            3. 스미스 선장과 대화
-          </Link>
-        </>
-      )}
-
       <div
         className={cn(
           "flex items-center rounded-lg text-sm font-medium transition-colors",
@@ -257,10 +163,7 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
 
       {/* Mobile: hamburger + drawer */}
       <div
-        className={cn(
-          "relative z-10 flex min-h-0 min-w-0 flex-1 flex-col",
-          isSmithSailor && "overflow-hidden",
-        )}
+        className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col")}
       >
         <div className="sticky top-[4.25rem] z-20 flex items-center gap-2 border-b border-stone-200/60 dark:border-stone-800/60 bg-white/70 dark:bg-stone-900/70 px-4 py-3 backdrop-blur md:hidden">
           <button
@@ -271,7 +174,7 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">타이타닉</span>
+          <span className="text-sm font-semibold text-stone-700 dark:text-stone-200">수업</span>
         </div>
 
         {children}
@@ -287,7 +190,7 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
           />
           <aside className="absolute left-0 top-0 h-full w-[18rem] border-r border-stone-200/70 dark:border-stone-800/70 bg-white/90 dark:bg-stone-950/90 px-3 py-6 backdrop-blur">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-bold text-stone-900 dark:text-stone-100">타이타닉</span>
+              <span className="text-sm font-bold text-stone-900 dark:text-stone-100">수업</span>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}

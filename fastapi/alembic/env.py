@@ -36,19 +36,11 @@ import kayfabe.adapter.outbound.orm.knowledge_chunk_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.ple_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.shop_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.title_history_orm  # noqa: E402, F401
-import wwe_game.adapter.outbound.orm.career_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_andrews_architect_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_hartley_violin_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_james_director_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_lowe_boat_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_smith_captain_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.crew_walter_roaster_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.passenger_cal_tester_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.passenger_isidor_couple_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.passenger_jack_trainer_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.passenger_molly_scaler_orm  # noqa: E402, F401
-import titanic.adapter.outbound.orm.passenger_ruth_validation_orm  # noqa: E402, F401
 
+# **고아 테이블 주의 (2026-09-28).** `wwe_game`·`titanic` 앱을 지웠지만 그 테이블은
+# 운영 DB에 그대로 남겨 뒀다(career_* 에 저장된 플레이 기록이 있다). 위 메타데이터에
+# 더 이상 그 모델이 없으므로 **`--autogenerate`가 DROP TABLE을 제안한다.**
+# 생성된 마이그레이션에 career_*·passengers·crew_* drop이 보이면 지우고 넘어간다.
 target_metadata = Base.metadata
 
 

@@ -16,7 +16,7 @@
 
 ### 0-3. 경로 규칙 (Path Convention)
 - `fastapi/apps/<앱명>/` 내부를 작업할 때, 패키지 경로는 **`jsangho`와 `apps`를 생략**하고 앱명부터 시작한다.
-  - 예: `fastapi/apps/titanic/domain/...` → 경로 표기는 `titanic.domain....`
+  - 예: `fastapi/apps/kayfabe/domain/...` → 경로 표기는 `kayfabe.domain....`
 - **core 패키지** 경로는 반드시 `jsangho.core.` 로 시작한다.
   - 예: `fastapi/core/shared/...` → `jsangho.core.shared....`
 - 경로 표기가 위 규칙과 어긋나면 코드를 작성하기 전에 멈추고 사용자에게 확인한다.
@@ -210,9 +210,9 @@ Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 ## 테스트
 
 - **프레임워크**: pytest + pytest-asyncio (`[dependency-groups] dev`). www에는 테스트 러너가 없고 `pnpm lint` · `pnpm type-check`가 그 자리를 대신한다.
-- **sys.path**: 앱별 `tests/conftest.py`가 `apps/`를 `sys.path`에 넣어 `titanic.*` 임포트를 활성화한다. 새 앱에 테스트를 추가할 때 이 conftest 패턴을 복사한다.
+- **sys.path**: 앱별 `tests/conftest.py`가 `apps/`를 `sys.path`에 넣어 `kayfabe.*` 임포트를 활성화한다. 새 앱에 테스트를 추가할 때 이 conftest 패턴을 복사한다.
 - **마커**: `ollama` — 로컬 Ollama가 필요한 통합 테스트. 기본 실행에서 빠뜨릴 수 있게 표시한다.
-- 참고 구현: `fastapi/apps/titanic/tests/` — 구조 템플릿으로 삼는다.
+- 참고 구현: `fastapi/apps/lion_king/tests/` — 구조 템플릿으로 삼는다. 작아서 통째로 읽힌다.
 
 ---
 

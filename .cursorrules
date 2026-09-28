@@ -16,7 +16,6 @@
 | [`.cursorrules`](.cursorrules) (루트) | 하네스·우선순위·공통 행동 요약 | [`CLAUDE.md`](CLAUDE.md) |
 | [`fastapi/.cursorrules`](fastapi/.cursorrules) | 백엔드(FastAPI) | [`fastapi/CLAUDE.md`](fastapi/CLAUDE.md) |
 | [`www/.cursorrules`](www/.cursorrules) | 프론트엔드(Next.js) | [`www/CLAUDE.md`](www/CLAUDE.md) |
-| [`fastapi/apps/titanic/_docs/.cursorrules`](fastapi/apps/titanic/_docs/.cursorrules) | Titanic 앱 (시블링 템플릿) | [`titanic/_docs/CLAUDE.md`](fastapi/apps/titanic/_docs/CLAUDE.md) |
 
 `fastapi/apps/` 아래 **kayfabe**, **friday13th** 등 앱이 늘면 각 `apps/<app>/_docs/.cursorrules`를 형제(sibling)로 추가한다.  
 `CLAUDE.md`는 같은 경로에 두되 **항상 `.cursorrules`를 먼저** Read한다.
@@ -30,7 +29,6 @@
 1. **작업 디렉터리에 맞는 `.cursorrules`를 Read한다.** (필수)
    - `fastapi/` → [`fastapi/.cursorrules`](fastapi/.cursorrules)
    - `www/` → [`www/.cursorrules`](www/.cursorrules)
-   - `fastapi/apps/titanic/` → [titanic `.cursorrules`](fastapi/apps/titanic/_docs/.cursorrules)
 2. **해당 `.cursorrules`가 가리키는 `vault/` 업무 MD를 Read한다.** (`vault/` = docs 서브모듈)
 3. **규칙에 맞춰 구현한다** — `vault/`·`.cursorrules`에 없는 패턴을 추측으로 도입하지 않는다.
 4. 행동 원칙이 헷갈리면 같은 경로의 [`CLAUDE.md`](CLAUDE.md) 보조 문서를 Read한다.
