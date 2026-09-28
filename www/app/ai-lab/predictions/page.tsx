@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
+import { SynthesisVersion } from "@/components/ai-lab/synthesis-version";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다.
 import { DataUnavailable, LoadingBlock } from "@/components/data-center/data-center-shell";
 // 근거 모달은 PLE 화면이 쓰던 것을 **그대로** 연다 — 같은 것을 두 벌 만들지 않는다.
@@ -223,7 +224,8 @@ function PredictionRow({ item }: { item: PredictionItem }) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="text-xs tabular-nums text-muted-foreground">
-            승률 {formatRatio(item.winProbability)} · 확신 {formatRatio(item.confidence)}
+            승률 {formatRatio(item.winProbability)} · 확신 {formatRatio(item.confidence)} ·{" "}
+            <SynthesisVersion version={item.synthesisVersion} />
           </span>
           <SourceBadge fallback={fallback} />
           <ResultBadge

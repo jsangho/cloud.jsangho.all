@@ -351,6 +351,7 @@ def audit_to_schema(response: PredictionAuditResponse) -> PredictionAuditSchema:
             ],
         ),
         knowledge_query=response.knowledge_query,
+        synthesis_version=response.synthesis_version,
     )
 
 
@@ -428,6 +429,7 @@ def performance_to_schema(
                 coverage=item.coverage,
                 correct=item.correct,
                 scoring_exclusion=item.scoring_exclusion,
+                synthesis_version=item.synthesis_version,
                 reports=[
                     ReportContributionSchema(
                         agent=report.agent,
@@ -749,6 +751,7 @@ def predictions_to_schema(
                 winner_name=item.winner_name,
                 correct=item.correct,
                 scoring_exclusion=item.scoring_exclusion,
+                synthesis_version=item.synthesis_version,
                 reports=[
                     AgentReportSchema(
                         agent=report.agent,
@@ -799,6 +802,7 @@ def to_schema(response: AiLabOverviewResponse) -> AiLabOverviewSchema:
                 winner_name=item.winner_name,
                 correct=item.correct,
                 scoring_exclusion=item.scoring_exclusion,
+                synthesis_version=item.synthesis_version,
             )
             for item in response.recent
         ],

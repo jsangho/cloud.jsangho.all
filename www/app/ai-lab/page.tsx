@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
+import { SynthesisVersion } from "@/components/ai-lab/synthesis-version";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다 — 같은 것을 두 벌 만들지 않는다.
 import {
   DataUnavailable,
@@ -160,7 +161,8 @@ function Overview({ data }: { data: AiLabOverview }) {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="text-xs tabular-nums text-muted-foreground">
-                    승률 {formatRatio(row.winProbability)} · 확신 {formatRatio(row.confidence)}
+                    승률 {formatRatio(row.winProbability)} · 확신 {formatRatio(row.confidence)} ·{" "}
+                    <SynthesisVersion version={row.synthesisVersion} />
                   </span>
                   <ResultBadge correct={row.correct} scoringExclusion={row.scoringExclusion} />
                 </div>

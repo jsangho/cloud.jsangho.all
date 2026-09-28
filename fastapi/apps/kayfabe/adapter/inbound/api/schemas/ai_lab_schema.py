@@ -89,6 +89,12 @@ class RecentPredictionSchema(_Camel):
     이 목록은 재고라 폴백까지 전부 싣는다. 그래서 위 `correct`가 `true`인데도
     적중률에 안 세어지는 줄이 있고, **화면은 그 줄에 이유를 적어야 한다.**
     """
+    synthesis_version: str = Field(alias="synthesisVersion")
+    """위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+
+    **최신순 목록이라 판본이 갈리는 경계가 바로 여기 놓인다** — 산식이 바뀐 자리를
+    가장 먼저 드러내는 화면이다.
+    """
 
 
 class AiLabOverviewSchema(_Camel):
@@ -137,6 +143,15 @@ class PredictionItemSchema(_Camel):
     """채점에서 빠진 이유(`bookmaker_fallback`·`ex_post`), 아니면 `None`.
 
     `source`만으로는 못 가린다 — 사후 재현 표본의 `source`는 `agents`다.
+    """
+    synthesis_version: str = Field(alias="synthesisVersion")
+    """위 `winProbability`를 만든 **합성 산식의 판본** ("1" | "2").
+
+    **이 목록에는 두 산식의 값이 섞여 있다.** v1은 기권한 에이전트를 분포에서 빼서
+    셋 중 하나만 답해도 승률 1.0이 나왔고, v2는 기권을 균등분포로 센다. 판본 없이
+    나란히 두면 화면이 서로 비교할 수 없는 두 숫자를 같은 자로 잰 값처럼 보여 준다.
+
+    서버가 이미 해석한 값이라 `null`이 아니다 — 기록이 없는 옛 예측은 `"1"`이다.
     """
     reports: list[AgentReportSchema]
 
@@ -312,6 +327,13 @@ class PerformanceItemSchema(_Camel):
 
     이 목록은 폴백을 이미 뺀 뒤라 여기 실리는 값은 사실상 `ex_post` 하나다.
     위 `totals`가 안 세는 줄이 어느 것인지 **같은 화면 안에서** 가려야 한다.
+    """
+    synthesis_version: str = Field(alias="synthesisVersion")
+    """위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+
+    **이 화면이 특히 이 값을 필요로 한다** — 여기가 승률이 세 의견에서 어떻게 접혔는지
+    해부하는 자리인데, 접는 방식 자체가 판본마다 다르다. v1은 기권을 분포에서 뺐고
+    v2는 균등분포로 센다. 그래서 위 독스트링이 말하는 "분포 붕괴"는 **v1에서만** 일어난다.
     """
     reports: list[ReportContributionSchema]
 
@@ -593,6 +615,12 @@ class PredictionAuditSchema(_Camel):
 
     `null`은 기록 전이라는 뜻이다. 경기 행이 사라진 예측에서는 영영 복원되지 않는다 —
     질의가 경기 제목과 선택지 이름에서 만들어지기 때문이다.
+    """
+    synthesis_version: str = Field(alias="synthesisVersion")
+    """위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+
+    **`replay`가 돌린 산식과 같다** — 서버가 한 함수로 해석하므로, 화면이 적는
+    판본과 재현이 쓴 산식이 어긋날 수 없다.
     """
 
 

@@ -45,6 +45,13 @@ from kayfabe.app.services.ai_lab_integrity import (
 from kayfabe.app.services.ai_lab_knowledge import DocumentRow
 from kayfabe.app.services.ai_lab_replay import REPLAY_STAGES, ReplayStatus
 from kayfabe.app.use_cases.ai_lab_interactor import AiLabInteractor
+from kayfabe.app.use_cases.ai_prediction_interactor import AGENT_COUNT
+from kayfabe.domain.entities.agent_prediction import AgentKind, AgentReport
+from kayfabe.domain.services.prediction_synthesis import (
+    SYNTHESIS_V1,
+    SYNTHESIS_V2,
+    synthesize,
+)
 
 _SLUG = "summerslam"
 _LABEL = "SummerSlam"
@@ -469,3 +476,98 @@ async def test_the_replay_reads_the_same_reports_the_screen_shows() -> None:
     # 옆 경기의 의견이 섞였다면 pick이 뒤집혀 다른 재현 결과가 나온다.
     assert [r.agent for r in audit.reports] == ["storyline"]
     assert all(item.field != "pick" for item in audit.replay.mismatches)
+
+
+# ---------------------------------------------------------------------------
+# 7. 화면이 적는 산식 판본은 재현이 쓴 것과 같다 (2026-09-28)
+# ---------------------------------------------------------------------------
+
+
+def _synthesized(version: str):
+    """이 픽스처의 리포트로 그 판본의 합성을 돌린다.
+
+    기본 픽스처는 **셋 중 하나만 답한다**(storyline 하나). 기권이 있어야 두 산식의
+    값이 갈리므로, 그 성질이 이 시험의 전제다 — 아래에서 실제로 확인한다.
+    """
+    return synthesize(
+        [
+            AgentReport(
+                agent=AgentKind.STORYLINE,
+                pick="left",
+                weight=0.8,
+                summary="명분이 도전자 쪽에 있다.",
+                sources=(_DOC,),
+            )
+        ],
+        agent_count=AGENT_COUNT,
+        options=[option.pick for option in _OPTIONS],
+        version=version,
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_version_on_screen_is_the_one_the_replay_used() -> None:
+    """**화면이 적는 판본과 재현이 돌린 산식은 어긋날 수 없다.**
+
+    판본이 장식이면 이 값은 아무것도 말하지 않는다. 그래서 *그 판본으로만 재현되는*
+    승률을 심고, 화면이 적은 판본과 재현 결과를 **함께** 본다 — 둘이 갈리면
+    한쪽은 반드시 `diverged`가 된다.
+
+    `NULL`이 `v1`이라는 규칙도 여기서 함께 붙든다. 그 해석이 재현과 화면에서 따로
+    적히면 화면은 `v2`라고 쓰는데 재현은 `v1`으로 돌리는 상태가 되고, 그 어긋남은
+    **아무 데서도 안 보인다.**
+    """
+    v1, v2 = _synthesized(SYNTHESIS_V1), _synthesized(SYNTHESIS_V2)
+    # 전제: 기권이 있어 두 산식이 다른 값을 낸다. 같으면 이 시험은 초록이 떠도
+    # 아무것도 증명하지 못한다 — 실제로 그 구멍이 replay 시험에서 한 번 났다.
+    assert v1.win_probability != pytest.approx(v2.win_probability)
+
+    legacy = await _audit(
+        FakeRepository(
+            predictions=[
+                _prediction(
+                    win_probability=v1.win_probability,
+                    confidence=v1.confidence,
+                    synthesis_version=None,
+                )
+            ]
+        )
+    )
+    current = await _audit(
+        FakeRepository(
+            predictions=[
+                _prediction(
+                    win_probability=v2.win_probability,
+                    confidence=v2.confidence,
+                    synthesis_version=SYNTHESIS_V2,
+                )
+            ]
+        )
+    )
+
+    assert legacy is not None and current is not None
+    assert legacy.synthesis_version == SYNTHESIS_V1
+    assert legacy.replay.status is ReplayStatus.REPRODUCED
+    assert current.synthesis_version == SYNTHESIS_V2
+    assert current.replay.status is ReplayStatus.REPRODUCED
+
+
+@pytest.mark.asyncio
+async def test_the_list_labels_every_row_with_its_formula() -> None:
+    """목록도 줄마다 판본을 싣는다 — **두 산식의 값이 같은 화면에 나란히 선다.**
+
+    승률 1.0(v1)과 0.44(v2)가 이유 없이 붙어 있으면 화면은 서로 비교할 수 없는 두
+    숫자를 같은 자로 잰 값처럼 보여 준다.
+    """
+    other = "ss26-n2-whc"
+    response = await AiLabInteractor(
+        FakeRepository(
+            predictions=[
+                _prediction(synthesis_version=None),
+                _prediction(match_key=other, synthesis_version=SYNTHESIS_V2),
+            ]
+        )
+    ).list_predictions()
+
+    versions = {item.match_key: item.synthesis_version for item in response.items}
+    assert versions == {_MATCH: SYNTHESIS_V1, other: SYNTHESIS_V2}

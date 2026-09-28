@@ -47,6 +47,7 @@ from kayfabe.app.services.ai_lab_readiness import (
     ReadinessTotals,
 )
 from kayfabe.app.services.ai_lab_replay import PredictionReplay
+from kayfabe.domain.services.prediction_synthesis import SYNTHESIS_V1
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,11 @@ class RecentPrediction:
     #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
     #: 위 `correct`는 그대로 사실을 말하고, 이 칸이 **그것을 적중률에 세는지**를 말한다.
     scoring_exclusion: str | None = None
+    #: 위 `win_probability`를 만든 합성 산식의 판본 (기록이 없으면 `"1"`).
+    #:
+    #: **이 목록이 산식이 바뀐 자리를 가장 먼저 드러낸다** — 최신순이라 판본이 갈리는
+    #: 경계가 바로 여기 놓인다. 실제로 첫 v2 예측과 마지막 v1 예측이 나란히 섰다.
+    synthesis_version: str = SYNTHESIS_V1
 
 
 @dataclass(frozen=True)
@@ -119,6 +125,13 @@ class PredictionItem:
     #: 채점 모집단에서 빠졌다면 그 이유, 아니면 `None` (Phase 3-8 잔여).
     #: 이 목록도 재고라 폴백을 싣는다 — 같은 화면의 `totals`가 안 세는 줄이 있다.
     scoring_exclusion: str | None = None
+    #: 위 `win_probability`를 만든 **합성 산식의 판본**. 서버가 이미 해석한 값이라
+    #: `None`이 아니다(기록이 없으면 `"1"`).
+    #:
+    #: **이 목록은 두 산식의 값을 나란히 싣는다.** 판본 없이 늘어놓으면 화면이
+    #: 서로 비교할 수 없는 두 숫자를 같은 자로 잰 값처럼 보여 준다 — 실제로 승률
+    #: 1.0(v1)과 0.44(v2)가 한 화면에 있다. 판정은 이 값을 보지 않는다.
+    synthesis_version: str = SYNTHESIS_V1
 
 
 @dataclass(frozen=True)
@@ -188,6 +201,9 @@ class PredictionAuditResponse:
     #: 그 청크들을 찾을 때 던진 질의 (Phase 3). 증거 **앞**의 한 단계다 —
     #: 무엇이 검색됐는지보다 무엇을 물었는지가 먼저다. `None`은 기록 전이다.
     knowledge_query: str | None = None
+    #: 위 `win_probability`를 만든 합성 산식의 판본. **`replay`가 고른 산식과 같다** —
+    #: 같은 함수로 해석하므로 화면이 적는 판본과 재현이 돌린 산식이 어긋날 수 없다.
+    synthesis_version: str = SYNTHESIS_V1
 
 
 @dataclass(frozen=True)
