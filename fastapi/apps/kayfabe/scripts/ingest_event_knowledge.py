@@ -71,6 +71,9 @@ from sqlalchemy import text  # noqa: E402
 from kayfabe.app.dtos.knowledge_ingestion_dto import (  # noqa: E402
     IngestKnowledgeCommand,
 )
+from kayfabe.app.services.wiki_event_titles import (  # noqa: E402
+    EVENT_ARTICLE_TITLES as _EVENT_TITLES,
+)
 from kayfabe.dependencies.knowledge_ingestion_provider import (  # noqa: E402
     get_knowledge_ingestion_use_case,
 )
@@ -91,16 +94,11 @@ from ontology.dependencies.wiki_title_provider import (  # noqa: E402
 
 _WIKI = "https://en.wikipedia.org/wiki/"
 
-#: 대회 문서 제목. **주소가 아니라 제목이고, 총론이 아니라 회차다.**
-#: 인코딩은 `_wiki_url`이 하고, 실재 여부와 회차는 위키에 물어 확인한다.
-#:
-#: 값은 2026-09-22에 전수 실측한 것이다. 위키의 회차 문서 명명은 세 갈래로 갈려서
-#: 규칙으로 생성할 수 없다 — `WrestleMania 42`는 연도를 안 쓰고, `Backlash (2026)`은
-#: `WWE ` 접두사가 빠지며, `Survivor Series (2026)`은 `Survivor Series: WarGames
-#: (2026)`으로 넘어간다. 그래서 사람이 확인한 제목을 적고 관문이 검증한다.
-#:
-#: **다음 시즌에 이 표가 낡으면 관문이 소리를 낸다** — 연도가 어긋난 회차 문서는
-#: 조용히 통과하지 않고 `wrong_edition`으로 보고된다.
+#: 대회 문서 제목은 **`app/services/wiki_event_titles`가 들고 있다.**
+#: 결과 확정 에이전트도 같은 표를 봐야 해서 옮겼다 — 두 벌이 되면 한쪽만 고친 날
+#: 적재와 확정이 다른 문서를 보게 되고, 그때 인용 검증은 통과하는데 근거가 딴
+#: 대회의 것이 된다. 갈라진 명명 규칙과 실측 메모는 그 모듈에 그대로 있다.
+
 #: 카드 표시 이름 → 위키 문서 제목. **`_EVENT_TITLES`의 선수판이다.**
 #:
 #: `WikiTitlePort`는 "이 이름이 무엇을 가리키나"만 답하지 **"어느 쪽을 가리켜야
@@ -131,42 +129,6 @@ _COMPETITOR_TITLES: dict[str, str] = {
     # 카드는 `Mascarita Sagrada`로 적지만 위키 링크는 `[[Mascarita Dorada|…]]`다.
     # `Mascarita Sagrada`도 실재하는 문서인데 **다른 사람**이라 더 위험하다.
     "Mascarita Sagrada": "Mascarita Dorada",
-}
-
-
-_EVENT_TITLES: dict[str, str] = {
-    "royal-rumble": "Royal Rumble (2026)",
-    "elimination-chamber": "Elimination Chamber (2026)",
-    # NXT 계열은 문서 제목에 `NXT ` 접두사가 붙는다 — 단, `Worlds Collide`는
-    # 세 브랜드 합동이라 붙지 않는다. 앱 슬러그에는 접두사를 쓰지 않으므로
-    # 여기서만 갈린다.
-    "vengeance-day": "NXT Vengeance Day (2026)",
-    "stand-and-deliver": "NXT Stand & Deliver (2026)",
-    "great-american-bash": "NXT The Great American Bash (2026)",
-    "heatwave": "NXT Heatwave (2026)",
-    "worlds-collide": "Worlds Collide (2026)",
-    "halloween-havoc": "NXT Halloween Havoc (2026)",
-    "wrestlemania": "WrestleMania 42",
-    "backlash": "Backlash (2026)",
-    # **연도 접미사가 없다.** 첫 회차라 문서 제목이 대회 이름 그대로다
-    # (2026-05-31 · 토리노 Inalpi Arena, rev 1368715233). `WWE Clash in Italy`로
-    # 물으면 `missing`이 나온다 — 그래서 한때 "없는 대회"로 잘못 뺐던 자리다.
-    # 회차 관문은 선두 연도 카테고리로 보므로 이 제목도 그대로 통과한다.
-    "clash-in-italy": "Clash in Italy",
-    "night-of-champions": "Night of Champions (2026)",
-    "summerslam": "SummerSlam (2026)",
-    "money-in-the-bank": "Money in the Bank (2026)",
-    "crown-jewel": "Crown Jewel (2026)",
-    "survivor-series": "Survivor Series (2026)",
-    "wrestlepalooza": "Wrestlepalooza (2026)",
-    # `bad-blood`는 2026 회차가 **없다**(총론 회차 표는 2003·2004·2024 셋뿐).
-    # 총론(`WWE Bad Blood`)을 대신 넣지 않는다 — 과거 회차 결과가 적힌 문서라
-    # 근거가 아니라 오염이고, 그게 이 관문이 막으려는 바로 그것이다.
-    #
-    # `king-queen-of-the-ring`은 **`night-of-champions`에 흡수됐다.** 2026년에는
-    # 독립 PLE가 아니라 6/1~6/27 토너먼트였고 결승이 거기서 열렸다. 그 경기의
-    # 근거 문서는 `Night of Champions (2026)` 하나면 된다 — 토너먼트 문서를 따로
-    # 넣으면 같은 경기가 두 문서로 검색된다.
 }
 
 

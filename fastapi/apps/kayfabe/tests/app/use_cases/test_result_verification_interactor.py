@@ -493,3 +493,81 @@ class TestEngineOutage:
 
         assert outage.matches[0].hold is HoldReason.ENGINE_UNAVAILABLE
         assert no_claim.matches[0].hold is HoldReason.NO_CLAIM
+
+
+class TestArticleHint:
+    """아는 문서는 미리 알려 준다 — 이름 맞히기에 걸음을 태우지 않기 위해서다.
+
+    `worlds-collide` 실측(2026-09-28): 힌트가 없을 때 모델이 `Worlds Collide`
+    (동음이의)와 `WWE Worlds Collide`(결과 없는 총론)를 거치다 걸음 상한에 걸려
+    두 경기가 통째로 보류됐다.
+    """
+
+    @pytest.mark.asyncio
+    async def test_known_event_gets_document_and_toc(self) -> None:
+        tools = FakeTools(_happy_steps())
+
+        await _interactor(tools).verify(VerifyResultsCommand())
+        prompt = tools.commands[0].prompt
+
+        assert "[문서]\nSummerSlam (2026)" in prompt
+        assert "[목차]" in prompt
+        assert "- 3: Results" in prompt
+
+    @pytest.mark.asyncio
+    async def test_hint_replaces_the_find_step(self) -> None:
+        """힌트가 있으면 지시문에서 문서 찾기가 빠진다."""
+        tools = FakeTools(_happy_steps())
+
+        await _interactor(tools).verify(VerifyResultsCommand())
+        prompt = tools.commands[0].prompt
+
+        assert "1. 위 [목차]에서" in prompt
+        assert "1. find_wiki_article로" not in prompt
+
+    @pytest.mark.asyncio
+    async def test_unknown_event_falls_back_to_searching(self) -> None:
+        """표에 없는 대회(`bad-blood`가 그렇다)는 모델이 스스로 찾는다."""
+        unknown = MatchUnderReview(
+            event_slug="bad-blood",
+            event_label="Bad Blood 2026",
+            match_key="bb26-main",
+            title="Singles match",
+            options=_MATCH.options,
+        )
+        tools = FakeTools(_happy_steps())
+
+        await _interactor(tools, matches=(unknown,)).verify(VerifyResultsCommand())
+        prompt = tools.commands[0].prompt
+
+        assert "[문서]" not in prompt
+        assert "1. find_wiki_article로" in prompt
+
+    @pytest.mark.asyncio
+    async def test_toc_failure_does_not_hold_the_match(self) -> None:
+        """목차 조회가 실패해도 보류하지 않는다 — 모델이 찾으면 된다."""
+
+        class NoSections(FakeArticles):
+            async def sections(self, title):
+                return None
+
+        tools = FakeTools(_happy_steps())
+
+        run = await _interactor(tools, articles=NoSections()).verify(
+            VerifyResultsCommand()
+        )
+
+        assert "[문서]" not in tools.commands[0].prompt
+        assert run.matches[0].pick == "left"
+
+    @pytest.mark.asyncio
+    async def test_hint_is_not_evidence(self) -> None:
+        """힌트는 우리가 준 값이다 — 인용 대조의 기준이 되면 안 된다.
+
+        목차에 적힌 글자를 인용해 오면 위조로 걸려야 한다.
+        """
+        steps = _happy_steps(winner="Roman Reigns", quote="Results")
+
+        run = await _interactor(FakeTools(steps)).verify(VerifyResultsCommand())
+
+        assert run.matches[0].hold is HoldReason.QUOTE_NOT_FOUND
