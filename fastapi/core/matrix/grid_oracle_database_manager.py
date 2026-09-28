@@ -136,6 +136,14 @@ def _force_round_trip_float_text(async_engine) -> None:
             cursor.execute("SET extra_float_digits = 1")
         finally:
             cursor.close()
+        # **커밋을 빼면 아무 효과가 없다.** psycopg는 이 `SET`으로 트랜잭션을 열고
+        # (`[INTRANS]`), 세션이 반납될 때 도는 rollback이 `SET`을 함께 되돌린다.
+        # `SET LOCAL`이 아니어도 트랜잭션 안에서 실행하면 롤백 대상이다.
+        #
+        # 놓치기 쉬운 이유: `SET` 직후 같은 트랜잭션에서 읽으면 `1`로 보인다.
+        # 요청 하나가 끝나고 나서야 `0`으로 돌아가므로, 스크립트로 확인하면 고쳐진
+        # 것처럼 보이고 앱에서만 안 고쳐진다. **요청 경로로 확인해야 한다.**
+        dbapi_connection.commit()
 
 
 engine = (
