@@ -104,6 +104,40 @@ DATABASE_URL = (
     else ""
 )
 
+
+def _force_round_trip_float_text(async_engine) -> None:
+    """새 연결마다 `extra_float_digits`를 올린다 — **읽어 온 float이 저장값과 달라진다.**
+
+    운영 연결의 기본값이 `0`이었다(2026-09-28 실측). 그 값에서 PostgreSQL은
+    `double precision`을 **유효숫자 15자리 문자열**로 내보내고, psycopg가 그것을 다시
+    파싱하면 원래와 **다른 double**이 된다. 저장은 정확한데 읽기에서 깨지는 것이다:
+
+        confidence = (1.0/3.0)::float8   -> true    (저장값은 정확하다)
+        confidence::text                 -> '0.333333333333333'
+        파싱 결과                         != 1/3
+
+    `1` 이상이면 왕복 무손실(최단 정확 표현)로 바뀐다. `3`을 쓰지 않는 이유는 그것이
+    PostgreSQL 12 이전의 "최대 자리수" 관용값이고 지금은 1 이상이면 전부 같기 때문이다.
+
+    **startup 파라미터(`options=-c extra_float_digits=1`)로는 안 된다.** Supabase 풀러가
+    그것을 **조용히 버린다** — 연결은 성공하고 에러도 없는데 값이 `0`에 머문다(실측).
+    고친 줄 알고 아무것도 안 바뀌는 쪽이 더 위험해서 `SET`으로 간다. 세션 모드
+    풀러(5432)라 `SET`이 연결 수명 동안 유지된다.
+
+    처음 드러난 자리는 KAYFABE 재현(Phase 5)이다 — 저장된 `confidence`와 다시 계산한
+    값을 **오차 없이** 견주므로, 1/3·2/3처럼 15자리로 안 떨어지는 값이면 멀쩡한 예측이
+    `diverged`로 떴다. 다만 이 칸은 kayfabe 전용이 아니라 float을 읽는 모든 곳에 걸린다.
+    """
+
+    @event.listens_for(async_engine.sync_engine, "connect")
+    def _set_extra_float_digits(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("SET extra_float_digits = 1")
+        finally:
+            cursor.close()
+
+
 engine = (
     create_async_engine(
         DATABASE_URL,
@@ -117,6 +151,8 @@ engine = (
     if DATABASE_URL
     else None
 )
+if engine is not None:
+    _force_round_trip_float_text(engine)
 AsyncSessionLocal = (
     async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     if engine is not None
