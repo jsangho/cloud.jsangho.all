@@ -32,6 +32,7 @@ from kayfabe.app.services.ai_lab_integrity import (
     scoring_exclusion,
 )
 from kayfabe.domain.entities.agent_prediction import AgentKind
+from kayfabe.domain.services.prediction_synthesis import resolved_synthesis_version
 
 #: 합의도의 분모 — 코디네이터가 물어보는 에이전트 수.
 #:
@@ -82,6 +83,14 @@ class PerformanceItem:
     #: 무엇을 했는지 화면에서 사라진다. 대신 이 칸이 **`correct`를 어떻게 읽어야
     #: 하는지**를 말한다.
     scoring_exclusion: str | None
+    #: 위 `win_probability`를 만든 **합성 산식의 판본**. 서버가 해석한 값이라
+    #: `None`이 아니다(기록이 없으면 `"1"`).
+    #:
+    #: **이 화면이 특히 이 값을 필요로 한다.** 여기가 승률이 세 의견에서 어떻게
+    #: 접혔는지 해부하는 자리인데, 접는 방식 자체가 판본마다 다르다 — v1은 기권을
+    #: 분포에서 뺐고 v2는 균등분포로 센다. 판본 없이 `coverage` 옆에 승률을 세우면
+    #: 두 산식의 관계를 한 가지로 읽게 된다.
+    synthesis_version: str
     reports: tuple[ReportContribution, ...]
 
 
@@ -212,6 +221,7 @@ def _item(row: PredictionRow, reports: Sequence[ReportRow]) -> PerformanceItem:
         coverage=coverage_of(len(opinionated)),
         correct=_correct(row),
         scoring_exclusion=scoring_exclusion(row),
+        synthesis_version=resolved_synthesis_version(row.synthesis_version),
         reports=tuple(
             ReportContribution(
                 agent=r.agent, weight=r.weight, opinionated=r.pick is not None

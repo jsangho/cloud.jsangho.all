@@ -58,6 +58,7 @@ from kayfabe.app.services.ai_lab_readiness import (
     summarize_readiness,
 )
 from kayfabe.app.services.ai_lab_replay import replay_prediction
+from kayfabe.domain.services.prediction_synthesis import resolved_synthesis_version
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -274,6 +275,8 @@ class AiLabInteractor(AiLabUseCase):
             replay=replay_prediction(row, my_reports, options),
             # 무엇을 물었는가 (Phase 3). 증거 목록보다 한 단계 앞의 사실이다.
             knowledge_query=row.knowledge_query,
+            # 위 승률을 만든 산식. **`replay`가 고른 것과 같은 함수로** 해석한다.
+            synthesis_version=resolved_synthesis_version(row.synthesis_version),
         )
 
     async def get_performance(self) -> AiLabPerformanceResponse:
@@ -473,6 +476,7 @@ class AiLabInteractor(AiLabUseCase):
                     winner_name=row.winner_name,
                     correct=_correct(row),
                     scoring_exclusion=scoring_exclusion(row),
+                    synthesis_version=resolved_synthesis_version(row.synthesis_version),
                     reports=tuple(grouped.get((row.event_slug, row.match_key), ())),
                 )
                 for row in ordered
@@ -539,6 +543,7 @@ def _recent(rows: list[PredictionRow]) -> list[RecentPrediction]:
             winner_name=row.winner_name,
             correct=_correct(row),
             scoring_exclusion=scoring_exclusion(row),
+            synthesis_version=resolved_synthesis_version(row.synthesis_version),
         )
         for row in newest
     ]

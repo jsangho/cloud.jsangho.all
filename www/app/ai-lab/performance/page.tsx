@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { SeverityBadge, StatusBadge } from "@/components/ai-lab/eligibility-badges";
 import { IntegrityBanner } from "@/components/ai-lab/integrity-banner";
+import { SynthesisVersion } from "@/components/ai-lab/synthesis-version";
 // 대시보드 공통 조각은 데이터 센터(Phase 2)의 것을 그대로 쓴다.
 import {
   DataUnavailable,
@@ -497,7 +498,8 @@ function ItemRow({ item }: { item: PerformanceItem }) {
           <p className="mt-0.5 truncate text-sm font-medium text-foreground">{item.matchTitle}</p>
         </div>
         <p className="shrink-0 text-sm tabular-nums text-foreground">
-          승률 {formatRatio(item.winProbability)}
+          승률 {formatRatio(item.winProbability)}{" "}
+          <SynthesisVersion version={item.synthesisVersion} className="text-muted-foreground" />
         </p>
       </div>
 
@@ -540,8 +542,9 @@ function ItemRow({ item }: { item: PerformanceItem }) {
       {thinEvidence && (
         <p className="mt-2 text-xs text-muted-foreground">
           승률 100%는 확신의 크기가 아니라{" "}
-          <strong className="font-semibold">한 명만 답한 결과</strong>입니다 — 의견이 하나면 분포가
-          그쪽으로 붕괴합니다.
+          <strong className="font-semibold">한 명만 답한 결과</strong>입니다 — 기권을 분포에서 뺀
+          산식 v1에서는 의견이 하나면 분포가 그쪽으로 붕괴합니다. 지금 산식(v2)은 기권을 세므로 이
+          값이 다시 나오지 않습니다.
         </p>
       )}
     </li>

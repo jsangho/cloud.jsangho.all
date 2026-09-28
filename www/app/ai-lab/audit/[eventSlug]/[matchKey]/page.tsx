@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { AiLabShell } from "@/components/ai-lab/ai-lab-shell";
 import { SeverityBadge, StatusBadge } from "@/components/ai-lab/eligibility-badges";
+import { SynthesisVersion, synthesisVersionNote } from "@/components/ai-lab/synthesis-version";
 import { DataUnavailable, LoadingBlock } from "@/components/data-center/data-center-shell";
 import {
   agentLabel,
@@ -92,7 +93,7 @@ function Audit({ data }: { data: PredictionAudit }) {
         eventStartDate={data.eventStartDate}
         knowledgeQuery={data.knowledgeQuery}
       />
-      <Replay replay={data.replay} />
+      <Replay replay={data.replay} synthesisVersion={data.synthesisVersion} />
     </div>
   );
 }
@@ -111,7 +112,8 @@ function Header({ data }: { data: PredictionAudit }) {
         <span className="text-muted-foreground">예측 </span>
         <span className="font-medium">{data.pickName}</span>{" "}
         <span className="tabular-nums text-muted-foreground">
-          (승률 {formatRatio(data.winProbability)} · 확신 {formatRatio(data.confidence)})
+          (승률 {formatRatio(data.winProbability)} · 확신 {formatRatio(data.confidence)} ·{" "}
+          <SynthesisVersion version={data.synthesisVersion} />)
         </span>
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{data.rationale}</p>
@@ -434,7 +436,13 @@ const REPLAY_FIELD_LABEL: Record<string, string> = {
  * 다섯 단계 중 둘만 실제로 돌아간다. 나머지 셋을 목록에서 빼지 않는 이유는 Phase 9가
  * 이 칸을 아예 만들지 않았던 이유와 같다 — 보이지 않는 것은 "재현됐다"로 읽힌다.
  */
-function Replay({ replay }: { replay: PredictionReplay }) {
+function Replay({
+  replay,
+  synthesisVersion,
+}: {
+  replay: PredictionReplay;
+  synthesisVersion: string;
+}) {
   return (
     <section
       aria-labelledby="replay-heading"
@@ -450,6 +458,11 @@ function Replay({ replay }: { replay: PredictionReplay }) {
         저장된 리포트를 생성 때와 같은 함수에 다시 넣어 같은 결론이 나오는지 봅니다. 적중 여부와는
         무관합니다.
       </p>
+      {/*
+        **어느 판본으로 돌렸는지 적는다.** 지금 산식으로 옛 예측을 견주면 전부 값이
+        달라지고, 화면은 우리가 함수를 바꾼 일을 "예측이 드리프트했다"로 읽는다.
+      */}
+      <p className="mt-1 text-xs text-muted-foreground">{synthesisVersionNote(synthesisVersion)}</p>
 
       <p className="mt-3 text-sm text-foreground">
         {replay.status === "reproduced" && "같은 재료에서 같은 결론이 다시 나왔습니다."}

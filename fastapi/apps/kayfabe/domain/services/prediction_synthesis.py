@@ -27,6 +27,19 @@ SYNTHESIS_V2 = "2"
 SYNTHESIS_VERSION = SYNTHESIS_V2
 
 
+def resolved_synthesis_version(recorded: str | None) -> str:
+    """저장된 판본을 **실제로 그 숫자를 만든 산식**의 이름으로 읽는다.
+
+    비어 있으면 `v1`이다 — 칼럼이 `v2`와 함께 생겼으므로 기록이 없는 행은 전부
+    `v1`이 만든 것이다.
+
+    **이 규칙을 두 군데서 적지 않기 위해 함수로 둔다.** 재현이 산식을 고를 때와
+    화면이 판본을 적을 때가 같은 답을 내야 한다 — 한쪽만 바뀌면 화면은 `v2`라고
+    적는데 재현은 `v1`으로 돌리는 상태가 되고, 그 어긋남은 아무 데서도 안 보인다.
+    """
+    return recorded or SYNTHESIS_V1
+
+
 class ReportsUnavailableError(Exception):
     """의견을 낸 리포트가 하나도 없다. 클라이언트에는 503.
 

@@ -85,6 +85,13 @@ export type RecentPrediction = {
    * `predictions` 적중률에 안 세어지는 줄이 있고, 화면은 그 이유를 적어야 한다.
    */
   scoringExclusion: string | null;
+  /**
+   * 위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+   *
+   * **최신순 목록이라 판본이 갈리는 경계가 여기 놓인다** — 산식이 바뀐 자리를 가장
+   * 먼저 드러내는 화면이다.
+   */
+  synthesisVersion: string;
 };
 
 export type AiLabOverview = {
@@ -132,6 +139,16 @@ export type PredictionItem = {
    * **`source`로는 못 가린다** — 사후 재현 표본의 `source`도 `agents`다.
    */
   scoringExclusion: string | null;
+  /**
+   * 위 `winProbability`를 만든 **합성 산식의 판본** ("1" | "2").
+   *
+   * **이 목록에는 두 산식의 값이 섞여 있다.** v1은 기권한 에이전트를 분포에서 빼서
+   * 셋 중 하나만 답해도 승률 1.0이 나왔고, v2는 기권을 균등분포로 센다. 판본을 안
+   * 적으면 화면이 비교할 수 없는 두 숫자를 같은 자로 잰 값처럼 보여 준다.
+   *
+   * 서버가 이미 해석한 값이라 `null`이 아니다 — 기록 없는 옛 예측은 `"1"`이다.
+   */
+  synthesisVersion: string;
   reports: PredictionReport[];
 };
 
@@ -489,6 +506,13 @@ export type PredictionAudit = {
    * 경기가 카드에서 사라진 예측은 기록해 두지 않았으면 영영 복원되지 않는다.
    */
   knowledgeQuery: string | null;
+  /**
+   * 위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+   *
+   * **`replay`가 돌린 산식과 같다** — 서버가 한 함수로 해석하므로 화면이 적는
+   * 판본과 재현이 쓴 산식이 어긋날 수 없다.
+   */
+  synthesisVersion: string;
 };
 
 /**
@@ -549,6 +573,14 @@ export type PerformanceItem = {
    * 실제로 오는 값은 `ex_post` 하나다.
    */
   scoringExclusion: string | null;
+  /**
+   * 위 `winProbability`를 만든 합성 산식의 판본 ("1" | "2").
+   *
+   * **이 화면이 특히 이 값을 필요로 한다** — 승률이 의견들에서 어떻게 접혔는지
+   * 해부하는 자리인데, 접는 방식 자체가 판본마다 다르다. 위 주석이 말하는 "분포
+   * 붕괴"는 기권을 분포에서 뺀 v1에서만 일어난다.
+   */
+  synthesisVersion: string;
   reports: ReportContribution[];
 };
 
