@@ -406,17 +406,18 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ),
   ],
 
-  // `Money in the Bank (2026)` rev 1376101948의 Matches 절 그대로 — 래더 둘 + 타이틀전 하나.
+  // `Money in the Bank (2026)` rev 1376940088의 `matchN` 그대로 — 래더 둘 + 타이틀전 하나.
   // 이전 다섯 경기는 2025 카드를 베낀 픽스처였다(실재하지 않는 IC·여성IC·태그 셋이
   // 섞여 있었다). 2026-09-22에 위키 대진으로 교체했다.
-  // 래더 두 경기에 `TBD` 두 칸이 남아 있고 배당은 아직 없다 — 둘 다 지어내지 않는다.
+  // 2026-09-28에 래더 둘의 다섯째 칸이 채워졌다 — 남자 CM Punk · 여자 Lash Legend.
+  // **`TBD`는 이제 각 래더 한 칸씩이다.** 배당은 아직 없다 — 둘 다 지어내지 않는다.
   "money-in-the-bank": [
     mm("mitb26-men", "Men's Money in the Bank Ladder Match", "sideB", [
       { name: "Bron Breakker" },
       { name: "Je'Von Evans" },
       { name: "Trick Williams" },
       { name: "Penta" },
-      { name: BRACKET_LABELS.tbd },
+      { name: "CM Punk" },
       { name: BRACKET_LABELS.tbd },
     ]),
     mm("mitb26-women", "Women's Money in the Bank Ladder Match", "sideA", [
@@ -424,7 +425,7 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "Lola Vice" },
       { name: "Jacy Jayne" },
       { name: "Roxanne Perez" },
-      { name: BRACKET_LABELS.tbd },
+      { name: "Lash Legend" },
       { name: BRACKET_LABELS.tbd },
     ]),
     m2(
