@@ -120,6 +120,28 @@ FINISHED_EVENT_RESULTS: dict[str, dict[str, MatchResultResponse]] = {
         ),
         "bl26-whc": MatchResultResponse(winner_side="left", winner_name="Roman Reigns"),
     },
+    "worlds-collide": {
+        "wc26-reina": MatchResultResponse(
+            winner_side="left", winner_name="La Catalina"
+        ),
+        "wc26-tag": MatchResultResponse(
+            winner_side="left", winner_name="Lucha Brothers"
+        ),
+        # **카드의 좌우가 위키 서술 순서와 반대다** — 위키는 Fatal Influence를 먼저
+        # 적지만 카드에서는 Las Tóxicas가 `left`다. 이름만 보고 `left`로 고치면 틀린다.
+        "wc26-trios-women": MatchResultResponse(
+            winner_side="right", winner_name="Fatal Influence"
+        ),
+        "wc26-dragon-lee": MatchResultResponse(
+            winner_side="left", winner_name="Dragon Lee"
+        ),
+        # 이긴 쪽에 팀 이름이 없다 — `wm42-n1-six`처럼 `winner_name`을 비운다.
+        "wc26-atomicos": MatchResultResponse(winner_side="left"),
+        "wc26-cruiserweight": MatchResultResponse(
+            winner_index=1, winner_name="Mini Vikingo"
+        ),
+        "wc26-trios-men": MatchResultResponse(winner_side="left"),
+    },
 }
 
 FINISHED_EVENT_SLUGS: frozenset[str] = frozenset(FINISHED_EVENT_RESULTS.keys())
