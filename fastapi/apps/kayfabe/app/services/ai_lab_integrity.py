@@ -25,6 +25,7 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
+from urllib.parse import urlsplit
 
 #: 윌슨 구간의 z (95%). 바꾸면 화면 문구의 "95%"도 함께 바꾼다.
 Z_95 = 1.959963984540054
@@ -416,21 +417,37 @@ def _normalize(text: str) -> str:
     return _NON_ALNUM.sub("", text.lower())
 
 
-def _last_segment(url: str) -> str:
-    return url.rstrip("/").rsplit("/", 1)[-1]
+def _path_segments(url: str) -> list[str]:
+    """URL **경로**의 조각들. 호스트는 빼고 빈 조각도 뺀다.
+
+    호스트를 안 보는 이유는 도메인 이름이 대회 이름과 겹치면 그 사이트의 **모든**
+    문서가 대회 문서가 되어 버리기 때문이다.
+    """
+    path = urlsplit(url.strip()).path
+    return [segment for segment in path.split("/") if segment]
 
 
 def cites_own_event(sources: Iterable[str], event_label: str) -> bool:
     """인용 출처 중 **그 대회 자체를 다룬 문서**가 있는가.
 
-    URL 마지막 조각의 정규화 값이 대회 이름으로 **시작**할 때만 참이다. 단순 포함으로
-    하면 "Champions"가 "Night of Champions" 문서에도 걸려 없는 누수를 만든다 —
-    이 함수의 값이 화면에 "누수 의심"으로 나가므로 과탐이 과소탐보다 나쁘다.
+    경로 조각 **어느 하나라도** 정규화 값이 대회 이름으로 **시작**하면 참이다.
+
+    조각 안에서는 시작으로만 본다 — 단순 포함으로 하면 "Champions"가 "Night of
+    Champions" 문서에도 걸려 없는 누수를 만든다. 반대로 **마지막 조각만** 보면
+    한 단 더 깊은 주소가 같은 문서인데 빠져나간다:
+    `/shows/moneyinthebank`는 걸리는데 `/shows/moneyinthebank/2026`은 `2026`만
+    보고 통과했다(2026-09-28 실측). 그 구멍으로 들어온 문서는 ex-ante인 척하는
+    표본을 만든다 — 이 함수의 값이 화면에 "누수 의심"으로 나가므로 과탐이
+    과소탐보다 낫다.
     """
     label = _normalize(event_label)
     if not label:
         return False
-    return any(_normalize(_last_segment(url)).startswith(label) for url in sources)
+    return any(
+        _normalize(segment).startswith(label)
+        for url in sources
+        for segment in _path_segments(url)
+    )
 
 
 def summarize_predictions(rows: Sequence[PredictionRow]) -> PredictionTotals:

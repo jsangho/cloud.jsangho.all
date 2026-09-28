@@ -105,6 +105,28 @@ class TestCitesOwnEvent:
     def test_no_sources_means_no_self_reference(self) -> None:
         assert not cites_own_event([], "SummerSlam")
 
+    def test_a_deeper_path_does_not_slip_through(self) -> None:
+        # 마지막 조각만 보면 `2026`을 읽고 통과한다 — 같은 대회 문서인데 빠져나간다.
+        assert cites_own_event(
+            ["https://www.wwe.com/shows/moneyinthebank/2026"], "Money in the Bank"
+        )
+        assert cites_own_event(
+            ["https://www.wwe.com/shows/moneyinthebank"], "Money in the Bank"
+        )
+
+    def test_a_wrestler_page_on_the_same_site_still_passes(self) -> None:
+        # 경로 조각을 전부 보더라도 `superstars`·`cmpunk`는 대회 이름이 아니다.
+        assert not cites_own_event(
+            ["https://www.wwe.com/superstars/cmpunk"], "Money in the Bank"
+        )
+
+    def test_the_host_is_not_a_path_segment(self) -> None:
+        # 도메인이 대회 이름과 겹치면 그 사이트의 모든 문서가 대회 문서가 돼 버린다.
+        assert not cites_own_event(
+            ["https://moneyinthebank.example.com/superstars/cmpunk"],
+            "Money in the Bank",
+        )
+
 
 class TestSummarizePredictions:
     def test_grading_excludes_the_bookmaker_fallback(self) -> None:
