@@ -12,7 +12,6 @@ export const authBaseUrl = stripTrailingSlash(
   process.env.NEXT_PUBLIC_AUTH_BASE_URL || "http://127.0.0.1:8001",
 );
 
-export const titanicApiBaseUrl = `${apiBaseUrl}/api/titanic`;
 export const pleEventsBaseUrl = `${apiBaseUrl}/api/ple_events`;
 export const pleMatchPicksBaseUrl = `${apiBaseUrl}/api/ple-match-picks`;
 export const pleMatchesBaseUrl = `${apiBaseUrl}/api/ple-matches`;

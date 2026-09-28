@@ -1,5 +1,32 @@
 import Link from "next/link";
-import { BookOpen, Database, ArrowRight, ListChecks } from "lucide-react";
+import { ArrowRight, Eye, FileText, MessagesSquare, Search } from "lucide-react";
+
+const LESSONS = [
+  {
+    href: "/lesson/vision",
+    icon: Eye,
+    title: "비전 처리",
+    description: "이미지를 업로드해 분류·객체 탐지 파이프라인으로 보냅니다.",
+  },
+  {
+    href: "/lesson/rag-system/rag-chat",
+    icon: MessagesSquare,
+    title: "RAG 챗",
+    description: "수집한 문서를 근거로 답하는 검색 증강 생성 연습입니다.",
+  },
+  {
+    href: "/lesson/dataset-collection/crawler-scraper",
+    icon: Search,
+    title: "크롤러 · 스크레이퍼",
+    description: "공개 페이지에서 데이터셋을 모으는 수집기 연습입니다.",
+  },
+  {
+    href: "/lesson/ledger",
+    icon: FileText,
+    title: "원장",
+    description: "영수증을 읽어 장부로 옮기는 연습입니다.",
+  },
+] as const;
 
 export default function LessonHomePage() {
   return (
@@ -13,68 +40,27 @@ export default function LessonHomePage() {
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/lesson/titanic"
-            className="group rounded-3xl border border-stone-300/60 dark:border-stone-700/60 bg-stone-50/45 dark:bg-stone-950/45 p-6 shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:border-stone-400/70 dark:hover:border-stone-500/70 hover:bg-stone-100/60 dark:hover:bg-stone-950/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500/50"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                  <BookOpen className="size-5 text-stone-500 dark:text-stone-300" aria-hidden />
-                  분석 연습
+          {LESSONS.map(({ href, icon: Icon, title, description }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group rounded-3xl border border-stone-300/60 dark:border-stone-700/60 bg-stone-50/45 dark:bg-stone-950/45 p-6 shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:border-stone-400/70 dark:hover:border-stone-500/70 hover:bg-stone-100/60 dark:hover:bg-stone-950/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500/50"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-stone-800 dark:text-stone-100">
+                    <Icon className="size-5 text-stone-500 dark:text-stone-300" aria-hidden />
+                    {title}
+                  </div>
+                  <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{description}</p>
                 </div>
-                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
-                  수업용 연습 페이지(분석)로 이동합니다.
-                </p>
+                <ArrowRight
+                  className="mt-1 size-5 text-stone-400 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
               </div>
-              <ArrowRight
-                className="mt-1 size-5 text-stone-400 transition-transform group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </div>
-          </Link>
-
-          <Link
-            href="/lesson/titanic/data-collection"
-            className="group rounded-3xl border border-stone-300/60 dark:border-stone-700/60 bg-stone-50/45 dark:bg-stone-950/45 p-6 shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:border-stone-400/70 dark:hover:border-stone-500/70 hover:bg-stone-100/60 dark:hover:bg-stone-950/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500/50"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                  <Database className="size-5 text-stone-500 dark:text-stone-300" aria-hidden />
-                  데이터 수집
-                </div>
-                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
-                  CSV 업로드(브라우저) 등 데이터 준비 연습으로 이동합니다.
-                </p>
-              </div>
-              <ArrowRight
-                className="mt-1 size-5 text-stone-400 transition-transform group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </div>
-          </Link>
-
-          <Link
-            href="/lesson/titanic/titaniclist"
-            className="group rounded-3xl border border-stone-300/60 dark:border-stone-700/60 bg-stone-50/45 dark:bg-stone-950/45 p-6 shadow-lg shadow-black/20 backdrop-blur-sm transition-colors hover:border-stone-400/70 dark:hover:border-stone-500/70 hover:bg-stone-100/60 dark:hover:bg-stone-950/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500/50"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                  <ListChecks className="size-5 text-stone-500 dark:text-stone-300" aria-hidden />
-                  DB 리스트
-                </div>
-                <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">
-                  Neon DB의 타이타닉 테이블 데이터를 50개씩 조회합니다.
-                </p>
-              </div>
-              <ArrowRight
-                className="mt-1 size-5 text-stone-400 transition-transform group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </div>
-          </Link>
+            </Link>
+          ))}
         </div>
       </div>
     </main>

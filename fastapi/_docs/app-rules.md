@@ -16,7 +16,7 @@
     - `James`: 메인 로직 래퍼 클래스
 
 ## 3. 코드 아키텍처 규칙
-- **FastAPI 초기화**: `app = FastAPI(title="Titanic (James)")` 형식을 유지할 것.
+- **FastAPI 초기화**: `app = FastAPI(title="<앱명> (<담당>)")` 형식을 유지할 것.
 - **실행 방식**: `uvicorn.run("james:app", ...)`를 통해 실행되므로 파일 이름은 반드시 `james.py`여야 함.
 - **모듈화**: 비즈니스 로직은 `James` 클래스 내부에 정의하거나 `Walter` 모듈을 활용할 것.
 

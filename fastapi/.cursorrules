@@ -14,7 +14,7 @@
 1. **본 파일** — 백엔드 공통 패턴
 2. **`fastapi/_claude/ENTITY_RULE.md`** — 엔티티·테이블·PK 규칙
 3. **앱 도메인 ERD·명세** (해당 시) — 예: [`fastapi/apps/kayfabe/_docs/KAYFABE_ERD.md`](apps/kayfabe/_docs/KAYFABE_ERD.md)
-4. **작업 중인 앱의 `_docs/.cursorrules`** — 예: [Titanic](apps/titanic/_docs/.cursorrules)
+4. **작업 중인 앱의 `_docs/.cursorrules`** — 예: [Kayfabe](apps/kayfabe/_docs/CLAUDE.md)
 
 규칙에 없는 패턴을 추측으로 도입하지 않는다.
 
@@ -28,7 +28,6 @@
 fastapi/
 ├── main.py              # FastAPI 앱 · 라우터 등록 · lifespan
 ├── apps/                # sys.path에 추가 — 최상위 패키지로 import
-│   ├── titanic/         # → titanic.*
 │   ├── kayfabe/         # → kayfabe.*
 │   ├── friday13th/      # → friday13th.*
 │   └── core/            # DB·설정 등 공유
@@ -37,7 +36,7 @@ fastapi/
 ```
 
 - `apps/<app>/`는 **형제(sibling) 앱**이다. 새 앱 추가 시 `main.py`에 라우터를 등록한다.
-- 앱별 상세 규칙은 `apps/<app>/_docs/.cursorrules`에 둔다. (Titanic이 템플릿)
+- 앱별 상세 규칙은 `apps/<app>/_docs/.cursorrules`에 둔다. (구조는 `lion_king`이 템플릿)
 
 ---
 
@@ -60,7 +59,7 @@ fastapi/
 
 - 앱 집계: `apps/<app>/adapter/inbound/api/__init__.py` → `<app>_router`
 - `main.py`에서 `app.include_router(<app>_router)` 로 마운트
-- 프론트(`www`)가 호출하는 URL과 **prefix를 일치**시킨다. (예: kayfabe는 루트 `/ple`, titanic은 `/titanic`)
+- 프론트(`www`)가 호출하는 URL과 **prefix를 일치**시킨다. (예: kayfabe는 루트 `/ple`, lion_king은 `/photos`)
 
 ---
 
@@ -92,11 +91,10 @@ docker compose up --build -d backend
 
 | 앱 | 규칙 |
 |----|------|
-| Titanic | [`apps/titanic/_docs/.cursorrules`](apps/titanic/_docs/.cursorrules) |
 | Kayfabe | `apps/kayfabe/_docs/` (ERD·명세; `.cursorrules` 추가 예정) |
 | Friday13th | `apps/friday13th/_docs/` (추가 예정) |
 
-Titanic 작업 시 **반드시** [Titanic `.cursorrules`](apps/titanic/_docs/.cursorrules)를 함께 Read한다.
+앱 작업 시 그 앱의 `_docs/` 지침을 **반드시** 함께 Read한다.
 
 ## 7. 행동 보조
 

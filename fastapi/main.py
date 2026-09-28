@@ -50,7 +50,6 @@ from pydantic import BaseModel, Field
 from soccer.adapter.inbound.api import soccer_router
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from wwe_game.adapter.inbound.api.v1.career_router import career_router
 
 from auth.adapter.inbound.api import auth_router
 from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
@@ -60,7 +59,6 @@ from kayfabe.adapter.inbound.api import kayfabe_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
-from titanic.adapter.inbound.api import titanic_router
 
 keymaker = get_keymaker()
 logger = logging.getLogger("uvicorn.error")
@@ -122,7 +120,6 @@ app.add_middleware(
 app.include_router(docs_gate_router)
 app.include_router(jwks_router)
 app.include_router(auth_router, prefix="/api")
-app.include_router(titanic_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")
 app.include_router(human_resource_router, prefix="/api")
 app.include_router(pdf_loader_router, prefix="/api")
@@ -133,7 +130,6 @@ app.include_router(vision_router, prefix="/api")
 app.include_router(photo_router, prefix="/api")
 app.include_router(receipt_router, prefix="/api")
 app.include_router(soccer_router, prefix="/api")
-app.include_router(career_router, prefix="/api")
 
 
 @app.middleware("http")

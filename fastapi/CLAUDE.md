@@ -16,7 +16,7 @@
 
 - 새 엔드포인트 → `main.py` include 목록 · 기존 `*_router.py` prefix 먼저 확인
 - 새 ORM 모델 → `_claude/ENTITY_RULE.md` 반드시 먼저 읽기
-- 기존 패턴(titanic 앱 구조) 먼저 Read 후 동일 구조로 구현
+- 기존 패턴(lion_king 앱 구조) 먼저 Read 후 동일 구조로 구현
 - 불분명하면 멈추고 무엇이 헷갈리는지 구체적으로 질문
 
 ---
@@ -90,7 +90,7 @@ dependencies/     ← FastAPI Depends 팩토리
 ```
               [ontology] ← HUB (중앙 허브)
              /      |      \
-     [kayfabe] [human_resource] [titanic] ···  ← SPOKE
+     [kayfabe] [human_resource] [lion_king] ···  ← SPOKE
 ```
 
 - **허브(`ontology`)**: 온톨로지 인덱스, 컨텍스트 라우팅, 전역 지식 조정.  
@@ -105,11 +105,10 @@ dependencies/     ← FastAPI Depends 팩토리
 | 앱 | 역할 | 토폴로지 | API Prefix | 상태 |
 |----|------|---------|-----------|------|
 | `ontology` | 온톨로지 허브 · 컨텍스트 라우터 | **HUB** | `/star-craft` | 개발 중 |
-| `titanic` | ML 학습 실습 (crew/passenger) | spoke | `/titanic` | 안정 (구조 템플릿) |
 | `kayfabe` | WWE 예측 · 랭킹 · 챔피언십 · 타이틀 히스토리 | spoke | `/ple`, `/rankings`, `/records`, `/championship`, `/title-history` | 운영 |
 | `user` | 인증 · 프로필 | spoke | `/users` | 운영 |
 | `human_resource` | 페르소나 AI 에이전트 | spoke | `/silicon-valley` | 개발 중 |
-| `lion_king` | 사진 보관 (촬영 → S3) | spoke | `/photos` | 개발 중 |
+| `lion_king` | 사진 보관 (촬영 → S3) | spoke | `/photos` | 개발 중 (**구조 템플릿**) |
 | `imitation_game` | 학습용 | spoke | — | 최소 |
 | `inception` | 학습용 | spoke | — | 최소 |
 | `social_network` | 소셜 | spoke | — | 플레이스홀더 |
@@ -174,6 +173,5 @@ result = await asyncio.to_thread(use_case.analyze_intent, question)
 | `_claude/ENTITY_RULE.md` | DB 엔티티 필수 규칙 |
 | `_claude/CLAUDE.md` | 백엔드 구현 세부 지침 |
 | [`apps/kayfabe/_docs/CLAUDE.md`](apps/kayfabe/_docs/CLAUDE.md) | Kayfabe 도메인 · CQRS · ERD |
-| [`apps/titanic/_docs/CLAUDE.md`](apps/titanic/_docs/CLAUDE.md) | Titanic 앱 구조 (템플릿) |
 | [`../_docs/k3s-rules.md`](../_docs/k3s-rules.md) | **로컬 개발 스택(k3s)** — 매니페스트·워크플로우·명령 대응표 |
 | [`_docs/docker-rules.md`](_docs/docker-rules.md) | EC2 운영 컨테이너(DB·백엔드·터널) 생성 전 기존 리소스 확인 규칙 |
