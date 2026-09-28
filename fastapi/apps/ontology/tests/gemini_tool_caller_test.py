@@ -24,13 +24,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ontology.adapter.outbound.gemini_tool_caller import _contents, _to_step
+import pytest
+
+from ontology.adapter.outbound.gemini_tool_caller import (
+    MAX_ATTEMPTS,
+    RETRY_BACKOFF_SECONDS,
+    GeminiToolCaller,
+    _contents,
+    _to_step,
+)
 from ontology.app.dtos.gemini_tool_dto import (
     ToolCall,
     ToolDeclaration,
     ToolExchange,
     ToolStepCommand,
 )
+from ontology.app.ports.output.gemini_tool_errors import ToolCallUnavailableError
 
 
 @dataclass
@@ -261,3 +270,99 @@ class TestThoughtSignature:
 
         assert contents[1].parts[0].thought_signature == b"sig-2"
         assert contents[1].parts[0].function_call.name == "read_wiki_section"
+
+
+class FakeModels:
+    """`generate_content`를 정해진 순서로 실패/성공시킨다."""
+
+    def __init__(self, outcomes: list[object]) -> None:
+        self._outcomes = list(outcomes)
+        self.calls = 0
+
+    async def generate_content(self, *, model, contents, config):
+        self.calls += 1
+        outcome = (
+            self._outcomes.pop(0) if self._outcomes else _response(FakePart(text="{}"))
+        )
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+
+class FakeAio:
+    def __init__(self, models):
+        self.models = models
+
+
+class FakeClient:
+    def __init__(self, models):
+        self.aio = FakeAio(models)
+
+
+def _caller(
+    outcomes: list[object], sink: list[float]
+) -> tuple[GeminiToolCaller, FakeModels]:
+    models = FakeModels(outcomes)
+
+    async def _sleep(seconds: float) -> None:
+        sink.append(seconds)
+
+    return GeminiToolCaller(client=FakeClient(models), sleep=_sleep), models
+
+
+def _command() -> ToolStepCommand:
+    return ToolStepCommand(
+        prompt="누가 이겼나요?",
+        tools=(
+            ToolDeclaration(name="t", description="d", parameters={"type": "object"}),
+        ),
+    )
+
+
+class TestTransientFailure:
+    """503 `high demand`는 실측된 장애다 — 재시도가 없으면 실행이 통째로 끊긴다."""
+
+    @pytest.mark.asyncio
+    async def test_transient_failure_is_retried(self) -> None:
+        sink: list[float] = []
+        caller, models = _caller(
+            [RuntimeError("503 UNAVAILABLE"), _response(FakePart(text='{"a": 1}'))],
+            sink,
+        )
+
+        step = await caller.next_step(_command())
+
+        assert step.text == '{"a": 1}'
+        assert models.calls == 2
+        assert sink == [RETRY_BACKOFF_SECONDS[0]]
+
+    @pytest.mark.asyncio
+    async def test_backoff_grows(self) -> None:
+        sink: list[float] = []
+        caller, _ = _caller([RuntimeError("503")] * MAX_ATTEMPTS, sink)
+
+        with pytest.raises(ToolCallUnavailableError):
+            await caller.next_step(_command())
+
+        assert sink == list(RETRY_BACKOFF_SECONDS[: MAX_ATTEMPTS - 1])
+
+    @pytest.mark.asyncio
+    async def test_exhausted_retries_raise_unavailable(self) -> None:
+        """벤더 예외가 그대로 새어 나가면 부르는 쪽이 장애와 버그를 구분할 수 없다."""
+        sink: list[float] = []
+        caller, models = _caller([RuntimeError("503")] * MAX_ATTEMPTS, sink)
+
+        with pytest.raises(ToolCallUnavailableError):
+            await caller.next_step(_command())
+
+        assert models.calls == MAX_ATTEMPTS
+
+    @pytest.mark.asyncio
+    async def test_success_does_not_sleep(self) -> None:
+        sink: list[float] = []
+        caller, models = _caller([_response(FakePart(text="{}"))], sink)
+
+        await caller.next_step(_command())
+
+        assert models.calls == 1
+        assert sink == []
