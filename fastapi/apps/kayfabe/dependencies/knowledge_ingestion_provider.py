@@ -12,7 +12,10 @@ from kayfabe.adapter.outbound.pg.knowledge_chunk_pg_repository import (
 from kayfabe.app.ports.input.knowledge_ingestion_use_case import (
     KnowledgeIngestionUseCase,
 )
-from kayfabe.app.services.prediction_knowledge_sources import ALLOWED_DOMAINS
+from kayfabe.app.services.prediction_knowledge_sources import (
+    ALLOWED_DOMAINS,
+    HEADER_LINEAGE_DOMAINS,
+)
 from kayfabe.app.use_cases.knowledge_ingestion_interactor import (
     KnowledgeIngestionInteractor,
 )
@@ -28,7 +31,12 @@ def get_knowledge_ingestion_use_case(
     (하네스 §2-D7). 지금 호출자는 `scripts/ingest_prediction_knowledge.py`뿐이다.
     """
     return KnowledgeIngestionInteractor(
-        OntologyPublicSourceCollector(get_public_source_use_case(ALLOWED_DOMAINS)),
+        OntologyPublicSourceCollector(
+            get_public_source_use_case(
+                ALLOWED_DOMAINS,
+                header_lineage_domains=HEADER_LINEAGE_DOMAINS,
+            )
+        ),
         BgeM3Embedder(),
         KnowledgeChunkPgRepository(db=db),
         max_chunks_per_document=max_chunks,

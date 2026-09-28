@@ -171,6 +171,12 @@ class AgentPrediction:
     #: 파생 가능해 보이는 값이라도 파생의 재료가 사라지면 기록해 둔 쪽만 남는다.
     #: `None`은 기록 전이라는 뜻이다.
     knowledge_query: str | None = None
+    #: 이 승률을 만든 **합성 산식의 판본** (`prediction_synthesis.SYNTHESIS_VERSION`).
+    #: 산식이 바뀌면 저장된 승률은 지금 산식으로 다시 만들 수 없으므로, 재현은 이
+    #: 값으로 그때의 산식을 골라 부른다. `None`은 판본 기록 이전 행이고 그것은
+    #: **`v1`이라는 뜻이다** — 칼럼이 `v2`와 함께 생겼으므로 기록 없는 행은 전부 `v1`이
+    #: 만들었다. 폴백 예측(`bookmaker_fallback`)은 합성을 지나지 않아 `None`이다.
+    synthesis_version: str | None = None
 
     def __post_init__(self) -> None:
         if not self.event_slug or not self.match_key:

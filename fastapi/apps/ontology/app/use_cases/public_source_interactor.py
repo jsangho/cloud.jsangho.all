@@ -14,10 +14,12 @@ from __future__ import annotations
 import logging
 import re
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
+from ontology.app.dtos.crawler_dto import FetchedPage
 from ontology.app.dtos.public_source_dto import PublicDocument
 from ontology.app.ports.input.public_source_use_case import (
     PublicSourceUseCase,
@@ -64,12 +66,25 @@ class PublicSourceInteractor(PublicSourceUseCase):
         fetcher: WebPageFetcherPort,
         robots: RobotsPolicyPort,
         revisions: RevisionMetadataPort | None = None,
+        header_lineage_domains: frozenset[str] = frozenset(),
     ) -> None:
         self._allowed_domains = frozenset(d.lower() for d in allowed_domains)
         self._fetcher = fetcher
         self._robots = robots
         #: 없으면 계보 없이 수집한다 — 계보는 있으면 좋은 것이지 수집의 조건이 아니다.
         self._revisions = revisions
+        #: **개정본 API가 없어 응답 헤더를 계보로 인정하는 도메인** (2026-09-28).
+        #:
+        #: 기본이 빈 집합인 것이 중요하다 — 위키에는 절대 걸리면 안 된다. 그쪽
+        #: `Last-Modified`는 `page_touched`라 개정본 시각이 아니고, 실측에서 21일
+        #: 벌어져 있었다(`wikipedia_revision_metadata` 독스트링). API가 답하지 못한
+        #: 날 헤더로 물러서면 계보의 품질이 조용히 떨어진다.
+        #:
+        #: **어느 소스를 이 목록에 넣을지는 허브가 정하지 않는다.** 수집 정책은 부르는
+        #: 앱의 것이다(허용 도메인 목록과 같은 이유).
+        self._header_lineage_domains = frozenset(
+            d.lower() for d in header_lineage_domains
+        )
 
     async def collect(self, url: str) -> PublicDocument | None:
         self._require_allowed(url)
@@ -97,7 +112,9 @@ class PublicSourceInteractor(PublicSourceUseCase):
         # 우리가 읽은 판본일 수 없다.
         collected_at = datetime.now(UTC)
         fetched_title = _title(soup)
-        revision = await self._revision_of(url, collected_at, fetched_title)
+        revision = await self._revision_of(
+            url, collected_at, fetched_title
+        ) or self._revision_from_response(url, page, fetched_title, collected_at)
         return PublicDocument(
             url=url,
             title=fetched_title,
@@ -189,6 +206,75 @@ class PublicSourceInteractor(PublicSourceUseCase):
             return None
         return revision
 
+    def _revision_from_response(
+        self,
+        url: str,
+        page: FetchedPage,
+        fetched_title: str | None,
+        collected_at: datetime,
+    ) -> RevisionMetadata | None:
+        """개정본 API가 없는 소스의 계보를 **본문을 받아 온 그 응답**에서 만든다.
+
+        **왜 제목을 대조하지 않는가.** `_revision_of`의 관문 2는 "계보가 다른 문서를
+        가리키지 않는가"를 묻는다. 여기서는 그 위험이 **구조적으로 없다** — 계보의
+        재료가 본문과 같은 HTTP 응답의 헤더이므로, 다른 문서일 수가 없다. 그래서
+        대조 대신 응답의 제목을 그대로 실어 보낸다.
+
+        **두 헤더가 서로 다른 것을 말한다.**
+
+        * `ETag` — 내용의 판본 식별자. 내용이 바뀌면 바뀌므로 위키의 `revid`와
+          같은 자리에 쓸 수 있다.
+        * `Last-Modified` — 그 판본이 만들어진 시각. **CDN 재생성 시각일 수 있다**
+          (실측: wwe.com이 조회 19분 전 값을 줬다). 그래서 이 값이 말할 수 있는 것은
+          "이 판본이 **늦어도** 그때 존재했다"이고, 그것이 자격 판정이 묻는 것과
+          맞는다 — 경기보다 앞서는가 · 예측보다 앞서는가.
+
+          **이것을 발행 시각으로 쓰지 않는다.** `published_at`은 여전히 메타태그에서만
+          온다 — 재생성 시각을 발행일로 적으면 없는 사실을 만드는 것이다.
+
+        **둘 중 하나라도 없으면 계보를 주장하지 않는다.** 시각만 있고 식별자가 없으면
+        "어느 판본인지"를 못 말하고, 식별자만 있으면 시간 판정에 쓸 수 없다.
+        """
+        host = (urlparse(url).hostname or "").lower()
+        if host not in self._header_lineage_domains:
+            return None
+        if not page.etag or not page.last_modified:
+            logger.info(
+                "[ontology.public_source] 헤더 계보 재료 부족 | url=%s "
+                "| etag=%s | last_modified=%s",
+                url,
+                page.etag,
+                page.last_modified,
+            )
+            return None
+
+        revised_at = _http_date(page.last_modified)
+        if revised_at is None:
+            logger.info(
+                "[ontology.public_source] Last-Modified를 읽지 못했다 | url=%s | 값=%s",
+                url,
+                page.last_modified,
+            )
+            return None
+        if revised_at > collected_at:
+            # `_revision_of`의 관문 3과 같은 이유다 — 수집보다 미래인 판본을 읽었을
+            # 수는 없다. 헤더 경로에도 같은 선을 긋는다.
+            logger.info(
+                "[ontology.public_source] 헤더 계보가 수집보다 미래 — 버린다 | url=%s "
+                "| 판본=%s | 수집=%s",
+                url,
+                revised_at,
+                collected_at,
+            )
+            return None
+
+        return RevisionMetadata(
+            revision_id=page.etag,
+            revised_at=revised_at,
+            # 같은 응답에서 나왔으므로 대조할 상대가 없다. 있는 그대로 싣는다.
+            title=fetched_title or "",
+        )
+
     def _require_allowed(self, url: str) -> None:
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
@@ -224,6 +310,21 @@ def _page_title(fetched_title: str | None) -> str | None:
     if title.endswith(_TITLE_SUFFIX):
         title = title[: -len(_TITLE_SUFFIX)].strip()
     return title or None
+
+
+def _http_date(value: str) -> datetime | None:
+    """RFC 7231 날짜 문자열을 UTC `datetime`으로. 못 읽으면 `None`이다.
+
+    **타임존이 없는 값은 UTC로 읽는다.** HTTP 날짜는 규격상 GMT이지만 규격을 안
+    지키는 서버가 있고, naive를 그대로 두면 aware 값과 비교하다 터진다.
+    """
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _title(soup: BeautifulSoup) -> str | None:

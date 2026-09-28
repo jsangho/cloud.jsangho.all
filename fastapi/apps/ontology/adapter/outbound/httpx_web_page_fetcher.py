@@ -28,4 +28,7 @@ class HttpxWebPageFetcher(WebPageFetcherPort):
             status_code=response.status_code,
             html=response.text,
             fetched_at=datetime.now(UTC).isoformat(),
+            # 개정본 API가 없는 소스의 계보 재료다. 여기서 해석하지 않고 그대로 싣는다.
+            etag=response.headers.get("etag"),
+            last_modified=response.headers.get("last-modified"),
         )

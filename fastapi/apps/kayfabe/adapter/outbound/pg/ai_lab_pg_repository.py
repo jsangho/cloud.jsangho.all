@@ -77,6 +77,7 @@ class AiLabPgRepository(AiLabRepository):
                 AgentPredictionModel.provenance_note,
                 # 검색 질의 (Phase 3). 감사 화면만 읽는다 — 판정은 보지 않는다.
                 AgentPredictionModel.knowledge_query,
+                AgentPredictionModel.synthesis_version,
                 # 대회 날짜 (Phase 3-12). 코퍼스 규칙이 "인용 문서가 경기보다 앞선
                 # 개정본인가"를 재는 데 쓴다. 컬럼 하나가 늘 뿐 조인은 그대로다.
                 PleEventModel.start_date,
@@ -111,6 +112,7 @@ class AiLabPgRepository(AiLabRepository):
                 event_start_date=row.start_date,
                 match_exists=row.match_id is not None,
                 knowledge_query=row.knowledge_query,
+                synthesis_version=row.synthesis_version,
             )
             for row in result.all()
         ]

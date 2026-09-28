@@ -44,6 +44,7 @@ from kayfabe.domain.entities.agent_prediction import (
     PredictionSource,
 )
 from kayfabe.domain.services.prediction_synthesis import (
+    SYNTHESIS_V1,
     PredictionSynthesis,
     ReportsUnavailableError,
     synthesize,
@@ -198,6 +199,10 @@ def replay_prediction(
             entities,
             agent_count=AGENT_COUNT,
             options=[option.pick for option in options],
+            # **그때의 산식으로 돌린다.** 지금 산식을 쓰면 옛 예측이 전부 어긋나고,
+            # 화면은 그것을 "값이 드리프트했다"로 읽는다 — 실제로는 우리가 함수를
+            # 바꾼 것이다. 기록이 없으면 `v1`이다(칼럼이 `v2`와 함께 생겼다).
+            version=prediction.synthesis_version or SYNTHESIS_V1,
         )
     except ReportsUnavailableError:
         return PredictionReplay(

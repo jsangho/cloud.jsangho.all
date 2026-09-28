@@ -144,6 +144,10 @@ class PredictionRow:
     #: 지식 검색에 던진 질의 (Phase 3). **감사 화면만 쓰고 판정은 보지 않는다.**
     #: `None`은 기록 전이라는 뜻이고, 경기 행이 사라진 예측에서는 영영 복원되지 않는다.
     knowledge_query: str | None = None
+    #: 이 승률을 만든 합성 산식의 판본. **재현이 이 값으로 산식을 고른다** — 기록이
+    #: 없으면 `v1`이다(칼럼이 `v2`와 함께 생겼으므로 그 전 행은 전부 `v1`이 만들었다).
+    #: 판정 규칙은 이 값을 보지 않는다 — 산식은 자격이 아니라 숫자의 출처다.
+    synthesis_version: str | None = None
 
 
 @dataclass(frozen=True)

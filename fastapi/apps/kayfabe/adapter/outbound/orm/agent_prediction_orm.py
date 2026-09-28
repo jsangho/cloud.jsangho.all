@@ -58,6 +58,12 @@ class AgentPredictionModel(Base):
     )
     #: 위 선언의 근거. **사실만 적는다** — 추정한 경기 날짜나 승자를 넣지 않는다.
     provenance_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: `win_probability`를 만든 합성 산식의 판본. **재현이 이 값으로 산식을 고른다.**
+    #: `NULL`은 **`v1`이라는 뜻이다** — 이 칼럼이 `v2`와 함께 생겼으므로 기록이 없는
+    #: 행은 전부 `v1`이 만들었다. `agent_version`과 달리 백필해도 사실을 만들지
+    #: 않지만, 읽는 쪽이 `NULL`을 `v1`로 해석하면 되므로 쓰지 않는다.
+    #: 폴백 예측은 합성을 지나지 않아 `NULL`이다.
+    synthesis_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     #: 지식 검색에 실제로 쓴 질의 (Phase 3). 경기 제목 + 선택지 이름으로 만들어지므로
     #: 파생값처럼 보이지만, **카드가 바뀌면 재료가 사라진다** — 경기 행이 없어진
     #: 예측이 이미 있다. `NULL`은 기록 전이며 백필하지 않는다.
