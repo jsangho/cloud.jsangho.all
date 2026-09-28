@@ -402,3 +402,160 @@ class TestEmptyRevisionIdIsRejected:
 
         assert document is not None
         assert document.revision_id is None
+
+
+# ---------------------------------------------------------------------------
+# 응답 헤더 계보 — 개정본 API가 없는 소스 (2026-09-28)
+# ---------------------------------------------------------------------------
+
+_WWE_URL = "https://www.wwe.com/superstars/cmpunk"
+_WWE_PAGE = """
+<html>
+  <head><title>CM Punk | WWE</title></head>
+  <body><p>CM Punk has qualified for the Men's Money in the Bank ladder match.</p></body>
+</html>
+"""
+_HTTP_DATE = "Mon, 28 Sep 2026 01:28:37 GMT"
+_HTTP_DATE_AS_DT = datetime(2026, 9, 28, 1, 28, 37, tzinfo=UTC)
+
+
+class HeaderFetcher(WebPageFetcherPort):
+    """`ETag`·`Last-Modified`를 실어 주는 fetcher."""
+
+    def __init__(
+        self,
+        *,
+        etag: str | None = 'W/"1790558917"',
+        last_modified: str | None = _HTTP_DATE,
+        html: str = _WWE_PAGE,
+    ) -> None:
+        self.etag = etag
+        self.last_modified = last_modified
+        self.html = html
+
+    async def fetch(self, url: str) -> FetchedPage:
+        return FetchedPage(
+            url=url,
+            status_code=200,
+            html=self.html,
+            fetched_at=datetime.now(UTC).isoformat(),
+            etag=self.etag,
+            last_modified=self.last_modified,
+        )
+
+
+def _header_interactor(
+    fetcher: HeaderFetcher,
+    *,
+    header_lineage_domains: frozenset[str] = frozenset({"www.wwe.com"}),
+    revisions: RevisionMetadataPort | None = None,
+) -> PublicSourceInteractor:
+    return PublicSourceInteractor(
+        allowed_domains=frozenset({"www.wwe.com", "en.wikipedia.org"}),
+        fetcher=fetcher,
+        robots=FakeRobots(),
+        revisions=revisions,
+        header_lineage_domains=header_lineage_domains,
+    )
+
+
+class TestHeaderLineage:
+    """개정본 API가 없는 소스는 **본문을 받아 온 그 응답**이 계보를 말한다."""
+
+    @pytest.mark.asyncio
+    async def test_etag_and_last_modified_become_the_lineage(self) -> None:
+        doc = await _header_interactor(HeaderFetcher()).collect(_WWE_URL)
+
+        assert doc is not None
+        assert doc.revision_id == 'W/"1790558917"'
+        assert doc.revised_at == _HTTP_DATE_AS_DT
+
+    @pytest.mark.asyncio
+    async def test_wikipedia_never_falls_back_to_headers(self) -> None:
+        """**이게 이 기능의 가장 중요한 선이다.**
+
+        위키의 `Last-Modified`는 `page_touched`라 개정본 시각이 아니다(실측 21일 차).
+        API가 답하지 못한 날 헤더로 물러서면 계보가 조용히 나빠진다.
+        """
+        fetcher = HeaderFetcher(html=_PAGE)
+        # API가 아무 답도 못 준 상황
+        interactor = _header_interactor(fetcher, revisions=FakeRevisions(None))
+
+        doc = await interactor.collect(_URL)
+
+        assert doc is not None
+        assert doc.revision_id is None
+        assert doc.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_a_domain_outside_the_list_gets_no_header_lineage(self) -> None:
+        """목록이 비어 있으면 기존 거동 그대로다 — 기능을 켜는 것은 부르는 앱이다."""
+        interactor = _header_interactor(
+            HeaderFetcher(), header_lineage_domains=frozenset()
+        )
+
+        doc = await interactor.collect(_WWE_URL)
+
+        assert doc is not None
+        assert doc.revision_id is None
+
+    @pytest.mark.asyncio
+    async def test_missing_etag_claims_no_lineage(self) -> None:
+        """시각만 있으면 **어느 판본인지**를 못 말한다."""
+        doc = await _header_interactor(HeaderFetcher(etag=None)).collect(_WWE_URL)
+
+        assert doc is not None
+        assert doc.revision_id is None
+        assert doc.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_missing_last_modified_claims_no_lineage(self) -> None:
+        """식별자만 있으면 시간 판정에 쓸 수 없다."""
+        doc = await _header_interactor(HeaderFetcher(last_modified=None)).collect(
+            _WWE_URL
+        )
+
+        assert doc is not None
+        assert doc.revision_id is None
+
+    @pytest.mark.asyncio
+    async def test_an_unreadable_http_date_is_not_guessed(self) -> None:
+        doc = await _header_interactor(HeaderFetcher(last_modified="어제쯤")).collect(
+            _WWE_URL
+        )
+
+        assert doc is not None
+        assert doc.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_a_future_header_is_discarded_like_a_future_revision(self) -> None:
+        """수집보다 미래인 판본을 읽었을 수는 없다 — API 경로와 같은 선이다."""
+        future = datetime.now(UTC) + timedelta(days=2)
+        stamp = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        doc = await _header_interactor(HeaderFetcher(last_modified=stamp)).collect(
+            _WWE_URL
+        )
+
+        assert doc is not None
+        assert doc.revised_at is None
+
+    @pytest.mark.asyncio
+    async def test_the_api_wins_when_it_answers(self) -> None:
+        """헤더는 **폴백**이다 — API가 답하면 그쪽이 계보다."""
+        api = RevisionMetadata(
+            revision_id="1376940088",
+            revised_at=_REVISED,
+            title="Money in the Bank (2026)",
+        )
+        interactor = _header_interactor(
+            HeaderFetcher(html=_PAGE),
+            header_lineage_domains=frozenset({"en.wikipedia.org"}),
+            revisions=FakeRevisions(api),
+        )
+
+        doc = await interactor.collect(_URL)
+
+        assert doc is not None
+        assert doc.revision_id == "1376940088"
+        assert doc.revised_at == _REVISED
