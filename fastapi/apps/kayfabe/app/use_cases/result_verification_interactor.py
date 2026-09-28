@@ -6,6 +6,11 @@
 찾아야 하고, 목차를 보고 어느 절에 결과가 있는지 골라야 하고, 그 절에 이 경기가
 없으면 다른 절을 읽어야 한다. 분기가 데이터에 따라 갈리므로 고정 호출로 못 쓴다.
 
+**아는 것은 미리 알려 준다.** 대회 문서 제목은 사람이 전수 실측한 표
+(`app/services/wiki_event_titles`)에 있으므로 모델에게 찾게 하지 않는다 —
+`_lookup_hint`가 그 이유와 실측을 적고 있다. 줄어든 것은 이름 맞히기뿐이고,
+어느 절을 읽을지·더 읽을지는 여전히 모델이 정한다.
+
 ## 모델에게 쓰기 도구를 주지 않는다
 
 `_TOOLS`에 읽기 둘뿐이다. 모델이 할 수 있는 일은 문서를 찾고 읽는 것이고, 마지막에
@@ -38,6 +43,7 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
 from kayfabe.app.dtos.result_verification_dto import (
@@ -50,6 +56,7 @@ from kayfabe.app.ports.input.result_verification_use_case import (
 )
 from kayfabe.app.ports.output.match_result_writer import MatchResultWriter
 from kayfabe.app.ports.output.pending_result_repository import PendingResultRepository
+from kayfabe.app.services.wiki_event_titles import article_title_for
 from kayfabe.domain.entities.result_verification import (
     Evidence,
     HoldReason,
@@ -66,13 +73,32 @@ from ontology.app.dtos.gemini_tool_dto import (
 )
 from ontology.app.ports.input.gemini_tool_use_case import GeminiToolUseCase
 from ontology.app.ports.output.gemini_tool_errors import ToolCallUnavailableError
-from ontology.app.ports.output.wiki_article_port import WikiArticlePort
+from ontology.app.ports.output.wiki_article_port import WikiArticlePort, WikiSection
 from ontology.app.ports.output.wiki_title_port import WikiTitlePort
 
 logger = logging.getLogger("uvicorn.error")
 
-#: 경기 하나에 허용하는 모델 왕복 수. 실측 기준 정상 경로는 3걸음이다
-#: (문서 찾기 → 절 읽기 → 답). 여유를 두되 넉넉하게 잡을 값이 아니다.
+
+@dataclass(frozen=True)
+class ArticleHint:
+    """우리가 이미 아는 것 — 어느 문서의 어느 절들인가.
+
+    모델에게 **알려 주는** 값이지 모델이 만든 값이 아니다. 그래서 인용 검증의
+    기준이 되지 않는다 — 증거는 여전히 `read_wiki_section`이 실제로 돌려준
+    본문뿐이다.
+    """
+
+    title: str
+    sections: tuple[WikiSection, ...]
+
+
+#: 경기 하나에 허용하는 모델 왕복 수.
+#:
+#: 힌트가 있으면 정상 경로는 **2걸음**이다(절 읽기 → 답). 없으면 3걸음이고
+#: (문서 찾기 → 절 읽기 → 답), 문서 이름이 빗나가면 더 든다 — 그 초과가
+#: `worlds-collide`에서 두 경기를 보류로 만들었고 `_lookup_hint`가 그 대응이다.
+#: 여유를 두되 넉넉하게 잡을 값이 아니다: **하루 한도가 천장이라 걸음 수가 곧
+#: 그날 볼 수 있는 경기 수다.**
 MAX_STEPS_PER_MATCH = 6
 
 #: 경기 하나에 허용하는 도구 호출 수. 한 걸음에 여러 호출을 요청할 수 있어 따로 센다.
@@ -91,14 +117,8 @@ _PERSONA = (
     "추측하지 않습니다. 문서에 적힌 것만 옮깁니다."
 )
 
-_INSTRUCTIONS = (
-    "절차:\n"
-    "1. find_wiki_article로 이 대회의 위키피디아 문서를 찾으세요. 대회 문서 제목에는 "
-    "규칙이 없습니다(`WrestleMania 42`·`Backlash (2026)`·`Survivor Series: WarGames "
-    "(2026)`처럼 갈립니다). 빗나가면 다른 표기로 다시 부르세요.\n"
-    "2. 목차에서 결과가 적힌 절을 골라 read_wiki_section으로 읽으세요. 보통 "
-    "`Results` 또는 `Event` 절입니다. 그 절에 이 경기가 없으면 다른 절을 읽으세요.\n"
-    "3. 아래 [경기]의 승자를 [선택지] 안에서 찾으세요.\n\n"
+#: 답의 형식과 규칙. 힌트가 있든 없든 같다 — 이 부분이 갈리면 검증 기준이 갈린다.
+_ANSWER_RULES = (
     "다 찾았으면 **아래 JSON 하나만** 출력하세요. 코드블록·설명·인사말을 붙이지 마세요.\n"
     '{"winner_name": "<선택지에 적힌 이름 또는 null>", '
     '"quote": "<읽은 본문에서 그대로 옮긴 구절>"}\n\n'
@@ -113,6 +133,31 @@ _INSTRUCTIONS = (
     "- 무승부·노컨테스트처럼 승자가 없으면 winner_name을 null로 두세요.\n"
     "- **모르면 null입니다.** 그럴듯한 쪽을 고르지 마세요."
 )
+
+_INSTRUCTIONS = (
+    "절차:\n"
+    "1. find_wiki_article로 이 대회의 위키피디아 문서를 찾으세요. 대회 문서 제목에는 "
+    "규칙이 없습니다(`WrestleMania 42`·`Backlash (2026)`·`Survivor Series: WarGames "
+    "(2026)`처럼 갈립니다). 빗나가면 다른 표기로 다시 부르세요.\n"
+    "2. 목차에서 결과가 적힌 절을 골라 read_wiki_section으로 읽으세요. 보통 "
+    "`Results` 또는 `Event` 절입니다. 그 절에 이 경기가 없으면 다른 절을 읽으세요.\n"
+    "3. 아래 [경기]의 승자를 [선택지] 안에서 찾으세요.\n\n"
+) + _ANSWER_RULES
+
+
+#: 힌트가 있을 때의 지시문. **1번(문서 찾기)이 사라진다.**
+#:
+#: `find_wiki_article`을 목록에서 빼지는 않는다 — 표가 낡아 목차에 결과 절이 없는 날
+#: 모델이 스스로 찾을 길을 남겨 둔다. 다만 기본 경로에서는 부를 일이 없다.
+_INSTRUCTIONS_WITH_HINT = (
+    "절차:\n"
+    "1. 위 [목차]에서 결과가 적힌 절을 골라 read_wiki_section으로 읽으세요. "
+    "**[문서]의 제목을 그대로 title로 넘기세요.** 보통 `Results` 또는 `Event` 절입니다. "
+    "그 절에 이 경기가 없으면 목차의 다른 절을 읽으세요.\n"
+    "2. 아래 [경기]의 승자를 [선택지] 안에서 찾으세요.\n"
+    "   목차에 결과가 적힌 절이 없어 보이면 그때만 find_wiki_article로 다른 문서를 "
+    "찾으세요.\n\n"
+) + _ANSWER_RULES
 
 _TOOLS: tuple[ToolDeclaration, ...] = (
     ToolDeclaration(
@@ -247,7 +292,7 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         모으는 것이 중요하다 — 나중에 위키에 다시 물어 대조하면 그 사이의 편집이
         정직한 인용을 위조로 만든다.
         """
-        prompt = _build_prompt(match)
+        prompt = _build_prompt(match, await self._lookup_hint(match))
         exchanges: list[ToolExchange] = []
         evidence: list[Evidence] = []
         calls = 0
@@ -292,6 +337,41 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
             "[kayfabe.result_agent] 걸음 상한 — 보류 | match=%s", match.match_key
         )
         return None, tuple(evidence), calls, model
+
+    async def _lookup_hint(self, match: MatchUnderReview) -> ArticleHint | None:
+        """이 대회의 문서 제목과 목차를 **미리** 찾아 둔다. 모르면 `None`.
+
+        ## 왜 모델에게 찾게 하지 않는가
+
+        우리가 **이미 알기 때문이다.** `wiki_event_titles`는 사람이 전수 실측한 표이고,
+        모델이 그것을 다시 알아내려고 쓰는 호출은 전부 낭비다. 그 낭비가 실제로
+        사고를 냈다 — `worlds-collide`에서 모델이 `Worlds Collide`(동음이의)와
+        `WWE Worlds Collide`(결과 없는 총론)를 거치다 걸음 상한에 걸려 두 경기가
+        통째로 보류됐다(2026-09-28 실측, 경기당 6호출).
+
+        여기서 얻는 것은 비용만이 아니다. **하루 한도가 천장이라 호출 수가 곧
+        처리 가능한 경기 수다** — 경기당 4~6에서 2로 줄면 하루에 보는 경기가 배 이상
+        늘어난다.
+
+        ## 그래도 에이전트다
+
+        줄어든 것은 "문서 이름 맞히기"뿐이다. **어느 절에 결과가 있는지는 여전히
+        모델이 고른다** — `Results`·`Event`·`Night 1`로 갈리고 문서마다 다르다.
+        첫 절에 이 경기가 없으면 다른 절을 읽는 것도 그대로다. 표가 낡았거나
+        `None`이면 `find_wiki_article`로 스스로 찾는 경로도 살아 있다.
+
+        **조회가 실패해도 보류하지 않는다.** 힌트가 없으면 모델이 찾으면 된다.
+        """
+        title = article_title_for(match.event_slug)
+        if not title:
+            return None
+        sections = await self._articles.sections(title)
+        if not sections:
+            logger.info(
+                "[kayfabe.result_agent] 목차를 못 받아 힌트 없이 간다 | title=%s", title
+            )
+            return None
+        return ArticleHint(title=title, sections=sections)
 
     async def _pace(self) -> None:
         """앞선 호출과 `MIN_CALL_INTERVAL_SECONDS`만큼 벌린다. 첫 호출은 기다리지 않는다."""
@@ -384,15 +464,24 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
 # ────────────────────────────── 프롬프트·판독 ──────────────────────────────
 
 
-def _build_prompt(match: MatchUnderReview) -> str:
+def _build_prompt(match: MatchUnderReview, hint: ArticleHint | None) -> str:
     options = "\n".join(f"- {option.name}" for option in match.options)
     return (
         f"{_PERSONA}\n\n"
         f"[대회]\n{match.event_label}\n\n"
         f"[경기]\n{match.title}\n\n"
         f"[선택지]\n{options}\n\n"
-        f"{_INSTRUCTIONS}"
+        f"{_hint_block(hint)}"
+        f"{_INSTRUCTIONS if hint is None else _INSTRUCTIONS_WITH_HINT}"
     )
+
+
+def _hint_block(hint: ArticleHint | None) -> str:
+    """알고 있는 문서와 목차를 적어 준다. 모르면 빈 문자열."""
+    if hint is None:
+        return ""
+    lines = "\n".join(f"- {section.index}: {section.line}" for section in hint.sections)
+    return f"[문서]\n{hint.title}\n\n[목차]\n{lines}\n\n"
 
 
 def _parse_claim(text: str, match: MatchUnderReview) -> ResultClaim | None:
