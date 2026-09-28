@@ -47,6 +47,7 @@ from ontology.app.dtos.gemini_tool_dto import (
     ToolStepCommand,
 )
 from ontology.app.ports.input.gemini_tool_use_case import GeminiToolUseCase
+from ontology.app.ports.output.gemini_tool_errors import ToolCallUnavailableError
 from ontology.app.ports.output.wiki_article_port import (
     WikiArticlePort,
     WikiSection,
@@ -429,3 +430,66 @@ class TestPacingAndCost:
 
         assert run.found == 2
         assert len(run.matches) == 1
+
+
+class FailingTools(GeminiToolUseCase):
+    """정해진 횟수만 장애를 내고 그 뒤로는 정상 응답을 낸다."""
+
+    def __init__(self, fail_on: set[int], steps: list[ToolStep]) -> None:
+        self._fail_on = fail_on
+        self._steps = list(steps)
+        self.commands: list[ToolStepCommand] = []
+
+    async def next_step(self, command: ToolStepCommand) -> ToolStep:
+        self.commands.append(command)
+        if len(self.commands) in self._fail_on:
+            raise ToolCallUnavailableError("모델에게 물어볼 수 없었습니다.")
+        return self._steps.pop(0) if self._steps else ToolStep(text="{}")
+
+
+class TestEngineOutage:
+    """2026-09-28 운영 실측: 넷째 경기의 503이 앞선 셋의 작업까지 날렸다."""
+
+    @pytest.mark.asyncio
+    async def test_outage_becomes_a_hold_not_a_crash(self) -> None:
+        tools = FailingTools(fail_on={1}, steps=[])
+
+        run = await _interactor(tools).verify(VerifyResultsCommand(apply=True))
+
+        assert run.matches[0].hold is HoldReason.ENGINE_UNAVAILABLE
+        assert run.matches[0].written is False
+
+    @pytest.mark.asyncio
+    async def test_later_matches_still_run_after_an_outage(self) -> None:
+        """첫 경기가 막혀도 둘째는 정상으로 끝나야 한다 — 그게 이 수정의 요점이다."""
+        second = MatchUnderReview(
+            event_slug="summerslam",
+            event_label="SummerSlam 2026",
+            match_key="ss26-wwe",
+            title="WWE Championship",
+            options=_MATCH.options,
+        )
+        tools = FailingTools(fail_on={1}, steps=_happy_steps())
+        writer = FakeWriter()
+
+        run = await _interactor(tools, writer=writer, matches=(_MATCH, second)).verify(
+            VerifyResultsCommand(apply=True)
+        )
+
+        assert run.matches[0].hold is HoldReason.ENGINE_UNAVAILABLE
+        assert run.matches[1].pick == "left"
+        assert run.written == 1
+        assert [c["match_key"] for c in writer.calls] == ["ss26-wwe"]
+
+    @pytest.mark.asyncio
+    async def test_outage_is_not_confused_with_no_claim(self) -> None:
+        """ "묻지 못했다"와 "물어봤는데 못 골랐다"는 다른 보류다."""
+        outage = await _interactor(FailingTools(fail_on={1}, steps=[])).verify(
+            VerifyResultsCommand()
+        )
+        steps = _happy_steps()
+        steps[-1] = ToolStep(text="모르겠습니다.", model="fake-model")
+        no_claim = await _interactor(FakeTools(steps)).verify(VerifyResultsCommand())
+
+        assert outage.matches[0].hold is HoldReason.ENGINE_UNAVAILABLE
+        assert no_claim.matches[0].hold is HoldReason.NO_CLAIM

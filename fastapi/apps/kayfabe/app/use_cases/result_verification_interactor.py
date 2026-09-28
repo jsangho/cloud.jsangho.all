@@ -65,6 +65,7 @@ from ontology.app.dtos.gemini_tool_dto import (
     ToolStepCommand,
 )
 from ontology.app.ports.input.gemini_tool_use_case import GeminiToolUseCase
+from ontology.app.ports.output.gemini_tool_errors import ToolCallUnavailableError
 from ontology.app.ports.output.wiki_article_port import WikiArticlePort
 from ontology.app.ports.output.wiki_title_port import WikiTitlePort
 
@@ -195,7 +196,26 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
     async def _verify_one(
         self, match: MatchUnderReview, *, apply: bool
     ) -> MatchVerification:
-        claim, evidence, calls, model = await self._investigate(match)
+        try:
+            claim, evidence, calls, model = await self._investigate(match)
+        except ToolCallUnavailableError as exc:
+            # **한 경기의 장애가 실행을 끝내지 않는다.** 2026-09-28 운영 실측: 넷째
+            # 경기에서 503이 나 예외가 `verify`를 뚫고 나갔고, **앞선 세 경기의
+            # 작업까지 함께 날아갔다**(보고도 남지 않았다). 배치로 도는 에이전트에서
+            # 한 대상의 실패는 그 대상의 보류여야 한다.
+            logger.warning(
+                "[kayfabe.result_agent] 엔진 장애로 보류 | match=%s | %r",
+                match.match_key,
+                exc,
+            )
+            return _to_dto(
+                match,
+                Verdict(match_key=match.match_key, hold=HoldReason.ENGINE_UNAVAILABLE),
+                written=False,
+                calls=0,
+                model=None,
+            )
+
         verdict = adjudicate(match, claim, evidence)
 
         written = False

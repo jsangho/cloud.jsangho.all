@@ -11,8 +11,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from collections.abc import Awaitable, Callable
 
 from core.matrix.vault_keymaker_secret_manager import (
     DEFAULT_GEMINI_MODEL_ID,
@@ -27,9 +29,17 @@ from ontology.app.dtos.gemini_tool_dto import (
     ToolStep,
     ToolStepCommand,
 )
+from ontology.app.ports.output.gemini_tool_errors import ToolCallUnavailableError
 from ontology.app.ports.output.gemini_tool_port import GeminiToolPort
 
 logger = logging.getLogger("uvicorn.error")
+
+#: 한 걸음을 얻기 위한 최대 시도 수. `gemini_agent_support.MAX_ATTEMPTS`와 같은 값이고
+#: 이유도 같다 — **재시도는 한도 초과(429)가 아니라 벤더의 일시 장애(503)를 위한 것이다.**
+MAX_ATTEMPTS = 3
+
+#: 재시도 간격(초). 몰아치지 않도록 뒤로 갈수록 늘린다.
+RETRY_BACKOFF_SECONDS = (3.0, 8.0)
 
 
 def _default_model() -> str:
@@ -85,14 +95,30 @@ def _contents(command: ToolStepCommand) -> list[types.Content]:
 
 
 class GeminiToolCaller(GeminiToolPort):
-    """`client`는 테스트가 갈아 끼우는 자리다 — 기본값이 실제 동작이다."""
+    """`client`·`sleep`은 테스트가 갈아 끼우는 자리다 — 기본값이 실제 동작이다."""
 
-    def __init__(self, *, client: genai.Client | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        client: genai.Client | None = None,
+        sleep: Callable[[float], Awaitable[None]] | None = None,
+    ) -> None:
         self._client = client or genai.Client(
             api_key=get_keymaker().get_gemini_api_key()
         )
+        self._sleep = sleep or asyncio.sleep
 
     async def next_step(self, command: ToolStepCommand) -> ToolStep:
+        """일시 장애면 물러섰다 다시 묻는다. 끝내 안 되면 `ToolCallUnavailableError`.
+
+        **한 걸음을 다시 묻는 것은 안전하다.** 대화 상태가 허브에 없어서(`_contents`가
+        매번 재조립한다) 같은 `command`는 같은 요청이고, 도구는 아직 실행되지 않았다.
+
+        **예비 모델로 넘기지 않는다.** `gemini_agent_support`는 그렇게 하지만 그쪽은
+        에이전트가 빠지면 예측이 오즈 단독으로 확정돼 값이 왜곡된다 — 답을 받아 내는
+        것이 보류보다 나은 상황이다. 이쪽은 보류가 안전한 정상 종료이므로, 모델을
+        바꿔 가며 답을 짜내는 대신 물러섰다 다시 묻고 안 되면 보류한다.
+        """
         model = command.model or _default_model()
         config = types.GenerateContentConfig(
             tools=[
@@ -105,10 +131,33 @@ class GeminiToolCaller(GeminiToolPort):
                 disable=True
             ),
         )
-        response = await self._client.aio.models.generate_content(
-            model=model, contents=_contents(command), config=config
-        )
-        return _to_step(response, model)
+        contents = _contents(command)
+
+        last: Exception | None = None
+        for attempt in range(MAX_ATTEMPTS):
+            try:
+                response = await self._client.aio.models.generate_content(
+                    model=model, contents=contents, config=config
+                )
+            except Exception as exc:  # 일시 혼잡(503)·네트워크·한도 초과
+                last = exc
+                # 프롬프트도 도구 인자도 로그에 원문으로 남기지 않는다.
+                logger.warning(
+                    "[ontology.gemini_tool] 호출 실패 | 시도=%d/%d | %r",
+                    attempt + 1,
+                    MAX_ATTEMPTS,
+                    exc,
+                )
+                if attempt < MAX_ATTEMPTS - 1:
+                    await self._sleep(
+                        RETRY_BACKOFF_SECONDS[
+                            min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)
+                        ]
+                    )
+                continue
+            return _to_step(response, model)
+
+        raise ToolCallUnavailableError("모델에게 물어볼 수 없었습니다.") from last
 
 
 def _to_step(response: object, model: str) -> ToolStep:
