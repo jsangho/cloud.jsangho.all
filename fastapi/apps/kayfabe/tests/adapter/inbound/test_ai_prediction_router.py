@@ -9,11 +9,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from core.security.dependencies import get_current_user
-from core.security.token_verifier import TokenPayload
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fastapi import FastAPI
+from core.security.dependencies import get_current_user
+from core.security.token_verifier import TokenPayload
 from kayfabe.adapter.inbound.api.v1.ai_prediction_router import ai_prediction_router
 from kayfabe.app.dtos.agent_prediction_dto import (
     AgentPredictionDto,

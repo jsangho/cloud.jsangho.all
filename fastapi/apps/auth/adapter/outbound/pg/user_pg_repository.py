@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import secrets
 
-from core.entities.user_model import UserModel
-from core.security.password import hash_password
-from core.security.role import UserRole
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.app.ports.output.user_repository import UserRepository
+from core.entities.user_model import UserModel
+from core.security.password import hash_password
+from core.security.role import UserRole
 
 
 class UserPgRepository(UserRepository):

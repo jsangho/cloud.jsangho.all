@@ -4,9 +4,6 @@ import re
 import secrets
 import time
 
-from core.entities.user_model import UserModel
-from core.security.role import UserRole
-
 from auth.app.dtos.mobile_auth_dto import (
     MobileDeviceDto,
     MobileDeviceSessionDto,
@@ -30,6 +27,8 @@ from auth.domain.services.token_issuer import (
     create_access_token,
 )
 from auth.domain.value_objects.kakao_identity import KakaoProfile
+from core.entities.user_model import UserModel
+from core.security.role import UserRole
 
 _LOGIN_ID_SAFE_CHARS = re.compile(r"[^a-zA-Z0-9_]+")
 _PROVIDER = "kakao"

@@ -6,14 +6,13 @@ Redis는 대역 대신 `fakeredis[lua]`를 써서 Lua 스크립트까지 실제�
 
 from __future__ import annotations
 
-from core.entities.user_model import UserModel
-
 from auth.app.ports.output.kakao_mobile_identity_provider import (
     KakaoMobileIdentityProvider,
 )
 from auth.app.ports.output.kakao_token_vault import KakaoTokenVault
 from auth.app.ports.output.user_repository import UserRepository
 from auth.domain.value_objects.kakao_identity import KakaoProfile, KakaoTokenSet
+from core.entities.user_model import UserModel
 
 
 class FakeKakao(KakaoMobileIdentityProvider):

@@ -43,9 +43,9 @@ import asyncio  # noqa: E402
 import json  # noqa: E402
 from datetime import UTC, datetime  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.adapter.outbound.orm.championship_orm import (  # noqa: E402
     ChampionshipTitleModel,
 )

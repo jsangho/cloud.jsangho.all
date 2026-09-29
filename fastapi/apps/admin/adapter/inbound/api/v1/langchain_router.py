@@ -1,3 +1,5 @@
+from fastapi import APIRouter, Depends
+
 from admin.adapter.inbound.api.schemas.langchain_chat_schema import (
     LangchainChatRequestSchema,
     LangchainChatResponseSchema,
@@ -5,8 +7,6 @@ from admin.adapter.inbound.api.schemas.langchain_chat_schema import (
 from admin.app.dtos.langchain_chat_dto import LangchainChatCommand, LangchainChatMessage
 from admin.app.ports.input.langchain_use_case import LangchainUseCase
 from admin.dependencies.langchain_provider import get_langchain_use_case
-
-from fastapi import APIRouter, Depends
 
 langchain_router = APIRouter(prefix="/langchain", tags=["langchain"])
 

@@ -55,18 +55,18 @@ export default function AiLabReadinessPage() {
 
   return (
     <AiLabShell
-      title="Readiness"
-      description="지금 코퍼스로 다음 대회를 예측하면 무엇이 막히는지를 봅니다. 판정이 아니라 위험입니다."
+      title="예측 가능성"
+      description="지금 가진 문서로 다음 대회를 예측하면 무엇이 걸리는지 미리 봅니다. 판정이 아니라 위험 예보입니다."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
-      {state.status === "error" && <DataUnavailable what="코퍼스 준비도" />}
+      {state.status === "error" && <DataUnavailable what="예측 가능성 점검" />}
       {state.status === "ready" && <Readiness data={state.data} />}
     </AiLabShell>
   );
 }
 
 const RISK_LABEL: Record<ReadinessRisk, string> = {
-  clear: "지뢰 없음",
+  clear: "걸릴 글 없음",
   hold_risk: "보류 위험",
   disqualify_risk: "실격 위험",
 };
@@ -79,23 +79,23 @@ function Readiness({ data }: { data: AiLabReadiness }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           value={totals.events}
-          label="Upcoming"
+          label="다가오는 대회"
           note={
             totals.undatedEvents > 0
-              ? `날짜 없는 대회 ${totals.undatedEvents}건은 판정 불가`
+              ? `날짜 없는 대회 ${totals.undatedEvents}건은 볼 수 없음`
               : "날짜가 오늘 이후인 대회"
           }
         />
         <StatTile
           value={totals.disqualifyRisk}
-          label="Disqualify risk"
-          note="대회 문서가 코퍼스에 있음"
+          label="실격 위험"
+          note="그 대회를 다룬 글을 이미 갖고 있음"
         />
-        <StatTile value={totals.holdRisk} label="Hold risk" note="계보를 모르는 문서만 있음" />
+        <StatTile value={totals.holdRisk} label="보류 위험" note="출처를 모르는 글만 있음" />
         <StatTile
           value={totals.clear}
-          label="Clear"
-          note={`지뢰 문서 ${totals.mineDocuments}건`}
+          label="걸릴 글 없음"
+          note={`걸릴 만한 글 ${totals.mineDocuments}건`}
           tone="data"
         />
       </div>
@@ -114,11 +114,8 @@ function Readiness({ data }: { data: AiLabReadiness }) {
         </p>
       ) : (
         <section aria-labelledby="events-heading" className="flex flex-col gap-3">
-          <h2
-            id="events-heading"
-            className="font-sport text-base tracking-wide text-foreground"
-          >
-            Upcoming events
+          <h2 id="events-heading" className="font-sport text-base tracking-wide text-foreground">
+            다가오는 대회
           </h2>
           <ul className="flex flex-col gap-2">
             {events.map((item) => (
@@ -129,10 +126,10 @@ function Readiness({ data }: { data: AiLabReadiness }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        지뢰는 <strong className="font-semibold">검색되면 막는다</strong>는 뜻이지 반드시
-        검색된다는 뜻이 아닙니다 — 이 화면은 검색을 돌리지 않으므로 어떤 청크가 실제로 뽑힐지
-        모릅니다. 그래서 위험을 과하게 세는 쪽으로 틀립니다. 못 본 지뢰는 자격을 앗아가지만,
-        헛본 지뢰는 문서 하나를 덜 수집하게 할 뿐입니다.
+        &ldquo;걸릴 만한 글&rdquo;은 <strong className="font-semibold">읽히면 막힌다</strong>는
+        뜻이지 반드시 읽힌다는 뜻이 아닙니다 — 이 화면은 실제 검색을 돌리지 않아서 어느 글이 뽑힐지
+        모릅니다. 그래서 위험을 실제보다 많이 세는 쪽으로 틀립니다. 놓친 글은 예측 하나를 통째로 못
+        쓰게 만들지만, 괜히 센 글은 문서 하나를 덜 모으게 할 뿐입니다.
       </p>
     </div>
   );
@@ -151,7 +148,7 @@ function Legend({ rules }: { rules: RuleDefinition[] }) {
       className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
     >
       <h2 id="legend-heading" className="font-sport text-base tracking-wide text-foreground">
-        미리 볼 수 있는 규칙
+        미리 볼 수 있는 경우
       </h2>
       <ul className="mt-3 flex flex-col gap-2.5">
         {rules.map((rule) => (
@@ -166,9 +163,10 @@ function Legend({ rules }: { rules: RuleDefinition[] }) {
         ))}
       </ul>
       <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-        나머지 규칙은 예측이 생긴 뒤에야 물을 수 있습니다 — 특히 &ldquo;증거가 예측보다 나중에
-        생긴 글인가&rdquo;는 개정본과 <strong className="font-semibold">예측 생성 시각</strong>을
-        견주는데, 견줄 시각이 아직 없습니다. 여기서 깨끗하다고 자격이 보장되지는 않습니다.
+        나머지는 예측이 실제로 만들어진 뒤에야 확인할 수 있습니다 — 특히 &ldquo;읽은 글이 예측보다
+        나중에 고쳐진 것인가&rdquo;는 글의 판본과{" "}
+        <strong className="font-semibold">예측을 만든 시각</strong>을 견주는데, 견줄 시각이 아직
+        없습니다. 여기서 깨끗하다고 통과가 보장되지는 않습니다.
       </p>
     </section>
   );
@@ -187,39 +185,52 @@ function CorpusCard({ corpus }: { corpus: AiLabReadiness["corpus"] }) {
       className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
     >
       <h2 id="corpus-heading" className="font-sport text-base tracking-wide text-foreground">
-        코퍼스 전역
+        대회와 상관없는 문제
       </h2>
       <dl className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <div>
-          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">문서</dt>
+          <dt className="text-xs text-muted-foreground">모아 둔 문서</dt>
           <dd className="text-lg font-bold tabular-nums text-foreground">{corpus.documents}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            계보 불완전
-          </dt>
+          <dt className="text-xs text-muted-foreground">출처를 되짚을 수 없는 글</dt>
           <dd className="text-lg font-bold tabular-nums text-foreground">
             {corpus.incompleteLineage}
           </dd>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            어느 대회를 예측하든 인용되면 보류를 만듭니다.
+            어느 대회를 예측하든 이 글이 읽히면 보류가 됩니다.
           </p>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            임베딩 없음
-          </dt>
+          <dt className="text-xs text-muted-foreground">검색에 안 걸리는 글</dt>
           <dd className="text-lg font-bold tabular-nums text-foreground">
             {corpus.unembeddedDocuments}
           </dd>
           {/* **지뢰가 아니라 없는 것이다.** 검색에 안 잡히므로 근거도 못 된다. */}
           <p className="mt-0.5 text-xs text-muted-foreground">
-            검색에 잡히지 않습니다 — 코퍼스가 보이는 것보다 작습니다.
+            뽑히지 않으므로 근거도 못 됩니다 — 실제로 쓸 수 있는 문서는 보이는 수보다 적습니다.
           </p>
         </div>
       </dl>
     </section>
   );
+}
+
+/**
+ * 대회 상태 코드 → 한국어.
+ *
+ * **모르는 값은 그대로 내보낸다.** 서버가 상태를 늘렸는데 화면이 임의로 다른 말로
+ * 옮기면, 사람이 보는 것과 DB에 적힌 것이 조용히 갈린다 (`scoringExclusionLabel`과
+ * 같은 규칙). 타입이 `string`이라 유니온으로 좁힐 수도 없다.
+ */
+const EVENT_STATUS_LABEL: Record<string, string> = {
+  upcoming: "예정",
+  live: "진행 중",
+  finished: "종료",
+};
+
+function eventStatusLabel(status: string): string {
+  return EVENT_STATUS_LABEL[status] ?? status;
 }
 
 function EventCard({ event }: { event: ReadinessEvent }) {
@@ -230,10 +241,12 @@ function EventCard({ event }: { event: ReadinessEvent }) {
           <p className="truncate text-sm font-medium text-foreground">{event.label}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {event.startDate} · D-{event.daysUntil} · 경기 {event.matches}건 중 예측{" "}
-            {event.predicted}건
-            {/* 날짜가 앞인데 상태가 닫혀 있으면 사람이 아직 안 돌린 것이다. */}
+            {event.predicted}건{/* 날짜가 앞인데 상태가 닫혀 있으면 사람이 아직 안 돌린 것이다. */}
             {event.status !== "upcoming" && (
-              <span className="text-muted-foreground"> · 상태 {event.status}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                · 상태 {eventStatusLabel(event.status)}
+              </span>
             )}
           </p>
         </div>
@@ -251,9 +264,9 @@ function EventCard({ event }: { event: ReadinessEvent }) {
       {/* 0이면 적지 않는다 — "0건"은 화면에서 배경이 된다. */}
       {event.unverifiableDocuments > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
-          이 대회 날짜 기준으로 시간을 확인할 수 없는 문서{" "}
-          <strong className="font-semibold">{event.unverifiableDocuments}건</strong> — 인용되면
-          보류가 됩니다. 목록은 위의 코퍼스 칸에 있습니다.
+          이 대회 날짜보다 먼저 쓰인 글인지 확인할 수 없는 문서{" "}
+          <strong className="font-semibold">{event.unverifiableDocuments}건</strong> — 읽히면 보류가
+          됩니다. 수는 위의 &ldquo;대회와 상관없는 문제&rdquo; 칸에 함께 있습니다.
         </p>
       )}
     </li>
@@ -281,7 +294,7 @@ function MineRow({ mine }: { mine: ReadinessMine }) {
   return (
     <li className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
       <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-live">
-        대회 문서
+        그 대회를 다룬 글
       </span>
       <a
         href={mine.sourceUrl}
@@ -291,7 +304,7 @@ function MineRow({ mine }: { mine: ReadinessMine }) {
       >
         {mine.title ?? mine.sourceUrl}
       </a>
-      <span className="shrink-0 tabular-nums text-muted-foreground">청크 {mine.chunks}</span>
+      <span className="shrink-0 tabular-nums text-muted-foreground">글 조각 {mine.chunks}</span>
     </li>
   );
 }

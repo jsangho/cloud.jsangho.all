@@ -27,7 +27,6 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 
-from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -38,6 +37,7 @@ from sqlalchemy.pool import StaticPool
 
 # `outbound.mappers.__init__` ↔ `inbound.api` 순환 회피 — main.py와 같은 순서다.
 import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
+from core.matrix.grid_oracle_database_manager import Base
 from kayfabe.adapter.outbound.orm.agent_prediction_orm import (  # noqa: E402
     AgentPredictionModel,
     AgentReportModel,

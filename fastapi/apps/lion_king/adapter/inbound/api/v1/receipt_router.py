@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, HTTPException
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
 from lion_king.adapter.inbound.api.schemas.receipt_schema import (
@@ -26,8 +28,6 @@ from lion_king.app.ports.output.receipt_ocr_port import OcrUnavailableError
 from lion_king.dependencies.receipt_provider import get_receipt_use_case
 from lion_king.domain.services.receipt_parser import ReceiptNotRecognizedError
 from lion_king.domain.value_objects.receipt_key import ReceiptKeyNotOwnedError
-
-from fastapi import APIRouter, Depends, HTTPException
 
 receipt_router = APIRouter(prefix="/receipts", tags=["receipts"])
 

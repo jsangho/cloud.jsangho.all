@@ -5,6 +5,7 @@ import time
 import uuid
 
 import jwt
+
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from core.security.token_verifier import DEFAULT_SERVICE_AUD
 

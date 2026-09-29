@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 from ontology.adapter.inbound.api.schemas.image_classifier_schema import (
     ImageClassificationResponse,
     TopKPredictionSchema,

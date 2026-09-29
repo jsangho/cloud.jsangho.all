@@ -3,11 +3,11 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 import httpx
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from fastapi import HTTPException
 
 from auth.app.ports.output.oauth_identity_provider import OAuthIdentityProvider
 from auth.domain.value_objects.oauth_profile import OAuthProfile
-from fastapi import HTTPException
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 KAKAO_AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"

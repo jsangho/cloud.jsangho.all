@@ -53,11 +53,11 @@ export default function AiLabLeakagePage() {
 
   return (
     <AiLabShell
-      title="Leakage"
-      description="자격을 잃은 예측을 근거 문서로 되짚습니다. 어느 글이 몇 건의 판정을 막았는지를 봅니다."
+      title="근거 오염"
+      description="성적에서 뺀 예측을 근거가 된 글까지 되짚습니다. 어느 글이 몇 건을 못 쓰게 만들었는지 봅니다."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
-      {state.status === "error" && <DataUnavailable what="누수 그래프" />}
+      {state.status === "error" && <DataUnavailable what="근거 오염 기록" />}
       {state.status === "ready" && <Leakage data={state.data} />}
     </AiLabShell>
   );
@@ -72,25 +72,25 @@ function Leakage({ data }: { data: AiLabLeakage }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           value={totals.blockedPredictions}
-          label="Blocked"
-          note="실격 + 보류 — 제외는 세지 않음"
+          label="못 쓰게 된 예측"
+          note="성적에서 뺀 것과 보류한 것"
         />
         <StatTile
           value={totals.attributed}
-          label="Attributed"
-          note="근거 문서로 설명되는 수"
+          label="원인이 된 글을 찾은 것"
+          note="어느 글 때문인지 짚을 수 있음"
           tone="data"
         />
         {/* **감추지 않는다.** 문서로 못 돌리는 이유가 있고, 그 수가 곧 그래프의 한계다. */}
         <StatTile
           value={totals.unattributed}
-          label="Unattributed"
-          note="시간 역전 등 근거의 성질이 아닌 이유"
+          label="글 탓이 아닌 것"
+          note="순서가 뒤집혔다거나, 글과 무관한 이유"
         />
         <StatTile
           value={totals.documents}
-          label="Documents"
-          note={`단독 원인 ${totals.soleCausePredictions}건`}
+          label="문제가 된 글"
+          note={`혼자서 막은 경우 ${totals.soleCausePredictions}건`}
         />
       </div>
 
@@ -101,13 +101,13 @@ function Leakage({ data }: { data: AiLabLeakage }) {
       {documents.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
           {totals.blockedPredictions === 0
-            ? "자격을 잃은 예측이 없습니다."
-            : "막힌 예측은 있지만 근거 문서로 설명되는 것이 없습니다 — 전부 근거의 성질이 아닌 이유입니다."}
+            ? "성적에서 뺀 예측이 없습니다."
+            : "못 쓰게 된 예측은 있지만, 특정 글 때문인 것은 없습니다 — 전부 다른 이유입니다."}
         </p>
       ) : (
         <section aria-labelledby="documents-heading" className="flex flex-col gap-3">
           <h2 id="documents-heading" className="font-sport text-base tracking-wide text-foreground">
-            Documents
+            문제가 된 글
           </h2>
           <ul className="flex flex-col gap-2">
             {documents.map((document) => (
@@ -118,10 +118,10 @@ function Leakage({ data }: { data: AiLabLeakage }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        문서를 코퍼스에서 지워도{" "}
-        <strong className="font-semibold">이미 만들어진 예측의 자격은 되살아나지 않습니다</strong> —
-        그 예측은 그 글을 실제로 읽었기 때문입니다. &ldquo;단독 원인&rdquo;이 말하는 것은 판정을
-        뒤집을 수 있다는 뜻이 아니라, 그 문서 하나가 그 판정을 혼자 결정했다는 사실입니다.
+        그 글을 지금 지워도{" "}
+        <strong className="font-semibold">이미 만들어진 예측은 되살아나지 않습니다</strong> — 그
+        예측은 그 글을 실제로 읽고 나왔기 때문입니다. &ldquo;혼자서 막았다&rdquo;는 말은 지우면
+        된다는 뜻이 아니라, 그 글 하나만으로 그 판단이 결정됐다는 사실입니다.
       </p>
     </div>
   );
@@ -140,7 +140,7 @@ function Legend({ rules, unattributed }: { rules: RuleDefinition[]; unattributed
       className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
     >
       <h2 id="legend-heading" className="font-sport text-base tracking-wide text-foreground">
-        문서에 돌릴 수 있는 규칙
+        글 탓으로 볼 수 있는 경우
       </h2>
       <ul className="mt-3 flex flex-col gap-2.5">
         {rules.map((rule) => (
@@ -156,9 +156,10 @@ function Legend({ rules, unattributed }: { rules: RuleDefinition[]; unattributed
       </ul>
       {unattributed > 0 && (
         <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          나머지 규칙은 근거의 성질이 아니라 예측 자체의 사실입니다 — 결과 기록 이후 생성,
-          카드에서 사라진 경기 등. 지금 <strong className="font-semibold">{unattributed}건</strong>이
-          그런 이유로 막혀 있고, 이 그래프에는 오지 않습니다.
+          나머지는 읽은 글과 상관없이 예측 자체에 문제가 있던 경우입니다 — 결과가 나온 뒤에 만들어진
+          예측, 대진표에서 빠진 경기 같은 것들입니다. 지금{" "}
+          <strong className="font-semibold">{unattributed}건</strong>이 그런 이유로 빠져 있고, 아래
+          목록에는 나오지 않습니다.
         </p>
       )}
     </section>
@@ -186,9 +187,7 @@ function DocumentCard({
         <p className="shrink-0 text-sm tabular-nums text-muted-foreground">
           {doc.blocked}건 막음
           {/* 0이면 적지 않는다 — "단독 원인 0"은 화면에서 배경이 된다. */}
-          {doc.soleCause > 0 && (
-            <span className="text-live"> · 단독 원인 {doc.soleCause}</span>
-          )}
+          {doc.soleCause > 0 && <span className="text-live"> · 단독 원인 {doc.soleCause}</span>}
         </p>
       </div>
 

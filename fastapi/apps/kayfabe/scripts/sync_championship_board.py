@@ -16,9 +16,9 @@ if str(_APPS_DIR) not in sys.path:
 import asyncio
 import json
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 from sqlalchemy import delete
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal
 from kayfabe.adapter.outbound.orm.championship_orm import ChampionshipTitleModel
 from kayfabe.adapter.outbound.orm.title_history_orm import TitleAcquisitionModel
 from kayfabe.app.services.current_championship_catalog import (

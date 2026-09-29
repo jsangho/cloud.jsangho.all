@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Query
+
 from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     AnalyticsSchema,
     BeltStatSchema,

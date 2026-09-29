@@ -65,12 +65,12 @@ export default function PredictionAuditPage({
 
   return (
     <AiLabShell
-      title="Prediction Audit"
-      description="이 예측이 생성될 당시 실제로 알 수 있었던 정보만 썼는지, 그 사실을 사후에 증거로 재구성할 수 있는지를 봅니다."
+      title="예측 감사"
+      description="이 예측을 만들 때 그 시점에 알 수 있던 정보만 썼는지, 그리고 그것을 나중에 증거로 다시 짚을 수 있는지를 봅니다."
     >
       <p className="mb-4 text-xs text-muted-foreground">
         <Link href="/ai-lab/performance" className="hover:text-foreground">
-          ← Synthesis
+          ← 승률 합성
         </Link>
       </p>
 
@@ -138,7 +138,7 @@ function Header({ data }: { data: PredictionAudit }) {
 
       {data.source !== "agents" && (
         <p className="mt-3 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
-          이 예측은 에이전트가 아니라 북메이커 배당으로 만들어졌습니다.
+          이 예측은 분석기가 아니라 배당을 그대로 옮겨 만든 것입니다.
         </p>
       )}
     </section>
@@ -169,14 +169,14 @@ function Verdict({ data }: { data: PredictionAudit }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="verdict-heading" className="font-sport text-base tracking-wide text-foreground">
-          Eligibility
+          채점 자격
         </h2>
         <StatusBadge status={data.evaluation.status} />
       </div>
 
       {blocking.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          막은 규칙이 없습니다. 일곱 규칙을 모두 지났습니다.
+          걸린 것이 없습니다. 일곱 가지 점검을 모두 지났습니다.
         </p>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
@@ -188,7 +188,7 @@ function Verdict({ data }: { data: PredictionAudit }) {
 
       {passed.length > 0 && (
         <p className="mt-3 text-xs text-muted-foreground">
-          지난 규칙: {passed.map((v) => rules.get(v.code)?.label ?? v.code).join(" · ")}
+          지난 점검: {passed.map((v) => rules.get(v.code)?.label ?? v.code).join(" · ")}
         </p>
       )}
     </section>
@@ -225,11 +225,11 @@ function Agents({ reports }: { reports: AuditReport[] }) {
       className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
     >
       <h2 id="agents-heading" className="font-sport text-base tracking-wide text-foreground">
-        Agents
+        누가 무엇이라고 했나
       </h2>
 
       {reports.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">저장된 리포트가 없습니다.</p>
+        <p className="mt-3 text-sm text-muted-foreground">저장된 의견이 없습니다.</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2.5">
           {reports.map((report) => (
@@ -242,7 +242,7 @@ function Agents({ reports }: { reports: AuditReport[] }) {
                   {/* **의견 없음을 빈칸으로 두지 않는다.** 실패도 반반도 아닌 정상 상태다. */}
                   {report.pick === null
                     ? "의견 없음"
-                    : `${report.pick} · weight ${report.weight.toFixed(2)}`}
+                    : `${report.pick} · 비중 ${report.weight.toFixed(2)}`}
                 </span>
               </div>
               {report.summary && (
@@ -269,14 +269,14 @@ function RuntimeLine({ report }: { report: AuditReport }) {
     /* **백필하지 않았다.** 없는 것을 없다고 적는다. */
     return (
       <p className="mt-1.5 text-xs text-muted-foreground">
-        실행 조건 기록 없음 — 이 리포트는 기록을 남기기 전에 만들어졌습니다.
+        실행 조건 기록 없음 — 이 의견은 기록을 남기기 전에 만들어졌습니다.
       </p>
     );
   }
   return (
     <p className="mt-1.5 font-mono text-xs text-muted-foreground">
       {report.agentVersion ?? "판 미상"}
-      {report.promptVersion && ` · prompt ${report.promptVersion}`}
+      {report.promptVersion && ` · 프롬프트 ${report.promptVersion}`}
     </p>
   );
 }
@@ -284,9 +284,9 @@ function RuntimeLine({ report }: { report: AuditReport }) {
 /* ── 4. 무엇을 읽었나 ───────────────────────────────────────────── */
 
 const TEMPORAL_LABEL: Record<EvidenceTemporal, string> = {
-  before_event: "경기 전 개정본",
-  not_before_event: "경기 당일 이후 개정본",
-  unknown_revision: "개정본 시각 모름",
+  before_event: "경기 전에 쓰인 글",
+  not_before_event: "경기 당일 이후에 고쳐진 글",
+  unknown_revision: "언제 쓰인 글인지 모름",
   unknown_event_date: "대회 날짜를 몰라 비교 불가",
 };
 
@@ -305,10 +305,10 @@ function EvidenceList({
       className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
     >
       <h2 id="evidence-heading" className="font-sport text-base tracking-wide text-foreground">
-        Evidence
+        무엇을 읽었나
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        예측을 만들 때 프롬프트에 **실제로 들어간** 청크입니다. 순서는 검색 순위가 아니라 읽은
+        예측을 만들 때 AI에게 실제로 건네진 글 조각입니다. 순서는 검색 순위가 아니라 건네진
         순서입니다.
       </p>
 
@@ -316,7 +316,7 @@ function EvidenceList({
           칸을 세우지 않는다 — 빈칸은 "질의가 없었다"로 읽히는데 그건 거짓이다. */}
       {knowledgeQuery && (
         <div className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-          <p className="text-xs text-muted-foreground">검색 질의</p>
+          <p className="text-xs text-muted-foreground">AI가 던진 검색어</p>
           <p className="mt-1 break-words font-mono text-sm text-foreground">{knowledgeQuery}</p>
         </div>
       )}
@@ -325,8 +325,8 @@ function EvidenceList({
         /* **빈 것이 정직한 상태다.** 지금 코퍼스에서 다시 검색해 채우면 "그때 읽은
            것"이 아니라 "지금 검색되는 것"을 적는 것이 된다. */
         <p className="mt-3 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground">
-          이 예측에는 검색 기록이 없습니다. 기록을 남기기 전에 만들어진 예측이며, 지금 다시 검색해
-          채우면 그때 읽은 것이 아니라 지금 검색되는 것을 적는 것이 됩니다.
+          이 예측에는 무엇을 읽었는지 기록이 없습니다. 기록을 남기기 전에 만들어진 예측이며, 지금
+          다시 검색해 채우면 그때 읽은 것이 아니라 지금 검색되는 것을 적는 셈이 됩니다.
         </p>
       ) : (
         <ol className="mt-3 flex flex-col gap-2">
@@ -373,12 +373,12 @@ function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate:
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>
-              개정본 {item.sourceRevisionId ?? "미상"}
+              판본 {item.sourceRevisionId ?? "미상"}
               {item.sourceRevisedAt && ` · ${formatMoment(item.sourceRevisedAt)}`}
             </span>
             {/* 거리를 못 구했으면 비운다 — 0.0으로 채우지 않는다. */}
             {item.distance !== null && (
-              <span className="tabular-nums">거리 {item.distance.toFixed(3)}</span>
+              <span className="tabular-nums">질문과의 거리 {item.distance.toFixed(3)}</span>
             )}
           </div>
 
@@ -402,12 +402,12 @@ function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate:
                 붙이면 그 배지가 배경이 되어, 정작 이상한 줄이 눈에 안 띈다. */}
             {impossible && (
               <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-xs text-live">
-                예측보다 나중 개정본 ← 그때 없던 글
+                예측보다 나중에 고쳐진 글 ← 그때는 없던 내용
               </span>
             )}
             {item.selfReference && (
               <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-xs text-live">
-                대회 자체 문서 ← 자기참조
+                그 대회를 다룬 글 ← 결과가 적혀 있을 수 있음
               </span>
             )}
           </div>
@@ -423,8 +423,8 @@ function EvidenceRow({ item, eventStartDate }: { item: Evidence; eventStartDate:
 const REPLAY_FIELD_LABEL: Record<string, string> = {
   pick: "선택",
   win_probability: "승률",
-  confidence: "확신",
-  knowledge_query: "검색 질의",
+  confidence: "확신도",
+  knowledge_query: "검색어",
 };
 
 /**
@@ -450,13 +450,13 @@ function Replay({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="replay-heading" className="font-sport text-base tracking-wide text-foreground">
-          Replay
+          다시 돌려보기
         </h2>
         <ReplayBadge status={replay.status} />
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        저장된 리포트를 생성 때와 같은 함수에 다시 넣어 같은 결론이 나오는지 봅니다. 적중 여부와는
-        무관합니다.
+        저장된 의견을 처음과 같은 계산에 다시 넣어 같은 결론이 나오는지 봅니다. 맞혔는지와는
+        상관없습니다.
       </p>
       {/*
         **어느 판본으로 돌렸는지 적는다.** 지금 산식으로 옛 예측을 견주면 전부 값이
@@ -467,7 +467,7 @@ function Replay({
       <p className="mt-3 text-sm text-foreground">
         {replay.status === "reproduced" && "같은 재료에서 같은 결론이 다시 나왔습니다."}
         {replay.status === "diverged" &&
-          "다시 돌렸더니 값이 달라졌습니다. 그 사이 합성 규칙이 바뀌었거나 카드가 바뀌었다는 뜻입니다."}
+          "다시 돌렸더니 값이 달라졌습니다. 그 사이 계산 방식이 바뀌었거나 대진이 바뀌었다는 뜻입니다."}
         {/* **사유는 서버가 낸 문장 그대로다.** 화면이 "재현 실패"로 뭉뚱그리지 않는다. */}
         {replay.status === "unreplayable" && (replay.reason ?? "다시 돌릴 재료가 없습니다.")}
       </p>
@@ -481,8 +481,8 @@ function Replay({
               </p>
               {/* **두 값을 다 세운다.** "다르다"만으로는 아무것도 못 한다. */}
               <div className="mt-1 grid grid-cols-1 gap-1 font-mono text-xs sm:grid-cols-2">
-                <p className="break-words text-muted-foreground">기록 {item.stored}</p>
-                <p className="break-words text-foreground">재현 {item.replayed}</p>
+                <p className="break-words text-muted-foreground">그때 저장된 값 {item.stored}</p>
+                <p className="break-words text-foreground">다시 돌린 값 {item.replayed}</p>
               </div>
             </li>
           ))}
@@ -502,7 +502,7 @@ function Replay({
                   : "border-border text-muted-foreground",
               )}
             >
-              {stage.replayable ? "재현" : "불가"}
+              {stage.replayable ? "다시 됨" : "안 됨"}
             </span>
             <span className="min-w-0">
               <span className="text-foreground">{stage.label}</span>
@@ -526,22 +526,22 @@ function CardDrift({ unchanged }: { unchanged: boolean | null }) {
     /* **`null`은 "같다"가 아니다.** 견줄 질의 기록이 없는 상태다. */
     return (
       <p className="mt-3 text-xs text-muted-foreground">
-        카드가 그때와 같은지는 판단할 수 없습니다 — 견줄 질의 기록이 없습니다.
+        대진이 그때와 같은지는 알 수 없습니다 — 견줄 검색어 기록이 없습니다.
       </p>
     );
   }
   if (unchanged) {
     return (
       <p className="mt-3 text-xs text-muted-foreground">
-        저장된 질의가 지금 카드로 다시 만든 질의와 같습니다 — 경기 제목과 선택지 이름이 그때와
+        저장된 검색어가 지금 대진으로 다시 만든 것과 같습니다 — 경기 제목과 선수 이름이 그때와
         같습니다.
       </p>
     );
   }
   return (
     <p className="mt-3 rounded-lg border border-live/50 bg-live/5 px-3 py-2 text-xs text-live">
-      경기 카드가 그때와 다릅니다. 합성은 지금 카드의 선택지로 돌아갔으므로, 값이 달라졌다면 그
-      원인을 합성 규칙에만 돌릴 수 없습니다.
+      대진이 그때와 다릅니다. 다시 돌릴 때는 지금 대진을 썼으므로, 값이 달라졌더라도 그 원인을 계산
+      방식 탓으로만 볼 수 없습니다.
     </p>
   );
 }

@@ -88,30 +88,44 @@ dependencies/     ← FastAPI Depends 팩토리
 ### 6-2. 스타 토폴로지 규칙 (Harness Engineering)
 
 ```
-              [ontology] ← HUB (중앙 허브)
-             /      |      \
-     [kayfabe] [human_resource] [lion_king] ···  ← SPOKE
+     [kayfabe]  [admin]  [heyman]  [lion_king] ···  ← SPOKE
+          \         |        |         /
+           ↓        ↓        ↓        ↓              import 방향
+                    [ontology]                     ← HUB (공유 커널 · 최하위)
 ```
 
 - **허브(`ontology`)**: 온톨로지 인덱스, 컨텍스트 라우팅, 전역 지식 조정.  
-  다른 스포크 앱을 import할 수 있는 **유일한** 모듈.
-- **스포크**: 허브에만 연결. 스포크 ↔ 스포크 직접 import **엄격 금지**.
-- 위반 시 `import-linter` + `scripts/validate_harness.py` 가 CI에서 차단.
+  **스포크를 import하지 않는다** — 최하위 공유 커널이라 위를 볼 수 없다.
+- **스포크**: 허브만 import한다. 스포크 ↔ 스포크 직접 import **엄격 금지**.
+- 위반은 `lint-imports`(`.importlinter` 계약 넷)가 차단한다 — 로컬 pre-commit 훅과
+  GitHub Actions `gates` 워크플로 양쪽에서 돈다(§5).
+  `scripts/validate_harness.py`는 **MD 문서 링크**의 스타 토폴로지를 보는 별개 도구로
+  import는 검사하지 않고, 어느 게이트에도 연결돼 있지 않다.
 
 > **판단 기준**: 두 앱 사이에 의존성이 필요하면, 그 로직은 `ontology` 허브로 올린다.
 
 ### 6-3. 앱 목록
 
+> **디렉터리 이름이 정본이다** (`apps/` 아래 실제 이름). Prefix는 `main.py`가 붙이는
+> `/api`를 **포함해** 적는다 — 라우터 파일에 적힌 prefix만 보고 URL을 만들면 `/api`가 빠진다.
+
 | 앱 | 역할 | 토폴로지 | API Prefix | 상태 |
 |----|------|---------|-----------|------|
-| `ontology` | 온톨로지 허브 · 컨텍스트 라우터 | **HUB** | `/star-craft` | 개발 중 |
-| `kayfabe` | WWE 예측 · 랭킹 · 챔피언십 · 타이틀 히스토리 | spoke | `/ple`, `/rankings`, `/records`, `/championship`, `/title-history` | 운영 |
-| `user` | 인증 · 프로필 | spoke | `/users` | 운영 |
-| `human_resource` | 페르소나 AI 에이전트 | spoke | `/silicon-valley` | 개발 중 |
-| `lion_king` | 사진 보관 (촬영 → S3) | spoke | `/photos` | 개발 중 (**구조 템플릿**) |
-| `imitation_game` | 학습용 | spoke | — | 최소 |
-| `inception` | 학습용 | spoke | — | 최소 |
-| `social_network` | 소셜 | spoke | — | 플레이스홀더 |
+| `ontology` | 허브 · 공유 커널. 스팸 분류 · Gemini · 시맨틱 라우팅 · 크롤/스크랩 · 이미지·영상 분류 | **HUB** | `/api/ontology/*`, `/api/vision` | 개발 중 |
+| `kayfabe` | WWE 예측 · 랭킹 · 기록 · 챔피언 보드 · AI Lab(Provenance) · 상점 | spoke | `/api` + `/ple_events` `/data-center` `/ai-lab` `/ple-matches` `/ple-match-picks` `/title-acquisitions` `/wwe-chat` `/shop` | 운영 |
+| `auth` | 인증 · 프로필 · 카카오 OAuth · 모바일 (RS256 · JWKS) | spoke (**격리**) | `main.py`: `/api` · `auth_main.py`: `/auth` | 운영 |
+| `admin` | 페르소나 AI 에이전트(실리콘밸리) · LangChain · PDF 로더 | spoke | `/api/human_resource/*`, `/api/langchain`, `/api/pdf` | 개발 중 |
+| `heyman` | n8n 연동 매니저 — 메일·디스코드·텔레그램·주소(juso) · 스팸 필터 워처 · 받은편지함 | spoke | `/api/manager/*` | 개발 중 |
+| `lion_king` | 사진 보관 (촬영 → S3) · 영수증 OCR | spoke | `/api/photos`, `/api/receipts` | 개발 중 (**구조 템플릿**) |
+| `soccer` | 축구 RAG 챗 | spoke | `/api/soccer-chat` | 개발 중 |
+
+- **`auth`는 아무도 import할 수 없다** — 허브(`ontology`)조차 금지다(`.importlinter` 계약
+  `auth_isolation`). 검증이 필요하면 `jsangho.core.security`를 쓴다.
+- **새 앱을 만들면 `.importlinter`에 이름을 넣는다** — `root_packages` + 계약 넷 중 셋
+  (`no_spoke_to_spoke`·`star_topology_hub_only`·`clean_architecture_layers`). 빠뜨리면
+  계약이 그 앱을 **검사하지 않고도 초록으로 통과한다.**
+- **구조를 베낄 대상은 `lion_king`이다** — 빈 스캐폴드 앱(`sample`)과 쓰이지 않던 골격
+  (`superstar`)은 2026-09-29에 지웠다.
 
 ---
 

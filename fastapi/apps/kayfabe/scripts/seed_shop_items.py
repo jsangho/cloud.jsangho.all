@@ -24,9 +24,9 @@ if str(_APPS_DIR) not in sys.path:
 
 import asyncio  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.adapter.outbound.orm.shop_orm import (  # noqa: E402
     ShopItemCategory,
     ShopItemModel,

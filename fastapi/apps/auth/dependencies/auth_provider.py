@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.matrix.grid_oracle_database_manager import get_db
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.adapter.outbound.google_oauth_client import GoogleOAuthClient
@@ -24,7 +24,7 @@ from auth.app.use_cases.mobile_auth_interactor import MobileAuthInteractor
 from auth.app.use_cases.oauth_login_interactor import OAuthLoginInteractor
 from auth.app.use_cases.profile_interactor import ProfileInteractor
 from auth.app.use_cases.signup_interactor import SignupInteractor
-from fastapi import Depends
+from core.matrix.grid_oracle_database_manager import get_db
 
 
 def get_login_use_case(db: AsyncSession = Depends(get_db)) -> LoginUseCase:

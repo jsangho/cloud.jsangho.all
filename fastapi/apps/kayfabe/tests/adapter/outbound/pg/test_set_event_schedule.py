@@ -23,8 +23,6 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, date, datetime
 
-from core.entities.user_model import UserModel
-from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -37,6 +35,8 @@ from sqlalchemy.pool import StaticPool
 # 있어서, PG 어댑터를 먼저 임포트하면 `ai_stats_to_progress` 해석이 깨진다. 운영에서는
 # `main.py`가 라우터를 먼저 임포트해 순서가 맞으므로, 여기서도 같은 순서를 만든다.
 import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
+from core.entities.user_model import UserModel
+from core.matrix.grid_oracle_database_manager import Base
 from kayfabe.adapter.outbound.orm.agent_prediction_orm import (
     AgentPredictionModel,
     AgentReportModel,

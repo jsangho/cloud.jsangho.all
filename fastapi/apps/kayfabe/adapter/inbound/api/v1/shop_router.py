@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import logging
 
+from fastapi import APIRouter, Depends, HTTPException
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-
-from fastapi import APIRouter, Depends, HTTPException
 from kayfabe.adapter.inbound.api.schemas.shop_schema import (
     EquipRequestSchema,
     InventoryItemSchema,

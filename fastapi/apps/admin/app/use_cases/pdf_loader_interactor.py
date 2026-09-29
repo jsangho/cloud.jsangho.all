@@ -4,10 +4,11 @@ import os
 import tempfile
 from pathlib import Path
 
+from neo4j_graphrag.experimental.components.data_loader import PdfLoader
+
 from admin.app.dtos.pdf_loader_dto import PdfLoaderCommand, PdfLoaderResult
 from admin.app.ports.input.pdf_loader_use_case import PdfLoaderUseCase
 from admin.app.ports.output.pdf_document_port import PdfDocumentPort
-from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 
 
 class PdfLoaderInteractor(PdfLoaderUseCase):

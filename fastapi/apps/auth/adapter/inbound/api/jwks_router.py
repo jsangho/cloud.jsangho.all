@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import base64
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from fastapi import APIRouter
 
 from auth.domain.services.token_issuer import KID
-from fastapi import APIRouter
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 jwks_router = APIRouter(tags=["auth-jwks"], include_in_schema=False)
 

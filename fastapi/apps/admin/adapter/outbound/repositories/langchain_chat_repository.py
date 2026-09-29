@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import logging
 
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 from admin.adapter.outbound.repositories.reasoning_graph_repository import (
     ReasoningGraphRepository,
 )
@@ -10,9 +13,6 @@ from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 from admin.app.ports.output.langchain_chat_port import LangchainChatPort
 from admin.app.use_cases.langgraph_interactor import LangGraphInteractor
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 from ontology.app.dtos.semantic_routing_dto import SemanticRoutingCommand
 from ontology.app.ports.input.semantic_routing_use_case import SemanticRoutingUseCase
 

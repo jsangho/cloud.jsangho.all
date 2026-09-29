@@ -2,7 +2,6 @@
 root_packages =
     ontology
     kayfabe
-    superstar
     admin
     heyman
     soccer
@@ -27,7 +26,6 @@ name = Spoke modules must not import each other directly
 type = forbidden
 source_modules =
     kayfabe
-    superstar
     admin
     heyman
     soccer
@@ -35,7 +33,6 @@ source_modules =
     auth
 forbidden_modules =
     kayfabe
-    superstar
     admin
     heyman
     soccer
@@ -51,10 +48,10 @@ exclude_type_checking_imports = True
 # 반대로 허브가 스포크를 import하는 것은 금지한다.
 # ────────────────────────────────────────────
 [importlinter:contract:star_topology_hub_only]
-name = Only hub (ontology) may import spoke modules
+name = Spokes may import the hub (ontology); the hub must not import spokes
 type = layers
 layers =
-    kayfabe | superstar | admin | heyman | soccer | lion_king
+    kayfabe | admin | heyman | soccer | lion_king
     ontology
 
 
@@ -68,7 +65,6 @@ name = Clean Architecture layer ordering within each app
 type = layers
 containers =
     kayfabe
-    superstar
     admin
     heyman
     soccer
@@ -91,7 +87,6 @@ type = forbidden
 source_modules =
     ontology
     kayfabe
-    superstar
     admin
     heyman
     soccer

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 
-from core.entities.user_model import UserModel
-from core.security.password import verify_password
+from fastapi import HTTPException
 
 from auth.app.ports.input.login_use_case import LoginUseCase
 from auth.app.ports.output.user_repository import UserRepository
-from fastapi import HTTPException
+from core.entities.user_model import UserModel
+from core.security.password import verify_password
 
 
 class LoginInteractor(LoginUseCase):

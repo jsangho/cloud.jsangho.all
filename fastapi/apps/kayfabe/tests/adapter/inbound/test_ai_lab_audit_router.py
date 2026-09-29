@@ -20,9 +20,9 @@ import json
 from datetime import UTC, date, datetime
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fastapi import FastAPI
 from kayfabe.adapter.inbound.api.v1.ai_lab_router import ai_lab_router
 from kayfabe.app.dtos.ai_lab_dto import AuditReport, PredictionAuditResponse
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase

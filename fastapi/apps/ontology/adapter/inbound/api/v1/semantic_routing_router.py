@@ -4,6 +4,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends
+
 from ontology.adapter.inbound.api.schemas.semantic_routing_schema import (
     RoutingDecisionResponse,
     SemanticRoutingSchema,

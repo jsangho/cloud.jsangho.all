@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
+
+from core.matrix.grid_oracle_database_manager import Base
 
 
 class TitleAcquisitionModel(Base):

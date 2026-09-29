@@ -4,6 +4,7 @@ import json as _json
 import os
 
 import httpx
+
 from core.lol.t1_mid_faker_orchestrator import FakerOrchestrator
 from heyman.app.dtos.email_dto import EmailDto
 from heyman.app.ports.input.email_use_case import EmailUseCase

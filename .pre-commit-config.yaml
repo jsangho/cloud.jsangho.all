@@ -100,3 +100,22 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+
+      # **포맷은 게이트에 없어서 계속 새로 어긋났다.** 커밋 전 검사가 ESLint·tsc
+      # 둘뿐이라 `pnpm format`을 돌린 사람만 포맷이 맞았고, 무관한 파일이 diff에
+      # 섞여 들어와 매번 `git restore`로 되돌리는 작업이 생겼다. 파이썬
+      # (`ruff-format-check`) · Flutter(`dart-format-check`)와 같은 자리를 채운다.
+      #
+      # **`--write`가 아니라 `--check`다** — 형제 둘과 같은 이유로, 게이트는
+      # 알려 주기만 하고 고치는 것은 사람이 `pnpm format`으로 한다.
+      #
+      # **`node_modules/.bin/prettier`를 쓰지 않는다.** 그 shim은 sh 스크립트라
+      # `node`로 부르면 SyntaxError가 난다(ESLint 훅이 `bin/eslint.js`를 직접
+      # 가리키는 것과 같은 이유다).
+      - id: prettier-check
+        name: "Next.js: Prettier format check"
+        entry: bash
+        args: [-c, "cd www && node node_modules/prettier/bin/prettier.cjs --check ."]
+        language: system
+        always_run: true
+        pass_filenames: false

@@ -75,16 +75,16 @@ export default function AiLabPerformancePage() {
 
   return (
     <AiLabShell
-      title="Synthesis"
-      description="이 화면은 AI가 얼마나 잘 맞히는지를 재지 않습니다. 최종 승률 숫자가 무엇으로 만들어졌는지를 해부합니다."
+      title="승률 합성"
+      description="이 화면은 AI가 얼마나 잘 맞히는지를 재지 않습니다. 화면에 뜨는 승률 숫자가 어떻게 만들어졌는지를 뜯어봅니다."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
-      {state.status === "error" && <DataUnavailable what="합성 해부" />}
+      {state.status === "error" && <DataUnavailable what="승률 계산 내역" />}
       {state.status === "ready" && <Synthesis data={state.data} />}
 
       <div className="mt-6">
         {evaluation.status === "loading" && <LoadingBlock rows={2} />}
-        {evaluation.status === "error" && <DataUnavailable what="평가 자격" />}
+        {evaluation.status === "error" && <DataUnavailable what="채점 자격 판정" />}
         {evaluation.status === "ready" && <Eligibility data={evaluation.data} />}
       </div>
     </AiLabShell>
@@ -111,27 +111,27 @@ function Eligibility({ data }: { data: AiLabEvaluation }) {
     >
       <div>
         <h2 id="eligibility-heading" className="font-sport text-base tracking-wide text-foreground">
-          Evaluation eligibility
+          성적에 넣을 수 있는 예측
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          채점 대상이 될 자격이 있는 예측이 몇 건인가. 자격 없는 예측은 경고를 붙이는 것이 아니라
-          분모에서 빼냅니다.
+          채점해도 되는 예측이 몇 건인가. 자격이 없는 예측은 경고만 붙이고 두는 것이 아니라 아예
+          계산에서 빼냅니다.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatTile
           value={totals.eligible}
-          label="Eligible"
-          note="채점 가능"
+          label="자격 있음"
+          note="채점해도 되는 예측"
           tone={totals.eligible > 0 ? "data" : "default"}
         />
-        <StatTile value={totals.disqualified} label="Disqualified" note="누수 확정" />
-        <StatTile value={totals.held} label="Held" note="증명도 반증도 불가" />
-        <StatTile value={totals.exPost} label="Ex-post" note="사후 재현 표본" />
-        <StatTile value={totals.withdrawn} label="Withdrawn" note="경기가 카드에서 사라짐" />
-        <StatTile value={totals.pending} label="Pending" note="결과 없음" />
-        <StatTile value={totals.fallback} label="N/A" note="배당 폴백" />
+        <StatTile value={totals.disqualified} label="실격" note="정답이 샌 것이 확인됨" />
+        <StatTile value={totals.held} label="보류" note="샜는지 아닌지 확인 불가" />
+        <StatTile value={totals.exPost} label="사후 재현" note="지나간 경기를 다시 맞혀 본 것" />
+        <StatTile value={totals.withdrawn} label="경기 사라짐" note="대진표에서 빠진 경기" />
+        <StatTile value={totals.pending} label="결과 없음" note="아직 안 끝난 경기" />
+        <StatTile value={totals.fallback} label="평가 대상 아님" note="배당으로 대신 채운 예측" />
       </div>
 
       <EligiblePerformanceBlock
@@ -183,11 +183,11 @@ function EligiblePerformanceBlock({
     return (
       <div className="rounded-xl border border-live/40 bg-card px-4 py-4 sm:px-5">
         <p className="text-sm font-medium text-foreground">
-          자격 있는 표본이 {eligible}건입니다 — 성능을 계산하지 않았습니다.
+          채점할 수 있는 예측이 {eligible}건입니다 — 성적을 계산하지 않았습니다.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          저장된 예측 {predictions}건 중 채점 대상 자격을 얻은 것이 없습니다. 0%나 임시 숫자로 이
-          자리를 채우지 않습니다.
+          저장된 예측 {predictions}건 중 채점 자격을 얻은 것이 없습니다. 0%나 임시 숫자로 이 자리를
+          채우지 않습니다.
         </p>
       </div>
     );
@@ -196,17 +196,19 @@ function EligiblePerformanceBlock({
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5">
       <p className="text-sm text-foreground">
-        자격 표본 {performance.sample}건 ·{" "}
+        채점한 예측 {performance.sample}건 ·{" "}
         <span className="tabular-nums">
           {formatRatio(performance.accuracy)} ({performance.correct}/{performance.sample})
         </span>{" "}
         <span className="text-muted-foreground">
-          · 95% CI {formatRatio(performance.accuracyLow)}–{formatRatio(performance.accuracyHigh)}
+          · 실제로는 {formatRatio(performance.accuracyLow)}–{formatRatio(performance.accuracyHigh)}{" "}
+          사이
         </span>
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        대회 {performance.eventsCovered}개 기준. 자격 판정을 통과한 표본이지만 위의 무결성 경고는
-        그대로 적용됩니다 — 자격과 일반화 가능성은 다른 층위입니다.
+        대회 {performance.eventsCovered}개 기준. 채점 자격은 통과했지만 위의 경고는 그대로
+        적용됩니다 — &ldquo;채점해도 되는가&rdquo;와 &ldquo;다른 대회에도 통하는가&rdquo;는 다른
+        질문입니다.
       </p>
     </div>
   );
@@ -256,24 +258,24 @@ function Synthesis({ data }: { data: AiLabPerformance }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           value={totals.predictions}
-          label="Predictions"
+          label="예측"
           note={`2파전 ${totals.singles} · 다파전 ${totals.multi}`}
         />
         <StatTile
           value={totals.graded}
-          label="Graded"
-          note={`미채점 ${totals.predictions - totals.bookmakerFallback - totals.graded}`}
+          label="채점한 예측"
+          note={`아직 못 채점 ${totals.predictions - totals.bookmakerFallback - totals.graded}`}
           tone="data"
         />
         <StatTile
           value={`${integrity.eventsCovered}/${integrity.eventsTotal}`}
-          label="Events covered"
+          label="대회 범위"
           note="예측이 있는 대회 / 전체"
         />
         <StatTile
           value={totals.bookmakerFallback}
-          label="Fallback"
-          note="배당으로 대체된 예측 — 집계에서 제외"
+          label="배당으로 채운 예측"
+          note="AI가 아니라 배당을 그대로 씀 — 집계에서 제외"
         />
       </div>
 
@@ -290,9 +292,9 @@ function Synthesis({ data }: { data: AiLabPerformance }) {
 
       <p className="text-xs text-muted-foreground">
         <strong className="font-semibold">승률이 높다고 근거가 두꺼운 것은 아닙니다.</strong> 의견을
-        낸 에이전트가 하나뿐이고 그 확신이 최대치면 분포가 한쪽으로 붕괴해 승률이 100%로 나옵니다 —
-        가장 확신에 찬 예측이 아니라 <strong className="font-semibold">가장 적게 답한 예측</strong>
-        입니다. 승률 옆의 Coverage를 함께 보세요.
+        낸 분석기가 하나뿐이고 그 확신이 최대치면 계산이 한쪽으로 쏠려 승률이 100%로 나옵니다 — 가장
+        확신에 찬 예측이 아니라 <strong className="font-semibold">가장 적게 답한 예측</strong>
+        입니다. 승률 옆의 &ldquo;몇 명이 답했나&rdquo;를 함께 보세요.
       </p>
     </div>
   );
@@ -308,9 +310,10 @@ function InferentialLock({ inferential }: { inferential: AiLabPerformance["infer
   if (inferential.available) {
     return (
       <section className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5">
-        <h2 className="font-sport text-base tracking-wide text-foreground">Inferential metrics</h2>
+        <h2 className="font-sport text-base tracking-wide text-foreground">더 깊은 통계</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          무결성 판정이 통과했습니다. 캘리브레이션 같은 추론 지표를 낼 조건이 갖춰졌습니다.
+          앞의 점검을 통과했습니다. &ldquo;승률 70%라고 할 때 실제로 70% 맞는가&rdquo; 같은 통계를
+          낼 조건이 갖춰졌습니다.
         </p>
       </section>
     );
@@ -323,15 +326,16 @@ function InferentialLock({ inferential }: { inferential: AiLabPerformance["infer
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 id="lock-heading" className="font-sport text-base tracking-wide text-foreground">
-          Inferential metrics
+          더 깊은 통계
         </h2>
         <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
           내지 않음
         </span>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        캘리브레이션 곡선 · Brier 점수 · ROC 같은 추론 지표를 이 화면에서 내지 않습니다. 아래가
-        서버가 밝힌 이유이며, 이 화면이 따로 정한 기준은 없습니다.
+        &ldquo;승률 70%라고 한 예측이 실제로 70% 맞는가&rdquo;를 재는 통계는 내지 않습니다. 지금
+        표본으로는 그 숫자가 의미를 갖지 못하기 때문입니다. 아래가 그 이유이고, 이 화면이 따로 정한
+        기준은 없습니다.
       </p>
       {inferential.reasons.length > 0 && (
         <ul className="mt-3 flex flex-col gap-1">
@@ -360,15 +364,16 @@ function Consensus({ levels }: { levels: ConsensusLevel[] }) {
     <section aria-labelledby="consensus-heading" className="flex flex-col gap-3">
       <div>
         <h2 id="consensus-heading" className="font-sport text-base tracking-wide text-foreground">
-          Consensus
+          몇 명이 답해서 몇 명이 같은 편이었나
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          확신 = 동의도 × 응답률. 곱이 같아도 답한 수가 다르면 근거의 두께가 다릅니다.
+          확신도는 &ldquo;얼마나 같은 편인가&rdquo;와 &ldquo;몇 명이나 답했나&rdquo;를 곱한
+          값입니다. 곱이 같아도 답한 수가 다르면 근거의 두께가 다릅니다.
         </p>
       </div>
 
       {levels.length === 0 ? (
-        <EmptyRow>합의를 잴 예측이 없습니다.</EmptyRow>
+        <EmptyRow>여러 의견을 비교할 예측이 없습니다.</EmptyRow>
       ) : (
         <ul className="flex flex-col gap-2">
           {levels.map((level) => (
@@ -382,14 +387,14 @@ function Consensus({ levels }: { levels: ConsensusLevel[] }) {
                   <span className="tabular-nums">{level.agreed}</span>명이 동의
                 </p>
                 <p className="text-xs tabular-nums text-muted-foreground">
-                  확신 {formatRatio(level.confidence)}
+                  확신도 {formatRatio(level.confidence)}
                 </p>
               </div>
               <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
-                <Fact label="Predictions" value={`${level.predictions}`} />
-                <Fact label="Graded" value={`${level.graded}`} />
+                <Fact label="이런 예측" value={`${level.predictions}`} />
+                <Fact label="채점됨" value={`${level.graded}`} />
                 <Fact
-                  label="Correct"
+                  label="맞힘"
                   value={level.graded === 0 ? "—" : `${level.correct}/${level.graded}`}
                 />
               </dl>
@@ -416,15 +421,16 @@ function Contributions({ contributions }: { contributions: AgentContribution[] }
           id="contributions-heading"
           className="font-sport text-base tracking-wide text-foreground"
         >
-          Contributions
+          각 분석기가 숫자를 실제로 움직였나
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          그 에이전트가 낸 확신 값이 실제로 움직이는지. 정확도가 아니라 변동성입니다.
+          늘 같은 값만 내는 분석기는 100% 맞혀도 최종 승률을 바꾸지 못합니다. 잘 맞히는지가 아니라
+          값이 움직이는지를 봅니다.
         </p>
       </div>
 
       {contributions.length === 0 ? (
-        <EmptyRow>리포트를 낸 에이전트가 없습니다.</EmptyRow>
+        <EmptyRow>아직 의견을 낸 분석기가 없습니다.</EmptyRow>
       ) : (
         <ul className="flex flex-col gap-2">
           {contributions.map((item) => (
@@ -438,10 +444,10 @@ function Contributions({ contributions }: { contributions: AgentContribution[] }
                 )}
               </div>
               <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
-                <Fact label="Opinions" value={`${item.opinions}/${item.reports}`} />
-                <Fact label="Distinct values" value={`${item.distinctWeights}`} />
+                <Fact label="의견을 낸 횟수" value={`${item.opinions}/${item.reports}`} />
+                <Fact label="서로 다른 값" value={`${item.distinctWeights}`} />
                 <Fact
-                  label="Range"
+                  label="값의 폭"
                   value={
                     item.minWeight === null || item.maxWeight === null
                       ? "—"
@@ -449,8 +455,8 @@ function Contributions({ contributions }: { contributions: AgentContribution[] }
                   }
                 />
                 <Fact
-                  label="Constant"
-                  value={item.constant === null ? "—" : item.constant ? "Yes" : "No"}
+                  label="늘 같은 값인가"
+                  value={item.constant === null ? "—" : item.constant ? "예" : "아니오"}
                 />
               </dl>
             </li>
@@ -466,15 +472,15 @@ function Items({ items }: { items: PerformanceItem[] }) {
     <section aria-labelledby="items-heading" className="flex flex-col gap-3">
       <div>
         <h2 id="items-heading" className="font-sport text-base tracking-wide text-foreground">
-          Predictions
+          예측 하나하나
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          최종 승률과 그것을 만든 리포트. 승률이 높은 순입니다.
+          최종 승률과 그 숫자를 만든 의견들. 승률이 높은 순입니다.
         </p>
       </div>
 
       {items.length === 0 ? (
-        <EmptyRow>해부할 예측이 없습니다.</EmptyRow>
+        <EmptyRow>뜯어볼 예측이 없습니다.</EmptyRow>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) => (
@@ -504,12 +510,12 @@ function ItemRow({ item }: { item: PerformanceItem }) {
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-        <Fact label="Confidence" value={formatRatio(item.confidence)} />
-        <Fact label="Agreement" value={formatRatio(item.agreement)} />
-        <Fact label="Coverage" value={formatRatio(item.coverage)} />
+        <Fact label="확신도" value={formatRatio(item.confidence)} />
+        <Fact label="같은 편인 비율" value={formatRatio(item.agreement)} />
+        <Fact label="몇 명이 답했나" value={formatRatio(item.coverage)} />
         <Fact
-          label="Result"
-          value={item.correct === null ? "Pending" : item.correct ? "적중" : "실패"}
+          label="결과"
+          value={item.correct === null ? "아직 없음" : item.correct ? "적중" : "실패"}
         />
       </dl>
 
@@ -526,7 +532,7 @@ function ItemRow({ item }: { item: PerformanceItem }) {
       <ul className="mt-3 flex flex-wrap gap-1.5">
         {item.reports.length === 0 && (
           <li>
-            <Note tone="neutral">저장된 리포트가 없습니다</Note>
+            <Note tone="neutral">저장된 의견이 없습니다</Note>
           </li>
         )}
         {item.reports.map((report) => (
@@ -541,10 +547,10 @@ function ItemRow({ item }: { item: PerformanceItem }) {
 
       {thinEvidence && (
         <p className="mt-2 text-xs text-muted-foreground">
-          승률 100%는 확신의 크기가 아니라{" "}
-          <strong className="font-semibold">한 명만 답한 결과</strong>입니다 — 기권을 분포에서 뺀
-          산식 v1에서는 의견이 하나면 분포가 그쪽으로 붕괴합니다. 지금 산식(v2)은 기권을 세므로 이
-          값이 다시 나오지 않습니다.
+          승률 100%는 확신이 커서가 아니라{" "}
+          <strong className="font-semibold">한 명만 답했기 때문</strong>입니다 — 옛 계산법은 의견을
+          내지 않은 분석기를 아예 빼고 셌기 때문에, 한 명만 답하면 그쪽으로 쏠렸습니다. 지금
+          계산법은 답하지 않은 것도 세므로 이 값이 다시 나오지 않습니다.
         </p>
       )}
     </li>
@@ -554,7 +560,7 @@ function ItemRow({ item }: { item: PerformanceItem }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-sm font-medium tabular-nums text-foreground">{value}</dd>
     </div>
   );

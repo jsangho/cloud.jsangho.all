@@ -68,7 +68,6 @@ import asyncio  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
 from datetime import datetime  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 from sqlalchemy.orm import selectinload  # noqa: E402
@@ -77,6 +76,7 @@ from sqlalchemy.orm import selectinload  # noqa: E402
 # 있다. 운영에서는 `main.py`가 라우터를 먼저 임포트해 순서가 맞으므로, 여기서도 같은
 # 순서를 만든다. 빠뜨리면 PG 어댑터 임포트가 깨진다.
 import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.adapter.outbound.orm.ple_orm import (  # noqa: E402
     PleEventModel,
     PleEventStatus,

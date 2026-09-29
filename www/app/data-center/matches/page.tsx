@@ -65,7 +65,7 @@ function MatchesContent() {
 
   return (
     <DataCenterShell
-      title="Matches"
+      title="경기"
       description="DB에 기록된 PLE 경기입니다. 참가자는 카드에서 개인 이름으로 펼치고, 승자를 되짚지 못한 경기는 그렇게 적습니다."
     >
       <div className="mb-5 flex flex-col gap-3">
@@ -164,7 +164,7 @@ export default function DataCenterMatchesPage() {
   return (
     <Suspense
       fallback={
-        <DataCenterShell title="Matches">
+        <DataCenterShell title="경기">
           <LoadingBlock />
         </DataCenterShell>
       }

@@ -65,9 +65,9 @@ from collections.abc import Sequence  # noqa: E402
 from dataclasses import dataclass  # noqa: E402
 from urllib.parse import quote  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.app.dtos.knowledge_ingestion_dto import (  # noqa: E402
     IngestKnowledgeCommand,
 )

@@ -18,8 +18,6 @@ import asyncio
 from collections.abc import Sequence
 
 import pytest
-from core.entities.user_model import UserModel
-from core.matrix.grid_oracle_database_manager import Base
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -27,6 +25,8 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from core.entities.user_model import UserModel
+from core.matrix.grid_oracle_database_manager import Base
 from kayfabe.adapter.outbound.orm.ple_orm import (
     PleEventModel,
     PleMatchModel,

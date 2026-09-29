@@ -15,9 +15,10 @@ import asyncio
 import json
 import logging
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from google import genai
 from google.genai import types
+
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from lion_king.app.dtos.receipt_dto import OcrRawResult, ReceiptImage
 from lion_king.app.ports.output.receipt_ocr_port import (
     OcrUnavailableError,

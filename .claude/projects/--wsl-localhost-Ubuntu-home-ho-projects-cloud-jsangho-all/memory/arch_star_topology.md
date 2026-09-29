@@ -7,9 +7,11 @@ metadata:
 
 `fastapi/apps/` 는 허브(`ontology`)를 중심으로 한 **스타 토폴로지**다.
 
-앱 목록: `admin` `auth` `heyman` `kayfabe` `lion_king` **`ontology`(허브)** `sample` `soccer` `superstar` `titanic`
+앱 목록: `admin` `auth` `heyman` `kayfabe` `lion_king` **`ontology`(허브)** `soccer`
 
-- **스포크 ↔ 스포크 직접 import 금지.** 앱 간 의존은 반드시 허브 `ontology` 를 통한다.
+- **스포크 ↔ 스포크 직접 import 금지.** 공통 로직을 허브 `ontology` 로 **올려서** 푼다 —
+  허브가 두 앱을 중개하는 게 아니다. 의존은 스포크 → 허브 **한 방향**이고, 허브가 스포크를
+  import하는 것도 금지다.
 - 위반은 import-linter가 차단한다:
   ```bash
   cd fastapi && PYTHONUTF8=1 PYTHONPATH=apps uv run lint-imports

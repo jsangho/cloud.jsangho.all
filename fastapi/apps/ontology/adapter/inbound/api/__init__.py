@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from ontology.adapter.inbound.api.v1.crawl_scrape_pipeline_router import (
     crawl_scrape_pipeline_router,
 )

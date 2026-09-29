@@ -55,7 +55,7 @@ export default function DataCenterPlePage() {
 
   return (
     <DataCenterShell
-      title="PLE Events"
+      title="대회"
       description="대회별 경기 수와 구성입니다. 예측은 PLE 예측 화면에서 하고, 여기서는 데이터만 봅니다."
     >
       {loading ? (

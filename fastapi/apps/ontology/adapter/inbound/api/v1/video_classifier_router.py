@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 from ontology.adapter.inbound.api.schemas.video_classifier_schema import (
     VideoClassificationResponse,
     VideoTopKPredictionSchema,

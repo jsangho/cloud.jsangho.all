@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
 from kayfabe.adapter.inbound.api.schemas.ai_lab_schema import (
     AgentActivitySchema,
     AgentAnalysisSchema,

@@ -23,12 +23,13 @@ if str(_APPS_DIR) not in sys.path:
 
 import asyncio  # noqa: E402
 
+from sqlalchemy import text  # noqa: E402
+
 from core.matrix.grid_architect_graph_manager import (  # noqa: E402
     dispose_neo4j_driver,
     driver,
 )
 from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-from sqlalchemy import text  # noqa: E402
 
 
 def _to_jsonable(row: dict[str, Any]) -> dict[str, Any]:

@@ -48,7 +48,7 @@ export default function DataCenterAnalyticsPage() {
 
   if (loading) {
     return (
-      <DataCenterShell title="Analytics">
+      <DataCenterShell title="차트">
         <LoadingBlock rows={4} />
       </DataCenterShell>
     );
@@ -56,7 +56,7 @@ export default function DataCenterAnalyticsPage() {
 
   if (!analytics) {
     return (
-      <DataCenterShell title="Analytics">
+      <DataCenterShell title="차트">
         <DataUnavailable what="분석 데이터" />
       </DataCenterShell>
     );
@@ -73,7 +73,7 @@ export default function DataCenterAnalyticsPage() {
 
   return (
     <DataCenterShell
-      title="Analytics"
+      title="차트"
       description="DB에 있는 것만 셉니다. 표본이 얇은 지표는 순위에서 빼고, 없는 축은 그리지 않습니다."
     >
       <div className="flex flex-col gap-6">

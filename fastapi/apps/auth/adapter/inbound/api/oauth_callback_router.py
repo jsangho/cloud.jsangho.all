@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from core.security.cookie import set_access_cookie
-from core.security.role import UserRole
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from auth.adapter.outbound.redis.refresh_token_repository import RefreshTokenRepository
@@ -21,7 +19,9 @@ from auth.domain.services.token_issuer import (
     create_access_token,
     create_refresh_token,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from core.security.cookie import set_access_cookie
+from core.security.role import UserRole
 
 oauth_callback_router = APIRouter(tags=["auth-oauth-callback"])
 

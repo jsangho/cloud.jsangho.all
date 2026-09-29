@@ -30,8 +30,10 @@ export function IntegrityBanner({
       className="rounded-xl border border-live/40 bg-card px-4 py-4 sm:px-5"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {/* 예전 제목은 `Evaluation Integrity`였다. 이 상자는 화면에서 **가장 먼저
+            읽혀야 하는 블록**인데 제목부터 읽히지 않으면 그냥 넘어간다. */}
         <h2 id="integrity-heading" className="font-sport text-base tracking-wide text-foreground">
-          Evaluation Integrity
+          이 숫자를 믿어도 되나
         </h2>
         {!integrity.generalizable && (
           <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-xs font-medium text-live">
@@ -43,42 +45,44 @@ export function IntegrityBanner({
       <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
         {totals && (
           <IntegrityFact
-            label="Hit rate"
+            label="적중률"
             value={
               totals.hitRate === null
                 ? "채점된 예측 없음"
-                : `${formatRatio(totals.hitRate)} · ${totals.correct}/${totals.graded} · 95% CI ${formatRatio(totals.hitRateLow)}–${formatRatio(totals.hitRateHigh)}`
+                : `${formatRatio(totals.hitRate)} · ${totals.correct}/${totals.graded} · 실제로는 ${formatRatio(totals.hitRateLow)}–${formatRatio(totals.hitRateHigh)} 사이`
             }
           />
         )}
-        <IntegrityFact label="Sample" value={`${integrity.sampleSize} predictions`} />
+        <IntegrityFact label="표본" value={`예측 ${integrity.sampleSize}건`} />
         <IntegrityFact
-          label="Coverage"
-          value={`${integrity.eventsCovered} of ${integrity.eventsTotal} PLE`}
+          label="대회 범위"
+          value={`대회 ${integrity.eventsTotal}개 중 ${integrity.eventsCovered}개`}
         />
         <IntegrityFact
-          label="Self-referencing sources"
-          value={`${integrity.selfReferencingPredictions} / ${integrity.predictionsWithSources} predictions`}
+          label="결과가 적힌 글을 근거로 쓴 예측"
+          value={`${integrity.predictionsWithSources}건 중 ${integrity.selfReferencingPredictions}건`}
           tone={integrity.selfReferencingPredictions > 0 ? "warn" : "default"}
         />
         <IntegrityFact
-          label="Temporal verification"
+          label="예측 시점 확인"
           value={
             integrity.temporalVerifiable
-              ? `가능 (계보 ${integrity.chunksWithRevision}/${integrity.chunksTotal})`
-              : `불가 (계보 없음 ${integrity.chunksTotal - integrity.chunksWithRevision}/${integrity.chunksTotal})`
+              ? `가능 (출처를 되짚을 수 있는 글 ${integrity.chunksWithRevision}/${integrity.chunksTotal})`
+              : `불가 (출처를 모르는 글 ${integrity.chunksTotal - integrity.chunksWithRevision}/${integrity.chunksTotal})`
           }
           tone={integrity.temporalVerifiable ? "default" : "warn"}
         />
         <IntegrityFact
-          label="Generalizable"
-          value={integrity.generalizable ? "Yes" : "No"}
+          label="다른 대회에도 통하는 숫자인가"
+          value={integrity.generalizable ? "예" : "아니오"}
           tone={integrity.generalizable ? "default" : "warn"}
         />
       </dl>
 
       {leakageSuspected && (
-        <p className="mt-3 text-sm font-medium text-live">Potential data leakage detected.</p>
+        <p className="mt-3 text-sm font-medium text-live">
+          경기 결과가 예측에 미리 새어 들어왔을 수 있습니다.
+        </p>
       )}
       {!integrity.generalizable && totals && totals.hitRate !== null && (
         <p className="mt-1 text-sm text-foreground">
@@ -101,10 +105,10 @@ export function IntegrityBanner({
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        누수 없는 평가 표본을 따로 만드는 작업은 Phase 3-6으로 분리했습니다. 시간 검증이 보는 것은
-        발행일이 아니라{" "}
-        <strong className="font-semibold">인용한 문서가 어느 개정본에서 왔는가</strong>이고, 계보를
-        모르는 청크를 임의로 과거 문서로 간주하지 않습니다.
+        결과가 새지 않은 평가용 표본을 따로 모으는 일은 아직 남아 있습니다. 예측 시점 확인이 보는
+        것은 글의 작성 날짜가 아니라{" "}
+        <strong className="font-semibold">그 글이 어느 판본에서 온 것인가</strong>이고, 출처를
+        모르는 글을 임의로 &ldquo;예전 글&rdquo;로 치지 않습니다.
       </p>
     </section>
   );
@@ -121,7 +125,7 @@ function IntegrityFact({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className={cn("text-sm tabular-nums", tone === "warn" ? "text-live" : "text-foreground")}>
         {value}
       </dd>

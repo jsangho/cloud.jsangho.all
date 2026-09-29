@@ -354,7 +354,7 @@ async def test_a_vanished_match_card_leaves_the_synthesis_unreplayable() -> None
     result = replay_prediction(row, reports, ())
 
     assert result.status is ReplayStatus.UNREPLAYABLE
-    assert result.reason is not None and "선택지" in result.reason
+    assert result.reason is not None and "후보" in result.reason
     assert result.card_unchanged is None
 
 
@@ -369,7 +369,7 @@ async def test_a_bookmaker_fallback_prediction_never_went_through_synthesis() ->
     )
 
     assert result.status is ReplayStatus.UNREPLAYABLE
-    assert result.reason is not None and "폴백" in result.reason
+    assert result.reason is not None and "배당" in result.reason
 
 
 @pytest.mark.asyncio
@@ -397,7 +397,7 @@ async def test_a_report_row_outside_the_entity_contract_is_a_reason_not_a_crash(
     result = replay_prediction(row, broken, _OPTIONS)
 
     assert result.status is ReplayStatus.UNREPLAYABLE
-    assert result.reason is not None and "리포트" in result.reason
+    assert result.reason is not None and "저장된 의견" in result.reason
 
 
 # ---------------------------------------------------------------------------

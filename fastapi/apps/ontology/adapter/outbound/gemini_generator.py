@@ -4,12 +4,12 @@ import logging
 import os
 from collections.abc import AsyncIterator
 
+from google import genai
+
 from core.matrix.vault_keymaker_secret_manager import (
     DEFAULT_GEMINI_MODEL_ID,
     get_keymaker,
 )
-from google import genai
-
 from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
 from ontology.app.ports.output.gemini_generation_port import GeminiGenerationPort
 

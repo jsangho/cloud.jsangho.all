@@ -137,7 +137,7 @@ class TestRevisionBeforeEventPasses:
         )
         verdict = next(v for v in items[0].verdicts if v.code == "unverifiable_corpus")
         assert verdict.failed is False
-        assert "개정본" in verdict.detail
+        assert "먼저 쓰인" in verdict.detail
 
 
 class TestPublishedAtIsNotEnough:

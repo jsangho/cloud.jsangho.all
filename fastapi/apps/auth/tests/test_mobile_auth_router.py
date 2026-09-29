@@ -8,8 +8,7 @@
 from __future__ import annotations
 
 import pytest
-from core.security.dependencies import get_current_user
-from core.security.token_verifier import TokenPayload
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from auth.adapter.inbound.api.mobile_auth_router import mobile_auth_router
@@ -26,7 +25,8 @@ from auth.app.ports.output.session_store import (
     SessionReuseDetectedError,
 )
 from auth.dependencies.auth_provider import get_mobile_auth_use_case
-from fastapi import FastAPI
+from core.security.dependencies import get_current_user
+from core.security.token_verifier import TokenPayload
 
 
 class FakeUseCase(MobileAuthUseCase):

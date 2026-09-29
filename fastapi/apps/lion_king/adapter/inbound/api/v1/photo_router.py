@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
 from lion_king.adapter.inbound.api.schemas.photo_schema import PhotoResponse
@@ -21,8 +23,6 @@ from lion_king.domain.value_objects.photo_content import (
     PhotoTooLargeError,
     UnsupportedPhotoFormatError,
 )
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 photo_router = APIRouter(prefix="/photos", tags=["photos"])
 

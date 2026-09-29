@@ -6,10 +6,10 @@ from typing import Any, ClassVar
 
 import timm
 import torch
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from PIL import Image, UnidentifiedImageError
 from timm.data import ImageNetInfo
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from ontology.app.dtos.image_classification_dto import (
     ImageClassificationDto,
     TopKPredictionDto,

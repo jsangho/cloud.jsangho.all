@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 
-from core.entities.user_model import UserModel
-from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from core.entities.user_model import UserModel
+from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from kayfabe.adapter.outbound.catalog.ple_event_schedule_catalog import schedule_for
 from kayfabe.adapter.outbound.mappers.ple_orm_mapper import (
     card_command_to_json,

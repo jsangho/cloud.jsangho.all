@@ -36,7 +36,13 @@
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python \\
         apps/kayfabe/scripts/verify_match_results.py
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python \\
-        apps/kayfabe/scripts/verify_match_results.py --event mitb --limit 5 --apply
+        apps/kayfabe/scripts/verify_match_results.py \\
+        --event money-in-the-bank --limit 5 --apply
+
+**`--event`는 슬러그가 정확히 일치해야 한다**(`slug == event_slug`, ILIKE가 아니다).
+줄여 쓰면(`--event mitb`) 조용히 **대상 0건**이 되어 "확정할 게 없다"로 읽힌다 —
+슬러그는 `ple_events.slug`에서 확인한다(MITB는 `money-in-the-bank`이고
+`match_key`만 `mitb26-*`이다).
 
 `close_past_events.py`와 기본값을 맞췄다. 쓰는 값이 **모델이 읽은 문서에서** 나오므로,
 아무 플래그 없이 운영 DB에 들어가지 않게 한다.
@@ -53,12 +59,11 @@ if str(_APPS_DIR) not in sys.path:
 
 import asyncio  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-
 # `outbound.mappers.__init__`가 `inbound.api`를 거쳐 다시 자신을 부르는 **기존** 순환이
 # 있다. 운영에서는 `main.py`가 라우터를 먼저 임포트해 순서가 맞으므로, 여기서도 같은
 # 순서를 만든다. 빠뜨리면 PG 어댑터 임포트가 깨진다.
 import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.app.dtos.result_verification_dto import (  # noqa: E402
     MatchVerification,
     VerificationRun,

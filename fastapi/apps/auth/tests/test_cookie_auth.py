@@ -10,16 +10,16 @@
 
 from __future__ import annotations
 
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+
 from core.security import cookie as cookie_module
 from core.security.cookie import (
     ACCESS_COOKIE_NAME,
     clear_access_cookie,
     set_access_cookie,
 )
-from fastapi.responses import JSONResponse
-from fastapi.testclient import TestClient
-
-from fastapi import FastAPI
 
 app = FastAPI()
 

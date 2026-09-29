@@ -4,16 +4,16 @@ import html
 from typing import Any
 
 import jwt
-from core.security.cookie import COOKIE_KWARGS
-from core.security.role import UserRole
-from core.security.token_verifier import verify_token
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from auth.app.ports.input.login_use_case import LoginUseCase
 from auth.dependencies.auth_provider import get_login_use_case
 from auth.domain.services.token_issuer import create_access_token
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from core.security.cookie import COOKIE_KWARGS
+from core.security.role import UserRole
+from core.security.token_verifier import verify_token
 
 docs_gate_router = APIRouter(tags=["docs-gate"], include_in_schema=False)
 

@@ -1,3 +1,6 @@
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from admin.adapter.outbound.repositories.piper_dunn_coo_repository import (
     DunnCooRepository,
 )
@@ -5,9 +8,6 @@ from admin.app.ports.input.piper_dunn_coo_use_case import DunnCooUseCase
 from admin.app.ports.output.piper_dunn_coo_port import DunnCooPort
 from admin.app.use_cases.piper_dunn_coo_interactor import DunnCooInteractor
 from core.matrix.grid_oracle_database_manager import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from fastapi import Depends
 
 
 def get_dunn_coo_repository(

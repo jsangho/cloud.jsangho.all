@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from core.security.dependencies import get_current_user, require_self_or_admin
-from core.security.role import UserRole
-from core.security.token_verifier import TokenPayload
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.app.ports.input.profile_use_case import ProfileUseCase
 from auth.dependencies.auth_provider import get_profile_use_case
-from fastapi import APIRouter, Depends
+from core.security.dependencies import get_current_user, require_self_or_admin
+from core.security.role import UserRole
+from core.security.token_verifier import TokenPayload
 
 profile_router = APIRouter(tags=["auth-profile"])
 

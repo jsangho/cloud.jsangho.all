@@ -16,13 +16,13 @@ import logging
 import os
 from collections.abc import Awaitable, Callable
 
+from google import genai
+from google.genai import types
+
 from core.matrix.vault_keymaker_secret_manager import (
     DEFAULT_GEMINI_MODEL_ID,
     get_keymaker,
 )
-from google import genai
-from google.genai import types
-
 from ontology.app.dtos.gemini_tool_dto import (
     ToolCall,
     ToolDeclaration,

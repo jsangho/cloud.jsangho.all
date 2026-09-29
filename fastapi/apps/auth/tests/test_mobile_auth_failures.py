@@ -9,6 +9,7 @@ from __future__ import annotations
 import fakeredis.aioredis
 import pytest
 from fakes import FakeUsers, FakeVault
+from fastapi import HTTPException
 
 from auth.adapter.outbound.redis.session_redis_store import SessionRedisStore
 from auth.app.dtos.mobile_auth_dto import MobileDeviceDto
@@ -23,7 +24,6 @@ from auth.app.ports.output.session_store import (
 )
 from auth.app.use_cases.mobile_auth_interactor import MobileAuthInteractor
 from auth.domain.value_objects.kakao_identity import KakaoProfile, KakaoTokenSet
-from fastapi import HTTPException
 
 _DEVICE = MobileDeviceDto(
     device_id="device-1", device_name="Pixel 8", os="android", app_version="1.0.0+1"

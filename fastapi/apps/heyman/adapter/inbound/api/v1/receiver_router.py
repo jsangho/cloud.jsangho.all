@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends
+
 from heyman.adapter.inbound.api.schemas.receiver_schema import (
     ReceiverRequest,
     ReceiverResponse,
@@ -7,8 +9,6 @@ from heyman.adapter.inbound.api.schemas.receiver_schema import (
 from heyman.app.dtos.receiver_dto import ReceiverCommand
 from heyman.app.ports.input.receiver_use_case import ReceiverUseCase
 from heyman.dependencies.receiver_provider import get_receiver_use_case
-
-from fastapi import APIRouter, Depends
 
 receiver_router = APIRouter(prefix="/receiver", tags=["receiver"])
 

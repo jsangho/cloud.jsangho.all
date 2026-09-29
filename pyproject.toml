@@ -27,15 +27,20 @@ dependencies = [
     "ollama==0.6.2",
     "kiwipiepy==0.23.1",
     "opencv-python-headless==5.0.0.93",
-    "ultralytics==8.4.89",
+    # `ultralytics`는 2026-09-29에 뺐다 — YOLO 얼굴 탐지·분류를 지우면서 코드
+    # 참조가 0건이 됐다. 그것만 딸려 온 전이 의존이 셋이다(비-headless
+    # `opencv-python`·`polars`·`polars-runtime-32`) — 특히 opencv가 headless와
+    # **중복 설치**되고 있었다.
     "timm==1.0.28",
     "decord==0.6.0",
     "pillow==12.3.0",
     "numpy==2.5.1",
     "pandas==3.0.3",
     "scikit-learn==1.8.0",
-    "lightgbm==4.7.0",
-    "xgboost==3.3.0",
+    # `lightgbm`·`xgboost`는 2026-09-29에 뺐다 — **코드 import가 0건**이었다.
+    # xgboost 하나가 자기 99MB에 `nvidia-nccl-cu12` **290MB**까지 끌고 왔다
+    # (GPU 지원 의존이다. torch는 CPU 휠인데 이쪽으로 CUDA가 들어오고 있었다).
+    # 부스팅이 다시 필요해지면 그때 되살린다.
     "matplotlib==3.11.0",
     "seaborn==0.13.2",
     "boto3==1.43.40",
@@ -122,18 +127,30 @@ ignore = [
 "**/apps/ontology/tests/*.py" = ["E402"]  # standalone 검증 스크립트 sys.path 조작
 
 [tool.ruff.lint.isort]
+# **`fastapi/apps/*` 디렉터리명 + 공유 커널 `core`가 정본이다.** 여기 빠진 이름은
+# 서드파티로 분류되어 `fastapi`·`pydantic` 사이에 섞여 정렬된다 — 실제로 `core`와
+# 앱 넷(`admin`·`heyman`·`lion_king`·`soccer`)이 그 상태였다.
+# 앱을 추가·삭제하면 이 목록과 `fastapi/.importlinter`를 함께 고친다.
 known-first-party = [
+    # `jsangho`는 디렉터리가 아니라 §0-3이 정한 core의 표기 규약이다. 실제 import는
+    # `core.`로 쓰므로 아래 `core`가 분류를 담당하고, 이 줄은 규약 쪽을 받쳐 둔다.
     "jsangho",
+    "core",
     "ontology",
     "kayfabe",
-    "superstar",
     "auth",
-    "human_resource",
-    "imitation_game",
-    "inception",
-    "social_network",
-    "manager",
+    "admin",
+    "heyman",
+    "lion_king",
+    "soccer",
 ]
+
+# **`fastapi`는 서드파티 라이브러리다 — 명시하지 않으면 ruff가 오인한다.**
+# 저장소 루트에 배포 디렉터리 `fastapi/`가 있어서 src 자동 탐지가 그것을 패키지로
+# 본다. 그러면 같은 라이브러리가 두 블록으로 갈라진다: `from fastapi import Depends`는
+# 디렉터리가 맞아 first-party로, `from fastapi.middleware.cors import ...`는
+# `fastapi/middleware/`가 없어 서드파티로 떨어진다.
+known-third-party = ["fastapi"]
 
 [tool.mypy]
 python_version = "3.13"

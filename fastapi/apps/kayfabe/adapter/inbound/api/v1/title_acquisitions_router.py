@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends
+
 from kayfabe.adapter.inbound.api.schemas.ple_events_schema import MyselfSchema
 from kayfabe.adapter.inbound.api.schemas.title_acquisitions_schema import (
     ChampionshipBoardResponseSchema,

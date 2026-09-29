@@ -42,7 +42,7 @@ export default function DataCenterChampionshipsPage() {
 
   return (
     <DataCenterShell
-      title="Championships"
+      title="벨트"
       description="현 챔피언과 벨트별 획득 기록입니다. 재위 기간은 원본이 자유 텍스트라 계산하지 않습니다."
     >
       {loading ? (

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from google import genai
 from google.genai import types
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from ontology.app.dtos.semantic_routing_dto import (
     ROUTING_SYSTEM_PROMPT,
     SemanticRoutingCommand,

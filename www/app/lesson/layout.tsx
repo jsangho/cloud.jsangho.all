@@ -3,31 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const VISION_HREF = "/lesson/vision";
-const OBJECT_DETECTION_HREF = "/lesson/vision/object-detection";
 const RAG_CHAT_HREF = "/lesson/rag-system/rag-chat";
 const CRAWLER_SCRAPER_HREF = "/lesson/dataset-collection/crawler-scraper";
 const LEDGER_HREF = "/lesson/ledger";
 export default function LessonLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isVision = pathname === VISION_HREF;
-  const isObjectDetection = pathname === OBJECT_DETECTION_HREF;
   const isRagChat = pathname === RAG_CHAT_HREF;
   const isCrawlerScraper = pathname === CRAWLER_SCRAPER_HREF;
   const isLedger = pathname === LEDGER_HREF;
-  const isVisionSection = isVision || isObjectDetection;
 
-  const [visionExpanded, setVisionExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    if (isObjectDetection) {
-      setVisionExpanded(true);
-    }
-  }, [isObjectDetection]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -35,62 +25,18 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
 
   const nav = (
     <nav className="flex flex-col gap-1" aria-label="수업 메뉴">
-      <div
+      <Link
+        href={VISION_HREF}
+        aria-current={isVision ? "page" : undefined}
         className={cn(
-          "flex items-center rounded-lg text-sm font-medium transition-colors",
-          isVisionSection ? "bg-stone-100 text-stone-950" : "text-stone-600 dark:text-stone-300",
+          "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          isVision
+            ? "bg-stone-100 text-stone-950 hover:bg-stone-50"
+            : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
         )}
       >
-        <Link
-          href={VISION_HREF}
-          aria-current={isVision ? "page" : undefined}
-          className={cn(
-            "min-w-0 flex-1 rounded-l-lg px-3 py-2.5 transition-colors",
-            !isVisionSection &&
-              "hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            isVisionSection && "hover:bg-stone-50",
-          )}
-        >
-          비전 처리
-        </Link>
-        <button
-          type="button"
-          onClick={() => setVisionExpanded((v) => !v)}
-          aria-expanded={visionExpanded}
-          aria-label={visionExpanded ? "하위 메뉴 접기" : "하위 메뉴 펼치기"}
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-r-lg px-2 py-2.5 transition-colors",
-            !isVisionSection &&
-              "hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            isVisionSection && "hover:bg-stone-50",
-          )}
-        >
-          <ChevronRight
-            className={cn(
-              "size-4 transition-transform duration-200",
-              visionExpanded && "rotate-90",
-            )}
-            aria-hidden
-          />
-        </button>
-      </div>
-
-      {visionExpanded && (
-        <>
-          <Link
-            href={OBJECT_DETECTION_HREF}
-            aria-current={isObjectDetection ? "page" : undefined}
-            className={cn(
-              "rounded-lg py-2 pl-6 pr-3 text-sm transition-colors",
-              isObjectDetection
-                ? "bg-stone-100/90 font-semibold text-stone-950"
-                : "text-stone-600 dark:text-stone-300 hover:bg-stone-100/60 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-50",
-            )}
-          >
-            객체 탐지
-          </Link>
-        </>
-      )}
+        비전 처리
+      </Link>
 
       <Link
         href={RAG_CHAT_HREF}
@@ -162,9 +108,7 @@ export default function LessonLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* Mobile: hamburger + drawer */}
-      <div
-        className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col")}
-      >
+      <div className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col")}>
         <div className="sticky top-[4.25rem] z-20 flex items-center gap-2 border-b border-stone-200/60 dark:border-stone-800/60 bg-white/70 dark:bg-stone-900/70 px-4 py-3 backdrop-blur md:hidden">
           <button
             type="button"
