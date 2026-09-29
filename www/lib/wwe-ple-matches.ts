@@ -435,6 +435,14 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "Roman Reigns", isChampion: true },
       { name: "LA Knight" },
     ),
+    m2("mitb26-reed-femi", "Single Match", "sideA", { name: "Bronson Reed" }, { name: "Oba Femi" }),
+    m2(
+      "mitb26-women-world",
+      "Women's World Championship",
+      "sideB",
+      { name: "Stephanie Vaquer", isChampion: true },
+      { name: "Becky Lynch or Liv Morgan" },
+    ),
   ],
 
   "night-of-champions": [
