@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.app.dtos.mobile_auth_dto import MobileDeviceDto
@@ -19,7 +20,6 @@ from auth.dependencies.auth_provider import get_mobile_auth_use_case
 from core.security.client_ip import client_ip
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi import APIRouter, Depends, HTTPException, Request
 
 mobile_auth_router = APIRouter(prefix="/mobile", tags=["auth-mobile"])
 

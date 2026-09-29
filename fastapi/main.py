@@ -27,6 +27,7 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -50,7 +51,6 @@ from core.matrix.grid_oracle_database_manager import (
     init_db,
 )
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from fastapi import Depends, FastAPI, HTTPException, Request
 from heyman.adapter.inbound.api import manager_router
 from kayfabe.adapter.inbound.api import kayfabe_router
 from lion_king.adapter.inbound.api.v1.photo_router import photo_router

@@ -1,3 +1,4 @@
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin.adapter.outbound.repositories.piper_hendricks_ceo_repository import (
@@ -11,7 +12,6 @@ from admin.app.use_cases.piper_hendricks_ceo_interactor import (
     HendricksCeoInteractor,
 )
 from core.matrix.grid_oracle_database_manager import get_db
-from fastapi import Depends
 
 
 def get_hendricks_ceo_repository(

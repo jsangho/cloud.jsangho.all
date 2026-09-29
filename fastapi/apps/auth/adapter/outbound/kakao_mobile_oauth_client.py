@@ -7,13 +7,13 @@
 from __future__ import annotations
 
 import httpx
+from fastapi import HTTPException
 
 from auth.app.ports.output.kakao_mobile_identity_provider import (
     KakaoMobileIdentityProvider,
 )
 from auth.domain.value_objects.kakao_identity import KakaoProfile, KakaoTokenSet
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from fastapi import HTTPException
 
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_PROFILE_URL = "https://kapi.kakao.com/v2/user/me"

@@ -9,9 +9,10 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, HTTPException
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi import APIRouter, Depends, HTTPException
 from lion_king.adapter.inbound.api.schemas.receipt_schema import (
     OcrReceiptRequest,
     ReceiptDraftResponse,

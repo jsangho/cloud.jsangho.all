@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 from heyman.adapter.inbound.api.schemas.juso_schema import (
     JusoFileuploadResponse,
     JusoMyselfSchema,

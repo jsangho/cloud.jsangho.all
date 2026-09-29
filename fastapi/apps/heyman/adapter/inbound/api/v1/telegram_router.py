@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from heyman.adapter.inbound.api.schemas.telegram_schema import (
     TelegramMyselfSchema,
     TelegramSendRequest,

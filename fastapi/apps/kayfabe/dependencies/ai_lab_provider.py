@@ -1,7 +1,7 @@
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.matrix.grid_oracle_database_manager import get_db
-from fastapi import Depends
 from kayfabe.adapter.outbound.pg.ai_lab_pg_repository import AiLabPgRepository
 from kayfabe.app.ports.input.ai_lab_use_case import AiLabUseCase
 from kayfabe.app.ports.output.ai_lab_repository import AiLabRepository

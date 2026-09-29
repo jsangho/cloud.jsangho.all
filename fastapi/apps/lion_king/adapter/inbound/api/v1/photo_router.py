@@ -9,9 +9,10 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from lion_king.adapter.inbound.api.schemas.photo_schema import PhotoResponse
 from lion_king.app.dtos.photo_dto import UploadPhotoCommand
 from lion_king.app.ports.input.photo_use_case import PhotoUseCase

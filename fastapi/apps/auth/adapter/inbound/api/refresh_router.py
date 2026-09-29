@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,6 @@ from auth.domain.services.token_issuer import (
 from core.matrix.grid_oracle_database_manager import get_db
 from core.security.cookie import set_access_cookie
 from core.security.role import UserRole
-from fastapi import APIRouter, Depends, HTTPException, Response
 
 refresh_router = APIRouter(tags=["auth-refresh"])
 

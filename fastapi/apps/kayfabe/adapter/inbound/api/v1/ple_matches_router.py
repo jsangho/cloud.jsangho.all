@@ -4,6 +4,7 @@ import logging
 
 import fastapi
 from fastapi import APIRouter, Depends
+
 from kayfabe.adapter.inbound.api.schemas.ple_events_schema import MyselfSchema
 from kayfabe.adapter.inbound.api.schemas.ple_matches_schema import (
     BatchResultsRequestSchema,

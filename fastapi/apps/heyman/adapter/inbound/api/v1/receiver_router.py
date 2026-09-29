@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+
 from heyman.adapter.inbound.api.schemas.receiver_schema import (
     ReceiverRequest,
     ReceiverResponse,

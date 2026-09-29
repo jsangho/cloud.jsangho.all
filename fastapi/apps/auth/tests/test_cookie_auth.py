@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
@@ -19,7 +20,6 @@ from core.security.cookie import (
     clear_access_cookie,
     set_access_cookie,
 )
-from fastapi import FastAPI
 
 app = FastAPI()
 

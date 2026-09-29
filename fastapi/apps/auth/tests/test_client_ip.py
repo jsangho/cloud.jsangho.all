@@ -7,10 +7,10 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from core.security.client_ip import client_ip
-from fastapi import FastAPI, Request
 
 app = FastAPI()
 

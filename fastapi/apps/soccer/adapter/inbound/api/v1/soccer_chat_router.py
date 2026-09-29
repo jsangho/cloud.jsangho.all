@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
+from fastapi import APIRouter, Body, Depends
 from fastapi.responses import StreamingResponse
 
 from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
-from fastapi import APIRouter, Body, Depends
 from soccer.adapter.inbound.api.schemas.soccer_chat_schema import SoccerChatSchema
 from soccer.app.dtos.soccer_chat_dto import SoccerChatCommand, SoccerChatTurnDto
 from soccer.app.ports.input.soccer_chat_use_case import SoccerChatUseCase

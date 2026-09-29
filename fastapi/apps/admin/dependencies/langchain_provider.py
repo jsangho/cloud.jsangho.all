@@ -1,3 +1,4 @@
+from fastapi import Depends
 from neo4j import AsyncSession
 
 from admin.adapter.outbound.repositories.graph_retrieval_repository import (
@@ -11,7 +12,6 @@ from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 from admin.app.ports.output.langchain_chat_port import LangchainChatPort
 from admin.app.use_cases.langchain_interactor import LangchainInteractor
 from core.matrix.grid_architect_graph_manager import get_neo4j_session
-from fastapi import Depends
 from ontology.app.ports.input.semantic_routing_use_case import SemanticRoutingUseCase
 from ontology.dependencies.semantic_routing_provider import (
     get_semantic_routing_use_case,

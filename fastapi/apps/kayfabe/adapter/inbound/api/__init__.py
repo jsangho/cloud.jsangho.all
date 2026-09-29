@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from kayfabe.adapter.inbound.api.v1.ai_lab_router import ai_lab_router
 from kayfabe.adapter.inbound.api.v1.ai_prediction_router import ai_prediction_router
 from kayfabe.adapter.inbound.api.v1.data_center_router import data_center_router

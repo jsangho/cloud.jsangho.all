@@ -1,3 +1,4 @@
+from fastapi import Depends
 from neo4j import AsyncSession
 
 from admin.adapter.outbound.repositories.pdf_document_repository import (
@@ -7,7 +8,6 @@ from admin.app.ports.input.pdf_loader_use_case import PdfLoaderUseCase
 from admin.app.ports.output.pdf_document_port import PdfDocumentPort
 from admin.app.use_cases.pdf_loader_interactor import PdfLoaderInteractor
 from core.matrix.grid_architect_graph_manager import get_neo4j_session
-from fastapi import Depends
 
 
 def get_pdf_document_repository(

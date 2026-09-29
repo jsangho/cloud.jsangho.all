@@ -145,6 +145,13 @@ known-first-party = [
     "soccer",
 ]
 
+# **`fastapi`는 서드파티 라이브러리다 — 명시하지 않으면 ruff가 오인한다.**
+# 저장소 루트에 배포 디렉터리 `fastapi/`가 있어서 src 자동 탐지가 그것을 패키지로
+# 본다. 그러면 같은 라이브러리가 두 블록으로 갈라진다: `from fastapi import Depends`는
+# 디렉터리가 맞아 first-party로, `from fastapi.middleware.cors import ...`는
+# `fastapi/middleware/`가 없어 서드파티로 떨어진다.
+known-third-party = ["fastapi"]
+
 [tool.mypy]
 python_version = "3.13"
 strict = true

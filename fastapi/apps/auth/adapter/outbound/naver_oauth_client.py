@@ -3,11 +3,11 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 import httpx
+from fastapi import HTTPException
 
 from auth.app.ports.output.oauth_identity_provider import OAuthIdentityProvider
 from auth.domain.value_objects.oauth_profile import OAuthProfile
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from fastapi import HTTPException
 
 NAVER_AUTHORIZE_URL = "https://nid.naver.com/oauth2.0/authorize"
 NAVER_TOKEN_URL = "https://nid.naver.com/oauth2.0/token"

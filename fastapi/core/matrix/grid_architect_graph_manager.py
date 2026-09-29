@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+from fastapi import HTTPException
 from neo4j import AsyncDriver, AsyncGraphDatabase, AsyncSession
 
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from fastapi import HTTPException
 
 _NEO4J_URI = get_keymaker().get_secret("NEO4J_URI")
 _NEO4J_USER = get_keymaker().get_secret("NEO4J_USER", "neo4j")

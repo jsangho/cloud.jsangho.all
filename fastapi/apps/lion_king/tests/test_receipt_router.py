@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi import FastAPI
 from lion_king.adapter.inbound.api.v1.receipt_router import receipt_router
 from lion_king.app.dtos.receipt_dto import (
     OcrReceiptCommand,

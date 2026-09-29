@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 
+from fastapi import HTTPException
+
 from auth.app.ports.input.signup_use_case import SignupUseCase
 from auth.app.ports.output.user_repository import UserRepository
 from core.security.password import hash_password
 from core.security.role import UserRole
-from fastapi import HTTPException
 
 
 class SignupInteractor(SignupUseCase):

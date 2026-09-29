@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from heyman.adapter.inbound.api.schemas.judge_schema import JudgeMyselfSchema
 from heyman.app.dtos.judge_dto import JudgeQuery, JudgeResponse
 from heyman.app.ports.input.judge_use_case import JudgeUseCase

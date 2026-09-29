@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from fastapi import HTTPException
+
 from auth.app.ports.input.profile_use_case import ProfileUseCase
 from auth.app.ports.output.user_repository import UserRepository
 from core.entities.user_model import UserModel
-from fastapi import HTTPException
 
 
 class ProfileInteractor(ProfileUseCase):

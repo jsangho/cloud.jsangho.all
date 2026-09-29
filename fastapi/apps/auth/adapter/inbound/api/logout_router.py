@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import time
 
+from fastapi import APIRouter, Depends, Response
+
 from auth.adapter.outbound.redis.refresh_token_repository import RefreshTokenRepository
 from auth.dependencies.auth_provider import get_refresh_token_repository
 from core.security.cookie import clear_access_cookie
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi import APIRouter, Depends, Response
 
 logout_router = APIRouter(tags=["auth-logout"])
 

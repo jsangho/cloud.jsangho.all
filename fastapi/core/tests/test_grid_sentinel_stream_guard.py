@@ -15,6 +15,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.testclient import TestClient
 
@@ -24,7 +25,6 @@ from core.matrix.grid_sentinel_stream_guard import (
     UPSTREAM_FAILED_DETAIL,
     open_guarded_text_stream,
 )
-from fastapi import FastAPI, HTTPException
 
 
 class FakeUpstreamError(Exception):

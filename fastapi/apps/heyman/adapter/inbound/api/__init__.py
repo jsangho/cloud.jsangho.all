@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from heyman.adapter.inbound.api.v1.discord_router import discord_router
 from heyman.adapter.inbound.api.v1.email_router import email_router
 from heyman.adapter.inbound.api.v1.judge_router import judge_router

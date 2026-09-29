@@ -4,6 +4,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException
+
 from ontology.adapter.inbound.api.schemas.crawl_scrape_pipeline_schema import (
     CrawlScrapePipelineRequest,
     CrawlScrapePipelineResponse,
