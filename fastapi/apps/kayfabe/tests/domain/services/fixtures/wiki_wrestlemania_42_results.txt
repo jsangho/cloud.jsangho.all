@@ -1,0 +1,49 @@
+==Results==
+{{Pro wrestling results table
+|times  = 
+|caption = Night 1 (April 18)
+|match1 = The Usos (Jey Uso and Jimmy Uso) and LA Knight defeated The Vision (Logan Paul and Austin Theory) and IShowSpeed by pinfall
+|stip1  = Six-man tag team match
+|time1  = 7:10
+|match2 = Jacob Fatu defeated Drew McIntyre by pinfall
+|stip2  = Unsanctioned match
+|time2  = 14:10
+|match3 = Brie Bella and Paige (with Nikki Bella) defeated The Irresistible Forces (Nia Jax and Lash Legend) (c), Charlotte Flair and Alexa Bliss, and Bayley and Lyra Valkyria by pinfall
+|stip3  = Fatal four-way tag team match for the WWE Women's Tag Team Championship
+|time3  = 8:35
+|match4 = Becky Lynch defeated AJ Lee (c) by pinfall
+|stip4  = Singles match for the WWE Women's Intercontinental Championship
+|time4  = 8:15
+|match5 = Gunther defeated Seth Rollins by technical submission
+|stip5  = Singles match
+|time5  = 17:50
+|match6 = Liv Morgan defeated Stephanie Vaquer (c) by pinfall
+|stip6  = Singles match for the Women's World Championship
+|time6  = 6:50
+|match7 = Cody Rhodes (c) defeated Randy Orton by pinfall
+|stip7  = Singles match for the Undisputed WWE Championship
+|time7  = 22:45
+}}
+
+{{Pro wrestling results table
+| times = 
+| caption = Night 2 (April 19)
+| match1 = Oba Femi defeated Brock Lesnar (with Paul Heyman) by pinfall
+| stip1 = Singles match
+| time1 = 4:45
+| match2 = Penta (c) defeated Je'Von Evans, Dragon Lee, JD McDonagh, Rusev, and Rey Mysterio
+| stip2 = Six-pack ladder match for the WWE Intercontinental Championship
+| time2 = 15:10
+| match3 = Trick Williams (with Lil Yachty) defeated Sami Zayn (c) by pinfall
+| stip3 = Singles match for the WWE United States Championship
+| time3 = 7:05
+| match4 = "The Demon" Finn Bálor defeated Dominik Mysterio by pinfall
+| stip4 = Street Fight
+| time4 = 10:25
+| match5 = Rhea Ripley defeated Jade Cargill (c) by pinfall
+| stip5 = Singles match for the WWE Women's Championship
+| time5 = 10:10
+| match6 = Roman Reigns defeated CM Punk (c) by pinfall
+| stip6 = Singles match for the World Heavyweight Championship
+| time6 = 33:55
+}}

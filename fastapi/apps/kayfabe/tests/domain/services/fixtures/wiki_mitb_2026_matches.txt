@@ -1,0 +1,20 @@
+==Matches==
+
+{{Pro wrestling results table
+|times  =
+|match1 = Bron Breakker vs. Je'Von Evans vs. Trick Williams vs. Penta vs. CM Punk vs. 1 TBD
+|stip1  = Money in the Bank ladder match for a men's championship match contract
+|time1  = 
+|match2 = Sol Ruca vs. Lola Vice vs. Jacy Jayne vs. Roxanne Perez vs. Lash Legend vs. 1 TBD
+|stip2  = Money in the Bank ladder match for a women's championship match contract
+|time2  = 
+|match3 = Roman Reigns (c) vs. LA Knight
+|stip3  = Singles match for the World Heavyweight Championship
+|time3  = 
+|match4 = Bronson Reed vs. Oba Femi
+|stip4  = Singles match
+|time4  = 
+|match5 = Stephanie Vaquer (c) vs. Becky Lynch or Liv Morgan
+|stip5  = Singles match for the Women's World Championship
+|time5  = 
+}}
