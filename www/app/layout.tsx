@@ -51,7 +51,11 @@ export default function RootLayout({
         <GoogleSessionProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
+            /* 라이트가 기본이다 (2026-09-29). `_docs/darkmode-spec.md`가 처음부터
+               "기본값: 화이트 모드"로 정해 둔 것을 구현이 `dark`로 뒤집고 있었다.
+               `enableSystem`이 남아 있으므로 OS가 다크면 다크로 뜬다 — 기본값은
+               OS 설정이 없을 때만 쓰인다. */
+            defaultTheme="light"
             enableSystem
             disableTransitionOnChange
           >

@@ -5,39 +5,51 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* ── 라이트가 기본 테마다 (2026-09-29 사용자 결정) ─────────────────────
+     예전 이 자리는 shadcn 기본 무채색 한 벌이었다(`oklch(1 0 0)` 흰색 +
+     회색). 브랜드 역할색만 라이트용으로 잡혀 있고 **중립색과 표면은 제네릭**
+     이라, 토글을 눌러도 "밝지만 KayFabe가 아닌 화면"이 나왔다.
+
+     중립은 순수 회색이 아니라 **웜 뉴트럴(stone)** 이다 — 골드 액션과 같은
+     온도라 한 화면에서 따로 놀지 않는다. 역할은 다크와 똑같이 §표면 계단의
+     이름을 가리킨다: 값을 고칠 자리가 테마마다 한 곳뿐이어야 한다. */
+  --background: var(--surface-1);
+  --foreground: #1c1917;
+  --card: var(--surface-card);
+  --card-foreground: #1c1917;
+  --popover: var(--surface-card);
+  --popover-foreground: #1c1917;
+  /* `--primary`/`--primary-foreground`는 아래 §시맨틱 역할에서 정한다
+     (`--brand` 기준). 여기서 또 적으면 두 곳이 서로를 덮는다. */
+  --secondary: var(--surface-2);
+  --secondary-foreground: #1c1917;
+  --muted: var(--surface-2);
+  /* 본문 회색이 아니라 **메타 회색**이다. 본문은 --foreground를 쓴다 —
+     흰 배경에서 #78716c는 4.6:1로 본문에는 겨우 통과라 긴 글에 안 쓴다. */
+  --muted-foreground: #78716c;
+  --accent: var(--surface-2);
+  --accent-foreground: #1c1917;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: var(--surface-border);
+  --input: var(--surface-border);
+  /* 포커스 링은 브랜드색이다 — 무채색 링은 어느 화면에 있는지 말해 주지 않는다. */
+  --ring: var(--brand);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--surface-card);
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: var(--brand);
+  /* 딥앰버 위에서는 근흑색이 흰색보다 대비가 높다 (5.6:1 대 3.7:1). */
+  --sidebar-primary-foreground: #0c0a09;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: var(--surface-border);
+  --sidebar-ring: var(--brand);
 
   /* KayFabe 브랜드 램프 — Tailwind v4 amber 팔레트와 값이 정확히 같다.
      TSX의 amber-* 유틸리티를 brand-*로 옮기면서 픽셀 동일성을 지키기 위한
@@ -115,8 +127,11 @@
      골드 = 랭킹 / 성취 · 레드 = WWE / LIVE · 블루 = AI / 데이터 / 분석.
      **세 색이 각자 하나의 뜻만 갖는다** — 이게 "WWE 팬사이트"와
      "WWE Sports Analytics" 를 가르는 자리다. 골드를 분석 화면에 쓰거나
-     블루를 장식으로 쓰면 그 구분이 다시 사라진다. */
-  --live: #e63946;
+     블루를 장식으로 쓰면 그 구분이 다시 사라진다.
+
+     **값은 테마마다 다르고 뜻은 같다.** 아래는 라이트(흰 표면) 값이고 다크는
+     `.dark`가 덮는다 — 다크용 `#e63946`은 흰 배경에서 3.8:1이라 글자에 못 쓴다. */
+  --live: #dc2626;
 
   /* 분석·AI 축. 램프로 두는 이유: 차트가 한 색의 여러 단계를 쓴다
      (순차 램프 §차트 토큰). 단일 hex면 그때 가서 즉흥적으로 고르게 된다. */
@@ -127,9 +142,12 @@
   --data-500: #2563eb;
   --data-600: #1b44b5;
   --data-700: #16307a;
-  --data: var(--data-400);
-  /* 분석 카드의 표면 — 근흑색 캔버스보다 파랑 쪽으로 반 발짝. */
-  --data-surface: #101a2e;
+  /* 라이트는 램프 한 단 아래를 쓴다 — `--data-400`(#3b82f6)은 흰 배경에서
+     3.1:1이라 텍스트·아이콘에 못 쓴다. 다크는 `.dark`가 400으로 되돌린다. */
+  --data: var(--data-500);
+  /* 분석 카드의 표면 — 캔버스보다 파랑 쪽으로 반 발짝. 다크는 근흑색 기준의
+     남색(`.dark`), 라이트는 같은 뜻의 옅은 파랑이다. */
+  --data-surface: #eff6ff;
   --info: var(--data);
   /* `--info`는 옛 이름이다. 새 코드는 `--data`(text-data · bg-data)를 쓴다 —
      같은 값을 가리키므로 기존 화면은 그대로다. */
@@ -137,18 +155,38 @@
   /* ── 표면 계단 (KAYFABE 2.0) ───────────────────────────────────────────
      예전에는 `--card`가 `--background`와 **같은 값**이라 다크에서 카드가
      배경과 구분되지 않았다(그림자도 없는 시스템이라 경계가 아예 없었다).
-     대시보드는 카드가 정보 계층을 만드는 화면이므로 계단을 실제로 둔다. */
-  --surface-1: #08090b;
-  --surface-2: #0d0f12;
-  --surface-card: #101317;
-  --surface-card-2: #14171c;
-  --surface-border: #252a31;
+     대시보드는 카드가 정보 계층을 만드는 화면이므로 계단을 실제로 둔다.
+
+     **계단은 테마마다 다르다.** 예전에는 이 다섯이 `:root`에만 있어서 값이
+     다크 전용이었고, `bg-card-2`(18곳) · `bg-surface-2`(2곳)를 쓰는 화면은
+     라이트에서도 검게 남았다. 그래서 라이트 값을 여기 두고 다크는 `.dark`가
+     같은 이름을 덮는다.
+
+     라이트에서 카드가 뜨는 방향은 **반대다** — 캔버스가 오프화이트고 카드가
+     그보다 밝다. 어두운 표면에서 카드를 밝게 올리던 것을 그대로 뒤집은 것이다.
+
+     **여기서 순백을 쓰지 않는다** (2026-09-29 사용자 — "너무 밝아"). 처음 라이트
+     값은 캔버스 #fafaf9 · 카드 #ffffff였는데, 그림자 없는 시스템에서는 화면의
+     거의 전부가 표면이라 98% 밝기가 그대로 눈에 들어온다. 한 단 낮춘 웜 페이퍼로
+     옮겼다 — 계단의 **방향과 간격은 그대로**고(카드가 캔버스보다 위), 전체 밝기만
+     내려간다. 부수 효과로 경계선이 살아난다: 예전 카드↔캔버스 명도비는 1.04라
+     계단이 사실상 없었고, 지금은 1.09다. */
+  --surface-1: #f4f1ec;
+  --surface-2: #ebe7e1;
+  --surface-card: #fcfbf9;
+  --surface-card-2: #f6f3ef;
+  --surface-border: #ddd8d0;
 
   /* ── 차트 토큰 (dataviz 검증 통과) ─────────────────────────────────────
      **눈으로 고르지 않았다.** `scripts/validate_palette.js`로 밝기 대역 ·
      채도 바닥 · 색각 이상 분리(ΔE) · 정상시 분리 · 표면 대비 다섯을 재서
-     통과시킨 값이다. 다크(#0d0f12)와 라이트(#ffffff) **양쪽에서 통과**하므로
+     통과시킨 값이다. 다크(#0d0f12)와 라이트(당시 #ffffff) **양쪽에서 통과**하므로
      계열 색은 테마와 무관하게 하나를 쓴다.
+
+     **라이트 표면이 한 단 내려가면서 여유가 줄었다** — 계열 색의 표면 대비가
+     카드(#fcfbf9) 기준 2.94~3.62다. `--chart-3`(#0ea5a0)이 3:1 아래로 내려가는데,
+     순백에서도 3.04라 원래 경계선에 있던 값이다. 계열 값을 손대는 건 별도 작업이라
+     여기서는 건드리지 않았다.
 
      순서는 고정이다 — 계열이 늘거나 필터로 줄어도 **색이 사람을 따라간다.**
      일곱 번째 계열은 새 색을 만들지 않고 "기타"로 접거나 화면을 나눈다. */
@@ -192,6 +230,22 @@
 }
 
 .dark {
+  /* ── 다크 표면 계단 ────────────────────────────────────────────────────
+     **이 다섯이 예전에는 `:root`에 있었다.** 라이트가 기본이 되면서 이름은
+     그대로 두고 값만 여기로 옮겼다 — 아래 역할 매핑(`--card: var(--surface-card)`)
+     은 한 글자도 안 바뀌었고, 다크 화면은 전과 같은 값을 받는다. */
+  --surface-1: #08090b;
+  --surface-2: #0d0f12;
+  --surface-card: #101317;
+  --surface-card-2: #14171c;
+  --surface-border: #252a31;
+
+  /* 역할색도 같은 이유로 되돌린다 — 라이트에서 내렸던 단계를 다크에서는
+     원래 값으로 쓴다. 뜻(LIVE·데이터)은 테마와 무관하게 같다. */
+  --live: #e63946;
+  --data: var(--data-400);
+  --data-surface: #101a2e;
+
   /* 표면은 §표면 계단의 이름을 가리킨다 (KAYFABE 2.0).
      **예전에는 `--card`가 `--background`와 같은 값이었다** — 그림자가 없는
      시스템이라 카드가 배경에서 아예 안 떠올랐다. 대시보드로 가려면 여기부터
@@ -382,14 +436,28 @@
     width: min(100%, 36rem);
     transform: translate(-50%, -50%);
     border-radius: 9999px;
+    /* 라이트 기본값 — 흰 캔버스에서 빨강 28%는 분홍 얼룩으로 읽힌다.
+       골드를 옅게 깔아 헤드라인 뒤에 온기만 남긴다(액션 골드보다 연하게
+       두어 CTA와 경쟁하지 않는다). */
     background: radial-gradient(
       ellipse at center,
-      rgba(220, 38, 38, 0.28) 0%,
-      rgba(185, 28, 28, 0.12) 42%,
+      rgba(252, 187, 0, 0.16) 0%,
+      rgba(252, 187, 0, 0.06) 42%,
       transparent 72%
     );
     filter: blur(48px);
     pointer-events: none;
+  }
+
+  /* 다크에서는 근흑색 위라 빨강이 탁해 보였다 — 채도를 올리고 알파를 낮춰
+     갈색으로 뭉치지 않게 한다. 예전 값은 rgba(220,38,38,0.28)이었다. */
+  .dark .hero-title-backdrop {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(230, 57, 70, 0.22) 0%,
+      rgba(230, 57, 70, 0.08) 45%,
+      transparent 72%
+    );
   }
 
   .text-head-of-table {

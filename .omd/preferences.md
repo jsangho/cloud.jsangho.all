@@ -229,3 +229,78 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestle
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestlers/page.tsx — not in DESIGN.md radius scale
+
+## 2026-09-29T03:18:58.987Z — introduced-off-palette-color-s-fafaf9-f5
+
+```omd-meta
+id: pref_mum3xiuj_f32be542
+timestamp: 2026-09-29T03:18:58.987Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #fafaf9, #f5f5f4, #e7e5e4 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-29T03:19:20.542Z — introduced-off-palette-color-s-dc2626-in
+
+```omd-meta
+id: pref_mum3xzha_8ad27f47
+timestamp: 2026-09-29T03:19:20.542Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #dc2626 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-29T03:19:26.278Z — introduced-off-palette-color-s-eff6ff-in
+
+```omd-meta
+id: pref_mum3y3wm_016a4ade
+timestamp: 2026-09-29T03:19:26.278Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #eff6ff in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-29T05:35:18.363Z — introduced-off-palette-color-s-f4f1ec-eb
+
+```omd-meta
+id: pref_mum8su3f_528f4729
+timestamp: 2026-09-29T05:35:18.363Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #f4f1ec, #ebe7e1, #fcfbf9 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-29T05:35:24.961Z — introduced-off-palette-color-s-fcfbf9-in
+
+```omd-meta
+id: pref_mum8sz6p_a339edcd
+timestamp: 2026-09-29T05:35:24.961Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #fcfbf9 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
