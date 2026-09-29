@@ -163,7 +163,7 @@ WWE_BRAND_CHAMPIONS: list[_BrandRosterEntry] = [
     {
         "id": "global",
         "label": "브랜드 공통 · 디벨롭먼트",
-        "tagline": "Speed · Evolve · ID",
+        "tagline": "Evolve · ID",
         "accent": "purple",
         "titles": [
             {
@@ -172,20 +172,6 @@ WWE_BRAND_CHAMPIONS: list[_BrandRosterEntry] = [
                 "won_at": "2026-04-18",
                 "won_event": "WrestleMania 42",
                 "tier": "tag",
-            },
-            {
-                "belt_name": "WWE Speed Championship",
-                "champions": ["Lexis King"],
-                "won_at": "2026-04-21",
-                "won_event": "NXT Revenge",
-                "tier": "other",
-            },
-            {
-                "belt_name": "WWE Women's Speed Championship",
-                "champions": ["Wren Sinclair"],
-                "won_at": "2026-03-17",
-                "won_event": "NXT",
-                "tier": "other",
             },
             {
                 "belt_name": "WWE Evolve Championship",
