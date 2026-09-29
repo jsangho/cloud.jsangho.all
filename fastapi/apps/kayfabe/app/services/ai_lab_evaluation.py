@@ -93,28 +93,28 @@ RULES: tuple[Rule, ...] = (
         label="평가 대상 아님",
         severity=SEVERITY_EXCLUDE,
         description=(
-            "에이전트가 아무도 답하지 못해 북메이커 배당으로 대체한 예측입니다. "
-            "에이전트의 판단이 아니므로 채점 대상이 아닙니다."
+            "분석기가 아무도 답하지 못해 배당을 그대로 옮겨 만든 예측입니다. "
+            "분석기의 판단이 아니므로 채점 대상이 아닙니다."
         ),
     ),
     Rule(
         code="external_outcome_known",
-        label="생성 전 결과가 외부에 알려짐",
+        label="만들기 전에 이미 결과가 알려져 있었음",
         severity=SEVERITY_EXCLUDE,
         description=(
-            "예측을 만들 때 결과가 이 시스템 밖에서 이미 알려져 있었다고 기록된 "
-            "표본입니다. 사후 재현이므로 채점 대상이 아닙니다 — 누수가 확정된 "
-            "실격과 달리, 표본의 성격이 처음부터 다릅니다."
+            "예측을 만들 때 결과가 이 시스템 밖에서 이미 알려져 있었다고 적어 둔 "
+            "예측입니다. 지나간 경기를 다시 맞혀 본 것이므로 채점 대상이 아닙니다 — "
+            "정답이 샌 것이 확인된 실격과 달리, 애초에 성격이 다른 예측입니다."
         ),
     ),
     Rule(
         code=STATUS_WITHDRAWN,
-        label="경기가 카드에서 사라짐",
+        label="경기가 대진표에서 사라짐",
         severity=SEVERITY_EXCLUDE,
         description=(
-            "예측이 가리키는 경기가 더 이상 이 대회의 카드에 없습니다. 대진이 "
+            "예측이 가리키는 경기가 더 이상 이 대회의 대진표에 없습니다. 대진이 "
             "바뀌면서 빠졌거나, 애초에 잘못 올라간 경기였습니다. 결과를 기다리는 "
-            "것이 아니라 물음 자체가 회수된 것이므로 채점 대상이 아닙니다."
+            "것이 아니라 질문 자체가 사라진 것이므로 채점 대상이 아닙니다."
         ),
     ),
     Rule(
@@ -125,43 +125,43 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         code="temporal_inversion",
-        label="결과 기록 이후 생성",
+        label="결과가 기록된 뒤에 만들어짐",
         severity=SEVERITY_DISQUALIFY,
         description=(
-            "결과가 시스템에 기록된 뒤에 만들어진 예측입니다. 정답을 알 수 있는 "
-            "상태에서 생성됐으므로 예측 능력의 근거가 되지 못합니다. 같은 시각도 "
+            "결과가 시스템에 기록된 뒤에 만들어진 예측입니다. 정답을 볼 수 있는 "
+            "상태에서 나왔으므로 실력의 근거가 되지 못합니다. 시각이 똑같아도 "
             "먼저였다고 말할 수 없으므로 실격입니다."
         ),
     ),
     Rule(
         code="self_reference",
-        label="자기 대회 문서 인용",
+        label="그 대회를 다룬 글을 근거로 씀",
         severity=SEVERITY_DISQUALIFY,
         description=(
-            "그 대회 자체를 다룬 문서를 근거로 실었습니다. 대회 문서에는 경기 결과가 "
-            "적혀 있으므로 예측이 아니라 열람일 수 있습니다."
+            "그 대회 자체를 다룬 글을 근거로 실었습니다. 그런 글에는 경기 결과가 "
+            "적혀 있으므로, 예측이 아니라 정답을 읽은 것일 수 있습니다."
         ),
     ),
     Rule(
         code="unverifiable_corpus",
-        label="인용 문서가 경기보다 앞선 개정본이 아님",
+        label="읽은 글이 경기보다 먼저 쓰인 것인지 확인 불가",
         severity=SEVERITY_HOLD,
         description=(
-            "인용한 문서를 우리가 읽은 개정본이 경기 시작일보다 앞선다는 것을 "
-            "확인할 수 없습니다. 개정본 시각이나 대회 날짜를 모르는 경우, 그리고 "
-            "경기 당일 이후 개정본인 경우가 모두 여기에 들어갑니다. 모르는 것을 "
-            "과거로 간주하지 않으므로 통과도 실격도 아닌 보류입니다."
+            "근거로 읽은 글이 경기 날짜보다 먼저 쓰인 것이라고 확인할 수 없습니다. "
+            "글이 언제 쓰였는지 모르는 경우, 대회 날짜를 모르는 경우, 경기 당일 "
+            "이후에 고쳐진 글인 경우가 모두 여기에 들어갑니다. 모르는 것을 "
+            '"그때는 없던 내용"으로 치지 않으므로 통과도 실격도 아닌 보류입니다.'
         ),
     ),
     Rule(
         code="revision_after_prediction",
-        label="예측보다 나중에 생긴 글을 읽었다고 기록됨",
+        label="예측보다 나중에 고쳐진 글을 읽었다고 적혀 있음",
         severity=SEVERITY_HOLD,
         description=(
-            "예측이 읽었다고 기록된 글 중에 예측보다 **나중에** 고쳐진 개정본이 "
-            "있습니다. 그 글은 예측을 만들 때 아직 존재하지 않았으므로 기록이 "
-            "사실일 수 없습니다 — 기록을 뒤늦게 채웠거나 시각이 어긋난 것입니다. "
-            "누수가 확인된 것은 아니므로 실격이 아니라, 증거를 믿을 수 없어 "
+            "읽었다고 적혀 있는 글 중에 예측보다 나중에 고쳐진 것이 있습니다. "
+            "그 내용은 예측을 만들 때 아직 없었으므로 이 기록은 사실일 수 "
+            "없습니다 — 기록을 뒤늦게 채웠거나 시각이 어긋난 것입니다. 정답이 "
+            "샜다고 확인된 것은 아니므로 실격이 아니라, 기록을 믿을 수 없어 "
             "보류입니다."
         ),
     ),
@@ -443,7 +443,7 @@ def _judge(
                     STATUS_NOT_APPLICABLE,
                     failed=True,
                     applicable=True,
-                    detail="북메이커 배당으로 대체된 예측입니다.",
+                    detail="분석기 대신 배당을 그대로 옮겨 만든 예측입니다.",
                 ),
             ),
         )
@@ -464,7 +464,7 @@ def _judge(
                     applicable=True,
                     # 선언의 근거는 사람이 쓴 문장이다. 여기서 지어내지 않는다.
                     detail=row.provenance_note
-                    or "생성 시점에 결과가 시스템 밖에서 이미 알려져 있었습니다.",
+                    or "만들 때 이미 결과가 시스템 밖에서 알려져 있었습니다.",
                 ),
             ),
         )
@@ -481,7 +481,7 @@ def _judge(
                     STATUS_WITHDRAWN,
                     failed=True,
                     applicable=True,
-                    detail="이 경기가 대회 카드에 더 이상 없습니다.",
+                    detail="이 경기가 대회 대진표에 더 이상 없습니다.",
                 ),
             ),
         )
@@ -527,10 +527,7 @@ def _temporal(row: PredictionRow) -> RuleVerdict:
             "temporal_inversion",
             failed=False,
             applicable=False,
-            detail=(
-                "결과가 시스템에 기록된 시각이 없어 예측이 먼저였는지 판정할 수 "
-                "없습니다."
-            ),
+            detail=("결과가 기록된 시각이 없어 예측이 먼저였는지 가릴 수 없습니다."),
         )
     if row.generated_at >= row.finished_at:
         return _verdict(
@@ -538,15 +535,15 @@ def _temporal(row: PredictionRow) -> RuleVerdict:
             failed=True,
             applicable=True,
             detail=(
-                f"결과 기록 {row.finished_at.isoformat()} 이후인 "
-                f"{row.generated_at.isoformat()}에 생성됐습니다."
+                f"결과가 기록된 {row.finished_at.isoformat()} 이후인 "
+                f"{row.generated_at.isoformat()}에 만들어졌습니다."
             ),
         )
     return _verdict(
         "temporal_inversion",
         failed=False,
         applicable=True,
-        detail=f"결과 기록 {row.finished_at.isoformat()}보다 먼저 생성됐습니다.",
+        detail=f"결과가 기록된 {row.finished_at.isoformat()}보다 먼저 만들어졌습니다.",
     )
 
 
@@ -562,20 +559,20 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
             "self_reference",
             failed=False,
             applicable=True,
-            detail="저장된 인용 출처가 없습니다.",
+            detail="근거로 적어 둔 출처가 없습니다.",
         )
     if cites_own_event(sources, row.event_label):
         return _verdict(
             "self_reference",
             failed=True,
             applicable=True,
-            detail=f"'{row.event_label}' 대회 자체를 다룬 문서를 인용했습니다.",
+            detail=f"'{row.event_label}' 대회 자체를 다룬 글을 근거로 썼습니다.",
         )
     return _verdict(
         "self_reference",
         failed=False,
         applicable=True,
-        detail=f"인용 출처 {len(sources)}건에 그 대회 문서가 없습니다.",
+        detail=f"근거로 쓴 출처 {len(sources)}건에 그 대회를 다룬 글이 없습니다.",
     )
 
 
@@ -728,7 +725,7 @@ def _corpus_from_retrievals(
             failed=True,
             applicable=True,
             detail=(
-                "대회 날짜를 몰라 읽은 글이 경기보다 앞선 것인지 비교할 수 없습니다."
+                "대회 날짜를 몰라 읽은 글이 경기보다 먼저 쓰인 것인지 견줄 수 없습니다."
             ),
         )
 
@@ -747,8 +744,8 @@ def _corpus_from_retrievals(
             failed=True,
             applicable=True,
             detail=(
-                f"읽은 청크 {len(too_late)}/{len(retrievals)}건이 경기 당일 이후 "
-                "개정본입니다. 결과가 적혀 있지 않다고 증명할 수 없습니다."
+                f"읽은 글 조각 {len(too_late)}/{len(retrievals)}건이 경기 당일 "
+                "이후에 고쳐진 것입니다. 결과가 안 적혀 있다고 장담할 수 없습니다."
             ),
         )
     if unknown:
@@ -757,8 +754,8 @@ def _corpus_from_retrievals(
             failed=True,
             applicable=True,
             detail=(
-                f"읽은 청크 {len(unknown)}/{len(retrievals)}건의 개정본 시각을 "
-                "확인할 수 없습니다."
+                f"읽은 글 조각 {len(unknown)}/{len(retrievals)}건이 언제 쓰인 "
+                "것인지 알 수 없습니다."
             ),
         )
     return _verdict(
@@ -766,7 +763,7 @@ def _corpus_from_retrievals(
         failed=False,
         applicable=True,
         detail=(
-            f"읽은 청크 {len(retrievals)}건 모두 경기 시작일보다 앞선 개정본입니다."
+            f"읽은 글 조각 {len(retrievals)}건 모두 경기 날짜보다 먼저 쓰인 것입니다."
         ),
     )
 
@@ -806,9 +803,9 @@ def _revision_after_prediction(
             failed=True,
             applicable=True,
             detail=(
-                f"읽은 청크 {len(future)}/{len(retrievals)}건이 예측 생성 "
-                f"{generated_at.isoformat()}보다 나중 개정본입니다. 그 글은 예측을 "
-                "만들 때 아직 없었으므로 이 기록은 사실일 수 없습니다."
+                f"읽은 글 조각 {len(future)}/{len(retrievals)}건이 예측을 만든 "
+                f"{generated_at.isoformat()}보다 나중에 고쳐진 것입니다. 그 내용은 "
+                "예측을 만들 때 아직 없었으므로 이 기록은 사실일 수 없습니다."
             ),
         )
     if unknown:
@@ -817,9 +814,10 @@ def _revision_after_prediction(
             failed=False,
             applicable=True,
             detail=(
-                f"시각을 아는 {len(retrievals) - len(unknown)}건 중 예측보다 나중인 "
-                f"개정본은 없습니다. 나머지 {len(unknown)}건은 시각이 없어 "
-                "`unverifiable_corpus`가 따로 잡습니다."
+                f"시각을 아는 {len(retrievals) - len(unknown)}건 중 예측보다 "
+                f"나중에 고쳐진 글은 없습니다. 나머지 {len(unknown)}건은 시각이 "
+                '없어 "읽은 글이 경기보다 먼저 쓰인 것인지 확인 불가"가 따로 '
+                "잡습니다."
             ),
         )
     return _verdict(
@@ -827,8 +825,8 @@ def _revision_after_prediction(
         failed=False,
         applicable=True,
         detail=(
-            f"읽은 청크 {len(retrievals)}건 모두 예측 생성 이전 개정본입니다 — "
-            "그때 실제로 읽을 수 있던 글입니다."
+            f"읽은 글 조각 {len(retrievals)}건 모두 예측을 만들기 전에 쓰인 "
+            "것입니다 — 그때 실제로 읽을 수 있던 글입니다."
         ),
     )
 
@@ -867,7 +865,7 @@ def _corpus(
             "unverifiable_corpus",
             failed=False,
             applicable=True,
-            detail="인용 출처가 없어 확인할 문서가 없습니다.",
+            detail="근거로 적어 둔 출처가 없어 확인할 글이 없습니다.",
         )
 
     if event_start_date is None:
@@ -876,7 +874,8 @@ def _corpus(
             failed=True,
             applicable=True,
             detail=(
-                "대회 날짜를 몰라 인용 문서가 경기보다 앞선 글인지 비교할 수 없습니다."
+                "대회 날짜를 몰라 근거로 쓴 글이 경기보다 먼저 쓰인 것인지 견줄 "
+                "수 없습니다."
             ),
         )
 
@@ -903,8 +902,8 @@ def _corpus(
             failed=True,
             applicable=True,
             detail=(
-                f"인용 문서 {len(too_late)}/{len(sources)}건이 경기 당일 이후 "
-                "개정본입니다. 결과가 적혀 있지 않다고 증명할 수 없습니다."
+                f"근거로 쓴 글 {len(too_late)}/{len(sources)}건이 경기 당일 "
+                "이후에 고쳐진 것입니다. 결과가 안 적혀 있다고 장담할 수 없습니다."
             ),
         )
     if unknown:
@@ -913,15 +912,17 @@ def _corpus(
             failed=True,
             applicable=True,
             detail=(
-                f"인용 문서 {len(unknown)}/{len(sources)}건의 개정본 시각을 확인할 "
-                "수 없습니다."
+                f"근거로 쓴 글 {len(unknown)}/{len(sources)}건이 언제 쓰인 것인지 "
+                "알 수 없습니다."
             ),
         )
     return _verdict(
         "unverifiable_corpus",
         failed=False,
         applicable=True,
-        detail=(f"인용 문서 {len(sources)}건 모두 경기 시작일보다 앞선 개정본입니다."),
+        detail=(
+            f"근거로 쓴 글 {len(sources)}건 모두 경기 날짜보다 먼저 쓰인 것입니다."
+        ),
     )
 
 

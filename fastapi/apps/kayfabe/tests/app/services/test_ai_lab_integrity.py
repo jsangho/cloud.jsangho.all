@@ -184,21 +184,26 @@ class TestSummarizeIntegrity:
         facts = summarize_integrity(rows, reports, _corpus(), events_total=11)
         assert facts.self_referencing_predictions == 1
         assert facts.generalizable is False
-        assert any("자체를 다룬 문서" in reason for reason in facts.reasons)
+        # 문구는 2026-09-29에 일반 사용자용으로 풀어 썼다("문서"→"글"). 세는 방식은
+        # 그대로다 — 이 단언이 보는 것은 사유가 **자기참조를 말하는가**이지 특정
+        # 낱말이 아니다.
+        assert any("그 대회를 다룬 글" in reason for reason in facts.reasons)
 
     def test_without_provenance_time_cannot_be_verified(self) -> None:
         facts = summarize_integrity(
             [_prediction()], [], _corpus(total=668, revisions=0), events_total=11
         )
         assert facts.temporal_verifiable is False
-        assert any("668건 중 668건에 개정본 계보가 없어" in r for r in facts.reasons)
+        assert any("668건 중 668건은 출처를 되짚을 수 없어" in r for r in facts.reasons)
 
     def test_full_provenance_makes_time_verifiable(self) -> None:
         facts = summarize_integrity(
             [_prediction()], [], _corpus(total=668, revisions=668), events_total=11
         )
         assert facts.temporal_verifiable is True
-        assert not any("계보" in reason for reason in facts.reasons)
+        # **문구를 바꾸면 이 단언이 조용히 무의미해진다.** 없는 낱말을 찾으므로 늘
+        # 통과한다 — 위 두 테스트가 쓰는 것과 같은 문구를 봐야 한다.
+        assert not any("출처를 되짚을 수 없어" in reason for reason in facts.reasons)
 
     def test_partial_provenance_is_not_verifiable(self) -> None:
         """**핵심 회귀.** 옛 판정은 "하나라도 있으면 통과"였다.
@@ -210,7 +215,7 @@ class TestSummarizeIntegrity:
             [_prediction()], [], _corpus(total=664, revisions=620), events_total=11
         )
         assert facts.temporal_verifiable is False
-        assert any("664건 중 44건에 개정본 계보가 없어" in r for r in facts.reasons)
+        assert any("664건 중 44건은 출처를 되짚을 수 없어" in r for r in facts.reasons)
 
     def test_publication_dates_alone_do_not_verify_time(self) -> None:
         """발행일은 판정 근거가 아니다 — 위키는 그 메타태그를 안 내보낸다."""

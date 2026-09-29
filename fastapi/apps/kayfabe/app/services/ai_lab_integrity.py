@@ -535,14 +535,14 @@ def summarize_integrity(
         reasons.append(f"예측이 대회 {events_covered}개에만 걸쳐 있습니다.")
     if self_referencing > 0:
         reasons.append(
-            f"{self_referencing}건이 해당 대회 자체를 다룬 문서를 근거로 인용했습니다 "
-            "— 결과가 적힌 글을 읽고 낸 예측일 수 있습니다."
+            f"{self_referencing}건이 그 대회를 다룬 글을 근거로 썼습니다 — 결과가 "
+            "적힌 글을 읽고 낸 예측일 수 있습니다."
         )
     if not temporal_verifiable:
         missing = corpus.chunks_total - corpus.chunks_with_revision
         reasons.append(
-            f"지식 청크 {corpus.chunks_total}건 중 {missing}건에 개정본 계보가 없어 "
-            "경기보다 먼저 쓰인 글인지 검증할 수 없습니다."
+            f"모아 둔 글 조각 {corpus.chunks_total}건 중 {missing}건은 출처를 "
+            "되짚을 수 없어, 경기보다 먼저 쓰인 글인지 확인할 수 없습니다."
         )
 
     return IntegrityFacts(

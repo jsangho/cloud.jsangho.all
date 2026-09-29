@@ -93,48 +93,48 @@ class ReplayStage:
 REPLAY_STAGES: tuple[ReplayStage, ...] = (
     ReplayStage(
         stage="knowledge_query",
-        label="검색 질의 조립",
+        label="검색어 만들기",
         replayable=True,
         note=(
-            "경기 제목과 선택지 이름으로 만든다. 저장된 질의와 지금 카드로 다시 "
-            "만든 질의를 견주면 카드가 그때와 같은지 알 수 있다."
+            "경기 제목과 선수 이름으로 만든다. 저장된 검색어와 지금 대진으로 다시 "
+            "만든 검색어를 견주면 대진이 그때와 같은지 알 수 있다."
         ),
     ),
     ReplayStage(
         stage="knowledge_retrieval",
-        label="지식 검색",
+        label="근거 글 찾기",
         replayable=False,
         note=(
-            "재수집이 같은 URL의 옛 청크를 지우므로 코퍼스에는 판본이 하나뿐이고, "
-            "어떤 시점으로도 그때의 검색을 다시 할 수 없다. 그때 읽은 본문은 "
-            "검색 기록에 스냅샷으로 남아 있다(Phase 3)."
+            "글을 다시 모으면 같은 주소의 옛 내용이 지워져 판본이 하나만 남는다. "
+            "그래서 그때의 검색을 어떤 방법으로도 되돌릴 수 없다. 다만 그때 읽은 "
+            "본문 자체는 기록에 그대로 떠 있다."
         ),
     ),
     ReplayStage(
         stage="prompt",
-        label="프롬프트 조립",
+        label="AI에게 보낼 지시문 만들기",
         replayable=False,
         note=(
-            "프롬프트 원문은 어디에도 저장하지 않는다(§11-6). 남는 것은 되돌릴 수 "
-            "없는 지시문 해시뿐이라, 같은 판인지 대조만 되고 복원은 되지 않는다."
+            "지시문 원문은 어디에도 저장하지 않는다. 남는 것은 되돌릴 수 없는 "
+            "지문뿐이라, 같은 판인지 맞춰 볼 수만 있고 원문을 되살리지는 못한다."
         ),
     ),
     ReplayStage(
         stage="model_call",
-        label="모델 호출",
+        label="AI에게 묻기",
         replayable=False,
         note=(
-            "같은 프롬프트라도 모델은 같은 문장을 다시 내놓지 않는다. 그때 무엇이 "
-            "답했는지는 기록(모델·지시문 판)으로만 남는다."
+            "같은 것을 물어도 AI는 같은 문장을 다시 내놓지 않는다. 그때 무엇이 "
+            "답했는지는 기록으로만 남는다."
         ),
     ),
     ReplayStage(
         stage="synthesis",
-        label="리포트 합성",
+        label="의견을 모아 승률 내기",
         replayable=True,
         note=(
-            "저장된 리포트를 생성 때와 같은 함수에 그대로 다시 넣는다. 선택지는 "
-            "지금 카드에서 읽으므로, 카드가 바뀌었으면 결과가 달라질 수 있다."
+            "저장된 의견을 처음과 같은 계산에 그대로 다시 넣는다. 후보 선수는 지금 "
+            "대진에서 읽으므로, 대진이 바뀌었으면 결과가 달라질 수 있다."
         ),
     ),
 )
@@ -189,7 +189,7 @@ def replay_prediction(
         # 조용히 통과시키지 않고 사유로 남긴다.
         return PredictionReplay(
             status=ReplayStatus.UNREPLAYABLE,
-            reason=f"저장된 리포트를 다시 읽지 못했습니다: {exc}",
+            reason=f"저장된 의견을 다시 읽지 못했습니다: {exc}",
             mismatches=query_mismatch,
             card_unchanged=card_unchanged,
         )
@@ -207,7 +207,7 @@ def replay_prediction(
     except ReportsUnavailableError:
         return PredictionReplay(
             status=ReplayStatus.UNREPLAYABLE,
-            reason="의견을 낸 리포트가 없어 합성이 성립하지 않습니다.",
+            reason="의견을 낸 분석기가 없어 승률을 낼 수 없습니다.",
             mismatches=query_mismatch,
             card_unchanged=card_unchanged,
         )
@@ -227,9 +227,9 @@ def _why_not_replayable(
     if prediction.source != str(PredictionSource.AGENTS):
         # 배당 폴백은 합성을 지나지 않았다. 그 경로를 여기서 다시 돌리면 그때
         # 배당이 필요한데, 배당도 카드에 있어 지금 값은 그때 값이 아니다.
-        return "에이전트 합성이 아니라 배당 폴백으로 만들어진 예측입니다."
+        return "분석기 의견이 아니라 배당을 그대로 옮겨 만든 예측입니다."
     if not options:
-        return "경기 카드가 남아 있지 않아 그때의 선택지를 알 수 없습니다."
+        return "경기가 대진표에 남아 있지 않아 그때의 후보를 알 수 없습니다."
     return None
 
 
