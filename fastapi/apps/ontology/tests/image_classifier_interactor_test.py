@@ -14,11 +14,11 @@ from ontology.dependencies.image_classifier_provider import (
     get_image_classifier_use_case,
 )
 
-_SAMPLE_IMAGE = next(
-    (TESTS_DIR.parents[0] / "resources" / "yolo_train" / "train" / "elton_john").glob(
-        "*.jpg"
-    )
-)
+# 샘플은 이 디렉터리의 일반 사진 하나다. 전에는 얼굴 인식 학습 데이터셋
+# (`resources/yolo_train`)에서 한 장을 빌려 썼는데, 2026-09-29에 얼굴 인식을
+# 지우면서 그 디렉터리가 함께 사라졌다. 이 스크립트가 보는 것은 ImageNet 분류기라
+# 인물 사진일 이유가 없다.
+_SAMPLE_IMAGE = TESTS_DIR / "bus.jpg"
 
 use_case = get_image_classifier_use_case()
 

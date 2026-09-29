@@ -6,7 +6,7 @@ const LESSONS = [
     href: "/lesson/vision",
     icon: Eye,
     title: "비전 처리",
-    description: "이미지를 업로드해 분류·객체 탐지 파이프라인으로 보냅니다.",
+    description: "이미지를 업로드해 분류 파이프라인으로 보냅니다.",
   },
   {
     href: "/lesson/rag-system/rag-chat",
