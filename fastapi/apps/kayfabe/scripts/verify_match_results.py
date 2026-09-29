@@ -36,7 +36,13 @@
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python \\
         apps/kayfabe/scripts/verify_match_results.py
     PYTHONUTF8=1 PYTHONPATH=apps:. uv run python \\
-        apps/kayfabe/scripts/verify_match_results.py --event mitb --limit 5 --apply
+        apps/kayfabe/scripts/verify_match_results.py \\
+        --event money-in-the-bank --limit 5 --apply
+
+**`--event`는 슬러그가 정확히 일치해야 한다**(`slug == event_slug`, ILIKE가 아니다).
+줄여 쓰면(`--event mitb`) 조용히 **대상 0건**이 되어 "확정할 게 없다"로 읽힌다 —
+슬러그는 `ple_events.slug`에서 확인한다(MITB는 `money-in-the-bank`이고
+`match_key`만 `mitb26-*`이다).
 
 `close_past_events.py`와 기본값을 맞췄다. 쓰는 값이 **모델이 읽은 문서에서** 나오므로,
 아무 플래그 없이 운영 DB에 들어가지 않게 한다.
