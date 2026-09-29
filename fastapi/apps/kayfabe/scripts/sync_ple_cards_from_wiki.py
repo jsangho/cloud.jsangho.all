@@ -42,6 +42,9 @@
 순차도 같았다. 그래서 대회 사이에 넉넉히 쉰다 — 느린 대신 한 번에 끝난다.
 
 종료 코드: 0 정상 · 1 위키 읽기 실패가 하나라도 있음 · 2 픽스처 파일을 못 찾음
+
+읽기 실패는 대개 **요청 제한**이고 다시 돌리면 통과한다. 실패한 대회만 `--event`로
+좁혀 다시 부르면 된다.
 """
 
 from __future__ import annotations
@@ -60,6 +63,9 @@ from kayfabe.app.services.ple_fixture_file import (  # noqa: E402
     read_event_cards,
     render_event_block,
     replace_event_block,
+)
+from kayfabe.app.services.ple_match_id_prefixes import (  # noqa: E402
+    id_prefix_for,
 )
 from kayfabe.app.services.ple_match_titles import (  # noqa: E402
     title_from_stipulation,
@@ -96,11 +102,15 @@ async def read_cards(
 ) -> tuple[str, tuple, str | None]:
     """한 대회의 카드형 경기들. `(사유, 경기들, 개정본)`.
 
-    사유는 사람이 읽을 한 낱말이다 — `ok` · `문서없음` · `절없음` · `결과형` · `본문없음`.
+    사유는 사람이 읽을 한 낱말이다 — `ok` · `목차실패` · `절없음` · `결과형` · `본문실패`.
+
+    **`목차실패`는 "없는 문서"와 "요청 제한"을 구별하지 못한다.** 포트가 둘 다
+    `None`으로 주기 때문이다(위키 API가 429에 본문을 안 준다). 실측에서 같은
+    문서가 한 번은 읽히고 한 번은 실패했으므로, 이 사유가 뜨면 **다시 돌려 본다.**
     """
     sections = await port.sections(title)
     if sections is None:
-        return "문서없음", (), None
+        return "목차실패", (), None
     hit = next(
         (s for s in sections if s.line.casefold() in _CARD_SECTIONS),
         None,
@@ -111,7 +121,7 @@ async def read_cards(
     await asyncio.sleep(_COURTESY_DELAY)
     section = await port.read_section(title, hit.index)
     if section is None:
-        return "본문없음", (), None
+        return "본문실패", (), None
 
     tables = parse_results_tables(section.text)
     rows = card_matches(tables)
@@ -181,16 +191,18 @@ async def main(*, apply: bool, only: str | None) -> int:
 
         reason, rows, revision = await read_cards(port, slug, title)
         if reason != "ok":
-            if reason in {"문서없음", "본문없음"}:
+            if reason in {"목차실패", "본문실패"}:
                 failures += 1
             print(f"{slug:22} {reason}")
             continue
 
-        prefix = id_prefix_of(existing)
+        # **픽스처가 정본이고 표는 폴백이다.** 경기가 0건인 대회(대진 미발표)는
+        # 읽을 id가 없어서 표를 본다 — 그 자리가 `halloween-havoc`이다.
+        prefix = id_prefix_of(existing) or id_prefix_for(slug)
         if prefix is None:
             print(
                 f"{slug:22} 경기 {len(rows)}건이 발표됐는데 id 접두사를 모른다 "
-                "— 첫 경기는 사람이 손으로 넣는다"
+                "— `ple_match_id_prefixes.py`에 한 줄 더한다"
             )
             continue
 

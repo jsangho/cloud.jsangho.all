@@ -798,6 +798,161 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { left: 2.2, right: 1.75 },
     ),
   ],
+
+  // ── NXT 계열 (2026-09-29 추가) ────────────────────────────────────────────
+  // 아래 넷은 `PLE_MATCH_CARDS`에 항목이 아예 없어서 `sync_ple_cards_from_wiki.py`가
+  // 매번 "픽스처에 항목이 없다"로 건너뛰던 대회다. 항목이 있어야 그 도구가 id
+  // 접두사를 읽고 일할 수 있다.
+  //
+  // **배당은 넣지 않았다.** 위키에 없는 값이고, 그럴듯한 숫자를 채우면 북메이커
+  // 막대가 근거 없는 값을 사실처럼 그린다 (`worlds-collide`와 같은 이유).
+  //
+  // 끝난 셋은 위키 Results 절의 **참가자만** 옮겼다 — 승자는 옮기지 않는다.
+  // 결과는 이 파일이 아니라 결과 경로가 들고 있다.
+
+  // `NXT Vengeance Day (2026)` rev 1374830448 · 2026-03-07 올랜도 WWE PC
+  "vengeance-day": [
+    m2("vd26-street", "Street Fight", "sideB", { name: "Blake Monroe" }, { name: "Jaida Parker" }),
+    m2(
+      "vd26-dangelo-lennox",
+      "Single Match",
+      "sideA",
+      { name: "Tony D'Angelo" },
+      { name: "Dion Lennox" },
+    ),
+    m2(
+      "vd26-women-na",
+      "NXT Women's North American Championship",
+      "sideB",
+      { name: "Tatum Paxley" },
+      { name: "Izzi Dame", isChampion: true },
+    ),
+    m2(
+      "vd26-underground",
+      "NXT Underground Match",
+      "sideA",
+      { name: "Lola Vice" },
+      { name: "Kelani Jordan" },
+    ),
+    m2(
+      "vd26-nxt",
+      "NXT Championship",
+      "sideB",
+      { name: "Joe Hendry", isChampion: true },
+      { name: "Ricky Saints" },
+    ),
+  ],
+
+  // `NXT The Great American Bash (2026)` rev 1366584485 · 2026-06-28 올랜도 WWE PC
+  "great-american-bash": [
+    m2(
+      "gab26-nxt",
+      "NXT Championship",
+      "sideB",
+      { name: "Tony D'Angelo", isChampion: true },
+      { name: "Naraku" },
+    ),
+    m2(
+      "gab26-women-na",
+      "NXT Women's North American Championship",
+      "sideA",
+      { name: "Zaria", isChampion: true },
+      { name: "Tatum Paxley" },
+    ),
+    m2(
+      "gab26-hill-angels",
+      "Single Match",
+      "sideB",
+      { name: "Shiloh Hill" },
+      { name: "Tristan Angels" },
+    ),
+    // 이 벨트는 2026-09-29에 **폐지로 확정돼 챔피언 보드에서 지웠다.** 경기 자체는
+    // 실제로 열렸으므로 제목을 위키 표기 그대로 남긴다 — 보드에 없다고 과거를
+    // 고쳐 쓰지 않는다.
+    m2(
+      "gab26-women-speed",
+      "WWE Women's Speed Championship",
+      "sideA",
+      { name: "Wren Sinclair", isChampion: true },
+      { name: "Arianna Grace" },
+    ),
+    m2(
+      "gab26-shugars-lennox",
+      "Single Match",
+      "sideB",
+      { name: "Saquon Shugars" },
+      { name: "Dion Lennox" },
+    ),
+    m2(
+      "gab26-na",
+      "NXT North American Championship",
+      "sideA",
+      { name: "Myles Borne", isChampion: true },
+      { name: "Tavion Heights" },
+    ),
+    m2(
+      "gab26-women",
+      "NXT Women's Championship",
+      "sideB",
+      { name: "Kendal Grey" },
+      { name: "Lola Vice", isChampion: true },
+    ),
+  ],
+
+  // `NXT Heatwave (2026)` rev 1377147141 · 2026-08-30 텍사스 에딘버그
+  heatwave: [
+    // 벨트 둘을 **통합**하는 경기라 제목이 한 벨트를 가리키지 않는다. 한쪽 벨트
+    // 이름만 적으면 나머지 하나가 화면에서 사라진다.
+    mm("hw26-winner-takes-all", "Winner Takes All Triple Threat", "sideB", [
+      { name: "Zaria", isChampion: true },
+      { name: "Wren Sinclair", isChampion: true },
+      { name: "Kali Armstrong" },
+    ]),
+    m2(
+      "hw26-tag",
+      "NXT Tag Team Championship",
+      "sideA",
+      { name: "The Vanity Project — Brad Baylor & Ricky Smokes" },
+      { name: "Myles Borne & Tavion Heights", isChampion: true },
+    ),
+    m2(
+      "hw26-submission",
+      "Submission Match",
+      "sideB",
+      { name: "Jaida Parker" },
+      { name: "Nattie" },
+    ),
+    m2(
+      "hw26-women",
+      "NXT Women's Championship",
+      "sideA",
+      { name: "Kelani Jordan" },
+      { name: "Kendal Grey", isChampion: true },
+    ),
+    m2(
+      "hw26-na",
+      "NXT North American Championship",
+      "sideB",
+      { name: "Jackson Drake" },
+      { name: "Myles Borne", isChampion: true },
+    ),
+    mm("hw26-nxt", "NXT Championship", "sideA", [
+      { name: "Grayson Waller" },
+      { name: "Tony D'Angelo", isChampion: true },
+      { name: "Cruz Montana" },
+      { name: "Zilla Fatu" },
+    ]),
+  ],
+
+  // `NXT Halloween Havoc (2026)` · 2026-10-31 · **대진 미발표**.
+  // 위키 문서에 `Matches` 절 자체가 없다(Background·References·External links뿐,
+  // 2026-09-29 확인). 빈 배열로 두는 이유는 `getPleMatches`가 `[]`를 돌려주어
+  // 화면이 "대진 미발표"로 뜨기 때문이다 — 추측 카드를 채우지 않는다.
+  //
+  // 대진이 발표되면 `sync_ple_cards_from_wiki.py --event halloween-havoc`가
+  // 채운다. 다만 경기가 0건이라 id 접두사를 읽을 자리가 없으므로, 그 도구는
+  // `ple_match_id_prefixes.py`의 `hh26`을 쓴다.
+  "halloween-havoc": [],
 };
 
 export function getPleMatches(slug: string): PleMatchCard[] {
