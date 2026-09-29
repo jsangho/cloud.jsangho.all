@@ -50,8 +50,8 @@ export default function AiLabKnowledgePage() {
 
   return (
     <AiLabShell
-      title="Knowledge"
-      description="에이전트가 근거로 쓰는 문서 코퍼스와, 그중 실제로 프롬프트에 들어간 문서."
+      title="근거 문서"
+      description="AI가 예측할 때 읽는 문서들입니다. 모아 둔 것과 실제로 읽힌 것을 나눠서 셉니다."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
       {state.status === "error" && <DataUnavailable what="지식 코퍼스" />}
@@ -67,22 +67,18 @@ function Knowledge({ data }: { data: AiLabKnowledge }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile value={totals.documents} label="Documents" note="출처 URL 하나가 문서 하나" />
+        <StatTile value={totals.documents} label="문서" note="출처 주소 하나가 문서 하나" />
         <StatTile
           value={totals.chunks}
-          label="Chunks"
-          note={
-            missingEmbedding > 0
-              ? `임베딩 없음 ${missingEmbedding} — 검색되지 않음`
-              : "전부 임베딩되어 검색 대상"
-          }
+          label="글 조각"
+          note={missingEmbedding > 0 ? `${missingEmbedding}개는 검색에 안 걸림` : "전부 검색 대상"}
           tone="data"
         />
-        <StatTile value={totals.domains} label="Domains" note="허용 도메인 안에서만 수집" />
+        <StatTile value={totals.domains} label="사이트" note="허용된 사이트에서만 수집" />
         <StatTile
           value={isoDate(totals.lastCollectedAt)}
-          label="Last collected"
-          note="가장 최근 수집 시각"
+          label="마지막 수집"
+          note="가장 최근에 긁어 온 시각"
         />
       </div>
 
@@ -95,12 +91,12 @@ function Knowledge({ data }: { data: AiLabKnowledge }) {
 
       {documents.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-          적재된 지식이 없습니다 — 에이전트는 의견 없음만 냅니다.
+          모아 둔 문서가 없습니다 — 읽을 자료가 없으면 분석기는 의견 없음만 냅니다.
         </p>
       ) : (
         <section aria-labelledby="documents-heading" className="flex flex-col gap-3">
           <h2 id="documents-heading" className="font-sport text-base tracking-wide text-foreground">
-            Documents
+            모아 둔 문서
           </h2>
           <ul className="flex flex-col gap-2">
             {documents.map((document) => (
@@ -111,11 +107,11 @@ function Knowledge({ data }: { data: AiLabKnowledge }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        &ldquo;사용됨&rdquo;은 인용 주장이 아니라{" "}
-        <strong className="font-semibold">적재 기록</strong>입니다 — 저장된 출처가 실제로 프롬프트에
-        넣은 청크의 주소이기 때문에 셀 수 있습니다. 다만 리포트당 상위 5청크·최대 5출처만 남으므로
-        이 수치는 <strong className="font-semibold">하한</strong>입니다. 어떤 청크가 어떤 유사도로
-        검색됐는지는 지금 구조가 기록하지 않습니다.
+        &ldquo;읽힘&rdquo;은 &ldquo;AI가 이 글을 인용했다&rdquo;가 아니라{" "}
+        <strong className="font-semibold">AI에게 실제로 건네졌다</strong>는 기록입니다. 분석 한 건당
+        많아야 다섯 곳까지만 남기므로 이 수치는{" "}
+        <strong className="font-semibold">실제보다 적게 세어진 값</strong>입니다. 어떤 글이 얼마나
+        비슷해서 뽑혔는지는 지금 구조가 기록하지 않습니다.
       </p>
     </div>
   );
@@ -135,12 +131,12 @@ function CorpusUsage({ totals }: { totals: AiLabKnowledge["totals"] }) {
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="usage-heading" className="font-sport text-base tracking-wide text-foreground">
-          Corpus usage
+          그중 실제로 쓰인 문서
         </h2>
         <p className="text-sm tabular-nums text-foreground">
           {formatRatio(totals.usedDocumentRate)}{" "}
           <span className="text-muted-foreground">
-            ({totals.usedDocuments}/{totals.documents} documents)
+            (문서 {totals.documents}건 중 {totals.usedDocuments}건)
           </span>
         </p>
       </div>
@@ -155,11 +151,11 @@ function CorpusUsage({ totals }: { totals: AiLabKnowledge["totals"] }) {
 
       <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
         <Fact
-          label="Reports with sources"
-          value={`${totals.reportsWithSources} / ${totals.reportsTotal} reports`}
+          label="출처를 남긴 분석"
+          value={`분석 ${totals.reportsTotal}건 중 ${totals.reportsWithSources}건`}
         />
         <Fact
-          label="Sources outside corpus"
+          label="지금은 없는 출처"
           value={`${totals.sourcesOutsideCorpus}`}
           tone={totals.sourcesOutsideCorpus > 0 ? "warn" : "default"}
         />
@@ -185,7 +181,7 @@ function Domains({ domains }: { domains: AiLabKnowledge["domains"] }) {
   return (
     <section aria-labelledby="domains-heading" className="flex flex-col gap-3">
       <h2 id="domains-heading" className="font-sport text-base tracking-wide text-foreground">
-        Domains
+        어느 사이트에서 가져왔나
       </h2>
       <ul className="flex flex-col gap-2">
         {domains.map((domain) => (
@@ -195,7 +191,7 @@ function Domains({ domains }: { domains: AiLabKnowledge["domains"] }) {
           >
             <span className="text-sm text-foreground">{domain.domain}</span>
             <span className="text-xs tabular-nums text-muted-foreground">
-              문서 {domain.documents} · 청크 {domain.chunks} · 사용 {domain.usedDocuments}/
+              문서 {domain.documents} · 글 조각 {domain.chunks} · 읽힘 {domain.usedDocuments}/
               {domain.documents}
             </span>
           </li>
@@ -300,7 +296,7 @@ function Fact({
 }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className={cn("text-sm tabular-nums", tone === "warn" ? "text-live" : "text-foreground")}>
         {value}
       </dd>

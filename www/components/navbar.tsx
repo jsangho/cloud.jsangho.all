@@ -148,7 +148,7 @@ export function Navbar() {
         fullWidth={fullWidth}
         icon={<Brain className="h-3.5 w-3.5 shrink-0 text-data" aria-hidden />}
       >
-        AI LAB
+        AI 예측
       </NavLink>
       <NavLink
         href="/rankings"

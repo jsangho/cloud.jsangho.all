@@ -44,8 +44,8 @@ export default function DataCenterPage() {
 
   return (
     <DataCenterShell
-      title="Overview"
-      description="KAYFABE가 실제로 들고 있는 데이터입니다. 선수·경기·대회·챔피언십을 DB에서 직접 셉니다."
+      title="데이터 센터"
+      description="KAYFABE가 실제로 들고 있는 데이터입니다. 선수·경기·대회·벨트를 DB에서 직접 셉니다."
     >
       {loading ? (
         <LoadingBlock rows={4} />
@@ -55,21 +55,21 @@ export default function DataCenterPage() {
         <div className="flex flex-col gap-8">
           <section aria-label="핵심 수치">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile value={overview.counts.wrestlers} label="Wrestlers" note="DB 등록" />
+              <StatTile value={overview.counts.wrestlers} label="선수" note="DB에 등록된 인원" />
               <StatTile
                 value={overview.counts.matches}
-                label="Matches"
-                note={`종료 ${overview.counts.finishedMatches}`}
+                label="경기"
+                note={`끝난 경기 ${overview.counts.finishedMatches}`}
               />
               <StatTile
                 value={overview.counts.events}
-                label="PLE Events"
-                note={`종료 ${overview.counts.finishedEvents}`}
+                label="대회"
+                note={`끝난 대회 ${overview.counts.finishedEvents}`}
               />
               <StatTile
                 value={overview.counts.championshipBelts}
-                label="Championships"
-                note={`획득 기록 ${overview.counts.titleAcquisitions}`}
+                label="벨트"
+                note={`주인이 바뀐 기록 ${overview.counts.titleAcquisitions}`}
                 tone="gold"
               />
             </div>
@@ -78,7 +78,7 @@ export default function DataCenterPage() {
           <section aria-labelledby="recent-matches">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="recent-matches" className="font-sport text-lg text-foreground">
-                최근 경기
+                최근에 무슨 경기가 있었나
               </h2>
               <Link
                 href="/data-center/matches"
@@ -103,7 +103,7 @@ export default function DataCenterPage() {
           <section aria-labelledby="top-wrestlers">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="top-wrestlers" className="font-sport text-lg text-foreground">
-                승률 상위
+                누가 제일 많이 이겼나
               </h2>
               <Link
                 href="/data-center/wrestlers"
@@ -152,13 +152,13 @@ export default function DataCenterPage() {
           <section aria-labelledby="ple-analytics">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="ple-analytics" className="font-sport text-lg text-foreground">
-                대회별 경기 수
+                대회마다 몇 경기였나
               </h2>
               <Link
                 href="/data-center/ple"
                 className="text-sm font-semibold text-brand-link underline-offset-4 hover:underline"
               >
-                PLE 데이터 보기 →
+                대회 전체 보기 →
               </Link>
             </div>
             {!analytics ? (
@@ -185,7 +185,7 @@ export default function DataCenterPage() {
           </section>
 
           <section className="rounded-xl border border-data-500/30 bg-data-surface p-5">
-            <h2 className="font-sport text-lg text-foreground">Analytics</h2>
+            <h2 className="font-sport text-lg text-foreground">그림으로 보고 싶다면</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               브랜드 분포 · 경기 형식 · 타이틀전 비율 · 승률 순위를 차트로 봅니다.
             </p>
@@ -193,7 +193,7 @@ export default function DataCenterPage() {
               href="/data-center/analytics"
               className="mt-4 inline-flex h-9 items-center rounded-lg border border-data-500/50 px-4 text-sm font-semibold text-data transition-colors hover:bg-card-2"
             >
-              분석 보기
+              차트 보기
             </Link>
           </section>
         </div>

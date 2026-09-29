@@ -39,7 +39,7 @@ const ALL = "__all__";
 export default function AiLabPredictionsPage() {
   /* `useSearchParams`는 Suspense 경계 안에서만 정적 프리렌더가 된다(Next 15). */
   return (
-    <Suspense fallback={<AiLabShell title="Predictions">{null}</AiLabShell>}>
+    <Suspense fallback={<AiLabShell title="이번 예측">{null}</AiLabShell>}>
       <PredictionsView />
     </Suspense>
   );
@@ -73,8 +73,8 @@ function PredictionsView() {
 
   return (
     <AiLabShell
-      title="Predictions"
-      description="저장된 AI 예측과 각 예측을 만든 세 에이전트의 판단 근거."
+      title="이번 예측"
+      description="AI가 내놓은 예측과, 그렇게 고른 이유입니다. 분석기 셋의 의견을 각각 볼 수 있습니다."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
       {state.status === "error" && <DataUnavailable what="AI 예측 목록" />}
@@ -127,8 +127,8 @@ function AgentFilterNotice({ agent, shown }: { agent: string; shown: number }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-data-500/40 bg-data-surface px-4 py-2.5">
       <span className="text-sm text-foreground">
-        <span className="font-medium text-data">{agentLabel(agent)}</span> 에이전트가 리포트를 낸
-        예측 <span className="tabular-nums">{shown}</span>건
+        <span className="font-medium text-data">{agentLabel(agent)}</span> 분석기가 의견을 낸 예측{" "}
+        <span className="tabular-nums">{shown}</span>건
       </span>
       <Link
         href="/ai-lab/predictions"
@@ -307,8 +307,10 @@ function ResultBadge({
     return (
       <span className="flex items-center gap-1.5">
         {excluded}
+        {/* 개요 화면의 같은 배지와 **같은 낱말을 쓴다** — 한쪽만 `Pending`이면
+            같은 상태가 화면마다 다른 것으로 읽힌다. */}
         <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-          Pending
+          미채점
         </span>
       </span>
     );

@@ -62,7 +62,7 @@ export default function DataCenterWrestlersPage() {
 
   return (
     <DataCenterShell
-      title="Wrestlers"
+      title="선수"
       description="DB에 등록된 선수와 그 전적입니다. 승·패는 실제 경기 카드에서 세고, 판정이 끝나지 않았으면 승률을 비웁니다."
     >
       <div className="mb-5 flex flex-col gap-3">

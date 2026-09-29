@@ -896,11 +896,17 @@ export function formatRatio(ratio: number | null): string {
   return `${Math.round(ratio * 100)}%`;
 }
 
-/** 에이전트 코드 이름 → 화면 라벨. 이름 자체는 코드의 것을 유지한다. */
+/**
+ * 에이전트 코드 이름 → 화면 라벨.
+ *
+ * **PLE 예측 화면과 같은 단어를 쓴다** (`lib/ple-ai-predictions.ts`). 예전에는
+ * 여기만 `Storyline`·`Odds`·`Rumor`였는데, 같은 분석기가 화면에 따라 다른 이름으로
+ * 불리면 사용자는 그것을 서로 다른 것으로 읽는다.
+ */
 const AGENT_LABELS: Record<string, string> = {
-  storyline: "Storyline",
-  odds: "Odds",
-  rumor: "Rumor",
+  storyline: "서사",
+  odds: "오즈",
+  rumor: "루머",
 };
 
 export function agentLabel(agent: string): string {

@@ -14,18 +14,23 @@ import { cn } from "@/lib/utils";
  *
  * WWE 다크는 그대로 두되(같은 `WweArenaShell`) 안쪽은 대시보드 쪽으로 조인다:
  * 카드 표면·경계선 토큰을 쓰고, 장식보다 숫자가 먼저 오게 배치한다.
+ *
+ * **라벨은 한글이다** (2026-09-29 사용자 — "너무 AI 느낌이 나고 일반 유저가 보기
+ * 어렵다"). 영어 대문자 여섯 탭은 이 화면을 아는 사람만 읽을 수 있었다. 라우트는
+ * 그대로다 — 북마크와 외부 링크를 깨뜨리지 않는다.
  */
 export const DATA_CENTER_TABS = [
-  { href: "/data-center", label: "Overview" },
-  { href: "/data-center/wrestlers", label: "Wrestlers" },
-  { href: "/data-center/matches", label: "Matches" },
-  { href: "/data-center/ple", label: "PLE Events" },
-  { href: "/data-center/championships", label: "Championships" },
-  { href: "/data-center/analytics", label: "Analytics" },
+  { href: "/data-center/wrestlers", label: "선수" },
+  { href: "/data-center/matches", label: "경기" },
+  { href: "/data-center/ple", label: "대회" },
+  { href: "/data-center/championships", label: "벨트" },
+  { href: "/data-center/analytics", label: "차트" },
 ] as const;
 
+const ROOT_HREF = "/data-center";
+const ROOT_LABEL = "데이터 센터";
+
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/data-center") return pathname === "/data-center";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -39,13 +44,27 @@ export function DataCenterShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const isRoot = pathname === ROOT_HREF;
 
   return (
     <WweArenaShell>
       <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8 sm:py-10">
         <header className="mb-5">
-          <p className="font-sport text-xs tracking-[0.3em] text-data">DATA CENTER</p>
-          <h1 className="mt-2 font-sport text-3xl text-foreground sm:text-4xl">{title}</h1>
+          {/* 예전 이 자리는 파란 `DATA CENTER` eyebrow였다. 모든 화면에 같은 영어
+              대문자가 서 있어 "여기가 기계 쪽 화면"이라는 인상을 먼저 줬다.
+              돌아갈 곳이 있는 화면에서만 상위 링크를 세운다. */}
+          {!isRoot && (
+            <Link
+              href={ROOT_HREF}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span aria-hidden>←</span>
+              {ROOT_LABEL}
+            </Link>
+          )}
+          <h1 className={cn("font-sport text-3xl text-foreground sm:text-4xl", !isRoot && "mt-2")}>
+            {title}
+          </h1>
           {description && (
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
               {description}
@@ -108,9 +127,10 @@ export function StatTile({
       >
         {value === null ? "—" : value}
       </p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {label}
-      </p>
+      {/* 한글 라벨이라 `uppercase tracking-[0.14em]`을 뺐다 — 자간을 벌린 한글은
+          읽는 속도를 떨어뜨리고, 대문자 변환은 한글에 아무 일도 하지 않으면서
+          영어 라벨만 남았을 때의 기계적인 인상만 남긴다. */}
+      <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
       {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
     </div>
   );

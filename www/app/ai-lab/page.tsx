@@ -53,11 +53,11 @@ export default function AiLabPage() {
 
   return (
     <AiLabShell
-      title="AI Overview"
-      description="예측이 어떻게 만들어지고 무엇으로 평가되는지, 그리고 그 평가를 어디까지 믿을 수 있는지."
+      title="AI 예측"
+      description="AI가 경기 결과를 얼마나 맞혔는지, 그리고 그 숫자를 어디까지 믿어도 되는지."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
-      {state.status === "error" && <DataUnavailable what="AI LAB 개요" />}
+      {state.status === "error" && <DataUnavailable what="AI 예측 요약" />}
       {state.status === "ready" && <Overview data={state.data} />}
     </AiLabShell>
   );
@@ -71,52 +71,60 @@ function Overview({ data }: { data: AiLabOverview }) {
       <IntegrityBanner integrity={integrity} totals={p} />
 
       <section>
-        <SectionTitle>Prediction Record</SectionTitle>
+        <SectionTitle>예측 성적</SectionTitle>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatTile value={p.total} label="AI Predictions" note="저장된 예측" />
-          <StatTile value={p.graded} label="Graded" note="결과가 나온 경기" tone="data" />
-          <StatTile value={p.correct} label="Correct" note={`실패 ${p.incorrect}`} />
+          <StatTile value={p.total} label="예측한 경기" note="지금까지 저장된 예측" />
+          <StatTile
+            value={p.graded}
+            label="결과가 나온 경기"
+            note="채점할 수 있는 예측"
+            tone="data"
+          />
+          <StatTile value={p.correct} label="맞힌 경기" note={`틀린 경기 ${p.incorrect}`} />
           <StatTile
             value={p.hitRate === null ? null : `${formatRatio(p.hitRate)}`}
-            label="Hit Rate"
+            label="적중률"
             note={
               p.hitRate === null
-                ? "채점된 예측 없음"
-                : `${p.correct}/${p.graded} · 95% CI ${formatRatio(p.hitRateLow)}–${formatRatio(p.hitRateHigh)}`
+                ? "아직 채점된 예측이 없습니다"
+                : `${p.correct}/${p.graded} · 실제로는 ${formatRatio(p.hitRateLow)}–${formatRatio(p.hitRateHigh)} 사이`
             }
           />
           <StatTile
             value={formatRatio(p.avgConfidence)}
-            label="Avg Confidence"
-            note={`평균 승률 ${formatRatio(p.avgWinProbability)}`}
+            label="평균 확신도"
+            note={`AI가 매긴 평균 승률 ${formatRatio(p.avgWinProbability)}`}
           />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          적중률은 점추정과 <strong className="font-semibold">윌슨 95% 신뢰구간</strong>을 함께
-          적습니다. 표본이 작을 때 점추정만 세우면 그 자체가 과장입니다
-          {p.bookmakerFallback > 0 && ` · 북메이커 폴백 ${p.bookmakerFallback}건은 채점에서 제외`}.
+          적중률 옆의 구간은 <strong className="font-semibold">윌슨 95% 신뢰구간</strong>입니다 —
+          표본이 적을수록 넓어지며, &ldquo;이 정도까지는 운일 수 있다&rdquo;는 폭입니다. 숫자 하나만
+          세우면 그 자체가 과장이라 함께 적습니다
+          {p.bookmakerFallback > 0 &&
+            ` · 배당으로 대신 채운 ${p.bookmakerFallback}건은 성적에서 뺐습니다`}
+          .
         </p>
       </section>
 
       <section>
-        <SectionTitle>AI System Status</SectionTitle>
+        <SectionTitle>지금 무엇이 돌고 있나</SectionTitle>
         <ul className="flex flex-col gap-2">
           {system.map((item) => (
             <SystemRow key={item.key} item={item} />
           ))}
         </ul>
         <p className="mt-3 text-xs text-muted-foreground">
-          이 화면은 LLM을 호출하지 않습니다 — 확인하지 않은 것은{" "}
-          <span className="text-foreground">unknown</span>으로 둡니다. 초록불을 채우려고 헬스체크를
-          부르면 화면 진입이 곧 비용이 됩니다.
+          이 화면은 AI 모델을 부르지 않습니다 — 확인하지 않은 것은{" "}
+          <span className="text-foreground">확인 안 함</span>으로 둡니다. 초록불을 채우려고 매번
+          점검을 돌리면 이 화면을 여는 것만으로 돈이 나갑니다.
         </p>
       </section>
 
       <section>
-        <SectionTitle>Agent Activity</SectionTitle>
+        <SectionTitle>누가 의견을 냈나</SectionTitle>
         {agents.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-6 text-center text-sm text-muted-foreground">
-            리포트를 낸 에이전트가 없습니다.
+            아직 의견을 낸 분석기가 없습니다.
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -128,20 +136,20 @@ function Overview({ data }: { data: AiLabOverview }) {
                   <span className="text-base text-muted-foreground">/{agent.reports}</span>
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  의견을 낸 리포트 / 전체 · 평균 가중치 {formatRatio(agent.avgWeight)}
+                  의견을 낸 횟수 / 부른 횟수 · 평균 반영 비중 {formatRatio(agent.avgWeight)}
                 </p>
               </div>
             ))}
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          에이전트 이름은 코드의 이름 그대로입니다. 근거가 없으면 모델을 부르지 않고 &ldquo;의견
-          없음&rdquo;을 내며, 그것은 고장이 아니라 설계된 동작입니다.
+          경기마다 성격이 다른 분석기 셋이 따로 의견을 냅니다. 근거로 쓸 자료가 없으면 억지로 답하지
+          않고 &ldquo;의견 없음&rdquo;을 내며, 그것은 고장이 아니라 설계된 동작입니다.
         </p>
       </section>
 
       <section>
-        <SectionTitle>Recent Predictions</SectionTitle>
+        <SectionTitle>최근 예측</SectionTitle>
         {recent.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-6 text-center text-sm text-muted-foreground">
             저장된 예측이 없습니다.
@@ -176,10 +184,10 @@ function Overview({ data }: { data: AiLabOverview }) {
 }
 
 const STATE_STYLE: Record<SystemState, { dot: string; text: string; label: string }> = {
-  operational: { dot: "bg-chart-win", text: "text-chart-win", label: "operational" },
-  degraded: { dot: "bg-live", text: "text-live", label: "degraded" },
-  empty: { dot: "bg-chart-pending", text: "text-muted-foreground", label: "empty" },
-  unknown: { dot: "bg-chart-pending", text: "text-muted-foreground", label: "unknown" },
+  operational: { dot: "bg-chart-win", text: "text-chart-win", label: "정상" },
+  degraded: { dot: "bg-live", text: "text-live", label: "문제 있음" },
+  empty: { dot: "bg-chart-pending", text: "text-muted-foreground", label: "비어 있음" },
+  unknown: { dot: "bg-chart-pending", text: "text-muted-foreground", label: "확인 안 함" },
 };
 
 /** 상태는 **색만으로 말하지 않는다** — 점 옆에 상태 문자열을 항상 적는다(DESIGN.md §2). */
@@ -191,9 +199,7 @@ function SystemRow({ item }: { item: SystemComponent }) {
         <span aria-hidden className={cn("h-2 w-2 rounded-full", style.dot)} />
         <span className="text-sm font-medium text-foreground">{item.label}</span>
       </span>
-      <span className={cn("shrink-0 text-xs uppercase tracking-[0.12em]", style.text)}>
-        {style.label}
-      </span>
+      <span className={cn("shrink-0 text-xs font-medium", style.text)}>{style.label}</span>
       <span className="min-w-0 basis-full text-xs text-muted-foreground sm:basis-auto">
         {item.detail}
       </span>

@@ -50,11 +50,11 @@ export default function AiLabAgentsPage() {
 
   return (
     <AiLabShell
-      title="Agents"
-      description="세 에이전트가 각각 얼마나 답했고, 그 의견이 실제 결과와 얼마나 맞았는지."
+      title="분석기 활동"
+      description="분석기 셋이 각각 얼마나 답했고, 그 의견이 실제 결과와 얼마나 맞았는지."
     >
       {state.status === "loading" && <LoadingBlock rows={4} />}
-      {state.status === "error" && <DataUnavailable what="에이전트 분석" />}
+      {state.status === "error" && <DataUnavailable what="분석기 기록" />}
       {state.status === "ready" && <Agents data={state.data} />}
     </AiLabShell>
   );
@@ -66,22 +66,22 @@ function Agents({ data }: { data: AiLabAgents }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile value={totals.agentCount} label="Agents" note="실제 코드의 이름" />
+        <StatTile value={totals.agentCount} label="분석기" note="서로 다른 각도로 본다" />
         <StatTile
           value={totals.totalReports}
-          label="Reports"
+          label="내놓은 분석"
           note={`예측 ${totals.totalPredictions}건에 대해`}
           tone="data"
         />
         <StatTile
           value={formatRatio(totals.overallOpinionRate)}
-          label="Opinion rate"
+          label="의견을 낸 비율"
           note={`${totals.opinionated}/${totals.totalReports} · 의견 없음 ${totals.noOpinion}`}
         />
         <StatTile
           value={totals.gradableReports}
-          label="Gradable"
-          note="의견 + 결과가 있는 리포트"
+          label="채점할 수 있는 분석"
+          note="의견을 냈고 결과도 나온 것"
         />
       </div>
 
@@ -90,7 +90,7 @@ function Agents({ data }: { data: AiLabAgents }) {
 
       {agents.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-8 text-center text-sm text-muted-foreground">
-          리포트를 낸 에이전트가 없습니다.
+          아직 의견을 낸 분석기가 없습니다.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -101,9 +101,9 @@ function Agents({ data }: { data: AiLabAgents }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        정확도는 최종 예측이 아니라 <strong className="font-semibold">그 에이전트의 의견</strong>을
-        실제 승자와 대조한 값입니다. 의견 없음은 오답이 아니며 분모에 들어가지 않습니다 — 근거가
-        없을 때 판단하지 않는 것은 설계된 동작입니다.
+        적중률은 최종 예측이 아니라 <strong className="font-semibold">그 분석기가 낸 의견</strong>을
+        실제 승자와 맞춰 본 값입니다. 의견 없음은 틀린 것으로 치지 않고 아예 세지 않습니다 — 근거가
+        없을 때 답하지 않는 것은 설계된 동작입니다.
       </p>
     </div>
   );
@@ -126,17 +126,17 @@ function AgentRow({ agent, totals }: { agent: AgentAnalysis; totals: AiLabAgents
 
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
         <Metric
-          label="Response"
+          label="답한 횟수"
           value={`${agent.reports}/${totals.totalPredictions}`}
           note={formatRatio(agent.responseRate)}
         />
         <Metric
-          label="Opinion"
+          label="의견을 낸 횟수"
           value={`${agent.withPick}/${agent.reports}`}
           note={`의견 없음 ${agent.noOpinion}`}
         />
         <Metric
-          label="Accuracy"
+          label="적중률"
           value={
             agent.accuracy === null
               ? "—"
@@ -144,30 +144,30 @@ function AgentRow({ agent, totals }: { agent: AgentAnalysis; totals: AiLabAgents
           }
           note={
             agent.accuracy === null
-              ? "채점 대상 없음"
-              : `95% CI ${formatRatio(agent.accuracyLow)}–${formatRatio(agent.accuracyHigh)}`
+              ? "채점할 것이 없음"
+              : `실제로는 ${formatRatio(agent.accuracyLow)}–${formatRatio(agent.accuracyHigh)} 사이`
           }
         />
         <Metric
-          label="Avg weight"
+          label="반영 비중"
           value={formatRatio(agent.avgWeightOpinionated)}
-          note={`전체 ${formatRatio(agent.avgWeight)}`}
+          note={`의견 없음까지 넣으면 ${formatRatio(agent.avgWeight)}`}
         />
       </dl>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {!agent.usesKnowledge && (
-          <Note tone="neutral">코퍼스 미사용 — 이 에이전트는 RAG 지식을 사용하지 않습니다.</Note>
+          <Note tone="neutral">모아 둔 문서를 읽지 않고 숫자만 보는 분석기입니다.</Note>
         )}
         {agent.selfReferencingReports > 0 && (
           <Note tone="warn">
-            자기 대회 문서 {agent.selfReferencingReports}/{agent.reports} 인용
+            그 경기 결과가 적힌 글을 근거로 씀 {agent.selfReferencingReports}/{agent.reports}
           </Note>
         )}
         {lowResponse && (
           <Note tone="neutral">
-            현재 데이터에서는 {agent.reports}/{totals.totalPredictions} 응답만 확인됩니다 — 기존
-            생성 로그상 Gemini 무료 등급 분당 호출 제한의 영향입니다.
+            {totals.totalPredictions}번 중 {agent.reports}번만 답했습니다 — 무료 사용량의 분당 호출
+            제한에 걸린 것으로 기록에 남아 있습니다.
           </Note>
         )}
       </div>
@@ -178,7 +178,7 @@ function AgentRow({ agent, totals }: { agent: AgentAnalysis; totals: AiLabAgents
 function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 text-sm font-medium tabular-nums text-foreground">{value}</dd>
       {note && <p className="text-xs tabular-nums text-muted-foreground">{note}</p>}
     </div>
