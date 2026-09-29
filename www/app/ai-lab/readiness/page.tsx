@@ -114,10 +114,7 @@ function Readiness({ data }: { data: AiLabReadiness }) {
         </p>
       ) : (
         <section aria-labelledby="events-heading" className="flex flex-col gap-3">
-          <h2
-            id="events-heading"
-            className="font-sport text-base tracking-wide text-foreground"
-          >
+          <h2 id="events-heading" className="font-sport text-base tracking-wide text-foreground">
             Upcoming events
           </h2>
           <ul className="flex flex-col gap-2">
@@ -129,10 +126,10 @@ function Readiness({ data }: { data: AiLabReadiness }) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        지뢰는 <strong className="font-semibold">검색되면 막는다</strong>는 뜻이지 반드시
-        검색된다는 뜻이 아닙니다 — 이 화면은 검색을 돌리지 않으므로 어떤 청크가 실제로 뽑힐지
-        모릅니다. 그래서 위험을 과하게 세는 쪽으로 틀립니다. 못 본 지뢰는 자격을 앗아가지만,
-        헛본 지뢰는 문서 하나를 덜 수집하게 할 뿐입니다.
+        지뢰는 <strong className="font-semibold">검색되면 막는다</strong>는 뜻이지 반드시 검색된다는
+        뜻이 아닙니다 — 이 화면은 검색을 돌리지 않으므로 어떤 청크가 실제로 뽑힐지 모릅니다. 그래서
+        위험을 과하게 세는 쪽으로 틀립니다. 못 본 지뢰는 자격을 앗아가지만, 헛본 지뢰는 문서 하나를
+        덜 수집하게 할 뿐입니다.
       </p>
     </div>
   );
@@ -166,8 +163,8 @@ function Legend({ rules }: { rules: RuleDefinition[] }) {
         ))}
       </ul>
       <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-        나머지 규칙은 예측이 생긴 뒤에야 물을 수 있습니다 — 특히 &ldquo;증거가 예측보다 나중에
-        생긴 글인가&rdquo;는 개정본과 <strong className="font-semibold">예측 생성 시각</strong>을
+        나머지 규칙은 예측이 생긴 뒤에야 물을 수 있습니다 — 특히 &ldquo;증거가 예측보다 나중에 생긴
+        글인가&rdquo;는 개정본과 <strong className="font-semibold">예측 생성 시각</strong>을
         견주는데, 견줄 시각이 아직 없습니다. 여기서 깨끗하다고 자격이 보장되지는 않습니다.
       </p>
     </section>
@@ -195,9 +192,7 @@ function CorpusCard({ corpus }: { corpus: AiLabReadiness["corpus"] }) {
           <dd className="text-lg font-bold tabular-nums text-foreground">{corpus.documents}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            계보 불완전
-          </dt>
+          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">계보 불완전</dt>
           <dd className="text-lg font-bold tabular-nums text-foreground">
             {corpus.incompleteLineage}
           </dd>
@@ -206,9 +201,7 @@ function CorpusCard({ corpus }: { corpus: AiLabReadiness["corpus"] }) {
           </p>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            임베딩 없음
-          </dt>
+          <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">임베딩 없음</dt>
           <dd className="text-lg font-bold tabular-nums text-foreground">
             {corpus.unembeddedDocuments}
           </dd>
@@ -230,8 +223,7 @@ function EventCard({ event }: { event: ReadinessEvent }) {
           <p className="truncate text-sm font-medium text-foreground">{event.label}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {event.startDate} · D-{event.daysUntil} · 경기 {event.matches}건 중 예측{" "}
-            {event.predicted}건
-            {/* 날짜가 앞인데 상태가 닫혀 있으면 사람이 아직 안 돌린 것이다. */}
+            {event.predicted}건{/* 날짜가 앞인데 상태가 닫혀 있으면 사람이 아직 안 돌린 것이다. */}
             {event.status !== "upcoming" && (
               <span className="text-muted-foreground"> · 상태 {event.status}</span>
             )}

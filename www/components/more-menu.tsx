@@ -42,9 +42,7 @@ export const MORE_GROUPS: readonly MoreGroup[] = [
   },
   {
     title: "킥오프",
-    items: [
-      { label: "대화", description: "슈퍼스타와 이야기하기", href: "/chat" },
-    ],
+    items: [{ label: "대화", description: "슈퍼스타와 이야기하기", href: "/chat" }],
   },
   {
     title: "실습",

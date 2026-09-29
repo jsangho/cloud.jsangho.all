@@ -156,9 +156,9 @@ function Legend({ rules, unattributed }: { rules: RuleDefinition[]; unattributed
       </ul>
       {unattributed > 0 && (
         <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          나머지 규칙은 근거의 성질이 아니라 예측 자체의 사실입니다 — 결과 기록 이후 생성,
-          카드에서 사라진 경기 등. 지금 <strong className="font-semibold">{unattributed}건</strong>이
-          그런 이유로 막혀 있고, 이 그래프에는 오지 않습니다.
+          나머지 규칙은 근거의 성질이 아니라 예측 자체의 사실입니다 — 결과 기록 이후 생성, 카드에서
+          사라진 경기 등. 지금 <strong className="font-semibold">{unattributed}건</strong>이 그런
+          이유로 막혀 있고, 이 그래프에는 오지 않습니다.
         </p>
       )}
     </section>
@@ -186,9 +186,7 @@ function DocumentCard({
         <p className="shrink-0 text-sm tabular-nums text-muted-foreground">
           {doc.blocked}건 막음
           {/* 0이면 적지 않는다 — "단독 원인 0"은 화면에서 배경이 된다. */}
-          {doc.soleCause > 0 && (
-            <span className="text-live"> · 단독 원인 {doc.soleCause}</span>
-          )}
+          {doc.soleCause > 0 && <span className="text-live"> · 단독 원인 {doc.soleCause}</span>}
         </p>
       </div>
 
