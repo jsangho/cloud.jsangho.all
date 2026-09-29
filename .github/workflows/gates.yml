@@ -29,7 +29,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      # **정확한 버전으로 핀한다.** 다른 액션들처럼 `@v10`으로 적으면 안 된다 —
+      # `astral-sh/setup-uv`는 **`v7` 이후로 이동 major 태그를 발행하지 않는다**
+      # (`tags/v10`이 404). 첫 CI 실행이 여기서 죽었다:
+      # "Unable to resolve action astral-sh/setup-uv@v10, unable to find version v10".
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
