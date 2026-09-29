@@ -944,6 +944,39 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ]),
   ],
 
+  // `Crown Jewel (2026)` rev 1372805732 · 2026-11-07 리야드
+  //
+  // **참가자가 사람 이름이 아니라 자리 이름이다.** 크라운 주얼은 두 브랜드의
+  // 챔피언끼리 붙이는 형식이라, 11/7에 그 벨트를 들고 있는 사람이 나간다 — 위키도
+  // 아직 모른다. 위키가 적은 그대로 두는 이유는 그것이 **실제로 발표된 대진**이기
+  // 때문이다. 이름을 지어 넣으면 확정되지 않은 것이 확정된 것처럼 보인다.
+  //
+  // 챔피언이 정해지면 위키가 이 칸을 사람 이름으로 바꾼다. 그때
+  // `sync_ple_cards_from_wiki.py`는 이름이 통째로 달라져 **기존 경기를 못 알아보고**
+  // 새 id를 제안하며 아래 둘을 `위키 대진에 없음`으로 보고한다. 지우지는 않으므로,
+  // 그 드라이런을 보고 사람이 이름만 갈아 끼우면 된다.
+  "crown-jewel": [
+    m2(
+      "cj26-crown-jewel",
+      "WWE Crown Jewel Championship",
+      "sideB",
+      { name: "Raw's World Heavyweight Champion" },
+      { name: "SmackDown's Undisputed WWE Champion" },
+    ),
+    m2(
+      "cj26-women-crown-jewel",
+      "WWE Women's Crown Jewel Championship",
+      "sideA",
+      { name: "Raw's Women's World Champion" },
+      { name: "SmackDown's WWE Women's Champion" },
+    ),
+  ],
+
+  // `Wrestlepalooza (2026)` · 2026-12-12 퍼스 RAC Arena · **대진 미발표**.
+  // 위키 문서에 `Matches` 절이 없다(Production·See also·References·External links뿐,
+  // 2026-09-29 확인). 통산 6번째이고 북미 밖 개최는 처음이다.
+  wrestlepalooza: [],
+
   // `NXT Halloween Havoc (2026)` · 2026-10-31 · **대진 미발표**.
   // 위키 문서에 `Matches` 절 자체가 없다(Background·References·External links뿐,
   // 2026-09-29 확인). 빈 배열로 두는 이유는 `getPleMatches`가 `[]`를 돌려주어

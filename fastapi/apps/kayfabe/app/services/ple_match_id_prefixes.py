@@ -50,10 +50,10 @@ PLE_MATCH_ID_PREFIXES: dict[str, str] = {
     "night-of-champions": "noc26",
     "summerslam": "ss26",
     "money-in-the-bank": "mitb26",
+    "crown-jewel": "cj26",
     "survivor-series": "ss26",
-    # `crown-jewel`·`wrestlepalooza`는 픽스처에 항목 자체가 없다. 접두사를 미리
-    # 정해 두지 않는 이유는, 항목이 없으면 도구가 접두사를 보기 전에 멈추기
-    # 때문이다 — 여기 값을 넣어도 쓰이지 않는다. 항목을 만드는 사람이 그때 정한다.
+    # 대진 미발표 — `halloween-havoc`과 같은 자리다.
+    "wrestlepalooza": "wp26",
 }
 
 

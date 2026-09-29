@@ -57,15 +57,18 @@ def test_every_event_with_a_fixture_entry_is_in_the_table(source: str) -> None:
     assert not missing, f"표에 없는 대회: {', '.join(missing)}"
 
 
-def test_the_unannounced_event_has_a_prefix_ready(source: str) -> None:
-    """**이 표가 실제로 쓰이는 자리다.**
+def test_every_unannounced_event_has_a_prefix_ready(source: str) -> None:
+    """**이 표가 실제로 쓰이는 유일한 자리다.**
 
-    `halloween-havoc`은 대진이 아직 없어 경기가 0건이고, 그래서 픽스처에서 접두사를
-    읽을 수 없다. 표에 값이 없으면 대진이 발표되는 날 도구가 그냥 멈춘다.
+    대진이 아직 없는 대회는 경기가 0건이라 픽스처에서 접두사를 읽을 수 없다. 표에
+    값이 없으면 대진이 발표되는 날 도구가 그냥 멈춘다 — 그 침묵을 여기서 막는다.
+
+    항목은 있는데 경기가 0건인 대회를 **찾아서** 검사한다. 슬러그를 손으로 적으면
+    대진이 들어오는 날 이 테스트가 무의미해진다.
     """
-    cards = read_event_cards(source, "halloween-havoc")
-    assert cards == (), (
-        "이 테스트의 전제가 깨졌다 — 대진이 들어왔다면 위 검사로 충분하다"
-    )
-    assert id_prefix_of(cards) is None
-    assert PLE_MATCH_ID_PREFIXES["halloween-havoc"] == "hh26"
+    unannounced = [
+        slug for slug in EVENT_ARTICLE_TITLES if read_event_cards(source, slug) == ()
+    ]
+    assert unannounced, "대진 미발표 대회가 없다 — 이 테스트의 전제가 사라졌다"
+    missing = [s for s in unannounced if s not in PLE_MATCH_ID_PREFIXES]
+    assert not missing, f"접두사가 없는 미발표 대회: {', '.join(missing)}"
