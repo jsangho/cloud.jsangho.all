@@ -17,7 +17,7 @@
 
 | 문서(ERD) 명칭 | 실제 테이블/모델 | 위치 |
 |---|---|---|
-| `users` | `users` (동일) | `apps/superstar/domain/entities/user_model.py` |
+| `users` | `users` (동일) | `core/entities/user_model.py` (공유 커널 — 앱 밖) |
 | `events` | `ple_events` | `apps/kayfabe/adapter/outbound/orm/ple_orm.py` |
 | `ple_matches` | `ple_matches` (동일) | 위 파일 |
 | `match_pick` | `ple_predictions` | 위 파일 |

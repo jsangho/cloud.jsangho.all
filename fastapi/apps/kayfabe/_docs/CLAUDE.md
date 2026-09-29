@@ -75,8 +75,12 @@ CQRS 분리는 **UseCase 레이어**에서 유지한다 (`PleUseCase` vs `PleInf
 관문이 건너뛴다. 스크립트는 **기본이 드라이런**이고 `--apply`로만 쓴다.
 
 ### UserModel 출처
-`from superstar.domain.entities.user_model import UserModel`  
-(구 `friday13th` → `superstar` 앱으로 이전됨)
+`from core.entities.user_model import UserModel`
+
+**앱이 아니라 공유 커널(`fastapi/core/`)에 있다.** `friday13th` → `superstar`를 거쳐
+`core`로 내려왔다(`superstar` 앱은 2026-09-29에 삭제). `auth`에 두지 않은 이유가 규칙이다:
+`kayfabe`가 FK 때문에 이걸 참조하는데 `auth`는 **아무도 import할 수 없는** 앱이라
+(`.importlinter` `auth_isolation`) 거기 두면 계약이 즉시 깨진다.
 
 ### Provider 멱등성 패턴
 ```python
