@@ -7,9 +7,9 @@
 
 from __future__ import annotations
 
-from core.entities.user_model import UserModel
 from sqlalchemy import case, func, select
 
+from core.entities.user_model import UserModel
 from kayfabe.adapter.outbound.orm.ple_orm import (
     PleMatchModel,
     PleMatchStatus,

@@ -11,11 +11,11 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from kayfabe.adapter.outbound.orm.knowledge_chunk_orm import KnowledgeChunkModel
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk
 from kayfabe.app.ports.output.prediction_knowledge_port import (

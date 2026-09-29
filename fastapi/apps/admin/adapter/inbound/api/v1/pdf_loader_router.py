@@ -4,7 +4,6 @@ from admin.adapter.inbound.api.schemas.pdf_loader_schema import (
 from admin.app.dtos.pdf_loader_dto import PdfLoaderCommand
 from admin.app.ports.input.pdf_loader_use_case import PdfLoaderUseCase
 from admin.dependencies.pdf_loader_provider import get_pdf_loader_use_case
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 pdf_loader_router = APIRouter(prefix="/pdf", tags=["pdf"])

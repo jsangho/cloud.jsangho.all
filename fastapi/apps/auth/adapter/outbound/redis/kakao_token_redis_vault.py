@@ -12,11 +12,11 @@ import base64
 import os
 
 import redis.asyncio as redis
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from auth.app.ports.output.kakao_token_vault import KakaoTokenVault
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 
 _REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 _REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))

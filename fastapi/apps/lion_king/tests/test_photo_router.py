@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi.testclient import TestClient
+from fastapi import FastAPI
 from lion_king.adapter.inbound.api.v1.photo_router import photo_router
 from lion_king.app.dtos.photo_dto import PhotoDto, UploadPhotoCommand
 from lion_king.app.ports.input.photo_use_case import PhotoUseCase
@@ -15,8 +17,6 @@ from lion_king.domain.value_objects.photo_content import (
     PhotoTooLargeError,
     UnsupportedPhotoFormatError,
 )
-
-from fastapi import FastAPI
 
 
 class FakeUseCase(PhotoUseCase):

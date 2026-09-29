@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
 from fastapi.responses import StreamingResponse
 
+from core.matrix.grid_sentinel_stream_guard import open_guarded_text_stream
 from fastapi import APIRouter, Body, Depends
 from kayfabe.adapter.inbound.api.schemas.wrestler_chat_schema import (
     WrestlerChatSchema,

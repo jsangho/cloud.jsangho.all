@@ -27,11 +27,19 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from admin.adapter.inbound.api import (
     human_resource_router,
     langchain_router,
     pdf_loader_router,
 )
+from auth.adapter.inbound.api import auth_router
+from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
+from auth.adapter.inbound.api.jwks_router import jwks_router
 from core.matrix.grid_architect_graph_manager import dispose_neo4j_driver
 from core.matrix.grid_oracle_database_manager import (
     attach_neon_sql_logging,
@@ -42,23 +50,15 @@ from core.matrix.grid_oracle_database_manager import (
     init_db,
 )
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, HTTPException, Request
 from heyman.adapter.inbound.api import manager_router
+from kayfabe.adapter.inbound.api import kayfabe_router
 from lion_king.adapter.inbound.api.v1.photo_router import photo_router
 from lion_king.adapter.inbound.api.v1.receipt_router import receipt_router
-from pydantic import BaseModel, Field
-from soccer.adapter.inbound.api import soccer_router
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from auth.adapter.inbound.api import auth_router
-from auth.adapter.inbound.api.docs_gate_router import docs_gate_router
-from auth.adapter.inbound.api.jwks_router import jwks_router
-from fastapi import Depends, FastAPI, HTTPException, Request
-from kayfabe.adapter.inbound.api import kayfabe_router
 from ontology.adapter.inbound.api import ontology_router
 from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
+from soccer.adapter.inbound.api import soccer_router
 
 keymaker = get_keymaker()
 logger = logging.getLogger("uvicorn.error")

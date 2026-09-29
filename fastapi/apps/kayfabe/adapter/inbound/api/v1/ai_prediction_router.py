@@ -9,7 +9,6 @@ from __future__ import annotations
 from core.security.dependencies import RoleChecker
 from core.security.role import UserRole
 from core.security.token_verifier import TokenPayload
-
 from fastapi import APIRouter, Depends, HTTPException
 from kayfabe.adapter.inbound.api.schemas.ai_prediction_schema import (
     AgentPredictionListSchema,

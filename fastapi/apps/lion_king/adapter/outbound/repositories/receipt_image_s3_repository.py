@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
+
 from core.matrix.s3_manager import get_s3_manager
 from lion_king.app.dtos.receipt_dto import ReceiptImage, ReceiptSummaryDto
 from lion_king.app.ports.output.photo_repository import PhotoStorageUnavailableError

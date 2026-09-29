@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from lion_king.app.dtos.receipt_dto import (
     OcrRawResult,
     OcrReceiptCommand,

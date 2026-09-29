@@ -1,5 +1,6 @@
-from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 from neo4j import AsyncSession
+
+from admin.app.ports.output.graph_retrieval_port import GraphRetrievalPort
 
 _MAX_DOCUMENTS = 3
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import os
 
-from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.matrix.grid_oracle_database_manager import get_db
 from fastapi import Depends
 from kayfabe.adapter.outbound.agents.odds_scout_agent import BookmakerOddsScout
 from kayfabe.adapter.outbound.agents.rumor_scout_agent import GeminiRumorScout

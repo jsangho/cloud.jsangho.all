@@ -127,16 +127,22 @@ ignore = [
 "**/apps/ontology/tests/*.py" = ["E402"]  # standalone 검증 스크립트 sys.path 조작
 
 [tool.ruff.lint.isort]
+# **`fastapi/apps/*` 디렉터리명 + 공유 커널 `core`가 정본이다.** 여기 빠진 이름은
+# 서드파티로 분류되어 `fastapi`·`pydantic` 사이에 섞여 정렬된다 — 실제로 `core`와
+# 앱 넷(`admin`·`heyman`·`lion_king`·`soccer`)이 그 상태였다.
+# 앱을 추가·삭제하면 이 목록과 `fastapi/.importlinter`를 함께 고친다.
 known-first-party = [
+    # `jsangho`는 디렉터리가 아니라 §0-3이 정한 core의 표기 규약이다. 실제 import는
+    # `core.`로 쓰므로 아래 `core`가 분류를 담당하고, 이 줄은 규약 쪽을 받쳐 둔다.
     "jsangho",
+    "core",
     "ontology",
     "kayfabe",
     "auth",
-    "human_resource",
-    "imitation_game",
-    "inception",
-    "social_network",
-    "manager",
+    "admin",
+    "heyman",
+    "lion_king",
+    "soccer",
 ]
 
 [tool.mypy]

@@ -15,15 +15,15 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
+from fastapi.responses import StreamingResponse
+from fastapi.testclient import TestClient
+
 from core.matrix.grid_sentinel_stream_guard import (
     EMPTY_UPSTREAM_DETAIL,
     MID_STREAM_NOTICE,
     UPSTREAM_FAILED_DETAIL,
     open_guarded_text_stream,
 )
-from fastapi.responses import StreamingResponse
-from fastapi.testclient import TestClient
-
 from fastapi import FastAPI, HTTPException
 
 

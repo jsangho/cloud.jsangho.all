@@ -26,7 +26,6 @@ import asyncio  # noqa: E402
 import logging  # noqa: E402
 
 from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-
 from kayfabe.adapter.outbound.pg.agent_prediction_pg_repository import (  # noqa: E402
     AgentPredictionPgRepository,
 )

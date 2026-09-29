@@ -34,7 +34,6 @@ if str(_APPS_DIR) not in sys.path:
 import asyncio  # noqa: E402
 
 from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-
 from kayfabe.app.dtos.knowledge_ingestion_dto import (  # noqa: E402
     IngestionSummary,
     IngestKnowledgeCommand,

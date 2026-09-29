@@ -53,12 +53,11 @@ if str(_APPS_DIR) not in sys.path:
 
 import asyncio  # noqa: E402
 
-from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-
 # `outbound.mappers.__init__`가 `inbound.api`를 거쳐 다시 자신을 부르는 **기존** 순환이
 # 있다. 운영에서는 `main.py`가 라우터를 먼저 임포트해 순서가 맞으므로, 여기서도 같은
 # 순서를 만든다. 빠뜨리면 PG 어댑터 임포트가 깨진다.
 import kayfabe.adapter.inbound.api.v1.ple_events_router  # noqa: F401,E402
+from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
 from kayfabe.app.dtos.result_verification_dto import (  # noqa: E402
     MatchVerification,
     VerificationRun,

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from core.security.role import UserRole
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.app.ports.input.signup_use_case import SignupUseCase
 from auth.dependencies.auth_provider import get_signup_use_case
+from core.security.role import UserRole
 from fastapi import APIRouter, Depends
 
 signup_router = APIRouter(tags=["auth-signup"])

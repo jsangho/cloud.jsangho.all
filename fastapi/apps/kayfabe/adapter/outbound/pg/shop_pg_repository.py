@@ -5,12 +5,12 @@
 
 from __future__ import annotations
 
-from core.entities.user_model import UserModel
-from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.entities.user_model import UserModel
+from core.matrix.grid_oracle_database_manager import LAYER_LOG
 from kayfabe.adapter.outbound.orm.shop_orm import (
     COSMETIC_CATEGORIES,
     PointLedgerEntryModel,

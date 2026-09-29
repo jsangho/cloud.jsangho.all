@@ -17,7 +17,6 @@ if str(_APPS_DIR) not in sys.path:
 import asyncio  # noqa: E402
 
 from core.matrix.grid_oracle_database_manager import AsyncSessionLocal  # noqa: E402
-
 from kayfabe.adapter.outbound.pg.ple_events_pg_repository import (  # noqa: E402
     PleEventsPgRepository,
 )

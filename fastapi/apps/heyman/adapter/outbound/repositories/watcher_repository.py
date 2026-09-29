@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from heyman.app.dtos.watcher_dto import WatcherQuery, WatcherResponse
 from heyman.app.ports.output.watcher_repository import WatcherRepository
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class WatcherPgRepository(WatcherRepository):

@@ -6,9 +6,6 @@
 
 from __future__ import annotations
 
-from core.security.client_ip import client_ip
-from core.security.dependencies import get_current_user
-from core.security.token_verifier import TokenPayload
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.app.dtos.mobile_auth_dto import MobileDeviceDto
@@ -19,6 +16,9 @@ from auth.app.ports.output.session_store import (
     SessionReuseDetectedError,
 )
 from auth.dependencies.auth_provider import get_mobile_auth_use_case
+from core.security.client_ip import client_ip
+from core.security.dependencies import get_current_user
+from core.security.token_verifier import TokenPayload
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 mobile_auth_router = APIRouter(prefix="/mobile", tags=["auth-mobile"])

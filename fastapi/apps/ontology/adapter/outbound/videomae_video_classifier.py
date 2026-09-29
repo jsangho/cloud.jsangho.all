@@ -6,10 +6,10 @@ from typing import Any, ClassVar
 
 import numpy as np
 import torch
-from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from decord import VideoReader, cpu
 from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
 
+from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from ontology.app.dtos.video_classification_dto import (
     VideoClassificationDto,
     VideoTopKPredictionDto,

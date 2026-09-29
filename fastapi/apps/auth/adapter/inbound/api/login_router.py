@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from core.security.cookie import set_access_cookie
-from core.security.role import UserRole
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.adapter.outbound.redis.refresh_token_repository import RefreshTokenRepository
@@ -16,6 +14,8 @@ from auth.domain.services.token_issuer import (
     create_access_token,
     create_refresh_token,
 )
+from core.security.cookie import set_access_cookie
+from core.security.role import UserRole
 from fastapi import APIRouter, Depends, Response
 
 login_router = APIRouter(tags=["auth-login"])

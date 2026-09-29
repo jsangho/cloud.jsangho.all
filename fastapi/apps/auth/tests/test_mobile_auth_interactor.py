@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import fakeredis.aioredis
 import pytest
-from core.entities.user_model import UserModel
 from fakes import FakeKakao, FakeUsers, FakeVault
 
 from auth.adapter.outbound.redis.session_redis_store import SessionRedisStore
@@ -15,6 +14,7 @@ from auth.app.dtos.mobile_auth_dto import MobileDeviceDto
 from auth.app.ports.output.session_store import MOBILE
 from auth.app.use_cases.mobile_auth_interactor import MobileAuthInteractor
 from auth.domain.value_objects.kakao_identity import KakaoProfile
+from core.entities.user_model import UserModel
 
 
 def _interactor(

@@ -4,20 +4,20 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
+from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
+from ontology.app.ports.input.gemini_generation_use_case import (
+    GeminiGenerationUseCase,
+)
 from soccer.adapter.outbound.orm.player_orm import PlayerOrm
 from soccer.adapter.outbound.orm.schedule_orm import ScheduleOrm
 from soccer.adapter.outbound.orm.stadium_orm import StadiumOrm
 from soccer.adapter.outbound.orm.team_orm import TeamOrm
 from soccer.app.dtos.soccer_chat_dto import SoccerChatCommand, SoccerChatTurnDto
 from soccer.app.ports.output.soccer_chat_port import SoccerChatPort
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from ontology.app.dtos.gemini_generation_dto import GeminiGenerationCommand
-from ontology.app.ports.input.gemini_generation_use_case import (
-    GeminiGenerationUseCase,
-)
 
 logger = logging.getLogger("uvicorn.error")
 

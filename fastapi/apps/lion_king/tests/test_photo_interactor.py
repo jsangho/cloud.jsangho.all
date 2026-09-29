@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from lion_king.app.dtos.photo_dto import UploadPhotoCommand
 from lion_king.app.ports.output.photo_repository import (
     PhotoRepository,

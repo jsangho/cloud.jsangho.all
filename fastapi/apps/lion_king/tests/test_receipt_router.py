@@ -5,9 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from fastapi.testclient import TestClient
+
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
-from fastapi.testclient import TestClient
+from fastapi import FastAPI
 from lion_king.adapter.inbound.api.v1.receipt_router import receipt_router
 from lion_king.app.dtos.receipt_dto import (
     OcrReceiptCommand,
@@ -22,8 +24,6 @@ from lion_king.app.ports.output.receipt_ocr_port import OcrUnavailableError
 from lion_king.dependencies.receipt_provider import get_receipt_use_case
 from lion_king.domain.services.receipt_parser import ReceiptNotRecognizedError
 from lion_king.domain.value_objects.receipt_key import ReceiptKeyNotOwnedError
-
-from fastapi import FastAPI
 
 _DRAFT = ReceiptDraftDto(
     merchant_name="이마트 성수점",

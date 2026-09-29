@@ -3,12 +3,11 @@ from __future__ import annotations
 import re
 import secrets
 
-from core.entities.user_model import UserModel
-
 from auth.app.ports.input.oauth_login_use_case import OAuthLoginUseCase
 from auth.app.ports.output.oauth_identity_provider import OAuthIdentityProvider
 from auth.app.ports.output.oauth_state_store import OAuthStateStore
 from auth.app.ports.output.user_repository import UserRepository
+from core.entities.user_model import UserModel
 
 _LOGIN_ID_SAFE_CHARS = re.compile(r"[^a-zA-Z0-9_]+")
 

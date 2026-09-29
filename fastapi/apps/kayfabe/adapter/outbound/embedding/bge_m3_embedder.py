@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
-
 from kayfabe.app.ports.output.text_embedding_port import (
     EmbeddingUnavailableError,
     TextEmbeddingPort,

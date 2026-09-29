@@ -1,6 +1,6 @@
-from core.matrix.grid_oracle_database_manager import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.matrix.grid_oracle_database_manager import get_db
 from fastapi import Depends
 from kayfabe.adapter.outbound.pg.ple_matches_pg_repository import PleMatchesPgRepository
 from kayfabe.app.ports.input.ple_matches_use_case import PleMatchesUseCase
