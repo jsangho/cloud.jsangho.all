@@ -56,9 +56,23 @@ CQRS 분리는 **UseCase 레이어**에서 유지한다 (`PleUseCase` vs `PleInf
 ### DB 없는 기능
 | 기능 | 출처 | 파일 |
 |------|------|------|
-| Championship | 정적 카탈로그 | `app/services/current_championship_catalog.py` |
+| Championship | `championship_titles` 기준선 + 갱신 두 축(아래) | `adapter/outbound/pg/title_acquisitions_pg_repository.py` |
 | Records | `ple_matches.card_json` 집계 | `app/services/records_scoring.py` |
 | Title History | PostgreSQL (`title_history` 테이블) | `adapter/outbound/pg/title_history_pg_repository.py` |
+
+### 챔피언 보드가 갱신되는 두 축
+
+카탈로그(`app/services/current_championship_catalog.py`)는 **최초 시딩**만 한다. 사람이
+고치지 않으면 보드가 낡으므로 갱신 경로가 둘 있고, 기준일(`championship_titles.as_of`)이
+둘을 가른다.
+
+| 축 | 재료 | 어디서 | 범위 |
+|----|------|--------|------|
+| 좁고 빠름 | PLE 경기 결과 | 읽기 경로(`get_board` → `domain/services/championship_succession.apply_results`) | PLE만 · 쓰기 없음 |
+| 넓고 늦음 | 위키 현 챔피언 표 | `scripts/sync_champion_board_from_wiki.py`(사람이 실행) | Raw·하우스쇼까지 · 기준선을 쓴다 |
+
+위키 동기화가 기준일을 읽은 날로 올리므로 그 이전 PLE는 `apply_results`의 기준일
+관문이 건너뛴다. 스크립트는 **기본이 드라이런**이고 `--apply`로만 쓴다.
 
 ### UserModel 출처
 `from superstar.domain.entities.user_model import UserModel`  
