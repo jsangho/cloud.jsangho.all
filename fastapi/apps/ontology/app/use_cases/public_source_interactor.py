@@ -15,6 +15,7 @@ import logging
 import re
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
+from hashlib import sha256
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -67,6 +68,7 @@ class PublicSourceInteractor(PublicSourceUseCase):
         robots: RobotsPolicyPort,
         revisions: RevisionMetadataPort | None = None,
         header_lineage_domains: frozenset[str] = frozenset(),
+        collection_lineage_domains: frozenset[str] = frozenset(),
     ) -> None:
         self._allowed_domains = frozenset(d.lower() for d in allowed_domains)
         self._fetcher = fetcher
@@ -84,6 +86,24 @@ class PublicSourceInteractor(PublicSourceUseCase):
         #: 앱의 것이다(허용 도메인 목록과 같은 이유).
         self._header_lineage_domains = frozenset(
             d.lower() for d in header_lineage_domains
+        )
+        #: **수집 시각을 계보로 인정하는 도메인** (2026-09-30 · 하네스 §13-Q8 결정).
+        #:
+        #: 뉴스 매체는 개정본 API도 없고 `ETag`·`Last-Modified`도 **둘 중 하나씩만**
+        #: 준다. 그렇다고 발행 시각(`article:published_time`)을 계보로 쓸 수는 없다 —
+        #: 같은 URL이 경기 뒤에 결과로 갱신돼도 그 값은 그대로라, **경기 후 본문이
+        #: 경기 전 증거로 통과한다.** 계보가 막으려던 바로 그 일이다.
+        #:
+        #: 그래서 우리가 **증명할 수 있는 것**을 쓴다: "이 본문을 우리가 그때 손에
+        #: 쥐고 있었다." 본문 해시가 함께 남으므로 자기 증명이 되고, 발행 뒤의 조용한
+        #: 수정에 흔들리지 않는다. 자격 판정이 묻는 것(경기보다 앞서는가 · 예측보다
+        #: 앞서는가)에 정확히 답하는 값이기도 하다.
+        #:
+        #: **틀리는 방향이 안전하다.** 수집이 늦으면 멀쩡한 기사도 "경기 전임을 못
+        #: 보증한다"며 걸린다. 반대로 통과시키는 일은 없다. 운영 규칙은 하나로
+        #: 정리된다 — **경기 전에 수집하면 증거로 쓰인다.**
+        self._collection_lineage_domains = frozenset(
+            d.lower() for d in collection_lineage_domains
         )
 
     async def collect(self, url: str) -> PublicDocument | None:
@@ -112,9 +132,13 @@ class PublicSourceInteractor(PublicSourceUseCase):
         # 우리가 읽은 판본일 수 없다.
         collected_at = datetime.now(UTC)
         fetched_title = _title(soup)
-        revision = await self._revision_of(
-            url, collected_at, fetched_title
-        ) or self._revision_from_response(url, page, fetched_title, collected_at)
+        # 계보를 얻는 세 길. 위에서부터 **주장이 강한 순서**다 — 발행자가 매긴
+        # 개정본 → 본문을 받아 온 응답의 헤더 → 우리가 읽었다는 사실.
+        revision = (
+            await self._revision_of(url, collected_at, fetched_title)
+            or self._revision_from_response(url, page, fetched_title, collected_at)
+            or self._revision_from_collection(url, text, fetched_title, collected_at)
+        )
         return PublicDocument(
             url=url,
             title=fetched_title,
@@ -272,6 +296,42 @@ class PublicSourceInteractor(PublicSourceUseCase):
             revision_id=page.etag,
             revised_at=revised_at,
             # 같은 응답에서 나왔으므로 대조할 상대가 없다. 있는 그대로 싣는다.
+            title=fetched_title or "",
+        )
+
+    def _revision_from_collection(
+        self,
+        url: str,
+        text: str,
+        fetched_title: str | None,
+        collected_at: datetime,
+    ) -> RevisionMetadata | None:
+        """**우리가 읽었다는 사실**을 계보로 삼는다 (2026-09-30 · §13-Q8).
+
+        앞의 두 길이 모두 실패한 뒤에만 온다. 여기까지 왔다는 것은 그 소스가 판본을
+        스스로 밝히지 않는다는 뜻이고, 그때 우리가 정직하게 말할 수 있는 문장은
+        하나뿐이다 — **"이 본문이 그 시각에 존재했다. 우리가 갖고 있었으니까."**
+
+        `revised_at`은 발행 시각이 아니다. `published_at`은 지금처럼 메타태그에서만
+        오고 이 값과 **따로 저장된다** — 둘을 한 칸에 접으면 "언제 쓰였는가"와
+        "언제 읽었는가"라는 다른 두 사실이 같은 이름으로 보고된다.
+
+        `revision_id`는 본문의 SHA-256이다. 응답이 준 식별자가 아니라 우리가 만든
+        값이므로 **출처를 접두사로 밝힌다** — 감사 화면에서 위키의 `revid`나 wwe.com의
+        `ETag`와 섞여 보이면 안 된다.
+        """
+        host = (urlparse(url).hostname or "").lower()
+        if host not in self._collection_lineage_domains:
+            return None
+        if not text:
+            # 본문이 없으면 해시할 것도, 읽었다고 주장할 것도 없다.
+            return None
+
+        digest = sha256(text.encode("utf-8")).hexdigest()[:32]
+        return RevisionMetadata(
+            revision_id=f"sha256:{digest}",
+            revised_at=collected_at,
+            # 같은 응답에서 나왔으므로 대조할 상대가 없다(`_revision_from_response`와 같다).
             title=fetched_title or "",
         )
 
