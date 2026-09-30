@@ -418,3 +418,20 @@ async def test_rumor_prompt_forbids_inferring_from_what_already_aired() -> None:
     prompt = generation.prompts[0]
     assert "보도했을 때만" in prompt
     assert "서사 분석가의 몫" in prompt
+
+
+@pytest.mark.asyncio
+async def test_rumor_prompt_rejects_a_mere_card_announcement() -> None:
+    """**의견 없음보다 나쁜 것은 틀린 근거로 확신하는 것이다.**
+
+    페르소나를 넓힌 직후 첫 생성에서 모델이 "방어전에 나설 예정"을 근거로 챔피언을
+    골라 0.9를 실었다(2026-09-30 실측). 미래에 관한 보도이긴 하나 승자에 대해서는
+    아무 말도 하지 않는 자료라, 그 확신은 합성의 확신도만 근거 없이 올린다.
+    """
+    generation = FakeGeneration(_reply("left"))
+
+    await _rumor(generation).analyze(_CONTEXT, _CHUNKS)
+
+    prompt = generation.prompts[0]
+    assert "출전한다는 발표는 승자에 대한 사실이" in prompt
+    assert "방어에 성공한다는 뜻이 아닙니다" in prompt
