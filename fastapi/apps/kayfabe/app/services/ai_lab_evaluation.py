@@ -17,12 +17,23 @@
   `not_applicable`(북메이커 폴백) · `external_outcome_known`(사후 재현 표본) ·
   `withdrawn_match`(경기가 카드에서 사라짐) · `pending`(결과 없음)
 * **실격**(`disqualify`) — 누수가 확정됐다.
-  `temporal_inversion`(결과 기록 이후 생성) · `self_reference`(자기 대회 문서 인용)
+  `temporal_inversion`(결과 기록 이후 생성) ·
+  `self_reference`(자기 대회 문서를 인용했고 **경기보다 앞선 판본임을 증명 못 함**)
 * **보류**(`hold`) — 누수를 **증명도 반증도 못 한다.**
   `unverifiable_corpus`(인용 문서가 경기보다 앞선 개정본임을 확인 못 함)
 
 **보류를 통과로 세지 않는다.** 모르는 것을 괜찮은 것으로 접으면 이 판정이 하는 일이
 사라진다. 그렇다고 실격으로도 세지 않는다 — 확정된 누수와 모르는 것은 다른 사실이다.
+
+**2026-09-30에 `self_reference`에 판본 조건이 붙었다.** 실격의 근거는 "그런 글에는
+결과가 적혀 있다"는 **추정**이었고, 추정이 필요했던 이유는 그 글이 언제의 판본인지
+몰랐기 때문이다. 계보가 그 물음에 직접 답하면 추정할 일이 없다 — 경기 시작일보다
+앞선 판본에 결과가 적혀 있을 수는 없고, `unverifiable_corpus`가 이미 같은 논리를 쓴다.
+
+그 결과 **자기참조는 단독으로 막지 못한다.** 증명하지 못하는 경우에는 코퍼스 규칙도
+함께 걸리기 때문이다. 남은 역할은 그 보류를 **실격으로 올리는 것**이다 — 대회 문서를
+근거로 썼다는 사실은 계보를 모른다는 사실보다 무겁다. 통과할 때도 사실이 사라지지는
+않는다: 감사 화면은 출처마다 `EvidenceVerdict.self_reference`로 계속 표시한다.
 
 **추정하지 않는다.** 어떤 청크가 검색됐는지 기록이 있으면(`ple_prediction_retrievals`,
 Stage 4) 그것으로 판정하고, 없으면 저장된 출처 URL까지만 쓴다. 없는 기록을 사후에
@@ -135,11 +146,14 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         code="self_reference",
-        label="그 대회를 다룬 글을 근거로 씀",
+        label="그 대회를 다룬 글을 근거로 씀 (판본을 증명 못 함)",
         severity=SEVERITY_DISQUALIFY,
         description=(
-            "그 대회 자체를 다룬 글을 근거로 실었습니다. 그런 글에는 경기 결과가 "
-            "적혀 있으므로, 예측이 아니라 정답을 읽은 것일 수 있습니다."
+            "그 대회 자체를 다룬 글을 근거로 실었고, 그것이 경기보다 앞선 판본임을 "
+            "증명하지 못했습니다. 그런 글에는 경기 결과가 적혀 있을 수 있으므로, "
+            "예측이 아니라 정답을 읽은 것일 수 있습니다. "
+            "판본 시각이 경기 시작일보다 앞서면 결과가 적혀 있을 수 없으므로 "
+            "막지 않습니다 — 그때도 감사 화면에는 출처마다 그 대회 글이라고 남습니다."
         ),
     ),
     Rule(
@@ -502,7 +516,7 @@ def _judge(
 
     verdicts = (
         _temporal(row),
-        _self_reference(row, sources),
+        _self_reference(row, sources, retrievals, provenance_by_url),
         # **기록이 있으면 그것이 이긴다.** 문서 단위 판정은 어느 청크가 뽑혔는지
         # 모를 때의 차선이고, 코퍼스의 지금 상태에 흔들린다. 옛 예측에는 기록이
         # 없으므로 그쪽은 지금까지와 똑같이 판정된다.
@@ -547,12 +561,34 @@ def _temporal(row: PredictionRow) -> RuleVerdict:
     )
 
 
-def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict:
+def _self_reference(
+    row: PredictionRow,
+    sources: tuple[str, ...],
+    retrievals: tuple[RetrievalRow, ...],
+    provenance_by_url: dict[str, DocumentProvenance],
+) -> RuleVerdict:
     """**출처가 없으면 자기참조라고 추정하지 않는다.**
 
     없음은 무죄도 유죄도 아니지만, 이 규칙이 잡는 것은 "인용했다"는 사실이다.
     인용이 없으면 이 규칙으로 막을 근거가 없다 — 다른 경로의 누수는 코퍼스 규칙과
     시간 규칙이 본다.
+
+    **경기보다 앞선 판본임이 증명되면 실격시키지 않는다** (2026-09-30).
+
+    이 규칙이 실격인 이유는 하나였다 — "그런 글에는 경기 결과가 적혀 있으므로."
+    그건 **대회 문서라는 사실에서 결과 포함을 추정한** 것이고, 추정이 필요했던 이유는
+    그 글이 언제의 판본인지 몰랐기 때문이다. 계보가 그 물음에 직접 답하면 추정할
+    일이 없어진다: **경기 시작일보다 앞선 판본에는 결과가 적혀 있을 수 없다.**
+    `_corpus`가 이미 같은 논리를 쓴다("앞서면 충분조건").
+
+    **그래도 경고는 남는다.** 판정이 통과로 바뀔 뿐, 감사 화면은 출처마다
+    `EvidenceVerdict.self_reference`로 "이건 그 대회를 다룬 글"이라고 계속 말한다 —
+    같은 `cites_own_event`를 지나므로 어긋날 수 없다. 사실을 지우는 것이 아니라
+    **막던 것을 멈추는** 변경이다.
+
+    **증명하지 못하면 예전 그대로 실격이다.** 대회 날짜가 없거나, 인용한 대회 문서
+    중 하나라도 판본 시각을 모르거나 경기 이후면 통과시키지 않는다. 모르는 것을
+    괜찮은 것으로 접지 않는다는 원칙은 여기서도 같다.
     """
     if not sources:
         return _verdict(
@@ -561,18 +597,74 @@ def _self_reference(row: PredictionRow, sources: tuple[str, ...]) -> RuleVerdict
             applicable=True,
             detail="근거로 적어 둔 출처가 없습니다.",
         )
-    if cites_own_event(sources, row.event_label):
+
+    flagged = tuple(url for url in sources if cites_own_event((url,), row.event_label))
+    if not flagged:
+        return _verdict(
+            "self_reference",
+            failed=False,
+            applicable=True,
+            detail=f"근거로 쓴 출처 {len(sources)}건에 그 대회를 다룬 글이 없습니다.",
+        )
+
+    unproven = tuple(
+        url
+        for url in flagged
+        if not _predates_event(url, retrievals, provenance_by_url, row.event_start_date)
+    )
+    if unproven:
         return _verdict(
             "self_reference",
             failed=True,
             applicable=True,
-            detail=f"'{row.event_label}' 대회 자체를 다룬 글을 근거로 썼습니다.",
+            detail=(
+                f"'{row.event_label}' 대회 자체를 다룬 글 {len(flagged)}건을 근거로 "
+                f"썼고, 그중 {len(unproven)}건은 경기보다 앞선 판본임을 "
+                f"증명하지 못했습니다."
+            ),
         )
     return _verdict(
         "self_reference",
         failed=False,
         applicable=True,
-        detail=f"근거로 쓴 출처 {len(sources)}건에 그 대회를 다룬 글이 없습니다.",
+        detail=(
+            f"'{row.event_label}' 대회를 다룬 글 {len(flagged)}건을 근거로 썼으나, "
+            f"전부 경기 시작({row.event_start_date}) 이전 판본이라 결과가 적혀 "
+            f"있을 수 없습니다."
+        ),
+    )
+
+
+def _predates_event(
+    url: str,
+    retrievals: tuple[RetrievalRow, ...],
+    provenance_by_url: dict[str, DocumentProvenance],
+    event_start_date: date | None,
+) -> bool:
+    """그 글의 **우리가 읽은 판본**이 경기보다 앞섰다고 말할 수 있는가.
+
+    **기록이 있으면 기록이 이긴다** — `_corpus_from_retrievals`와 같은 우선순위다.
+    문서 단위 계보는 어느 청크가 뽑혔는지 몰라 가장 늦은 판본을 기준으로 잡는
+    차선이고, 재수집이 과거 판정을 흔든다. 두 규칙이 서로 다른 재료를 보면 한
+    화면에서 "코퍼스는 괜찮은데 자기참조는 아니다" 같은 말이 나온다.
+    """
+    if event_start_date is None:
+        return False
+
+    read = [item for item in retrievals if item.source_url == url]
+    if read:
+        return all(
+            _temporal_position(item.source_revised_at, event_start_date)
+            == EVIDENCE_BEFORE_EVENT
+            for item in read
+        )
+
+    provenance = provenance_by_url.get(url)
+    if provenance is None or not provenance.is_complete:
+        return False
+    return (
+        _temporal_position(provenance.latest_revised_at, event_start_date)
+        == EVIDENCE_BEFORE_EVENT
     )
 
 

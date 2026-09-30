@@ -108,6 +108,19 @@ def _document(
     )
 
 
+def _own_doc(url: str) -> DocumentRow:
+    """그 대회를 다룬 문서를 **증명 불가 계보**로 준다 (2026-09-30).
+
+    자기참조는 이제 "경기보다 앞선 판본임을 증명했는가"를 함께 묻고, 증명되면
+    막지 않는다. 그래프가 무엇을 원인으로 지목하는지 재려면 먼저 막혀야 하므로
+    판본을 경기 뒤로 둔다.
+
+    그래서 이 문서에는 `unverifiable_corpus`가 **함께** 붙는다 — 두 규칙이 같은
+    계보를 보기 때문이고, 자기참조가 단독으로 막는 경우는 이제 없다.
+    """
+    return _document(url=url, revised_at=_AFTER_EVENT)
+
+
 def _retrieval(
     *,
     match_key: str = "m1",
@@ -136,7 +149,7 @@ def test_the_graph_repeats_the_verdict_it_was_given() -> None:
     """**그래프가 판정을 새로 내면 두 화면이 다른 말을 하게 된다.**"""
     predictions = [_prediction()]
     reports = [_report(sources=(_OWN,))]
-    documents = [_document(url=_OWN)]
+    documents = [_own_doc(_OWN)]
 
     _, _, items, _ = summarize_evaluation(predictions, reports, documents)
     _, graph = summarize_leakage(predictions, reports, documents)
@@ -148,7 +161,7 @@ def test_the_graph_repeats_the_verdict_it_was_given() -> None:
 def test_only_document_rules_can_appear() -> None:
     """**문서로 돌릴 수 없는 규칙을 코드로 내보내지 않는다.**"""
     _, graph = summarize_leakage(
-        [_prediction()], [_report(sources=(_OWN,))], [_document(url=_OWN)]
+        [_prediction()], [_report(sources=(_OWN,))], [_own_doc(_OWN)]
     )
 
     assert set(graph[0].codes) <= set(DOCUMENT_RULES)
@@ -169,12 +182,12 @@ def test_two_event_documents_are_both_named() -> None:
     _, graph = summarize_leakage(
         [_prediction()],
         [_report(sources=(_OWN, _OWN_2))],
-        [_document(url=_OWN), _document(url=_OWN_2)],
+        [_own_doc(_OWN), _own_doc(_OWN_2)],
     )
 
     named = {doc.source_url for doc in graph}
     assert named == {_OWN, _OWN_2}
-    assert all(doc.codes == ("self_reference",) for doc in graph)
+    assert all(doc.codes == ("self_reference", "unverifiable_corpus") for doc in graph)
     # 어느 쪽도 혼자 결정하지 않았다 — 하나를 빼도 판정이 그대로다.
     assert all(doc.sole_cause == 0 for doc in graph)
 
@@ -184,7 +197,7 @@ def test_a_clean_document_in_the_same_prediction_is_not_blamed() -> None:
     _, graph = summarize_leakage(
         [_prediction()],
         [_report(sources=(_OWN, _OTHER))],
-        [_document(url=_OWN), _document(url=_OTHER)],
+        [_own_doc(_OWN), _document(url=_OTHER)],
     )
 
     assert [doc.source_url for doc in graph] == [_OWN]
@@ -200,7 +213,7 @@ def test_removing_the_only_offender_would_have_made_it_eligible() -> None:
     totals, graph = summarize_leakage(
         [_prediction()],
         [_report(sources=(_OWN, _OTHER))],
-        [_document(url=_OWN), _document(url=_OTHER)],
+        [_own_doc(_OWN), _document(url=_OTHER)],
     )
 
     [document] = graph
@@ -219,7 +232,7 @@ def test_the_only_evidence_is_not_counted_as_a_sole_cause() -> None:
     얻는다"는 말이 되어, 그래프가 코퍼스를 비우라고 권하는 꼴이 된다.
     """
     totals, graph = summarize_leakage(
-        [_prediction()], [_report(sources=(_OWN,))], [_document(url=_OWN)]
+        [_prediction()], [_report(sources=(_OWN,))], [_own_doc(_OWN)]
     )
 
     [edge] = graph[0].predictions
@@ -254,7 +267,7 @@ def test_the_totals_always_add_up() -> None:
         _report(match_key="m1"),
         _report(match_key="m2", sources=(_OWN, _OTHER)),
     ]
-    documents = [_document(), _document(url=_OWN), _document(url=_OTHER)]
+    documents = [_document(), _own_doc(_OWN), _document(url=_OTHER)]
 
     totals, _ = summarize_leakage(predictions, reports, documents)
 
@@ -272,7 +285,7 @@ def test_excluded_predictions_are_not_blocked() -> None:
     ]
     reports = [_report(match_key=key, sources=(_OWN,)) for key in ("m1", "m2", "m3")]
 
-    totals, graph = summarize_leakage(predictions, reports, [_document(url=_OWN)])
+    totals, graph = summarize_leakage(predictions, reports, [_own_doc(_OWN)])
 
     assert totals.blocked_predictions == 0
     assert graph == []
@@ -356,7 +369,7 @@ def test_the_document_that_blocked_the_most_comes_first() -> None:
         _report(match_key="m2", sources=(_OWN,)),
         _report(match_key="m3", sources=(_OWN_2,)),
     ]
-    documents = [_document(url=_OWN), _document(url=_OWN_2)]
+    documents = [_own_doc(_OWN), _own_doc(_OWN_2)]
 
     _, graph = summarize_leakage(predictions, reports, documents)
 

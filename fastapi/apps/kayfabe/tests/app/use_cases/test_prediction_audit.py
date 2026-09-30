@@ -275,11 +275,16 @@ async def test_evidence_is_empty_for_predictions_without_a_record() -> None:
 
 @pytest.mark.asyncio
 async def test_self_referencing_evidence_is_marked() -> None:
-    """실격의 **근거가 어느 조각인지** 짚을 수 있어야 한다 (Phase 6)."""
+    """실격의 **근거가 어느 조각인지** 짚을 수 있어야 한다 (Phase 6).
+
+    대회 문서의 판본을 경기 **이후**로 둔다 — 2026-09-30부터 자기참조는 "경기보다
+    앞선 판본임을 증명했는가"를 함께 묻고, 증명되면 막지 않는다. 여기서 재는 것은
+    막혔을 때 근거를 짚을 수 있는가이므로 증명이 없는 쪽을 쓴다.
+    """
     repository = FakeRepository(
         reports=[_report(sources=(_DOC, _OWN))],
-        documents=[_document(), _document(_OWN)],
-        retrievals=[_retrieval(1), _retrieval(2, url=_OWN)],
+        documents=[_document(), _document(_OWN, revised_at=_AFTER)],
+        retrievals=[_retrieval(1), _retrieval(2, url=_OWN, revised_at=_AFTER)],
     )
 
     audit = await _audit(repository)
