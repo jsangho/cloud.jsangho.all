@@ -45,6 +45,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://jsangho.cloud",
         "https://www.jsangho.cloud",
+        "https://kayfabe.jsangho.cloud",
     ],
     allow_credentials=True,
     allow_methods=["*"],

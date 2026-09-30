@@ -111,6 +111,9 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://jsangho.cloud",
         "https://www.jsangho.cloud",
+        # KAYFABE는 2026-09-30에 서브도메인으로 분리됐다. 여기 없으면 브라우저가
+        # 응답을 버려서 화면이 통째로 빈다 — API 자체는 200을 준다.
+        "https://kayfabe.jsangho.cloud",
     ],
     allow_credentials=True,
     allow_methods=["*"],
