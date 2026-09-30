@@ -253,19 +253,39 @@ class TestSelfReference:
         _, agents = summarize_agent_analysis(predictions, reports)
         assert _only(agents, "rumor").self_referencing_reports == 1
 
-    def test_a_substring_match_in_another_event_does_not_count(self) -> None:
-        predictions = [_prediction(match_key="m1", slug="champions", label="Champions")]
+    def test_a_word_fragment_does_not_count(self) -> None:
+        """단어 중간 일치는 누수가 아니다 (`cites_own_event`와 **같은 판정**).
+
+        2026-09-30에 판정을 토큰 구간 일치로 바꾸면서 이쪽이 오히려 엄격해졌다 —
+        옛 `startswith` 규칙은 `backlashing-rumours`를 "Backlash" 문서로 셌다.
+        """
+        predictions = [_prediction(match_key="m1", slug="backlash", label="Backlash")]
         reports = [
             _report(
                 match_key="m1",
-                slug="champions",
+                slug="backlash",
                 agent="rumor",
-                sources=("https://en.wikipedia.org/wiki/Night_of_Champions_(2026)",),
+                sources=("https://wrestletalk.com/news/backlashing-rumours",),
             )
         ]
         _, agents = summarize_agent_analysis(predictions, reports)
-        # 마지막 path segment의 접두사로만 판정한다 — 단순 포함이면 과탐이 난다.
         assert _only(agents, "rumor").self_referencing_reports == 0
+
+    def test_an_event_name_mid_slug_counts(self) -> None:
+        """뉴스 주소는 단체명이 앞에 붙어 대회 이름이 가운데 온다 — 옛 규칙이 놓쳤다."""
+        predictions = [
+            _prediction(match_key="m1", slug="summerslam", label="SummerSlam")
+        ]
+        reports = [
+            _report(
+                match_key="m1",
+                slug="summerslam",
+                agent="rumor",
+                sources=("https://wrestletalk.com/news/wwe-summerslam-2026-preview",),
+            )
+        ]
+        _, agents = summarize_agent_analysis(predictions, reports)
+        assert _only(agents, "rumor").self_referencing_reports == 1
 
     def test_an_agent_with_no_sources_does_not_use_knowledge(self) -> None:
         predictions = [_prediction(match_key="m1")]
