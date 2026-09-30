@@ -319,3 +319,18 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/app/page.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/page.tsx — not in DESIGN.md radius scale
+
+## 2026-09-30T02:58:11.649Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_munimn29_3ce15f32
+timestamp: 2026-09-30T02:58:11.649Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/project-banner.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/project-banner.tsx — not in DESIGN.md radius scale

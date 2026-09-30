@@ -4,6 +4,11 @@ import { ArrowUpRight } from "lucide-react";
 export type PortfolioProject = {
   name: string;
   tagline: string;
+  /**
+   * 혼자 만든 게 아닐 때 **어디까지가 내 몫인지** 적는다.
+   * 없으면 개인 작업으로 읽힌다 — 팀 프로젝트는 반드시 채운다.
+   */
+  role?: { team: string; mine: string };
   description: string;
   href: string;
   /** 주소를 사람이 읽는 형태로 — 버튼이 어디로 가는지 눌러 보기 전에 보여 준다. */
@@ -52,6 +57,17 @@ export function ProjectBanner({ project }: { project: PortfolioProject }) {
               className="mt-1 size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-brand-link"
             />
           </div>
+
+          {project.role && (
+            <p className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="rounded-md border border-border px-2 py-0.5 text-muted-foreground">
+                {project.role.team}
+              </span>
+              <span className="text-muted-foreground">
+                담당 <span className="text-foreground">{project.role.mine}</span>
+              </span>
+            </p>
+          )}
 
           <p className="text-sm leading-relaxed text-muted-foreground">{project.description}</p>
 
