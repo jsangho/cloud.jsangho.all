@@ -47,6 +47,10 @@ _AFTER = datetime(2026, 8, 5, 7, tzinfo=UTC)
 _EVENT_START = date(2026, 8, 10)
 _REVISED = datetime(2026, 8, 1, 7, tzinfo=UTC)
 
+#: 경기 **이후** 판본. 자기참조가 실격으로 남으려면 판본이 경기보다 앞선다는 것을
+#: 증명하지 못해야 한다 (2026-09-30).
+_AFTER_EVENT = datetime(2026, 8, 12, 7, tzinfo=UTC)
+
 _DOC = "https://en.wikipedia.org/wiki/Backlash_(2026)"
 _OWN = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
 
@@ -180,14 +184,38 @@ class TestExclusions:
 
 class TestSelfReference:
     def test_citing_its_own_event_document_is_disqualified(self) -> None:
-        """Phase 3-0의 규칙을 그대로 쓴다 — 새 자기참조 규칙을 만들지 않는다."""
+        """Phase 3-0의 규칙을 그대로 쓴다 — 새 자기참조 규칙을 만들지 않는다.
+
+        **판본이 경기 이후라 통과 경로로 빠지지 않는다** (2026-09-30). 대회 문서를
+        인용했다는 사실만으로 막던 때와 달리, 지금은 "경기보다 앞선 판본임을
+        증명했는가"가 함께 묻는다. 여기서는 증명하지 못하므로 실격 그대로다.
+        """
+        item = _only(
+            [_prediction()],
+            [_report(sources=(_OWN,))],
+            [_document(url=_OWN, revised_at=_AFTER_EVENT)],
+        )
+        assert item.status == STATUS_DISQUALIFIED
+        assert _verdict(item, "self_reference").failed is True
+
+    def test_an_event_document_from_before_the_match_does_not_disqualify(self) -> None:
+        """**경기보다 앞선 판본에는 결과가 적혀 있을 수 없다** (2026-09-30).
+
+        실격의 근거는 "그런 글에는 결과가 적혀 있다"는 **추정**이었고, 추정이
+        필요했던 이유는 판본 시각을 몰랐기 때문이다. 계보가 그 물음에 직접 답하면
+        추정할 일이 없다 — `_corpus`가 이미 같은 논리를 쓴다.
+
+        판정만 통과로 바뀐다. 감사 화면은 출처마다 그 대회 글이라고 계속 말한다
+        (`test_prediction_audit.py`).
+        """
         item = _only(
             [_prediction()],
             [_report(sources=(_OWN,))],
             [_document(url=_OWN)],
         )
-        assert item.status == STATUS_DISQUALIFIED
-        assert _verdict(item, "self_reference").failed is True
+        verdict = _verdict(item, "self_reference")
+        assert (verdict.failed, verdict.applicable) == (False, True)
+        assert item.status == STATUS_ELIGIBLE
 
     def test_no_sources_is_not_assumed_to_be_self_reference(self) -> None:
         """없음을 유죄로 세지 않는다."""
@@ -453,7 +481,8 @@ class TestTotals:
                 _prediction(match_key="own"),
             ],
             [_report(match_key="late"), _report(match_key="own", sources=(_OWN,))],
-            [_document(), _document(url=_OWN)],
+            # 자기참조가 막으려면 판본이 경기보다 앞선다는 증명이 없어야 한다.
+            [_document(), _document(url=_OWN, revised_at=_AFTER_EVENT)],
         )
         by_code = {rule.code: rule for rule in rules}
         assert by_code["temporal_inversion"].blocked == 1

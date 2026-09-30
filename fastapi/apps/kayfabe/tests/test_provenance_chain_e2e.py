@@ -96,6 +96,15 @@ _OTHER_DOC = "https://en.wikipedia.org/wiki/Gunther_(wrestler)"
 #: 대회 자체를 다룬 문서. 이것을 읽으면 자기참조로 실격이다.
 _OWN_DOC = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
 
+#: 대회 문서의 판본은 **모른다**로 둔다 (2026-09-30). 자기참조는 이제 "경기보다
+#: 앞선 판본임을 증명했는가"를 함께 묻고, 증명되면 막지 않는다 — 이 파일이 재는
+#: 것은 막혔을 때 세 화면이 같은 이야기를 하는가이므로 증명이 없는 쪽을 쓴다.
+#:
+#: 경기 **뒤** 판본을 쓰지 않는 이유는 그것이 예측 생성 시각보다도 뒤여서
+#: `revision_after_prediction`까지 함께 걸리기 때문이다 — 재려는 것과 무관한
+#: 규칙이 섞이면 이 파일이 무엇을 고정하는지 흐려진다.
+_OWN_DOC_REVISION = None
+
 _CARD = json.dumps(
     {
         "format": "singles",
@@ -224,7 +233,7 @@ def _chunk(index: int, url: str, title: str) -> KnowledgeChunkModel:
         content=f"{title} 본문 {index}",
         published_at=None,
         source_revision_id=f"136777{index}",
-        source_revised_at=_CLEAN_REVISION,
+        source_revised_at=(_OWN_DOC_REVISION if url == _OWN_DOC else _CLEAN_REVISION),
         content_hash=f"{index}" * 64,
         embedding=None,
         collected_at=_COLLECTED_AT,
@@ -448,7 +457,7 @@ def test_reading_the_event_document_shows_up_in_all_three_screens() -> None:
 
         [document] = leakage.documents
         assert document.source_url == _OWN_DOC
-        assert document.codes == ("self_reference",)
+        assert document.codes == ("self_reference", "unverifiable_corpus")
         assert document.predictions[0].status == item.status
         assert leakage.totals.attributed == 1
         assert leakage.totals.unattributed == 0

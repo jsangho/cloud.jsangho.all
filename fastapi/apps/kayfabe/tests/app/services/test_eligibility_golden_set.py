@@ -84,8 +84,17 @@ COLLECTED_AT = datetime(2026, 8, 18, 7, tzinfo=UTC)
 EVENT_SLUG = "summerslam"
 EVENT_LABEL = "SummerSlam"
 
-#: **그 대회 자체**를 다룬 문서. 결과가 적혀 있으므로 인용하면 실격이다.
+#: **그 대회 자체**를 다룬 문서. 판본이 경기보다 앞섬을 증명 못 하면 실격이다.
 OWN_EVENT_DOC = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
+
+#: 같은 대회를 다룬 **다른** 문서 (2026-09-30). 위와 URL이 달라야 하는 이유는
+#: `_doc_url` 독스트링에 있다 — 계보는 URL 단위라, 두 케이스가 같은 주소를 쓰면
+#: 나중에 들어간 문서가 앞 케이스의 판정까지 덮는다.
+#:
+#: 뉴스 슬러그 형태인 것도 일부러다. 이 경로로 들어오는 실제 자료가 그 모양이고
+#: (단체명이 앞에 붙어 대회 이름이 가운데 온다), `cites_own_event`가 그것까지
+#: 잡는다는 사실을 여기서 한 번 더 쓴다.
+OWN_EVENT_NEWS = "https://wrestletalk.com/news/wwe-summerslam-2026-plans"
 
 
 def _doc_url(match_key: str) -> str:
@@ -211,6 +220,12 @@ class GoldenCase:
     expected_rule: str | None
     #: 그 규칙의 무게. **실격과 보류는 다른 사실이다.**
     expected_severity: str | None
+    #: `expected_rule`과 **함께** 걸리는 규칙들 (2026-09-30).
+    #:
+    #: 기본이 빈 집합인 것이 중요하다 — 과잉 차단은 여전히 회귀이고, 여기에 적지
+    #: 않은 규칙이 걸리면 아래 테스트가 잡는다. 적을 때는 **왜 같이 걸리는 것이
+    #: 정상인지**를 `guards`에 쓴다.
+    also_blocking: frozenset[str] = frozenset()
     reports: tuple[ReportRow, ...] = ()
     #: 비우면 **이 케이스 전용의 깨끗한 문서** 하나가 들어간다. 코퍼스 규칙을 재는
     #: 케이스만 여기를 채운다 — 나머지는 다른 규칙을 재고 있어서, 계보가 비면 재려던
@@ -250,6 +265,31 @@ GOLDEN_SET: tuple[GoldenCase, ...] = (
         ),
         prediction=_prediction("g02", outcome_known_externally=False),
         reports=(_report("g02"),),
+        expected_status="eligible",
+        expected_rule=None,
+        expected_severity=None,
+    ),
+    GoldenCase(
+        name="self_reference_predates_event",
+        guards=(
+            "**경기보다 앞선 판본까지 자기참조로 막는** 회귀 (2026-09-30 결정).\n"
+            "\n"
+            "실격의 근거는 '그런 글에는 결과가 적혀 있다'는 **추정**이었고, 추정이 "
+            "필요했던 이유는 판본 시각을 몰랐기 때문이다. 계보가 그 물음에 직접 "
+            "답하면 추정할 일이 없다 — 경기 시작일보다 앞선 판본에 결과가 적혀 있을 "
+            "수는 없고, `_corpus`가 이미 같은 논리를 쓴다.\n"
+            "\n"
+            "이 케이스가 없으면 조건을 되돌려도 아무도 모른다. 되돌리는 순간 "
+            "**보도된 푸시·타이틀 계획을 근거로 쓴 예측이 전부 실격**이 되고, 루머 "
+            "축을 넓힌 의미가 사라진다.\n"
+            "\n"
+            "**막지 않을 뿐 숨기지는 않는다** — 감사 화면은 출처마다 그 대회 글이라고 "
+            "계속 말한다(`EvidenceVerdict.self_reference`, 같은 `cites_own_event`를 "
+            "지나므로 어긋날 수 없다)."
+        ),
+        prediction=_prediction("g22"),
+        reports=(_report("g22", sources=(OWN_EVENT_NEWS,)),),
+        documents=(_document(OWN_EVENT_NEWS),),
         expected_status="eligible",
         expected_rule=None,
         expected_severity=None,
@@ -300,15 +340,24 @@ GOLDEN_SET: tuple[GoldenCase, ...] = (
         name="self_reference",
         guards=(
             "그 대회 자체를 다룬 문서를 인용하고도 통과하는 회귀. 대회 문서에는 "
-            "경기 결과가 적혀 있으므로 예측이 아니라 **열람**일 수 있다."
+            "경기 결과가 적혀 있을 수 있으므로 예측이 아니라 **열람**일 수 있다.\n"
+            "\n"
+            "**2026-09-30에 판본 조건이 붙었다.** 인용 문서를 경기 **이후** 판본으로 "
+            "두는 이유가 그것이다 — 경기 이전임이 증명되면 이 규칙은 막지 않는다"
+            "(`self_reference_predates_event`).\n"
+            "\n"
+            "그래서 `unverifiable_corpus`가 **함께** 걸리는 것이 정상이다. 두 규칙이 "
+            "같은 계보를 보기 때문이고, 그 결과 자기참조는 이제 **단독으로 막지 "
+            "못한다** — 남은 역할은 보류를 실격으로 올리는 것이다. 여기서 재는 것도 "
+            "그 승격이다: 상태가 `held`가 아니라 `disqualified`여야 한다."
         ),
         prediction=_prediction("g05"),
         reports=(_report("g05", sources=(OWN_EVENT_DOC,)),),
-        # 인용 문서의 계보는 깨끗하게 둔다 — 여기서 재는 것은 자기참조뿐이다.
-        documents=(_document(OWN_EVENT_DOC),),
+        documents=(_document(OWN_EVENT_DOC, latest_revised_at=REVISED_AFTER_EVENT),),
         expected_status="disqualified",
         expected_rule="self_reference",
         expected_severity="disqualify",
+        also_blocking=frozenset({"unverifiable_corpus"}),
     ),
     # ---- 3. 보류 (모르는 것을 통과로 접지 않는다) ---------------------------
     GoldenCase(
@@ -566,6 +615,7 @@ def test_golden_blocking_rule(case: GoldenCase) -> None:
     """
     blocking = _blocking(_judge(case))
     expected = set() if case.expected_rule is None else {case.expected_rule}
+    expected |= case.also_blocking
 
     assert blocking == expected, case.guards
 
