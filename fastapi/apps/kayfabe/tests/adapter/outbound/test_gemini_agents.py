@@ -386,3 +386,35 @@ def test_the_prompt_label_and_the_stripper_share_one_string() -> None:
     assert (
         f"- {gemini_agent_support._OPTION_LABEL_PREFIX}left = Roman Reigns" in rendered
     )
+
+
+# --- 루머 축의 경계 (2026-09-30) -------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_rumor_prompt_asks_for_both_kinds_of_reported_future() -> None:
+    """**서사와 이 축을 가르는 것은 시제다** — 저쪽은 일어난 일, 이쪽은 일어날 일.
+
+    그 시제 아래 두 갈래가 들어온다: 나설 수 있는가(부상 계열)와 어디로 가기로
+    했는가(보도된 푸시·타이틀 계획). 둘째가 빠지면 대부분의 경기에서 할 말이
+    없어지는데, 그것이 이 축이 오래 침묵한 이유였다.
+    """
+    generation = FakeGeneration(_reply("left"))
+
+    await _rumor(generation).analyze(_CONTEXT, _CHUNKS)
+
+    prompt = generation.prompts[0]
+    for word in ("부상", "계약 만료", "푸시", "타이틀 계획"):
+        assert word in prompt
+
+
+@pytest.mark.asyncio
+async def test_rumor_prompt_forbids_inferring_from_what_already_aired() -> None:
+    """추론까지 허용하면 이 축이 서사의 복제가 되고, 같은 근거가 두 표를 갖는다."""
+    generation = FakeGeneration(_reply("left"))
+
+    await _rumor(generation).analyze(_CONTEXT, _CHUNKS)
+
+    prompt = generation.prompts[0]
+    assert "보도했을 때만" in prompt
+    assert "서사 분석가의 몫" in prompt
