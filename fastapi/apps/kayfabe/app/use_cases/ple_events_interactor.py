@@ -136,6 +136,7 @@ class PleEventsInteractor(PleEventsUseCase):
                     competitors=[_competitor(c) for c in card.get("competitors") or []]
                     or None,
                     bookmaker_decimal=card.get("bookmakerDecimal"),
+                    bookmaker_quotes=card.get("bookmakerQuotes"),
                     status=row.status,
                     result=result,
                     site_votes=VoteTotalsResponse(

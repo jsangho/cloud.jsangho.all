@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from kayfabe.domain.services.odds_consensus import BookmakerQuote
+
 
 @dataclass(frozen=True)
 class GeneratePredictionCommand:
@@ -49,8 +51,14 @@ class MatchContext:
     #: "singles" | "multi"
     match_format: str
     options: tuple[MatchOption, ...]
-    #: 소수 배당. 카드에 없으면 `None` — 오즈 에이전트는 이때 의견 없음을 낸다.
+    #: **합의 소수 배당** — 여러 북메이커를 모은 결과이거나(호가가 있을 때), 카드에
+    #: 직접 적힌 한 벌이다. 카드에 아무것도 없으면 `None`.
+    #:
+    #: 이 칸을 남겨 둔 이유는 호환이다. 폴백 경로(`_bookmaker_favorite`)와 옛 카드는
+    #: 여전히 "배당 한 벌"만 알면 되고, 그쪽까지 호가 목록을 읽게 만들 이유가 없다.
     bookmaker_decimal: tuple[float, ...] | None = None
+    #: 북메이커별 호가. 비어 있으면 `bookmaker_decimal` 한 벌로만 판단한다.
+    bookmaker_quotes: tuple[BookmakerQuote, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -39,6 +39,12 @@ class MatchCardSyncSchema(BaseModel):
     bookmaker_decimal: dict[str, Any] | list[float] | None = Field(
         default=None, alias="bookmakerDecimal"
     )
+    #: 북메이커별 호가. 이웃한 `bookmakerDecimal`과 같은 이유로 **느슨하게 받는다** —
+    #: 카드는 통째로 JSON 블롭으로 저장되고, 항목 검증은 실제로 읽는 자리
+    #: (`quotes_from_card`)가 한다. 그쪽은 못 읽는 줄만 버리고 나머지를 살린다.
+    bookmaker_quotes: list[dict[str, Any]] | None = Field(
+        default=None, alias="bookmakerQuotes"
+    )
     result: MatchResultSchema | None = None
 
     model_config = ConfigDict(populate_by_name=True)
@@ -70,6 +76,12 @@ class MatchBoardSchema(BaseModel):
     competitors: list[CompetitorSchema] | None = None
     bookmaker_decimal: dict[str, Any] | list[float] | None = Field(
         default=None, alias="bookmakerDecimal"
+    )
+    #: 북메이커별 호가. 이웃한 `bookmakerDecimal`과 같은 이유로 **느슨하게 받는다** —
+    #: 카드는 통째로 JSON 블롭으로 저장되고, 항목 검증은 실제로 읽는 자리
+    #: (`quotes_from_card`)가 한다. 그쪽은 못 읽는 줄만 버리고 나머지를 살린다.
+    bookmaker_quotes: list[dict[str, Any]] | None = Field(
+        default=None, alias="bookmakerQuotes"
     )
     status: str
     result: MatchResultSchema | None = None

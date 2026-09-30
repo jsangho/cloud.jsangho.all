@@ -87,6 +87,8 @@ def card_command_to_json(card) -> dict:
         payload["competitors"] = [competitor(c) for c in card.competitors]
     if card.bookmaker_decimal is not None:
         payload["bookmakerDecimal"] = card.bookmaker_decimal
+    if card.bookmaker_quotes:
+        payload["bookmakerQuotes"] = card.bookmaker_quotes
     if card.result is not None:
         r = card.result
         res: dict = {}

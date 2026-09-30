@@ -51,6 +51,8 @@ class MatchCardSyncCommand:
     right: CompetitorResponse | None = None
     competitors: list[CompetitorResponse] | None = None
     bookmaker_decimal: dict[str, Any] | list[float] | None = None
+    #: 북메이커별 호가. 검증은 `quotes_from_card`가 한다 — 스키마 주석 참조.
+    bookmaker_quotes: list[dict[str, Any]] | None = None
     result: MatchResultResponse | None = None
 
 
@@ -124,6 +126,7 @@ class MatchBoardResponse:
     right: CompetitorResponse | None
     competitors: list[CompetitorResponse] | None
     bookmaker_decimal: dict[str, Any] | list[float] | None
+    bookmaker_quotes: list[dict[str, Any]] | None
     status: str
     result: MatchResultResponse | None
     site_votes: VoteTotalsResponse

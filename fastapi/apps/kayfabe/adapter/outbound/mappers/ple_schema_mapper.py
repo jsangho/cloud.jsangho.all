@@ -95,6 +95,7 @@ def _match_card_from_schema(schema: MatchCardSyncSchema) -> MatchCardSyncCommand
         if schema.competitors
         else None,
         bookmaker_decimal=schema.bookmaker_decimal,
+        bookmaker_quotes=schema.bookmaker_quotes,
         result=_match_result_from_schema(schema.result),
     )
 
@@ -172,6 +173,7 @@ def _match_board_to_schema(dto: MatchBoardResponse) -> MatchBoardSchema:
         if dto.competitors
         else None,
         bookmakerDecimal=dto.bookmaker_decimal,
+        bookmakerQuotes=dto.bookmaker_quotes,
         status=dto.status,
         result=_match_result_to_schema(dto.result),
         siteVotes=VoteTotalsSchema(

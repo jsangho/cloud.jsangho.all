@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from kayfabe.adapter.outbound.agents.odds_scout_agent import BookmakerOddsScout
 from kayfabe.app.dtos.agent_prediction_dto import MatchContext, MatchOption
 from kayfabe.domain.entities.agent_prediction import AgentKind
+from kayfabe.domain.services.odds_consensus import BookmakerQuote
 
 
 def context(
@@ -100,3 +103,64 @@ async def test_report_cites_no_external_source() -> None:
     report = await BookmakerOddsScout().analyze(context((1.5, 2.5)))
 
     assert report.sources == ()
+
+
+def with_quotes(*quotes: BookmakerQuote) -> MatchContext:
+    ctx = context(None)
+    return replace(ctx, bookmaker_quotes=quotes)
+
+
+@pytest.mark.asyncio
+async def test_several_books_are_merged_and_named_in_the_summary() -> None:
+    report = await BookmakerOddsScout().analyze(
+        with_quotes(
+            BookmakerQuote(book="BetOnline", decimals=(1.5, 2.5)),
+            BookmakerQuote(book="Bovada", decimals=(1.6, 2.4)),
+        )
+    )
+
+    assert report.pick == "left"
+    # 요약이 몇 곳인지·어디인지를 말한다 — 확률만 적으면 근거가 사라진다.
+    assert "2곳" in report.summary
+    assert "BetOnline" in report.summary and "Bovada" in report.summary
+
+
+@pytest.mark.asyncio
+async def test_quotes_win_over_the_single_card_odds() -> None:
+    """둘 다 있으면 호가가 이긴다 — 합의가 더 많은 사실을 본 값이다."""
+    ctx = replace(
+        context((1.01, 30.0)),
+        bookmaker_quotes=(
+            BookmakerQuote(book="A", decimals=(3.0, 1.4)),
+            BookmakerQuote(book="B", decimals=(3.2, 1.38)),
+        ),
+    )
+
+    report = await BookmakerOddsScout().analyze(ctx)
+
+    # 카드의 배당만 봤다면 left를 0.97로 골랐을 자리다.
+    assert report.pick == "right"
+
+
+@pytest.mark.asyncio
+async def test_source_urls_on_quotes_become_report_sources() -> None:
+    report = await BookmakerOddsScout().analyze(
+        with_quotes(
+            BookmakerQuote(book="A", decimals=(1.5, 2.5), source_url="https://x/1"),
+            BookmakerQuote(book="B", decimals=(1.6, 2.4), source_url="https://x/1"),
+            BookmakerQuote(book="C", decimals=(1.55, 2.45), source_url="https://x/2"),
+        )
+    )
+
+    # 중복은 접고 적힌 순서를 지킨다.
+    assert report.sources == ("https://x/1", "https://x/2")
+
+
+@pytest.mark.asyncio
+async def test_unusable_quotes_fall_back_to_no_opinion() -> None:
+    report = await BookmakerOddsScout().analyze(
+        with_quotes(BookmakerQuote(book="A", decimals=(0.0, 2.0)))
+    )
+
+    assert report.pick is None
+    assert report.has_opinion is False
