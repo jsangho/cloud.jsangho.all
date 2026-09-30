@@ -2,9 +2,18 @@
 
 import { cn } from "@/lib/utils";
 import { BRACKET_LABELS } from "@/lib/bracket-labels";
-import { normalizedMultiMarket, normalizedTwoWayMarket } from "@/lib/betting-odds";
+import {
+  consensusFromQuotes,
+  normalizedMultiMarket,
+  normalizedTwoWayMarket,
+} from "@/lib/betting-odds";
 import type { PleBracketTheme, BracketSideStyle } from "@/lib/wwe-ple-bracket-theme";
-import type { PleCompetitor, PleMatchCard, PleMatchResultHint } from "@/lib/wwe-ple-matches";
+import type {
+  BookmakerQuote,
+  PleCompetitor,
+  PleMatchCard,
+  PleMatchResultHint,
+} from "@/lib/wwe-ple-matches";
 import { isMultiMatch } from "@/lib/wwe-ple-matches";
 import type { PleMatchResult } from "@/lib/ple-api";
 
@@ -309,14 +318,43 @@ function DualStatBar({
   );
 }
 
+/**
+ * 합의가 **몇 곳에서 왔는지**를 적는다. 막대만 보여 주면 한 곳의 값과 다섯 곳의
+ * 합의가 화면에서 똑같이 생겨서, 어느 쪽을 얼마나 믿을지 판단할 근거가 사라진다.
+ *
+ * 곳이 둘 이상일 때만 편차를 적는다 — 한 곳뿐인데 "편차 0%p"라고 쓰면 의견이
+ * 일치한다는 뜻으로 읽히지만 사실은 대조한 적이 없다.
+ */
+function BookmakerSources({ consensus }: { consensus: { books: string[]; dispersion: number } }) {
+  const books = consensus.books.filter(Boolean);
+  if (books.length === 0) return null;
+
+  return (
+    <p className="text-center text-[9px] text-stone-600 tabular-nums">
+      {books.length > 1
+        ? `북메이커 ${books.length}곳 합의 · ${books.join(", ")} · 편차 ${Math.round(consensus.dispersion * 1000) / 10}%p`
+        : `${books[0]} 단독`}
+    </p>
+  );
+}
+
 function BookmakerMulti({
   competitors,
   decimals,
+  quotes,
 }: {
   competitors: PleCompetitor[];
-  decimals: number[];
+  decimals?: number[];
+  quotes?: BookmakerQuote[];
 }) {
-  const percents = normalizedMultiMarket(decimals);
+  // 단일전과 같은 우선순위다 — 호가 합의 > 카드의 배당 한 벌 > 아무것도 안 그린다.
+  const consensus = quotes ? consensusFromQuotes(quotes, competitors.length) : null;
+  const percents = consensus
+    ? consensus.probabilities.map((p) => Math.round(p * 1000) / 10)
+    : decimals
+      ? normalizedMultiMarket(decimals)
+      : null;
+  if (!percents) return null;
 
   return (
     <div className="space-y-2">
@@ -397,9 +435,11 @@ export function MatchBracketCard({
 
           <div className="space-y-2.5 border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-white/[0.03] px-3 py-2.5 sm:px-4">
             <SiteVoteMulti competitors={match.competitors} votes={multiVotes} barClass={barClass} />
-            {match.bookmakerDecimal && (
-              <BookmakerMulti competitors={match.competitors} decimals={match.bookmakerDecimal} />
-            )}
+            <BookmakerMulti
+              competitors={match.competitors}
+              decimals={match.bookmakerDecimal}
+              quotes={match.bookmakerQuotes}
+            />
             <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
           </div>
         </div>
@@ -408,10 +448,17 @@ export function MatchBracketCard({
   }
 
   const singlesVotes = votes as SinglesVotes;
-  // 배당이 없는 대회가 있다 — multi 쪽과 같이 막대를 통째로 접는다.
-  const book = match.bookmakerDecimal
-    ? normalizedTwoWayMarket(match.bookmakerDecimal.left, match.bookmakerDecimal.right)
-    : null;
+  // 호가가 있으면 그 합의가 이 경기의 배당이다. 없으면 카드에 직접 적힌 한 벌을 쓰고,
+  // 그것도 없으면 막대를 통째로 접는다 — 없는 숫자를 그럴듯하게 채우지 않는다.
+  const consensus = match.bookmakerQuotes ? consensusFromQuotes(match.bookmakerQuotes, 2) : null;
+  const book = consensus
+    ? {
+        left: Math.round(consensus.probabilities[0] * 1000) / 10,
+        right: Math.round(consensus.probabilities[1] * 1000) / 10,
+      }
+    : match.bookmakerDecimal
+      ? normalizedTwoWayMarket(match.bookmakerDecimal.left, match.bookmakerDecimal.right)
+      : null;
 
   return (
     <article className="ple-match-card overflow-hidden rounded-xl">
@@ -459,6 +506,7 @@ export function MatchBracketCard({
               muted
             />
           )}
+          {consensus && <BookmakerSources consensus={consensus} />}
           <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
         </div>
       </div>

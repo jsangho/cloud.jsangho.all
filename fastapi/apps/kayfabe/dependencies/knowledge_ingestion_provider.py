@@ -14,6 +14,7 @@ from kayfabe.app.ports.input.knowledge_ingestion_use_case import (
 )
 from kayfabe.app.services.prediction_knowledge_sources import (
     ALLOWED_DOMAINS,
+    COLLECTION_LINEAGE_DOMAINS,
     HEADER_LINEAGE_DOMAINS,
 )
 from kayfabe.app.use_cases.knowledge_ingestion_interactor import (
@@ -35,6 +36,7 @@ def get_knowledge_ingestion_use_case(
             get_public_source_use_case(
                 ALLOWED_DOMAINS,
                 header_lineage_domains=HEADER_LINEAGE_DOMAINS,
+                collection_lineage_domains=COLLECTION_LINEAGE_DOMAINS,
             )
         ),
         BgeM3Embedder(),

@@ -19,6 +19,25 @@ type PleMatchBase = {
   cardVariant: "sideA" | "sideB";
 };
 
+/**
+ * 북메이커 한 곳이 **한 시점에** 건 소수 배당 한 벌.
+ *
+ * `decimals`의 순서는 선택지 순서다 — 단일전 `[left, right]`, 다인전은 참가자 순서.
+ *
+ * WWE는 스포츠가 아니라 엔터테인먼트 스페셜 시장이라 공개 배당 API(The Odds API ·
+ * SportsGameOdds 등)가 다루지 않는다. 호가는 사람이 확인해 여기에 적는다.
+ *
+ * `observedAt`이 값의 일부다 — 배당은 움직인다. 언제 본 값인지를 적지 않으면 같은
+ * 북메이커의 두 관측이 서로 다른 북메이커처럼 세어져 합의가 왜곡된다.
+ */
+export type BookmakerQuote = {
+  book: string;
+  decimals: number[];
+  /** `YYYY-MM-DD` */
+  observedAt?: string;
+  sourceUrl?: string;
+};
+
 export type PleMatchCardSingles = PleMatchBase & {
   format: "singles";
   left: PleCompetitor;
@@ -29,12 +48,15 @@ export type PleMatchCardSingles = PleMatchBase & {
    * 북메이커 승률 막대가 근거 없는 값을 사실처럼 그린다.
    */
   bookmakerDecimal?: { left: number; right: number };
+  /** 북메이커별 호가. 있으면 `bookmakerDecimal`보다 우선한다. */
+  bookmakerQuotes?: BookmakerQuote[];
 };
 
 export type PleMatchCardMulti = PleMatchBase & {
   format: "multi";
   competitors: PleCompetitor[];
   bookmakerDecimal?: number[];
+  bookmakerQuotes?: BookmakerQuote[];
 };
 
 export type PleMatchCard = PleMatchCardSingles | PleMatchCardMulti;
@@ -84,6 +106,21 @@ function mm(
     competitors,
     bookmakerDecimal: odds,
   };
+}
+
+/**
+ * 호가를 여러 개 아는 단일전. `m2`와 달리 `bookmakerDecimal`을 적지 않는다 —
+ * 합의는 호가에서 계산하므로, 같은 사실을 두 칸에 적어 두면 언젠가 어긋난다.
+ */
+function mq(
+  id: string,
+  title: string,
+  cardVariant: "sideA" | "sideB",
+  left: PleCompetitor,
+  right: PleCompetitor,
+  quotes: BookmakerQuote[],
+): PleMatchCardSingles {
+  return { id, title, cardVariant, format: "singles", left, right, bookmakerQuotes: quotes };
 }
 
 /** 로얄 럼블 우승 — 북메이커 상위 5 + 기타 1칸 */
@@ -428,12 +465,29 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "Lash Legend" },
       { name: BRACKET_LABELS.tbd },
     ]),
-    m2(
+    mq(
       "mitb26-whc",
       "World Heavyweight Championship",
       "sideB",
       { name: "Roman Reigns", isChampion: true },
       { name: "LA Knight" },
+      // BetOnline이 MITB 2026 시장을 연 유일한 북메이커다 (2026-09-30 확인).
+      // 이틀 사이에 Knight가 +350 → +600으로 밀렸다 — 라인 흐름 자체가 정보라
+      // 옛 관측을 지우지 않고 남긴다. 합의는 최신 것만 센다.
+      [
+        {
+          book: "BetOnline",
+          decimals: [1.17, 4.5],
+          observedAt: "2026-09-26",
+          sourceUrl: "https://www.wweleaks.org/2026/09/mitb-2026-betting-september-26th.html",
+        },
+        {
+          book: "BetOnline",
+          decimals: [1.07, 7.0],
+          observedAt: "2026-09-27",
+          sourceUrl: "https://www.wweleaks.org/2026/09/mitb-2026-odds-update-27-september.html",
+        },
+      ],
     ),
     m2("mitb26-reed-femi", "Single Match", "sideA", { name: "Bronson Reed" }, { name: "Oba Femi" }),
     m2(

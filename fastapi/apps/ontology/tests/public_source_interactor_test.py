@@ -165,3 +165,89 @@ async def test_empty_body_is_not_a_document() -> None:
     fetcher = FakeFetcher(html="<html><body><nav>메뉴</nav></body></html>")
 
     assert await _interactor(fetcher).collect(_URL) is None
+
+
+# --- 수집 시각 계보 (2026-09-30 · kayfabe 하네스 §13-Q8) ---------------------
+
+
+def _collection_lineage_interactor(
+    fetcher: FakeFetcher | None = None,
+) -> PublicSourceInteractor:
+    return PublicSourceInteractor(
+        allowed_domains=_ALLOWED,
+        fetcher=fetcher or FakeFetcher(),
+        robots=FakeRobots(),
+        collection_lineage_domains=_ALLOWED,
+    )
+
+
+@pytest.mark.asyncio
+async def test_collection_lineage_is_off_unless_the_caller_asks() -> None:
+    """**기본이 꺼져 있어야 한다.** 켜는 것은 수집 정책이라 부르는 앱이 정한다."""
+    document = await _interactor().collect(_URL)
+
+    assert document is not None
+    assert document.revision_id is None
+    assert document.revised_at is None
+
+
+@pytest.mark.asyncio
+async def test_collection_lineage_dates_the_document_by_when_we_read_it() -> None:
+    before = datetime.now(UTC)
+
+    document = await _collection_lineage_interactor().collect(_URL)
+
+    assert document is not None
+    assert document.revised_at is not None
+    # 수집 시각이므로 지금 언저리다 — 발행 시각(2026-08-01)이 아니다.
+    assert before <= document.revised_at <= datetime.now(UTC)
+
+
+@pytest.mark.asyncio
+async def test_published_time_is_kept_separate_from_the_lineage_clock() -> None:
+    """둘을 한 칸에 접으면 "언제 쓰였나"와 "언제 읽었나"가 같은 이름으로 보고된다."""
+    document = await _collection_lineage_interactor().collect(_URL)
+
+    assert document is not None
+    assert document.published_at == datetime(2026, 8, 1, 12, 0, tzinfo=UTC)
+    assert document.revised_at != document.published_at
+
+
+@pytest.mark.asyncio
+async def test_revision_id_is_a_labelled_body_hash() -> None:
+    """우리가 만든 값이므로 위키 `revid`·wwe.com `ETag`와 섞여 보이면 안 된다."""
+    document = await _collection_lineage_interactor().collect(_URL)
+
+    assert document is not None
+    assert document.revision_id is not None
+    assert document.revision_id.startswith("sha256:")
+    # `ple_knowledge_chunks.source_revision_id`가 String(64)다.
+    assert len(document.revision_id) <= 64
+
+
+@pytest.mark.asyncio
+async def test_same_body_hashes_the_same_and_changed_body_does_not() -> None:
+    same = await _collection_lineage_interactor().collect(_URL)
+    again = await _collection_lineage_interactor().collect(_URL)
+    changed = await _collection_lineage_interactor(
+        FakeFetcher(html="<html><body><p>다른 본문이다.</p></body></html>")
+    ).collect(_URL)
+
+    assert same is not None and again is not None and changed is not None
+    assert same.revision_id == again.revision_id
+    assert changed.revision_id != same.revision_id
+
+
+@pytest.mark.asyncio
+async def test_domain_outside_the_list_gets_no_collection_lineage() -> None:
+    interactor = PublicSourceInteractor(
+        allowed_domains=_ALLOWED,
+        fetcher=FakeFetcher(),
+        robots=FakeRobots(),
+        collection_lineage_domains=frozenset({"other.example"}),
+    )
+
+    document = await interactor.collect(_URL)
+
+    assert document is not None
+    assert document.revision_id is None

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -33,6 +34,11 @@ from kayfabe.domain.entities.agent_prediction import (
     AgentRuntime,
     KnowledgeRetrieval,
     PredictionSource,
+)
+from kayfabe.domain.services.odds_consensus import (
+    BookmakerQuote,
+    OddsConsensus,
+    consensus,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -236,6 +242,8 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     if not options:
         return None
 
+    quotes = quotes_from_card(card, len(options))
+    merged = consensus(quotes, len(options)) if quotes else None
     return MatchContext(
         event_slug=event.slug,
         event_label=event.label,
@@ -243,7 +251,12 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
         title=row.title,
         match_format=row.format,
         options=options,
-        bookmaker_decimal=_odds_from_card(card, len(options)),
+        # 호가가 있으면 그 합의가 이 경기의 배당이다. 폴백 경로와 옛 코드가
+        # 읽는 칸이라 **합의를 다시 배당으로 되돌려** 채운다.
+        bookmaker_decimal=(
+            _decimals_from(merged) if merged else _odds_from_card(card, len(options))
+        ),
+        bookmaker_quotes=quotes,
     )
 
 
@@ -284,12 +297,50 @@ def _odds_from_card(
     card: dict[str, Any], option_count: int
 ) -> tuple[float, ...] | None:
     """배당이 없거나 선택지 수와 어긋나면 `None` — 오즈 에이전트가 의견 없음을 낸다."""
-    odds = card.get("bookmakerDecimal")
+    return _decimals_of(card.get("bookmakerDecimal"), option_count)
+
+
+def quotes_from_card(
+    card: dict[str, Any], option_count: int
+) -> tuple[BookmakerQuote, ...]:
+    """카드 JSON → 북메이커별 호가. **공개 함수다** — `options_from_card`와 같은 이유로
+    감사의 재현(Phase 5)이 같은 카드를 같은 규칙으로 읽어야 한다.
+
+    **읽히지 않는 항목은 조용히 버린다.** 호가 목록은 사람이 손으로 적는 자리라
+    오타가 섞이고, 한 줄 때문에 경기 전체의 배당을 잃는 것보다 그 줄만 빠지는 편이
+    낫다. 전부 버려지면 빈 튜플이고 오즈 에이전트는 카드의 `bookmakerDecimal`로
+    돌아간다.
+    """
+    raw = card.get("bookmakerQuotes")
+    if not isinstance(raw, list):
+        return ()
+
+    quotes: list[BookmakerQuote] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        decimals = _decimals_of(item.get("decimals"), option_count)
+        book = str(item.get("book", "")).strip()
+        if decimals is None or not book:
+            continue
+        quotes.append(
+            BookmakerQuote(
+                book=book,
+                decimals=decimals,
+                observed_at=_observed_date(item.get("observedAt")),
+                source_url=str(item.get("sourceUrl") or "") or None,
+            )
+        )
+    return tuple(quotes)
+
+
+def _decimals_of(raw: Any, option_count: int) -> tuple[float, ...] | None:
+    """소수 배당 한 벌을 읽는다. 단일전의 `{left, right}`와 다인전의 배열을 모두 받는다."""
     values: list[Any]
-    if isinstance(odds, dict):
-        values = [odds.get("left"), odds.get("right")]
-    elif isinstance(odds, list):
-        values = list(odds)
+    if isinstance(raw, dict):
+        values = [raw.get("left"), raw.get("right")]
+    elif isinstance(raw, list):
+        values = list(raw)
     else:
         return None
 
@@ -300,3 +351,27 @@ def _odds_from_card(
     except (TypeError, ValueError):
         return None
     return decimals if all(value > 0 for value in decimals) else None
+
+
+def _observed_date(raw: Any) -> date | None:
+    """`YYYY-MM-DD`만 받는다. 못 읽으면 `None` — **오늘로 채우지 않는다.**
+
+    모르는 관측일을 오늘로 적으면 옛 호가가 최신 호가를 밀어내고, 그 어긋남은
+    아무 데서도 안 보인다.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        return date.fromisoformat(raw.strip())
+    except ValueError:
+        return None
+
+
+def _decimals_from(merged: OddsConsensus) -> tuple[float, ...]:
+    """합의 확률 → 소수 배당. 폴백 경로가 읽는 `bookmaker_decimal` 칸을 채운다.
+
+    마진이 제거된 확률의 역수이므로 **북메이커가 실제로 건 값이 아니다** — 합이
+    정확히 100%인 공정 배당이다. 이 칸을 쓰는 쪽(`_bookmaker_favorite`·
+    `_implied_probability`)이 묻는 것은 순위와 내재 확률뿐이라 그 둘은 보존된다.
+    """
+    return tuple(1.0 / value if value > 0 else 0.0 for value in merged.probabilities)

@@ -29,7 +29,7 @@ class Keymaker:
     전역 키·설정 관리자.
 
     - `backend/.env` 로드
-    - Gemini API 키 및 `GenerativeModel` 인스턴스 보관
+    - Gemini API 키 및 `genai.Client` 인스턴스 보관
     - OpenWeatherMap API 키 및 서울 날씨 조회
     """
 
@@ -38,7 +38,7 @@ class Keymaker:
     def __init__(self, env_path: Path | None = None) -> None:
         self._env_path = env_path or default_backend_env_path()
         self._dotenv_loaded = False
-        self._gemini_model: Any = None
+        self._gemini_client: Any = None
         self._gemini_model_id = DEFAULT_GEMINI_MODEL_ID
         self._embedding_model: Any = None
 
@@ -61,7 +61,7 @@ class Keymaker:
 
             load_dotenv(self._env_path, override=True)
             self._dotenv_loaded = True
-        if self._gemini_model is None:
+        if self._gemini_client is None:
             self._bootstrap_gemini()
 
     def _resolve_gemini_model_id(self) -> str:
@@ -71,16 +71,17 @@ class Keymaker:
     def _bootstrap_gemini(self) -> None:
         key = (os.getenv("GEMINI_API_KEY") or "").strip()
         if not key:
-            self._gemini_model = None
+            self._gemini_client = None
             return
         try:
-            import google.generativeai as genai
+            from google import genai
         except ModuleNotFoundError:
-            self._gemini_model = None
+            self._gemini_client = None
             return
         self._gemini_model_id = self._resolve_gemini_model_id()
-        genai.configure(api_key=key)
-        self._gemini_model = genai.GenerativeModel(self._gemini_model_id)
+        # 모델 id는 클라이언트가 아니라 호출마다 넘긴다 — 옛 `GenerativeModel`과 달리
+        # `genai.Client`는 모델에 묶이지 않는다. 호출 측은 `get_gemini_model_name()`을 쓴다.
+        self._gemini_client = genai.Client(api_key=key)
 
     def get_secret(self, name: str, default: str = "") -> str:
         """임의 환경 변수(민감 값) 조회. 필요 시 `.env` 로드를 트리거합니다."""
@@ -94,14 +95,14 @@ class Keymaker:
     def get_gemini_model_name(self) -> str:
         return self._gemini_model_id
 
-    def get_gemini_model(self) -> Any:
-        """설정된 경우 `google.generativeai.GenerativeModel`, 없으면 `None`."""
+    def get_gemini_client(self) -> Any:
+        """설정된 경우 `google.genai.Client`, 없으면 `None`."""
         self.load_env()
-        return self._gemini_model
+        return self._gemini_client
 
     def is_gemini_ready(self) -> bool:
         self.load_env()
-        return self._gemini_model is not None
+        return self._gemini_client is not None
 
     def _get_embedding_model(self) -> Any:
         """bge-m3를 프로세스당 한 번만 로드합니다 (약 2.3GB — 호출마다 로드 금지)."""

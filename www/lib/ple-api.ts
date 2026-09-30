@@ -4,7 +4,7 @@ import {
   pleMatchPicksBaseUrl,
   requestTimeoutMs,
 } from "@/lib/api";
-import type { PleMatchCard } from "@/lib/wwe-ple-matches";
+import type { BookmakerQuote, PleMatchCard } from "@/lib/wwe-ple-matches";
 import type { PleSlug } from "@/lib/wwe-ple";
 import { getPleBySlug } from "@/lib/wwe-ple";
 
@@ -24,6 +24,7 @@ export type PleBoardMatch = {
   right?: { name: string; isChampion?: boolean };
   competitors?: { name: string; isChampion?: boolean }[];
   bookmakerDecimal?: PleMatchCard["bookmakerDecimal"] | number[];
+  bookmakerQuotes?: BookmakerQuote[];
   status: string;
   result?: PleMatchResult | null;
   siteVotes: { left: number; right: number; multi: number[] };
@@ -60,6 +61,7 @@ function boardMatchToCard(m: PleBoardMatch): PleMatchCard {
       format: "multi",
       competitors: m.competitors ?? [],
       bookmakerDecimal: m.bookmakerDecimal as number[] | undefined,
+      bookmakerQuotes: m.bookmakerQuotes,
     };
   }
   return {
@@ -68,6 +70,7 @@ function boardMatchToCard(m: PleBoardMatch): PleMatchCard {
     left: m.left!,
     right: m.right!,
     bookmakerDecimal: m.bookmakerDecimal as { left: number; right: number },
+    bookmakerQuotes: m.bookmakerQuotes,
   };
 }
 
