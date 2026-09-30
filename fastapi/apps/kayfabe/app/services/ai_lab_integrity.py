@@ -430,24 +430,59 @@ def _path_segments(url: str) -> list[str]:
 def cites_own_event(sources: Iterable[str], event_label: str) -> bool:
     """인용 출처 중 **그 대회 자체를 다룬 문서**가 있는가.
 
-    경로 조각 **어느 하나라도** 정규화 값이 대회 이름으로 **시작**하면 참이다.
+    경로 조각을 토큰(하이픈·밑줄·괄호 등 비영숫자)으로 쪼갠 뒤, **연속된 토큰 구간
+    하나가 대회 이름과 정확히 같으면** 참이다.
 
-    조각 안에서는 시작으로만 본다 — 단순 포함으로 하면 "Champions"가 "Night of
-    Champions" 문서에도 걸려 없는 누수를 만든다. 반대로 **마지막 조각만** 보면
-    한 단 더 깊은 주소가 같은 문서인데 빠져나간다:
-    `/shows/moneyinthebank`는 걸리는데 `/shows/moneyinthebank/2026`은 `2026`만
-    보고 통과했다(2026-09-28 실측). 그 구멍으로 들어온 문서는 ex-ante인 척하는
-    표본을 만든다 — 이 함수의 값이 화면에 "누수 의심"으로 나가므로 과탐이
-    과소탐보다 낫다.
+    **마지막 조각만 보지 않는다.** 한 단 더 깊은 주소가 같은 문서인데 빠져나가기
+    때문이다: `/shows/moneyinthebank`는 걸리는데 `/shows/moneyinthebank/2026`은
+    `2026`만 보고 통과했다(2026-09-28 실측).
+
+    **2026-09-30에 "조각의 시작"에서 "토큰 구간 일치"로 넓혔다.** 레슬링 매체를
+    수집 대상에 넣으면서 옛 규칙이 그쪽 주소 형태를 통째로 놓치는 것이 드러났다 —
+    뉴스 사이트는 슬러그 앞에 단체명을 붙이므로 대회 이름이 **가운데** 온다:
+
+        /wiki/Money_in_the_Bank_(2026)                    ← 옛 규칙도 잡았다
+        /news/wwe-money-in-the-bank-2026-every-entrant    ← `wwe`로 시작해 놓쳤다
+        /2259302/wwe-world-heavyweight-championship-money-in-the-bank-...
+
+    그 구멍으로 들어온 대회 프리뷰 기사는 ex-ante인 척하는 표본을 만든다.
+
+    **넓히면서 동시에 좁아졌다.** 양끝이 토큰 경계에 맞아야 하므로 단어 중간
+    일치가 사라진다 — 옛 규칙은 `backlashing-news`를 "Backlash" 문서로 잘못
+    셌지만 이제 아니다.
+
+    잃은 것은 하나다. 대회 이름이 **다른 대회 이름의 일부**일 때 그 다른 대회의
+    문서에도 걸린다("Champions" ↔ "Night of Champions"). 카탈로그 19개 라벨을
+    실측한 결과 **서로 substring인 쌍이 없어** 지금은 일어나지 않고, 일어나더라도
+    이 값은 화면에 "누수 의심"으로 나가므로 **과탐이 과소탐보다 낫다.**
     """
     label = _normalize(event_label)
     if not label:
         return False
     return any(
-        _normalize(segment).startswith(label)
+        _spans_match(segment, label)
         for url in sources
         for segment in _path_segments(url)
     )
+
+
+def _spans_match(segment: str, label: str) -> bool:
+    """조각 안의 연속 토큰 구간 하나가 대회 이름과 정확히 같은가.
+
+    **소문자로 내린 뒤 쪼갠다.** `_NON_ALNUM`은 `[^a-z0-9]`라 `.lower()` 뒤에 쓰라고
+    만든 패턴이고, 원문 그대로 넣으면 대문자마다 토큰이 갈려 `SummerSlam`이
+    `summer`·`slam` 둘로 쪼개진다.
+    """
+    tokens = [token for token in _NON_ALNUM.split(segment.lower()) if token]
+    for start in range(len(tokens)):
+        joined = ""
+        for end in range(start, len(tokens)):
+            joined += tokens[end]
+            if len(joined) > len(label):
+                break
+            if joined == label:
+                return True
+    return False
 
 
 def summarize_predictions(rows: Sequence[PredictionRow]) -> PredictionTotals:

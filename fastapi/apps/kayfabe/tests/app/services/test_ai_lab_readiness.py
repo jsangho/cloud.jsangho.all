@@ -130,19 +130,32 @@ class TestSelfReferenceMines:
         assert items[0].mines == ()
         assert items[0].risk == RISK_CLEAR
 
-    def test_a_longer_event_name_does_not_catch_a_shorter_one(self) -> None:
-        """`cites_own_event`와 **같은 판정**이다 — 포함이 아니라 시작으로 본다.
+    def test_a_word_fragment_is_not_a_mine(self) -> None:
+        """`cites_own_event`와 **같은 판정**이다 — 양끝이 토큰 경계에 맞아야 한다.
 
-        "Night of Champions" 문서가 "Champions" 대회의 지뢰가 되면, 화면이 없는
-        누수를 만들어 멀쩡한 문서를 빼라고 권하게 된다.
+        단어 중간에 걸리면 화면이 없는 누수를 만들어 멀쩡한 문서를 빼라고 권하게 된다.
         """
         _, _, items = _summarize(
-            events=[_event(slug="champions", label="Champions")],
+            events=[_event(slug="backlash", label="Backlash")],
             documents=[
-                _document(url="https://en.wikipedia.org/wiki/Night_of_Champions_(2026)")
+                _document(url="https://wrestletalk.com/news/backlashing-rumours")
             ],
         )
         assert items[0].mines == ()
+
+    def test_an_event_name_mid_slug_is_a_mine(self) -> None:
+        """뉴스 주소 형태(단체명 접두사)를 옛 규칙이 통째로 놓쳤다 (2026-09-30)."""
+        _, _, items = _summarize(
+            events=[_event(slug="champions", label="Night of Champions")],
+            documents=[
+                _document(
+                    url="https://wrestletalk.com/news/wwe-night-of-champions-2026-card"
+                )
+            ],
+        )
+        assert [mine.source_url for mine in items[0].mines] == [
+            "https://wrestletalk.com/news/wwe-night-of-champions-2026-card"
+        ]
 
     def test_an_unembedded_document_is_still_a_mine(self) -> None:
         """임베딩이 없어 지금은 안 뽑히지만, 임베딩은 나중에 채워진다.

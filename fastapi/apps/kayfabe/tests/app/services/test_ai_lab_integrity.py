@@ -96,10 +96,36 @@ class TestCitesOwnEvent:
             ["https://en.wikipedia.org/wiki/CM_Punk"], "SummerSlam"
         )
 
-    def test_a_name_appearing_late_in_another_event_does_not_count(self) -> None:
-        # "Champions"가 "Night of Champions" 문서에 걸리면 없는 누수를 만든다.
+    def test_a_word_fragment_does_not_count(self) -> None:
+        """단어 중간 일치는 누수가 아니다. **옛 규칙은 이것을 잘못 셌다** —
+        `startswith`라 `backlashingnews`가 "Backlash"로 걸렸다."""
         assert not cites_own_event(
-            ["https://en.wikipedia.org/wiki/Night_of_Champions_(2026)"], "Champions"
+            ["https://wrestletalk.com/news/backlashing-rumours"], "Backlash"
+        )
+
+    def test_the_event_name_in_the_middle_of_a_news_slug_counts(self) -> None:
+        """뉴스 사이트는 슬러그 앞에 단체명을 붙여 대회 이름이 가운데 온다.
+
+        옛 규칙(`조각의 시작`)은 이 형태를 통째로 놓쳤고, 그 구멍으로 대회 프리뷰
+        기사가 ex-ante인 척 들어왔다 (2026-09-30).
+        """
+        assert cites_own_event(
+            ["https://wrestletalk.com/news/wwe-money-in-the-bank-2026-every-entrant"],
+            "Money in the Bank",
+        )
+        assert cites_own_event(
+            [
+                "https://www.wrestlinginc.com/2259302/"
+                "wwe-world-heavyweight-championship-money-in-the-bank-roman-reigns/"
+            ],
+            "Money in the Bank",
+        )
+
+    def test_a_wrestler_news_article_still_passes(self) -> None:
+        """루머 축이 원래 찾는 기사다 — 대회 이름이 없으면 자기참조가 아니다."""
+        assert not cites_own_event(
+            ["https://www.wrestlinginc.com/1234/roman-reigns-injury-update/"],
+            "Money in the Bank",
         )
 
     def test_no_sources_means_no_self_reference(self) -> None:
