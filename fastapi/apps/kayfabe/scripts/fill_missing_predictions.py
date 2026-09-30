@@ -11,7 +11,7 @@ MITB 카드가 5경기인데 예측은 2건이었고(나머지 하나는 사라�
 비어 있는다. 이 스크립트가 그 틈을 메운다 — **무엇을 돌릴지 고르는 일만** 하고
 생성 자체는 기존 유스케이스에 넘긴다.
 
-## 고르는 규칙 넷
+## 고르는 규칙 다섯
 
 1. **다가오는 대회만.** 지난 대회에 지금 예측을 만들면 결과를 아는 상태에서 만든
    것이라 사후 재현이 된다 — 자격 판정이 `temporal_inversion`으로 실격시킬 표본을
@@ -19,7 +19,11 @@ MITB 카드가 5경기인데 예측은 2건이었고(나머지 하나는 사라�
 2. **예측이 없는 경기만.** 있는 것은 건드리지 않는다(`force`를 쓰지 않는다).
 3. **`걸릴 글 없음`인 대회만.** 준비도가 실격·보류 위험을 말하면 건너뛴다. 막힐
    것을 알면서 무료 한도를 태우지 않는다.
-4. **하루 상한.** 무료 등급이 모델당 하루 20요청이고 예측 하나가 두 번 부른다.
+4. **참가자가 확정된 경기만.** 위키는 대진이 정해지기 전에도 형식을 먼저 싣는다
+   ("Raw의 챔피언 vs SmackDown의 챔피언"). 거기에 예측을 만들면 승자가 사람이
+   아니라 역할명이 되고, 나중에 실명이 들어오면 경기 id가 달라져 **그 예측이
+   고아가 된다**(`unconfirmed_match_cards`).
+5. **하루 상한.** 무료 등급이 모델당 하루 20요청이고 예측 하나가 두 번 부른다.
    기본값은 경기 6개(=12요청)다.
 
 ## 기본이 드라이런이다
@@ -74,6 +78,9 @@ from kayfabe.app.dtos.agent_prediction_dto import (  # noqa: E402
     GeneratePredictionCommand,
 )
 from kayfabe.app.services.ai_lab_readiness import RISK_CLEAR  # noqa: E402
+from kayfabe.app.services.unconfirmed_match_cards import (  # noqa: E402
+    unconfirmed_match_keys,
+)
 from kayfabe.app.use_cases.ai_lab_interactor import AiLabInteractor  # noqa: E402
 from kayfabe.dependencies.ai_prediction_provider import (  # noqa: E402
     get_ai_prediction_use_case,
@@ -163,6 +170,17 @@ async def main(*, apply: bool, max_matches: int) -> int:
                 # 준비도가 아예 모르는 대회다(날짜가 없거나 목록에 없다).
                 print(f"{slug:22} 건너뜀 — 준비도가 모르는 대회 ({len(keys)}경기 대기)")
                 continue
+            unconfirmed = unconfirmed_match_keys(slug)
+            if unconfirmed:
+                held = [k for k in keys if k in unconfirmed]
+                keys = [k for k in keys if k not in unconfirmed]
+                if held:
+                    print(
+                        f"{slug:22} 참가자 미확정 {len(held)}경기 제외: "
+                        f"{', '.join(held)}"
+                    )
+                if not keys:
+                    continue
             if budget <= 0:
                 print(
                     f"{slug:22} 다음으로 미룸 — 오늘 상한 도달 ({len(keys)}경기 대기)"
