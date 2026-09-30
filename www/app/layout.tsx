@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald, Black_Han_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
-import { Navbar } from "@/components/navbar";
 import { AuthProvider } from "@/context/auth-context";
 import { GoogleSessionProvider } from "@/components/google-session-provider";
 import "./globals.css";
@@ -23,15 +22,16 @@ const blackHanSans = Black_Han_Sans({
   variable: "--font-kr-display",
 });
 
+/* 제품(KAYFABE) 메타데이터는 `app/(kayfabe)/layout.tsx`로 내려갔다 — 루트는 이제
+   포트폴리오와 제품 양쪽의 껍데기라 어느 한쪽의 제목을 달고 있으면 안 된다. */
 export const metadata: Metadata = {
-  title: "KayFabe",
-  description: "WWE PLE 예측 게임",
+  title: {
+    default: "정상호 — 백엔드·데이터 중심 풀스택",
+    template: "%s · 정상호",
+  },
+  description: "Wiki + LLM 개인 지식 시스템과 WWE 예측 플랫폼을 만듭니다.",
   icons: {
-    icon: [
-      { url: "/kayfabe-mark.svg", type: "image/svg+xml" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/kayfabe-mark.svg",
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
 };
 
@@ -59,10 +59,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthProvider>
-              <Navbar />
-              {children}
-            </AuthProvider>
+            <AuthProvider>{children}</AuthProvider>
           </ThemeProvider>
         </GoogleSessionProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}

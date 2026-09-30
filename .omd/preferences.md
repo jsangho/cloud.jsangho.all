@@ -304,3 +304,18 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #fcfbf9 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-30T02:16:48.724Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_munh5f84_cbf87468
+timestamp: 2026-09-30T02:16:48.724Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/page.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/page.tsx — not in DESIGN.md radius scale
