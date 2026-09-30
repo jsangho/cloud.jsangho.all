@@ -167,16 +167,17 @@ def chat(req: ChatRequest) -> ChatResponse:
             ),
         )
 
-    model = keymaker.get_gemini_model()
+    client = keymaker.get_gemini_client()
     try:
-        response = model.generate_content(req.message)
+        response = client.models.generate_content(
+            model=keymaker.get_gemini_model_name(),
+            contents=req.message,
+        )
     except Exception as e:
+        # google-genai는 실패를 `APIError`로 올리고 HTTP 상태를 `code`에 담는다.
+        # 옛 SDK의 `ResourceExhausted` 타입명은 더 이상 나오지 않는다.
         err = str(e)
-        if (
-            "429" in err
-            or "quota" in err.lower()
-            or "ResourceExhausted" in type(e).__name__
-        ):
+        if getattr(e, "code", None) == 429 or "quota" in err.lower():
             raise HTTPException(
                 status_code=429,
                 detail=(
@@ -193,25 +194,22 @@ def chat(req: ChatRequest) -> ChatResponse:
             detail=f"Gemini 호출 실패: {e!s}",
         ) from e
 
-    try:
-        text = (response.text or "").strip()
-    except ValueError as e:
-        feedback = getattr(response, "prompt_feedback", None)
-        raise HTTPException(
-            status_code=400,
-            detail=f"응답 텍스트를 읽을 수 없습니다: {e!s}. prompt_feedback={feedback}",
-        ) from e
+    # google-genai의 `.text`는 `Optional[str]`이다 — 차단·빈 응답도 예외가 아니라
+    # `None`으로 온다. 그래서 아래 한 분기가 옛 SDK의 ValueError 경로까지 받는다.
+    text = (response.text or "").strip()
 
     if not text:
         reason = None
         if getattr(response, "candidates", None):
             c0 = response.candidates[0]
             reason = getattr(c0, "finish_reason", None)
+        feedback = getattr(response, "prompt_feedback", None)
         raise HTTPException(
             status_code=502,
             detail=(
                 "모델이 비어 있는 응답을 반환했습니다."
                 + (f" (finish_reason={reason})" if reason else "")
+                + (f" prompt_feedback={feedback}" if feedback else "")
             ),
         )
 
