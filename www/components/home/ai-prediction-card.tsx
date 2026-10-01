@@ -93,14 +93,27 @@ export function AiPredictionCard({ className }: { className?: string }) {
   }, []);
 
   if (state.status === "loading") {
+    // **빈 상자를 두지 않는다.** 테두리만 있는 흰 칸은 로딩이 아니라 고장으로
+    // 읽힌다 — 이 카드는 대회 목록과 예측을 두 번 왕복해서 받으므로 그 시간이
+    // 짧지 않다. 자리표시는 완성된 카드와 같은 뼈대를 그린다.
     return (
       <div
         className={cn(
-          "h-[19rem] animate-pulse rounded-2xl border border-border bg-card",
+          "flex min-h-[19rem] flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:p-6",
           className,
         )}
-        aria-hidden
-      />
+        role="status"
+        aria-label="AI 예측을 불러오는 중"
+      >
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-data">AI Prediction</p>
+        <div className="flex animate-pulse flex-col gap-3">
+          <div className="h-3 w-2/3 rounded-full bg-surface-2" />
+          <div className="h-14 rounded-xl border border-data-500/20 bg-data-surface" />
+          <div className="mx-auto h-3 w-6 rounded-full bg-surface-2" />
+          <div className="h-14 rounded-xl border border-border bg-card-2" />
+        </div>
+        <div className="mt-auto h-3 w-1/3 animate-pulse rounded-full bg-surface-2" />
+      </div>
     );
   }
 

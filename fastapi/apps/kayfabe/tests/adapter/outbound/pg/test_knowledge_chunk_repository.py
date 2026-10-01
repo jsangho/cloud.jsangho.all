@@ -33,6 +33,7 @@ def _chunk(
     *,
     revision_id: str | None = "1367773770",
     revised_at: datetime | None = datetime(2026, 8, 5, 3, 7, 53, tzinfo=UTC),
+    collected_at: datetime | None = datetime(2026, 8, 5, 3, 8, 0, tzinfo=UTC),
 ) -> NewKnowledgeChunk:
     return NewKnowledgeChunk(
         source_url="https://www.wwe.com/shows/summerslam",
@@ -44,6 +45,7 @@ def _chunk(
         published_at=datetime(2026, 8, 1, tzinfo=UTC),
         source_revision_id=revision_id,
         source_revised_at=revised_at,
+        collected_at=collected_at,
     )
 
 
@@ -152,3 +154,32 @@ def test_missing_revision_is_stored_as_null_not_now() -> None:
 
     assert row["source_revision_id"] is None
     assert row["source_revised_at"] is None
+
+
+def test_collected_at_is_written_not_left_to_the_database() -> None:
+    """**수집 시각을 DB 기본값에 맡기지 않는다.**
+
+    `func.now()`는 문장 시각이 아니라 트랜잭션 시작 시각이라, 한 번의 적재에 들어간
+    청크가 전부 같은 값을 받는다. 배치 뒤쪽 문서는 개정본이 그보다 미래가 되어
+    계보가 통째로 불완전으로 떨어진다 — 2026-10-01 운영에서 뉴스 매체 7건이
+    0.3~21초 차이로 실제로 그렇게 됐다.
+    """
+    row = _deduplicated([_chunk()])[0]
+
+    assert row["collected_at"] == datetime(2026, 8, 5, 3, 8, 0, tzinfo=UTC)
+
+
+def test_revision_never_lands_after_collection() -> None:
+    """허브가 준 수집 시각이 없어도 개정본보다 앞서지 않는다.
+
+    이 호출은 문서 하나를 받아 임베딩까지 끝낸 뒤에 일어나므로, 메워 넣는 '지금'은
+    어떤 경우에도 그 문서의 개정본보다 뒤다. 두 항의 순서가 뒤집히지 않는 것이
+    `DocumentProvenance.is_complete`가 요구하는 전부다.
+    """
+    row = _deduplicated([_chunk(collected_at=None)])[0]
+
+    collected = row["collected_at"]
+    revised = row["source_revised_at"]
+    assert isinstance(collected, datetime)
+    assert isinstance(revised, datetime)
+    assert revised <= collected

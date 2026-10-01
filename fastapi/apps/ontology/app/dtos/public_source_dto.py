@@ -25,3 +25,7 @@ class PublicDocument:
     #: 그 개정본이 만들어진 시각. 확인 못 하면 `None`이고, 그 `None`은
     #: "모른다"이지 "통과"가 아니다. 여기서도 오늘 날짜로 대신 채우지 않는다.
     revised_at: datetime | None = None
+    #: **본문을 손에 넣은 시각.** `revised_at`을 판정한 바로 그 기준점이라
+    #: 둘을 비교하려면 같이 넘어가야 한다. 받는 쪽이 자기 시계로 다시 재면
+    #: 비교의 두 항이 서로 다른 순간을 가리키게 된다 (Phase 3-12).
+    collected_at: datetime | None = None

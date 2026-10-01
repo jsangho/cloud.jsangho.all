@@ -24,6 +24,8 @@ class SourceDocument:
     #: 개정본 계보 (Phase 3-12). 확인 못 했으면 `None`이고, 그 `None`은 "모른다"다.
     revision_id: str | None = None
     revised_at: datetime | None = None
+    #: 허브가 본문을 손에 넣은 시각. `revised_at`을 판정한 기준점과 같은 값이다.
+    collected_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,12 @@ class NewKnowledgeChunk:
     #: 이 청크를 뽑아낸 개정본. 같은 URL이라도 개정본이 다르면 다른 글이다.
     source_revision_id: str | None = None
     source_revised_at: datetime | None = None
+    #: **본문을 받아 온 시각.** `None`이면 DB의 `now()`가 채우는데, 그 값은
+    #: 문장 시각이 아니라 **트랜잭션 시작 시각**이라 한 번의 적재에 들어간 청크가
+    #: 전부 같은 값을 받는다. 그러면 배치 뒤쪽에서 받은 문서는 `source_revised_at`이
+    #: `collected_at`보다 미래가 되어 계보가 통째로 불완전으로 떨어진다
+    #: (2026-10-01 실측: 뉴스 매체 7건이 0.3~21초 차이로 그렇게 됐다).
+    collected_at: datetime | None = None
 
 
 @dataclass(frozen=True)
