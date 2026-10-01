@@ -146,6 +146,7 @@ class PublicSourceInteractor(PublicSourceUseCase):
             published_at=_published_at(soup),
             revision_id=revision.revision_id if revision else None,
             revised_at=revision.revised_at if revision else None,
+            collected_at=collected_at,
         )
 
     async def _revision_of(

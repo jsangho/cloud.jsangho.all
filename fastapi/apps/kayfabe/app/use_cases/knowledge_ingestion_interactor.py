@@ -150,6 +150,9 @@ class KnowledgeIngestionInteractor(KnowledgeIngestionUseCase):
                     published_at=document.published_at,
                     source_revision_id=document.revision_id,
                     source_revised_at=document.revised_at,
+                    # 허브가 본문을 받은 그 시각을 그대로 싣는다. DB의 기본값에
+                    # 맡기면 트랜잭션 시작 시각이 들어와 계보 비교가 뒤집힌다.
+                    collected_at=document.collected_at,
                 )
             )
         return prepared, failed

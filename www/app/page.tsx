@@ -261,7 +261,7 @@ const PROJECTS: PortfolioProject[] = [
     hrefLabel: "kayfabe.jsangho.cloud",
     image: "/projects/kayfabe-home.jpg",
     imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
-    facts: ["화면 19개", "테스트 1,233건", "아키텍처 계약 4", "커밋 384"],
+    facts: ["화면 19개", "테스트 1,235건", "아키텍처 계약 4", "커밋 385"],
   },
   {
     name: "SUPER-SUB",

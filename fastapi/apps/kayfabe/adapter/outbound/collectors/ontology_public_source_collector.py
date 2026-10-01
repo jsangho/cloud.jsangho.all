@@ -38,4 +38,5 @@ class OntologyPublicSourceCollector(PublicSourcePort):
             published_at=document.published_at,
             revision_id=document.revision_id,
             revised_at=document.revised_at,
+            collected_at=document.collected_at,
         )

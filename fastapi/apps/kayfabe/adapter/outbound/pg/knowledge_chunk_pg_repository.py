@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
@@ -57,6 +58,15 @@ def _deduplicated(chunks: Sequence[NewKnowledgeChunk]) -> list[dict[str, object]
     같은 문서에서 똑같은 문단이 두 번 뽑히는 일이 실제로 있다(반복되는 안내 문구).
     DB도 걸러 주지만, 넣는 쪽이 세는 숫자와 실제 저장 수가 어긋나면 요약이 거짓말이 된다.
     """
+    # **`collected_at`을 DB 기본값에 맡기지 않는다.** `func.now()`는 문장 시각이
+    # 아니라 트랜잭션 시작 시각이라, 한 번의 적재에 들어간 청크가 전부 같은 값을
+    # 받는다. 그러면 배치 뒤쪽 문서는 `source_revised_at`이 `collected_at`보다
+    # 미래가 되어 계보가 불완전으로 떨어진다 — 시간이 틀린 게 아니라 두 항이
+    # 서로 다른 순간을 가리키던 것이다.
+    #
+    # 허브가 준 수집 시각이 정본이고, 없을 때만 **지금** 시각으로 메운다. 이 호출은
+    # 문서 하나를 받아 임베딩까지 끝낸 뒤라 어떤 경우에도 수집보다 앞설 수 없다.
+    fallback = datetime.now(UTC)
     seen: set[str] = set()
     rows: list[dict[str, object]] = []
     for chunk in chunks:
@@ -74,6 +84,7 @@ def _deduplicated(chunks: Sequence[NewKnowledgeChunk]) -> list[dict[str, object]
                 "published_at": chunk.published_at,
                 "source_revision_id": chunk.source_revision_id,
                 "source_revised_at": chunk.source_revised_at,
+                "collected_at": chunk.collected_at or fallback,
             }
         )
     return rows
