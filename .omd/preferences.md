@@ -13,12 +13,14 @@ timestamp: 2026-08-04T02:22:28.710Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #ff00ff in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **무효** (2026-10-01) — 이 값은 더 이상 칠하지 않는다 (#ff00ff — 주석에만 남았거나 삭제됨)
 
 ## 2026-08-04T02:22:55.696Z — introduced-off-palette-color-s-ff00ff-in
 
@@ -28,12 +30,14 @@ timestamp: 2026-08-04T02:22:55.696Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/tmp/claude-1000/-home-ho-projects-cloud-jsangho-all/c28e286d-594c-4929-8e84-bfaebb17c545/scratchpad/hook-probe.css"
 ```
 
 Introduced off-palette color(s) #ff00ff in /tmp/claude-1000/-home-ho-projects-cloud-jsangho-all/c28e286d-594c-4929-8e84-bfaebb17c545/scratchpad/hook-probe.css — not in DESIGN.md
+
+> **무효** (2026-10-01) — 저장소 밖 임시 파일이다 — 코드가 아니다
 
 ## 2026-08-05T03:19:53.730Z — introduced-off-scale-border-radius-round
 
@@ -43,12 +47,14 @@ timestamp: 2026-08-05T03:19:53.730Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/ple/ai-report-dialog.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/ple/ai-report-dialog.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-10T06:41:02.936Z — introduced-off-palette-color-s-a8a29e-57
 
@@ -58,12 +64,14 @@ timestamp: 2026-08-10T06:41:02.936Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/career-belt.tsx"
 ```
 
 Introduced off-palette color(s) #a8a29e, #57534e in /home/ho/projects/cloud.jsangho.all/www/components/career-belt.tsx — not in DESIGN.md
+
+> **무효** (2026-10-01) — 그 파일은 더 이상 없다 (커리어 삭제 · data-center는 (kayfabe)로 이동)
 
 ## 2026-08-10T06:41:02.939Z — introduced-off-scale-border-radius-round
 
@@ -73,12 +81,14 @@ timestamp: 2026-08-10T06:41:02.939Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/career-belt.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/career-belt.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T02:32:39.688Z — introduced-off-palette-color-s-e63946-db
 
@@ -88,12 +98,14 @@ timestamp: 2026-08-20T02:32:39.688Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #e63946, #dbeafe, #93c5fd in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#e63946 · #dbeafe · #93c5fd)
 
 ## 2026-08-20T02:32:49.517Z — introduced-off-palette-color-s-101a2e-in
 
@@ -103,12 +115,14 @@ timestamp: 2026-08-20T02:32:49.517Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #101a2e in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#101a2e)
 
 ## 2026-08-20T02:33:14.235Z — introduced-off-palette-color-s-dbeafe-93
 
@@ -118,12 +132,14 @@ timestamp: 2026-08-20T02:33:14.235Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #dbeafe, #93c5fd, #60a5fa in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#dbeafe · #93c5fd · #60a5fa)
 
 ## 2026-08-20T02:46:38.661Z — introduced-off-scale-border-radius-round
 
@@ -133,12 +149,14 @@ timestamp: 2026-08-20T02:46:38.661Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/navbar.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/navbar.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T02:48:46.621Z — introduced-off-scale-border-radius-round
 
@@ -148,12 +166,14 @@ timestamp: 2026-08-20T02:48:46.621Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx"
 ```
 
 Introduced off-scale border radius rounded-2xl(16px), rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T02:50:00.576Z — introduced-off-scale-border-radius-round
 
@@ -163,12 +183,14 @@ timestamp: 2026-08-20T02:50:00.576Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/page.tsx"
 ```
 
 Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/app/page.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T02:50:59.673Z — introduced-off-scale-border-radius-round
 
@@ -178,12 +200,14 @@ timestamp: 2026-08-20T02:50:59.673Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/ple/ple-status-board.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/ple/ple-status-board.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T07:14:43.985Z — introduced-off-palette-color-s-ef4444-in
 
@@ -193,12 +217,14 @@ timestamp: 2026-08-20T07:14:43.985Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/charts/chart-theme.tsx"
 ```
 
 Introduced off-palette color(s) #ef4444 in /home/ho/projects/cloud.jsangho.all/www/components/charts/chart-theme.tsx — not in DESIGN.md
+
+> **무효** (2026-10-01) — 이 값은 더 이상 칠하지 않는다 (#ef4444 — 주석에만 남았거나 삭제됨)
 
 ## 2026-08-20T07:16:55.027Z — introduced-off-scale-border-radius-round
 
@@ -208,12 +234,14 @@ timestamp: 2026-08-20T07:16:55.027Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/data-center/match-row-card.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/data-center/match-row-card.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-08-20T07:17:39.716Z — introduced-off-scale-border-radius-round
 
@@ -223,12 +251,14 @@ timestamp: 2026-08-20T07:17:39.716Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestlers/page.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/data-center/wrestlers/page.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-09-29T03:18:58.987Z — introduced-off-palette-color-s-fafaf9-f5
 
@@ -238,12 +268,14 @@ timestamp: 2026-09-29T03:18:58.987Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #fafaf9, #f5f5f4, #e7e5e4 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **무효** (2026-10-01) — 이 값은 더 이상 칠하지 않는다 (#f5f5f4 · #e7e5e4 — 주석에만 남았거나 삭제됨)
 
 ## 2026-09-29T03:19:20.542Z — introduced-off-palette-color-s-dc2626-in
 
@@ -253,12 +285,14 @@ timestamp: 2026-09-29T03:19:20.542Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #dc2626 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#dc2626)
 
 ## 2026-09-29T03:19:26.278Z — introduced-off-palette-color-s-eff6ff-in
 
@@ -268,12 +302,14 @@ timestamp: 2026-09-29T03:19:26.278Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #eff6ff in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#eff6ff)
 
 ## 2026-09-29T05:35:18.363Z — introduced-off-palette-color-s-f4f1ec-eb
 
@@ -283,12 +319,14 @@ timestamp: 2026-09-29T05:35:18.363Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #f4f1ec, #ebe7e1, #fcfbf9 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#fcfbf9)
 
 ## 2026-09-29T05:35:24.961Z — introduced-off-palette-color-s-fcfbf9-in
 
@@ -298,12 +336,14 @@ timestamp: 2026-09-29T05:35:24.961Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #fcfbf9 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#fcfbf9)
 
 ## 2026-09-30T02:16:48.724Z — introduced-off-scale-border-radius-round
 
@@ -313,12 +353,14 @@ timestamp: 2026-09-30T02:16:48.724Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/page.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/app/page.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-09-30T02:58:11.649Z — introduced-off-scale-border-radius-round
 
@@ -328,12 +370,14 @@ timestamp: 2026-09-30T02:58:11.649Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/project-banner.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/project-banner.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-09-30T07:03:46.413Z — introduced-off-scale-border-radius-round
 
@@ -343,12 +387,14 @@ timestamp: 2026-09-30T07:03:46.413Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx"
 ```
 
 Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-09-30T07:11:24.394Z — introduced-off-palette-color-s-0c0b0a-in
 
@@ -358,12 +404,14 @@ timestamp: 2026-09-30T07:11:24.394Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #0c0b0a in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **무효** (2026-10-01) — 이 값은 더 이상 칠하지 않는다 (#0c0b0a — 주석에만 남았거나 삭제됨)
 
 ## 2026-09-30T07:11:51.034Z — introduced-off-scale-border-radius-round
 
@@ -373,12 +421,14 @@ timestamp: 2026-09-30T07:11:51.034Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/(kayfabe)/kayfabe/page.tsx"
 ```
 
 Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/app/(kayfabe)/kayfabe/page.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
 ## 2026-09-30T07:12:54.033Z — introduced-off-palette-color-s-efe7d8-in
 
@@ -388,12 +438,14 @@ timestamp: 2026-09-30T07:12:54.033Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: stale
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #efe7d8 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **무효** (2026-10-01) — 이 값은 더 이상 칠하지 않는다 (#efe7d8 — 주석에만 남았거나 삭제됨)
 
 ## 2026-09-30T07:21:09.722Z — introduced-off-palette-color-s-e6e2da-de
 
@@ -403,12 +455,14 @@ timestamp: 2026-09-30T07:21:09.722Z
 scope: color
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
 ```
 
 Introduced off-palette color(s) #e6e2da, #ded9cf, #d2ccc1 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+> **반영됨** (2026-10-01) — DESIGN.md가 이 값을 문서화한다 (#e6e2da · #ded9cf · #d2ccc1)
 
 ## 2026-10-01T00:43:31.299Z — introduced-off-scale-border-radius-round
 
@@ -418,9 +472,12 @@ timestamp: 2026-10-01T00:43:31.299Z
 scope: visualTheme
 signal: ambient
 confidence: inferred
-status: pending
+status: applied
 source_agent: claude-code
 source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx"
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx — not in DESIGN.md radius scale
+
+> **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
+

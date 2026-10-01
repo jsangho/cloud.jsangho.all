@@ -158,7 +158,7 @@ KayFabe는 **WWE Sports Analytics & Prediction Platform**이다 (2026-08-20 사�
 | `--data-400` (`--data`) | `#3b82f6` | 기본 — AI 예측 승률, 차트 1계열, 데이터 강조 |
 | `--data-300` / `--data-500` | `#60a5fa` / `#2563eb` | hover / pressed·진한 면 |
 | `--data-100` ~ `--data-700` | `#dbeafe` … `#16307a` | 순차 램프의 재료 |
-| `--data-surface` | `#101a2e` | AI LAB 카드 표면 — 캔버스보다 파랑 쪽으로 반 발짝 |
+| `--data-surface` | 다크 `#101a2e` · 라이트 `#eff6ff` | AI LAB 카드 표면 — 캔버스보다 파랑 쪽으로 반 발짝 |
 
 `--info`는 같은 값을 가리키는 **옛 이름**이다. 새 코드는 `text-data`·`bg-data-400`을 쓴다.
 

@@ -1,5 +1,22 @@
 # 배포 파이프라인 복구 Implementation Plan
 
+> ## ⛔ 이 계획은 실행되지 않았고, 지금은 유효하지 않다 (2026-10-01 확인)
+>
+> 체크박스 30개가 전부 비어 있다. **아래 단계를 따라가지 않는다** — 전제가 바뀌었다.
+>
+> | 계획이 하려던 것 | 지금 실제 상태 |
+> |---|---|
+> | 깨진 `deploy-backend.yml` 을 고친다 | **그 파일은 삭제됐다** (`916922c`). 고칠 대상이 없다 |
+> | `aws` 브랜치 compose 의 `restart: alwats` 오타를 고친다 | **이미 고쳐졌다** — `aws` 에 `restart: always` 둘, 오타 0 |
+> | EC2 에 self-hosted 러너를 등록한다 | **하지 않았다.** 러너는 지금도 없다 |
+> | 푸시하면 자동 배포되게 한다 | **자동 배포는 없다.** 배포는 `.claude/skills/deploy/SKILL.md` 의 수동 절차가 유일한 경로이고, 그 절차는 정상 동작한다 |
+>
+> CI 자동화는 다른 길로 갔다 — `.github/workflows/gates.yml` 이 **푸시마다 린트·타입·테스트를
+> ho·main·messi 세 브랜치에서** 돌린다(2026-09-29 신설). 배포가 아니라 게이트다.
+>
+> 자동 배포를 다시 하고 싶다면 이 문서를 되살리지 말고 **새로 쓴다.** 여기 적힌 결함 셋 중
+> 둘은 이미 사라졌고, 남은 하나(러너 없음)만 참고 가치가 있다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `aws` 브랜치에 푸시하면 EC2의 `backend`·`auth`가 자동으로 재빌드·재기동되고, 실패 시 워크플로우가 빨간불로 알려주는 상태를 만든다.

@@ -43,7 +43,10 @@ ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES
 서버에 예전 `fastapi/.env.infra` 가 남아 있으면 지금은 아무도 읽지 않는다. 지워도 되지만
 배포 흐름에서 건드리지 않는다.
 
-**서버 `docker-compose.yaml`에 커밋되지 않은 수정이 있다.** `aws` 브랜치에 `restart: alwats` 오타가 커밋돼 있고, 서버에서만 `always`로 고쳐 쓰는 상태다.
+**서버에 커밋되지 않은 수정이 남아 있을 수 있다.** 과거에는 `aws` 브랜치의
+`restart: alwats` 오타를 서버에서만 `always`로 고쳐 쓰고 있었다. **그 오타는 지금
+고쳐져 있고**(2026-10-01 확인: `aws`에 `restart: always` 둘, 오타 0) 서버
+`git status`도 깨끗하다. 그래도 매번 확인한다 — 드리프트는 또 생길 수 있다.
 
 ```bash
 ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && git status --short'
@@ -231,13 +234,16 @@ DB 마이그레이션을 포함한 배포라면 코드 롤백만으로 복구되
 
 ## 알려진 문제
 
-- **`.github/workflows/deploy-backend.yml`은 동작하지 않는다.** 결함 세 가지:
-  1. `runs-on: self-hosted` — EC2에 러너가 없다 (`actions-runner` 디렉터리·서비스 모두 미발견)
-  2. `cd ~/project/cloud.jsangho.all` — 실제 경로는 `/home/ec2-user/cloud.jsangho.all` (`project` 세그먼트 자체가 없다)
-  3. 트리거가 `push: branches: [main]`인데 서버는 `aws` 브랜치를 쓴다
+- **자동 배포는 없다 — 위 수동 절차가 유일한 경로다.** 예전의
+  `.github/workflows/deploy-backend.yml`은 한 번도 동작한 적이 없어 **삭제됐다**(`916922c`).
+  EC2에 self-hosted 러너도 여전히 없다. 되살리려던 계획
+  (`_docs/superpowers/plans/2026-07-29-deploy-pipeline-recovery.md`)은 실행되지 않았고,
+  그 문서 머리에 유효하지 않다고 적어 두었다.
 
-  배포는 위 수동 절차가 유일한 경로다. 워크플로우를 신뢰하지 않는다.
-  실행 이력은 현재 PAT에 `actions` 스코프가 없어 확인할 수 없다 (`gh run list` → 403).
+- **`.github/workflows/gates.yml`은 배포가 아니라 게이트다** (2026-09-29 신설). 푸시마다
+  ho·main·messi 세 브랜치에서 린트·타입·테스트를 돌린다. 초록이어도 **서버에는 아무것도
+  올라가지 않는다** — 배포는 사람이 이 절차를 돌려야 일어난다.
+  `gh run list`가 403이면 `env -u GITHUB_TOKEN`을 붙인다(PAT에 `actions` 스코프가 없다).
 
 - **프론트(`www`)는 Vercel에 배포된다 — 이 스킬의 범위가 아니다.** `jsangho.cloud`·`www.jsangho.cloud` 응답 헤더가 `server: Vercel`이다. EC2의 `www` 디렉터리는 어떤 컨테이너도 쓰지 않는다. 프론트 배포 요청을 받으면 이 절차가 아니라 Vercel 쪽을 확인한다.
 
