@@ -334,3 +334,93 @@ source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/pr
 ```
 
 Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/project-banner.tsx — not in DESIGN.md radius scale
+
+## 2026-09-30T07:03:46.413Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_munregh9_c9697507
+timestamp: 2026-09-30T07:03:46.413Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx"
+```
+
+Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/components/home/ai-prediction-card.tsx — not in DESIGN.md radius scale
+
+## 2026-09-30T07:11:24.394Z — introduced-off-palette-color-s-0c0b0a-in
+
+```omd-meta
+id: pref_munro9uy_b811d474
+timestamp: 2026-09-30T07:11:24.394Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #0c0b0a in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-30T07:11:51.034Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_munrouey_c9cfd2f0
+timestamp: 2026-09-30T07:11:51.034Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/(kayfabe)/kayfabe/page.tsx"
+```
+
+Introduced off-scale border radius rounded-2xl(16px) in /home/ho/projects/cloud.jsangho.all/www/app/(kayfabe)/kayfabe/page.tsx — not in DESIGN.md radius scale
+
+## 2026-09-30T07:12:54.033Z — introduced-off-palette-color-s-efe7d8-in
+
+```omd-meta
+id: pref_munrq70x_fdfa6d35
+timestamp: 2026-09-30T07:12:54.033Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #efe7d8 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-09-30T07:21:09.722Z — introduced-off-palette-color-s-e6e2da-de
+
+```omd-meta
+id: pref_muns0ti2_ff8edd72
+timestamp: 2026-09-30T07:21:09.722Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #e6e2da, #ded9cf, #d2ccc1 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-10-01T00:43:31.299Z — introduced-off-scale-border-radius-round
+
+```omd-meta
+id: pref_muot9aw3_802bde89
+timestamp: 2026-10-01T00:43:31.299Z
+scope: visualTheme
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx"
+```
+
+Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx — not in DESIGN.md radius scale
