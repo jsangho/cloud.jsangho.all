@@ -20,9 +20,13 @@ import {
   MailOpen,
   Sparkles,
   CalendarCheck,
+  ScanSearch,
+  Users,
 } from "lucide-react";
 import { AiPredictionGeneratePanel } from "@/components/admin/ai-prediction-generate-panel";
 import { EventStatusPanel } from "@/components/admin/event-status-panel";
+import { ResultVerificationPanel } from "@/components/admin/result-verification-panel";
+import { UserAdminPanel } from "@/components/admin/user-admin-panel";
 import { ContactsCsvUpload } from "@/components/contacts-csv-upload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -49,6 +53,8 @@ const NAV_TABS: {
   { label: "이메일", icon: Inbox, dropdown: false },
   { label: "AI 예측", icon: Sparkles, dropdown: false },
   { label: "대회 상태", icon: CalendarCheck, dropdown: false },
+  { label: "결과 확정", icon: ScanSearch, dropdown: false },
+  { label: "사용자", icon: Users, dropdown: false },
   { label: "결과", icon: Medal, dropdown: false, href: "/results" },
 ];
 
@@ -668,6 +674,10 @@ export default function AdminDashboard() {
           <AiPredictionGeneratePanel />
         ) : activeTab === "대회 상태" ? (
           <EventStatusPanel />
+        ) : activeTab === "결과 확정" ? (
+          <ResultVerificationPanel />
+        ) : activeTab === "사용자" ? (
+          <UserAdminPanel />
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between">

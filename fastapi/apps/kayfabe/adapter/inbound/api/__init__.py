@@ -7,6 +7,9 @@ from kayfabe.adapter.inbound.api.v1.event_status_router import event_status_rout
 from kayfabe.adapter.inbound.api.v1.ple_events_router import ple_events_router
 from kayfabe.adapter.inbound.api.v1.ple_match_pick_router import ple_match_pick_router
 from kayfabe.adapter.inbound.api.v1.ple_matches_router import ple_matches_router
+from kayfabe.adapter.inbound.api.v1.result_verification_router import (
+    result_verification_router,
+)
 from kayfabe.adapter.inbound.api.v1.shop_router import shop_router
 from kayfabe.adapter.inbound.api.v1.title_acquisitions_router import (
     title_acquisitions_router,
@@ -16,6 +19,7 @@ from kayfabe.adapter.inbound.api.v1.wrestler_chat_router import wrestler_chat_ro
 kayfabe_router = APIRouter(tags=["kayfabe"])
 kayfabe_router.include_router(ple_events_router)
 kayfabe_router.include_router(event_status_router)
+kayfabe_router.include_router(result_verification_router)
 kayfabe_router.include_router(data_center_router)
 kayfabe_router.include_router(ai_lab_router)
 kayfabe_router.include_router(ai_prediction_router)
