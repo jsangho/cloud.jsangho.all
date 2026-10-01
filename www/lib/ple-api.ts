@@ -157,6 +157,7 @@ export async function submitPleMatchResult(
 ): Promise<PleBoard> {
   const res = await fetch(`${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       winnerSide: body.winnerSide,
@@ -227,12 +228,22 @@ export type BatchResultItem = {
   status?: "scheduled" | "live" | "finished";
 };
 
+/**
+ * 결과 일괄 등록 — **관리자 전용**.
+ *
+ * 토큰은 httpOnly 쿠키라 JS가 `Authorization` 헤더를 붙일 수 없다. 대신
+ * `credentials: "include"`로 쿠키를 실어 보내고 서버가 그것을 읽는다
+ * (`core.security.dependencies._extract_token`의 쿠키 폴백). 프론트와 API는
+ * 같은 사이트(`*.jsangho.cloud`)라 SameSite=Lax로도 실려 간다 — 상점·지갑이
+ * 이미 같은 방식으로 돈다(`lib/shop-api.ts`).
+ */
 export async function submitPleResultsBatch(
   slug: PleSlug,
   results: BatchResultItem[],
 ): Promise<PleBoard> {
   const res = await fetch(`${pleMatchesBaseUrl}/${slug}/results/batch`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ results }),
   });
@@ -273,6 +284,7 @@ export async function setPleMatchResult(
 ): Promise<PleBoard> {
   const res = await fetch(`${pleMatchesBaseUrl}/${slug}/matches/${matchKey}/result`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });

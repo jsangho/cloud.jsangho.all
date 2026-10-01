@@ -11,7 +11,7 @@ import {
   type PleBoardMatch,
 } from "@/lib/ple-api";
 import type { PleSlug } from "@/lib/wwe-ple";
-import { PleResultsAdminGate } from "@/components/results/ple-results-admin-gate";
+import { useAuth } from "@/context/auth-context";
 import { getPleMatches, isMultiMatch, type PleMatchCard } from "@/lib/wwe-ple-matches";
 
 type PleResultsBoardProps = {
@@ -230,12 +230,23 @@ function MatchResultRow({
   );
 }
 
+/**
+ * 결과 보드. **읽기는 누구나, 쓰기는 관리자만.**
+ *
+ * 편집 권한은 로그인 세션의 역할(`/auth/me`가 준 `role`)에서 온다. 예전에는
+ * `lib/ple-results-admin.ts`에 박힌 비밀번호 하나를 `sessionStorage`에 찍는
+ * 방식이었는데, 그 값은 브라우저 코드에 그대로 들어 있었고 서버는 토큰을 보지
+ * 않았으므로 **문이 아니라 그림**이었다. 이제 서버가
+ * `RoleChecker(UserRole.ADMIN)`으로 거절하므로, 여기서 버튼을 숨기는 것은 권한
+ * 판정이 아니라 **판정 결과를 화면에 비추는 일**이다.
+ */
 export function PleResultsBoard({ slug }: PleResultsBoardProps) {
   const staticMatches = getPleMatches(slug);
+  const { user, isReady } = useAuth();
+  const canEdit = isReady && user?.role === "admin";
   const [board, setBoard] = useState<PleBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [canEdit, setCanEdit] = useState(false);
   const [ui, setUi] = useState<ResultsUiState>({
     drafts: {},
     submitting: false,
@@ -368,7 +379,11 @@ export function PleResultsBoard({ slug }: PleResultsBoardProps) {
 
   return (
     <div className="space-y-4">
-      <PleResultsAdminGate onAdminChange={setCanEdit} />
+      {canEdit && (
+        <p className="rounded-xl border border-stone-300/70 dark:border-stone-600/70 bg-stone-100/45 dark:bg-stone-800/45 px-4 py-3 text-sm text-stone-600 dark:text-stone-300">
+          관리자 모드 — 경기 결과를 등록·수정할 수 있습니다.
+        </p>
+      )}
       {syncError && (
         <p className="rounded-lg border border-brand-500/60 bg-brand-100/60 dark:bg-brand-950/30 px-4 py-3 text-sm text-brand-800 dark:text-brand-200">
           서버 연결 없음 — 결과를 등록하려면 백엔드가 실행 중이어야 합니다. ({syncError})
