@@ -1,6 +1,7 @@
 import { Github, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProjectBanner, type PortfolioProject } from "@/components/portfolio/project-banner";
+import { TechStack, type StackGroup } from "@/components/portfolio/tech-stack";
 
 /**
  * 개인 포트폴리오 — `www.jsangho.cloud` 의 첫 화면 (2026-09-30).
@@ -14,22 +15,239 @@ import { ProjectBanner, type PortfolioProject } from "@/components/portfolio/pro
 const GITHUB_URL = "https://github.com/jsangho";
 const EMAIL = "leicestercity12968@gmail.com";
 
-/** 이 저장소에서 실제로 쓰는 것만 적는다 — 이력서용 나열을 만들지 않는다. */
-const STACK: { group: string; items: string[] }[] = [
-  { group: "언어", items: ["Python 3.13", "TypeScript", "Dart", "SQL"] },
+/**
+ * 실제로 쓰는 것만 적는다 — 이력서용 나열을 만들지 않는다.
+ *
+ * `where` 는 칩에 마우스를 올렸을 때 뜨는 문장이고, `project: "supersub"` 는
+ * 팀 프로젝트(SUPER-SUB) 의 AI 영상 분석 에이전트에서 쓴 것이라는 표시다.
+ * 색이 갈리는 이유가 그거다 — 혼자 만든 것과 팀에서 맡은 몫을 섞지 않는다.
+ *
+ * **`where` 는 비개발자가 읽는 문장이다.** 이 페이지를 보는 사람 중 다수는
+ * 기술 이름을 모른다 — 이름을 풀어 쓰는 대신 *그게 무슨 일을 하는지*를 적는다.
+ * 용어를 남기려면 그 자리에서 뜻을 함께 풀어 준다.
+ */
+const STACK: StackGroup[] = [
+  {
+    group: "언어",
+    items: [
+      {
+        name: "Python 3.13",
+        where: "서버 쪽 코드를 쓰는 언어입니다. 백엔드 전체가 이걸로 돕니다.",
+      },
+      {
+        name: "Python 3.12",
+        where:
+          "영상 분석 쪽만 한 버전 낮게 맞췄습니다. 쓰는 AI 도구들이 아직 최신 버전을 지원하지 않아서입니다.",
+        project: "supersub",
+      },
+      {
+        name: "TypeScript",
+        where:
+          "화면 쪽 코드를 쓰는 언어입니다. 실행하기 전에 미리 검사해서 오타 같은 실수를 잡아 줍니다.",
+      },
+      { name: "Dart", where: "모바일 앱을 만드는 언어입니다." },
+      { name: "SQL", where: "저장해 둔 기록 중 필요한 것만 찾아오는 언어입니다." },
+    ],
+  },
   {
     group: "백엔드",
-    items: ["FastAPI", "SQLAlchemy 2.0 async", "SQLModel", "Alembic", "Pydantic", "pytest"],
+    items: [
+      {
+        name: "FastAPI",
+        where:
+          "화면이 서버에 자료를 요청할 때 그 요청을 받는 창구입니다. KAYFABE와 SUPER-SUB 영상 분석 모두 이걸로 만들었습니다.",
+      },
+      {
+        name: "SQLAlchemy 2.0 async",
+        where: "코드에서 데이터베이스를 다루는 도구입니다. 여러 요청이 서로 기다리지 않게 합니다.",
+      },
+      {
+        name: "SQLModel",
+        where: "저장할 자료의 모양과 화면에 내보낼 자료의 모양을 한 번에 정의합니다.",
+      },
+      {
+        name: "Alembic",
+        where: "저장 구조를 바꿀 때 그 변경을 기록해 두고, 필요하면 되돌릴 수 있게 합니다.",
+      },
+      {
+        name: "Pydantic",
+        where: "오가는 자료가 약속한 형식이 맞는지 검사합니다. 이상한 값은 여기서 걸립니다.",
+      },
+      {
+        name: "pytest",
+        where: "코드가 망가졌는지 자동으로 확인하는 검사 도구입니다. 1,182건이 매번 돌아갑니다.",
+      },
+      { name: "Uvicorn", where: "만든 서버를 실제로 띄워 두고 요청을 받게 하는 프로그램입니다." },
+      { name: "uv", where: "프로젝트에 필요한 외부 코드들을 받아서 관리합니다." },
+    ],
   },
   {
     group: "프론트엔드",
-    items: ["Next.js 16", "React 19", "Tailwind CSS", "Radix UI", "Recharts", "Flutter"],
+    items: [
+      {
+        name: "Next.js 16",
+        where: "지금 보고 계신 이 페이지를 포함해, 웹 화면 전체를 만드는 틀입니다.",
+      },
+      { name: "React 19", where: "화면을 버튼·카드 같은 조각으로 나눠 만들고 조립합니다." },
+      {
+        name: "Tailwind CSS",
+        where:
+          "색과 여백, 글자 크기를 정해진 규칙 안에서만 쓰게 해서 화면이 제각각 되는 걸 막습니다.",
+      },
+      {
+        name: "Radix UI",
+        where:
+          "마우스 없이 키보드만으로도 쓸 수 있게 만들어진 화면 부품 모음입니다. 지금 보고 계신 이 설명창도 그중 하나입니다.",
+      },
+      { name: "Recharts", where: "기록과 순위를 그래프로 그립니다." },
+      { name: "Flutter", where: "코드 한 벌로 안드로이드와 아이폰 앱을 함께 만듭니다." },
+    ],
   },
-  { group: "데이터", items: ["PostgreSQL", "pgvector", "Neo4j", "Redis", "Supabase"] },
-  { group: "AI", items: ["Google Gemini", "RAG", "BAAI/bge-m3", "Kiwi 형태소"] },
+  {
+    group: "데이터",
+    items: [
+      { name: "PostgreSQL", where: "경기와 예측, 채점 결과를 담아 두는 저장소입니다." },
+      {
+        name: "pgvector",
+        where: "글의 뜻을 숫자로 바꿔 저장해 두고, 말이 달라도 뜻이 비슷한 글을 찾아옵니다.",
+      },
+      {
+        name: "Neo4j",
+        where: "선수·단체·사건처럼 서로 얽힌 관계를 그물 모양 그대로 저장합니다.",
+      },
+      {
+        name: "Redis",
+        where:
+          "자주 쓰는 값을 잠깐 올려 두는 빠른 임시 저장소입니다. 로그인 상태와 수집 대기열이 여기 있습니다.",
+      },
+      { name: "Supabase", where: "저장소를 직접 운영하지 않고 맡겨 두는 서비스입니다." },
+      {
+        name: "S3",
+        where: "분석할 경기 영상과 결과 보고서를 올려 두는 아마존 저장 공간입니다.",
+        project: "supersub",
+      },
+    ],
+  },
+  {
+    group: "AI · 비전",
+    items: [
+      {
+        name: "RT-DETR",
+        where:
+          "영상 한 장면에서 사람이 어디에 있는지 찾아냅니다. 상업적으로 써도 되는 공개 모델이라 골랐습니다.",
+        project: "supersub",
+      },
+      {
+        name: "ViTPose",
+        where:
+          "찾아낸 사람의 어깨·팔꿈치·무릎 등 17곳을 짚어 자세를 읽습니다. 그걸 관절이 꺾인 각도로 바꿔 실력을 재는 재료로 씁니다.",
+        project: "supersub",
+      },
+      {
+        name: "OpenCV",
+        where:
+          "영상을 사진 여러 장으로 쪼갭니다. 전부 똑같이 보면 비용이 커서, 먼저 띄엄띄엄 훑어 중요한 구간만 고른 뒤 그 부분만 자세히 다시 봅니다.",
+        project: "supersub",
+      },
+      {
+        name: "NumPy",
+        where: "자세에서 뽑아낸 숫자 더미를 빠르게 계산합니다.",
+        project: "supersub",
+      },
+      {
+        name: "SciPy",
+        where: "시간에 따라 흔들리는 자세 값을 다듬고 통계를 냅니다.",
+        project: "supersub",
+      },
+    ],
+  },
+  {
+    group: "AI · 언어모델",
+    items: [
+      {
+        name: "Google Gemini",
+        where: "경기 결과를 예측하고, 끝난 경기의 승자를 찾아 정리하는 AI입니다.",
+      },
+      {
+        name: "RAG",
+        where:
+          "AI가 기억으로 지어내지 않도록, 먼저 관련 자료를 찾아 읽히고 그 자료를 근거로만 답하게 하는 방식입니다.",
+      },
+      {
+        name: "BAAI/bge-m3",
+        where: "문장을 숫자로 바꿔 줍니다. 이 숫자가 있어야 뜻이 비슷한 글을 찾을 수 있습니다.",
+      },
+      {
+        name: "Kiwi 형태소",
+        where: "한국어 문장을 단어 단위로 끊어 줍니다. 띄어쓰기만으로는 제대로 갈리지 않습니다.",
+      },
+      {
+        name: "EXAONE 4.0 1.2B",
+        where:
+          "등급 자체는 정하지 않습니다. 이미 정해진 등급을 사람이 읽을 설명으로 옮기는 일만 합니다 — 숫자 비교를 틀리는 일이 있어서 판정은 AI에게 맡기지 않았습니다.",
+        project: "supersub",
+      },
+      {
+        name: "Hugging Face Transformers",
+        where: "공개된 AI 모델을 내려받아 돌려 주는 도구입니다.",
+        project: "supersub",
+      },
+      {
+        name: "PyTorch (CUDA)",
+        where: "AI 모델을 그래픽카드로 돌려 속도를 올립니다.",
+        project: "supersub",
+      },
+      {
+        name: "vLLM",
+        where:
+          "언어 모델을 여러 요청이 나눠 쓸 수 있게 띄워 둡니다. 자세 분석 모델과 그래픽카드 한 장을 나눠 써야 해서, 메모리를 35%만 쓰도록 묶어 뒀습니다.",
+        project: "supersub",
+      },
+      {
+        name: "Outlines",
+        where:
+          "AI가 제멋대로 된 문장 대신 정해진 형식으로만 답하게 강제합니다. 그래야 프로그램이 그 답을 바로 쓸 수 있습니다.",
+        project: "supersub",
+      },
+    ],
+  },
   {
     group: "인프라",
-    items: ["Docker", "k3s", "AWS EC2", "Vercel", "Cloudflare Tunnel", "GitHub Actions"],
+    items: [
+      {
+        name: "Docker",
+        where: "서버에서 돌릴 프로그램을 통째로 포장해, 어느 컴퓨터에서나 똑같이 실행되게 합니다.",
+      },
+      {
+        name: "k3s",
+        where: "여러 프로그램을 한 대에서 묶어 돌리는 가벼운 운영 도구입니다. 개발용으로 씁니다.",
+      },
+      { name: "AWS EC2", where: "서비스가 실제로 돌아가고 있는 아마존 서버입니다." },
+      {
+        name: "AWS EC2 g4dn.xlarge (T4)",
+        where: "그래픽카드가 달린 아마존 서버입니다. 영상 분석 모델들이 이 한 장을 나눠 씁니다.",
+        project: "supersub",
+      },
+      {
+        name: "systemd",
+        where:
+          "분석할 영상이 들어왔는지 계속 확인하고 처리하는 프로그램을, 서버가 알아서 켜 두고 꺼지면 다시 살립니다.",
+        project: "supersub",
+      },
+      {
+        name: "Vercel",
+        where: "화면 쪽을 올려 두는 서비스입니다. 코드를 올리면 그대로 배포됩니다.",
+      },
+      {
+        name: "Cloudflare Tunnel",
+        where: "서버 문을 바깥에 직접 열지 않고도 인터넷에서 접속할 수 있게 연결해 줍니다.",
+      },
+      {
+        name: "GitHub Actions",
+        where:
+          "코드를 올릴 때마다 검사와 테스트를 자동으로 돌립니다. 통과 못 하면 올라가지 않습니다.",
+      },
+    ],
   },
 ];
 
@@ -130,29 +348,11 @@ export default function PortfolioPage() {
           쓰는 기술
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          아래 프로젝트에서 실제로 돌아가는 것만 적었습니다.
+          아래 프로젝트에서 실제로 돌아가는 것만 적었습니다. 칩에 마우스를 올리면 어디에 쓰이는지
+          보입니다.
         </p>
 
-        <dl className="mt-5 flex flex-col gap-4">
-          {STACK.map(({ group, items }) => (
-            <div
-              key={group}
-              className="grid grid-cols-1 gap-2 border-t border-border pt-4 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
-            >
-              <dt className="text-sm font-semibold text-foreground">{group}</dt>
-              <dd className="flex flex-wrap gap-1.5">
-                {items.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-md border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <TechStack groups={STACK} />
       </section>
 
       {/* ── 프로젝트 ────────────────────────────────────────────────────── */}
