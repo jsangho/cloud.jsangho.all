@@ -83,6 +83,60 @@ export function resolvePickName(slug: string, matchKey: string, pick: string): s
   return pick;
 }
 
+/** 생성 결과 — 경기 하나가 실패해도 나머지는 계속되므로 건수로 돌아온다. */
+export type AiGenerationSummary = {
+  requested: number;
+  generated: number;
+  skipped: number;
+  failed: number;
+};
+
+/** 경기 하나를 만드는 데 드는 LLM 호출 수 — 서사·루머 둘. 오즈 축은 LLM을 쓰지 않는다. */
+export const LLM_CALLS_PER_MATCH = 2;
+
+/**
+ * 생성 요청 타임아웃. 조회(20초)와 따로 두는 이유는 성격이 다르기 때문이다 —
+ * 지식 검색 한 번과 Gemini 두 번이 실제로 걸리는 시간이다.
+ *
+ * **경기를 한 번에 하나씩 보내는 것을 전제로 한 값이다.** 대회 전체를 한 요청으로
+ * 묶으면 경기 수에 비례해 길어져 중간 프록시(Cloudflare 100초)에 먼저 끊긴다 —
+ * 그러면 백엔드는 계속 만드는데 화면만 실패로 보인다.
+ */
+const generateTimeoutMs = 90_000;
+
+/**
+ * 예측 생성 — **관리자 전용**. 비용(Gemini 호출)이 드는 경로다.
+ *
+ * 토큰은 httpOnly 쿠키라 `credentials: "include"`로 실어 보낸다 (`lib/ple-api.ts`
+ * 의 결과 등록과 같은 방식).
+ */
+export async function generateAiPredictions(
+  slug: string,
+  options?: { matchKeys?: string[]; force?: boolean },
+): Promise<AiGenerationSummary> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), generateTimeoutMs);
+  try {
+    const res = await fetch(`${pleEventsBaseUrl}/${slug}/ai-predictions`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        matchKeys: options?.matchKeys ?? [],
+        force: options?.force ?? false,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new Error(data?.detail ?? `생성 실패 (${res.status})`);
+    }
+    return (await res.json()) as AiGenerationSummary;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchAiPredictions(slug: string): Promise<AiPredictionsResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
