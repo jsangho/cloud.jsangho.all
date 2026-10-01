@@ -9,10 +9,10 @@ globs:
 alwaysApply: false
 ---
 
-<!-- omd:start v=1 hash=0b5e07316adb -->
+<!-- omd:start v=1 hash=22d36ba7d2e6 -->
 The authoritative design spec lives at `@www/DESIGN.md`. Open and read before generating/modifying UI.
 
-Pending preference corrections: `@www/.omd/preferences.md`.
+Pending preference corrections: `@.omd/preferences.md`.
 
 Precedence: DESIGN.md > preferences.md > framework defaults.
 <!-- omd:end -->
