@@ -19,11 +19,13 @@ from auth.app.ports.input.mobile_auth_use_case import MobileAuthUseCase
 from auth.app.ports.input.oauth_login_use_case import OAuthLoginUseCase
 from auth.app.ports.input.profile_use_case import ProfileUseCase
 from auth.app.ports.input.signup_use_case import SignupUseCase
+from auth.app.ports.input.user_admin_use_case import UserAdminUseCase
 from auth.app.use_cases.login_interactor import LoginInteractor
 from auth.app.use_cases.mobile_auth_interactor import MobileAuthInteractor
 from auth.app.use_cases.oauth_login_interactor import OAuthLoginInteractor
 from auth.app.use_cases.profile_interactor import ProfileInteractor
 from auth.app.use_cases.signup_interactor import SignupInteractor
+from auth.app.use_cases.user_admin_interactor import UserAdminInteractor
 from core.matrix.grid_oracle_database_manager import get_db
 
 
@@ -37,6 +39,10 @@ def get_signup_use_case(db: AsyncSession = Depends(get_db)) -> SignupUseCase:
 
 def get_profile_use_case(db: AsyncSession = Depends(get_db)) -> ProfileUseCase:
     return ProfileInteractor(UserPgRepository(db))
+
+
+def get_user_admin_use_case(db: AsyncSession = Depends(get_db)) -> UserAdminUseCase:
+    return UserAdminInteractor(UserPgRepository(db))
 
 
 def get_google_login_use_case(db: AsyncSession = Depends(get_db)) -> OAuthLoginUseCase:

@@ -571,3 +571,70 @@ class TestArticleHint:
         run = await _interactor(FakeTools(steps)).verify(VerifyResultsCommand())
 
         assert run.matches[0].hold is HoldReason.QUOTE_NOT_FOUND
+
+
+class TestTargetSelection:
+    """`matchKeys` 로 경기를 골라 돌린다 (화면이 한 건씩 보내는 경로).
+
+    `limit` 만으로는 **드라이런에서 같은 경기가 계속 잡힌다** — 쓰지 않으니 목록이
+    줄지 않는다. 그래서 이름으로 고를 수 있어야 한다.
+    """
+
+    _SECOND = MatchUnderReview(
+        event_slug="summerslam",
+        event_label="SummerSlam 2026",
+        match_key="ss26-us",
+        title="United States Championship",
+        options=(
+            ReviewOption(pick="left", name="Roman Reigns"),
+            ReviewOption(pick="right", name="Cody Rhodes"),
+        ),
+    )
+
+    @pytest.mark.asyncio
+    async def test_only_named_matches_run(self) -> None:
+        tools = FakeTools(_happy_steps())
+
+        run = await _interactor(tools, matches=(_MATCH, self._SECOND)).verify(
+            VerifyResultsCommand(match_keys=("ss26-us",))
+        )
+
+        assert [m.match_key for m in run.matches] == ["ss26-us"]
+        # **총수는 자르기 전 값 그대로다** — 한 건만 돌린 실행이 "하나밖에 없다"로
+        # 읽히면 안 된다.
+        assert run.found == 2
+
+    @pytest.mark.asyncio
+    async def test_named_matches_beat_limit(self) -> None:
+        """사람이 집은 것이 앞에서부터 자르는 규칙을 덮어쓴다."""
+        tools = FakeTools(_happy_steps())
+
+        run = await _interactor(tools, matches=(_MATCH, self._SECOND)).verify(
+            VerifyResultsCommand(match_keys=("ss26-us",), limit=1)
+        )
+
+        assert [m.match_key for m in run.matches] == ["ss26-us"]
+
+    @pytest.mark.asyncio
+    async def test_unknown_key_runs_nothing(self) -> None:
+        """없는 이름을 집으면 **모델을 부르지 않는다** (비용)."""
+        tools = FakeTools(_happy_steps())
+
+        run = await _interactor(tools, matches=(_MATCH,)).verify(
+            VerifyResultsCommand(match_keys=("nope",))
+        )
+
+        assert run.matches == ()
+        assert tools.commands == []
+
+    @pytest.mark.asyncio
+    async def test_list_pending_calls_no_model(self) -> None:
+        """목록 조회는 공짜다 — 누르기 전에 비용을 세려면 그래야 한다."""
+        tools = FakeTools(_happy_steps())
+
+        pending = await _interactor(
+            tools, matches=(_MATCH, self._SECOND)
+        ).list_pending()
+
+        assert [m.match_key for m in pending] == ["ss26-whc", "ss26-us"]
+        assert tools.commands == []

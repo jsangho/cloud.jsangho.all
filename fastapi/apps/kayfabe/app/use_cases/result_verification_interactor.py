@@ -220,9 +220,22 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         self._monotonic = monotonic or time.monotonic
         self._last_call_at: float | None = None
 
+    async def list_pending(
+        self, *, event_slug: str | None = None
+    ) -> tuple[MatchUnderReview, ...]:
+        """대상 목록만. `verify`와 **같은 호출**이라 둘이 갈릴 수 없다."""
+        return await self._pending.list_pending(event_slug=event_slug)
+
     async def verify(self, command: VerifyResultsCommand) -> VerificationRun:
         found = await self._pending.list_pending(event_slug=command.event_slug)
-        targets = found[: max(command.limit, 0)]
+        # **이름으로 고른 것이 `limit`보다 앞선다.** 고른 쪽은 사람이 목록을 보고 집은
+        # 것이므로 앞에서부터 자르는 규칙을 덮어쓴다. `found`는 **자르기 전 총수**
+        # 그대로 둔다 — 고른 하나만 돌렸다는 사실이 "하나밖에 없다"로 읽히면 안 된다.
+        if command.match_keys:
+            wanted = set(command.match_keys)
+            targets = tuple(m for m in found if m.match_key in wanted)
+        else:
+            targets = found[: max(command.limit, 0)]
         logger.info(
             "[kayfabe.result_agent] 대상 %d건 (전체 %d건) | apply=%s",
             len(targets),

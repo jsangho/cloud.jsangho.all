@@ -30,6 +30,7 @@ from auth.adapter.inbound.api.oauth_callback_router import oauth_callback_router
 from auth.adapter.inbound.api.profile_router import profile_router
 from auth.adapter.inbound.api.refresh_router import refresh_router
 from auth.adapter.inbound.api.signup_router import signup_router
+from auth.adapter.inbound.api.user_admin_router import user_admin_router
 
 app = FastAPI(
     title="jsangho Auth Gateway",
@@ -57,6 +58,8 @@ app.include_router(logout_router, prefix="/auth")
 app.include_router(refresh_router, prefix="/auth")
 app.include_router(signup_router, prefix="/auth")
 app.include_router(profile_router, prefix="/auth")
+# 관리자 전용 사용자 관리. 프론트는 `/auth/me`와 같은 호스트를 쓰므로 여기 둔다.
+app.include_router(user_admin_router, prefix="/auth")
 # 라우터 자체 prefix가 "/mobile"이라 최종 경로는 "/auth/mobile/...".
 app.include_router(mobile_auth_router, prefix="/auth")
 # oauth_callback_router의 경로 자체가 이미 "/auth/{provider}/..."로 시작하므로
