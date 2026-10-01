@@ -18,7 +18,11 @@ import {
   Plus,
   SendHorizonal,
   MailOpen,
+  Sparkles,
+  CalendarCheck,
 } from "lucide-react";
+import { AiPredictionGeneratePanel } from "@/components/admin/ai-prediction-generate-panel";
+import { EventStatusPanel } from "@/components/admin/event-status-panel";
 import { ContactsCsvUpload } from "@/components/contacts-csv-upload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -43,6 +47,8 @@ const NAV_TABS: {
   // `dropdown`은 열리는 메뉴가 **있을 때만** 켠다. 예전에는 켜 두고 꺾쇠만 그려서,
   // 눌러도 아무것도 안 열리는 화살표가 붙어 있었다.
   { label: "이메일", icon: Inbox, dropdown: false },
+  { label: "AI 예측", icon: Sparkles, dropdown: false },
+  { label: "대회 상태", icon: CalendarCheck, dropdown: false },
   { label: "결과", icon: Medal, dropdown: false, href: "/results" },
 ];
 
@@ -658,57 +664,67 @@ export default function AdminDashboard() {
 
       {/* 메인 콘텐츠 */}
       <main className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex gap-1">
-            {(["이메일", "텔레그램", "받은편지함"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setEmailSubTab(t)}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  emailSubTab === t
-                    ? "border border-stone-400 bg-stone-600 text-stone-50"
-                    : "border border-transparent text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
-                }`}
-              >
-                {t === "이메일" ? (
-                  <Mail className="h-3.5 w-3.5" />
-                ) : t === "텔레그램" ? (
-                  <SendHorizonal className="h-3.5 w-3.5" />
-                ) : (
-                  <Inbox className="h-3.5 w-3.5" />
-                )}
-                {t}
-              </button>
-            ))}
-          </div>
-          {emailSubTab === "이메일" && (
-            <button
-              onClick={() => setShowAddressBook((v) => !v)}
-              className={[
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                showAddressBook
-                  ? "border-stone-400 bg-stone-600 text-stone-50"
-                  : "border-stone-600/70 bg-stone-800/45 text-stone-300 hover:bg-stone-700/65",
-              ].join(" ")}
-            >
-              <BookUser className="h-3.5 w-3.5" />
-              주소록
-            </button>
-          )}
-        </div>
-        {emailSubTab === "이메일" ? (
-          <div
-            className={
-              showAddressBook ? "grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]" : ""
-            }
-          >
-            <EmailComposeCard />
-            {showAddressBook && <AddressBookPanel />}
-          </div>
-        ) : emailSubTab === "텔레그램" ? (
-          <TelegramComposeCard />
+        {activeTab === "AI 예측" ? (
+          <AiPredictionGeneratePanel />
+        ) : activeTab === "대회 상태" ? (
+          <EventStatusPanel />
         ) : (
-          <ReceiverPanel />
+          <>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex gap-1">
+                {(["이메일", "텔레그램", "받은편지함"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setEmailSubTab(t)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      emailSubTab === t
+                        ? "border border-stone-400 bg-stone-600 text-stone-50"
+                        : "border border-transparent text-stone-400 hover:bg-stone-800/60 hover:text-stone-200"
+                    }`}
+                  >
+                    {t === "이메일" ? (
+                      <Mail className="h-3.5 w-3.5" />
+                    ) : t === "텔레그램" ? (
+                      <SendHorizonal className="h-3.5 w-3.5" />
+                    ) : (
+                      <Inbox className="h-3.5 w-3.5" />
+                    )}
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {emailSubTab === "이메일" && (
+                <button
+                  onClick={() => setShowAddressBook((v) => !v)}
+                  className={[
+                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                    showAddressBook
+                      ? "border-stone-400 bg-stone-600 text-stone-50"
+                      : "border-stone-600/70 bg-stone-800/45 text-stone-300 hover:bg-stone-700/65",
+                  ].join(" ")}
+                >
+                  <BookUser className="h-3.5 w-3.5" />
+                  주소록
+                </button>
+              )}
+            </div>
+            {emailSubTab === "이메일" ? (
+              <div
+                className={
+                  showAddressBook
+                    ? "grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]"
+                    : ""
+                }
+              >
+                <EmailComposeCard />
+                {showAddressBook && <AddressBookPanel />}
+              </div>
+            ) : emailSubTab === "텔레그램" ? (
+              <TelegramComposeCard />
+            ) : (
+              <ReceiverPanel />
+            )}
+          </>
         )}
       </main>
     </div>

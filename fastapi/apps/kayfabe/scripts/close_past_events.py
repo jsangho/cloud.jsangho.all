@@ -65,7 +65,6 @@ if str(_APPS_DIR) not in sys.path:
     sys.path.insert(0, str(_APPS_DIR))
 
 import asyncio  # noqa: E402
-from dataclasses import dataclass  # noqa: E402
 from datetime import UTC, date, datetime  # noqa: E402
 
 from sqlalchemy import select  # noqa: E402
@@ -84,44 +83,13 @@ from kayfabe.adapter.outbound.pg.ple_events_pg_repository import (  # noqa: E402
     PleEventsPgRepository,
 )
 
+# 판정은 도메인에 있다 — `/admin`의 같은 기능이 같은 규칙을 봐야 하기 때문이다
+# (`domain/services/event_status_drift.py`). 이 모듈에서 계속 쓸 수 있게 이름을
+# 그대로 둔다.
+from kayfabe.domain.services.event_status_drift import StatusChange  # noqa: E402
+
 EXIT_USAGE = 2
 EXIT_NO_DATABASE = 4
-
-
-@dataclass(frozen=True)
-class StatusChange:
-    """대회 한 행을 오늘과 맞댄 결과."""
-
-    slug: str
-    status: str
-    start_date: date | None
-    end_date: date | None
-    today: date
-
-    @property
-    def last_day(self) -> date | None:
-        """대회의 마지막 날. 이틀짜리면 `end_date`가 그것이다."""
-        return self.end_date or self.start_date
-
-    @property
-    def held(self) -> bool:
-        """날짜를 모르면 판정하지 않는다 — 통과가 아니라 보류다."""
-        return self.last_day is None
-
-    @property
-    def is_past(self) -> bool:
-        """마지막 날이 오늘보다 앞설 때만 지난 것이다. 당일은 아니다."""
-        last = self.last_day
-        return last is not None and last < self.today
-
-    @property
-    def needs_write(self) -> bool:
-        """`finished`가 아닌 채로 날짜가 지난 행만 쓴다.
-
-        `upcoming`뿐 아니라 `live`도 대상이다 — 둘 다 "아직 안 끝났다"는 주장이고
-        날짜가 지났으면 거짓이다. `finished`는 어느 쪽으로도 되돌리지 않는다.
-        """
-        return self.status != PleEventStatus.FINISHED and self.is_past
 
 
 async def collect_changes(session: AsyncSession, *, today: date) -> list[StatusChange]:

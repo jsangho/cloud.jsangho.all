@@ -5,6 +5,9 @@ import logging
 import fastapi
 from fastapi import APIRouter, Depends
 
+from core.security.dependencies import RoleChecker
+from core.security.role import UserRole
+from core.security.token_verifier import TokenPayload
 from kayfabe.adapter.inbound.api.schemas.ple_events_schema import MyselfSchema
 from kayfabe.adapter.inbound.api.schemas.ple_matches_schema import (
     BatchResultsRequestSchema,
@@ -27,6 +30,16 @@ from kayfabe.dependencies.ple_matches_provider import get_ple_matches
 logger = logging.getLogger("uvicorn.error")
 
 ple_matches_router = APIRouter(prefix="/ple-matches", tags=["ple-matches"])
+
+# 경기 결과를 쓰는 두 엔드포인트는 **관리자만** 부른다.
+#
+# 이 문을 잠그기 전까지 승자 입력은 프론트의 `lib/ple-results-admin.ts`에 박힌
+# 비밀번호 하나로만 가려져 있었다. 그건 브라우저 코드라 누구나 읽을 수 있고, 서버는
+# 토큰을 아예 보지 않았으므로 **아무나 운영 대회의 승자를 바꿀 수 있었다** — 결과는
+# 사용자 픽 채점과 랭킹의 입력이라, 한 번 뒤집히면 그 뒤 숫자가 전부 따라 틀린다.
+#
+# 조회(`/{slug}` 보드)는 그대로 공개다. 잠그는 것은 쓰기뿐이다.
+_admin_only = RoleChecker(UserRole.ADMIN)
 
 
 def _ple_http_error(exc: Exception) -> fastapi.HTTPException:
@@ -91,6 +104,7 @@ async def _competitor_exists(use_case: PleMatchesUseCase, name: str) -> bool:
 async def set_ple_results_batch(
     slug: str,
     body: BatchResultsRequestSchema,
+    _: TokenPayload = Depends(_admin_only),
     use_case: PleEventsUseCase = fastapi.Depends(get_ple_events),
 ):
     logger.info(
@@ -117,6 +131,7 @@ async def set_ple_match_result(
     slug: str,
     match_key: str,
     body: MatchResultUpdateSchema,
+    _: TokenPayload = Depends(_admin_only),
     use_case: PleEventsUseCase = fastapi.Depends(get_ple_events),
 ):
     logger.info(

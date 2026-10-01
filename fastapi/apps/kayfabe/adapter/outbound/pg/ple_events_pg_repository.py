@@ -26,6 +26,7 @@ from kayfabe.adapter.outbound.orm.ple_orm import (
     PleMatchStatus,
     PlePredictionModel,
 )
+from kayfabe.app.dtos.event_status_dto import EventScheduleRow
 from kayfabe.app.dtos.ple_events_dto import (
     MatchResultResponse,
     MyselfQuery,
@@ -37,6 +38,7 @@ from kayfabe.app.dtos.ple_events_dto import (
     PleEventSummaryResponse,
     PleEventSyncCommand,
 )
+from kayfabe.app.ports.output.event_status_repository import EventStatusRepository
 from kayfabe.app.ports.output.ple_events_repository import PleEventsRepository
 from kayfabe.app.services.ple_scoring import (
     competitor_count_from_card,
@@ -50,8 +52,13 @@ logger = LAYER_LOG
 BOOKMAKER_FALLBACK_SOURCE = str(PredictionSource.BOOKMAKER_FALLBACK)
 
 
-class PleEventsPgRepository(PleEventsRepository):
-    """Neon(Postgres) PLE 조회 어댑터."""
+class PleEventsPgRepository(PleEventsRepository, EventStatusRepository):
+    """Neon(Postgres) PLE 조회 어댑터.
+
+    포트는 둘이다 — 넓은 조회 포트(`PleEventsRepository`)와 `status` 점검이 쓰는
+    좁은 포트(`EventStatusRepository`). `set_event_status`가 양쪽에 다 있지만 구현은
+    하나이므로 겹침이 생기지 않는다.
+    """
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -81,6 +88,35 @@ class PleEventsPgRepository(PleEventsRepository):
         rows = [event_to_read(e) for e in result.scalars().all()]
         logger.info("[PleInfoPgRepository] list_events <- Neon | count=%d", len(rows))
         return rows
+
+    async def list_event_schedules(self) -> list[EventScheduleRow]:
+        """`status` 점검용 — 칸 넷만 읽는다.
+
+        `list_events`를 쓰지 않는 이유는 그쪽이 `matches`를 `selectinload`로 전부
+        끌고 오기 때문이다. 판정에 경기는 필요 없다.
+        """
+        rows = (
+            await self.db.execute(
+                select(
+                    PleEventModel.slug,
+                    PleEventModel.status,
+                    PleEventModel.start_date,
+                    PleEventModel.end_date,
+                )
+            )
+        ).all()
+        logger.info(
+            "[PleEventsPgRepository] list_event_schedules <- Neon | count=%d", len(rows)
+        )
+        return [
+            EventScheduleRow(
+                slug=row.slug,
+                status=row.status,
+                start_date=row.start_date,
+                end_date=row.end_date,
+            )
+            for row in rows
+        ]
 
     async def get_event_by_slug(self, slug: str) -> PleEventReadQuery | None:
         logger.info("[PleInfoPgRepository] get_event_by_slug -> Neon | slug=%s", slug)
