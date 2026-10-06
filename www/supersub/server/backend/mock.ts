@@ -1,4 +1,5 @@
 import { REGIONS } from '@/supersub/lib/regions'
+import { appendUpload, readUploads, removeUpload } from '../mockUploads'
 import { BackendError } from './errors'
 import type { Backend } from './gateway'
 import type {
@@ -285,6 +286,17 @@ function isUploaded(v: MyVideo): boolean {
  * 인스턴스가 바뀌면 그 타이머를 아무도 기억하지 못한다. 시각에서 계산하면
  * **누가 언제 물어도 같은 답**이 나온다.
  */
+/**
+ * 한 편을 찾는다 — **올린 것(쿠키)과 깔아 둔 것(모듈) 양쪽에서.**
+ *
+ * 🔴 올린 것을 먼저 본다. 둘의 id 공간이 겹치지 않지만(`up-` 접두사), 순서를
+ * 정해 두면 나중에 겹치더라도 「내가 올린 것」이 이긴다.
+ */
+async function findVideo(videoId: string): Promise<MyVideo | undefined> {
+  const mine = (await readUploads()).find((v) => v.id === videoId)
+  return mine ?? DEMO_VIDEOS.find((v) => v.id === videoId)
+}
+
 function withDerivedStatus(v: MyVideo): MyVideo {
   if (!isUploaded(v) || v.analysis_job_id === null) return v
   const ms = Date.now() - Date.parse(v.created_at)
@@ -1199,7 +1211,9 @@ export const mockBackend: Backend = {
 
   async listMyVideos(token) {
     requireUser(token)
-    return DEMO_VIDEOS.map(withDerivedStatus)
+    /* 🔴 **올린 클립은 쿠키에서 온다** — 모듈 메모리는 서버리스 인스턴스를 못
+       넘는다(`server/mockUploads.ts` 의 머리말). 최근 것이 앞이다. */
+    return [...(await readUploads()), ...DEMO_VIDEOS].map(withDerivedStatus)
   },
 
   /**
@@ -1255,7 +1269,10 @@ export const mockBackend: Backend = {
       title: null,
       description: null,
     }
-    DEMO_VIDEOS = [row, ...DEMO_VIDEOS]
+    /* 🔴 **모듈 배열에 넣지 않는다.** 넣으면 같은 인스턴스에서는 쿠키의 것과
+       겹쳐 목록에 두 번 뜨고, 다른 인스턴스에서는 아예 안 보인다. 올린 클립의
+       정본은 쿠키 하나뿐이다. */
+    await appendUpload(row)
     return withDerivedStatus(row)
   },
 
@@ -1272,7 +1289,7 @@ export const mockBackend: Backend = {
    */
   async getVideoReport(token, videoId) {
     requireUser(token)
-    const raw = DEMO_VIDEOS.find((x) => x.id === videoId)
+    const raw = await findVideo(videoId)
     if (!raw) throw new BackendError(404, 'VIDEO_NOT_FOUND', '그 영상을 찾을 수 없습니다.')
     /* 🔴 **파생 상태를 거쳐 읽는다** (2026-10-06). 올린 클립의 분석 상태는 행에
        적혀 있는 것이 아니라 올린 시각에서 계산된다(`withDerivedStatus`) — 여기서
@@ -1373,7 +1390,7 @@ export const mockBackend: Backend = {
 
   async getPlaybackUrl(token, videoId) {
     requireUser(token)
-    const v = DEMO_VIDEOS.find((x) => x.id === videoId)
+    const v = await findVideo(videoId)
     if (!v) throw new BackendError(404, 'VIDEO_NOT_FOUND', '그 영상을 찾을 수 없습니다.')
     // mock 의 저장 키는 `public/` 안의 진짜 파일이라 그대로가 곧 재생 주소다.
     // 만료도 없지만 **화면이 그걸 알면 안 된다** — 실물과 같은 모양으로 답한다.
@@ -1382,6 +1399,11 @@ export const mockBackend: Backend = {
 
   async deleteMyVideo(token, videoId) {
     requireUser(token)
+    /* 올린 클립은 쿠키에 산다 — 거기서 빼야 실제로 목록에서 사라진다. */
+    if ((await readUploads()).some((v) => v.id === videoId)) {
+      await removeUpload(videoId)
+      return
+    }
     const before = DEMO_VIDEOS.length
     DEMO_VIDEOS = DEMO_VIDEOS.filter((v) => v.id !== videoId)
     // 🔴 없는 것을 지웠다고 하지 않는다 — 화면이 "지워졌다"로 읽고 목록에서
