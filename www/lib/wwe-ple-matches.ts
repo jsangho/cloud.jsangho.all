@@ -461,14 +461,31 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "CM Punk" },
       { name: "Kevin Owens" },
     ]),
-    mm("mitb26-women", "Women's Money in the Bank Ladder Match", "sideA", [
-      { name: "Sol Ruca" },
-      { name: "Lola Vice" },
-      { name: "Jacy Jayne" },
-      { name: "Roxanne Perez" },
-      { name: "Lash Legend" },
-      { name: "Tiffany Stratton" },
-    ]),
+    // 배당 출처: BetOnline · **2026-10-05 12:00PM 관측** · 미국식 호가를 소수로 옮겼다
+    // (Perez -150 · Lash +125 · Stratton +300 · Sol +850 · Jacy +1,200 · Lola +1,200).
+    // https://www.wweleaks.org/2026/10/mitb-2026-betting-update-5th-october-afternoon.html
+    //
+    // **`bookmakerQuotes`가 아니라 `bookmakerDecimal`로 적는다.** 호가 배열을 쓰려면
+    // `mq` 같은 새 생성자가 필요한데, 픽스처 리더(`ple_fixture_file.py`)가 `m2`·`mm`·
+    // `rumbleWinner` 셋만 알아서 **그 경기를 통째로 못 본다** — 동기화 스크립트가
+    // 멀쩡한 경기를 「신규」로 다시 만들어 버린다. 그 버그를 고치기 전까지는 늘리지 않는다.
+    //
+    // 순서는 위 참가자 순서와 **반드시** 같아야 한다 — 길이가 선택지 수와 다르면
+    // `odds_consensus`가 그 호가를 조용히 버린다.
+    mm(
+      "mitb26-women",
+      "Women's Money in the Bank Ladder Match",
+      "sideA",
+      [
+        { name: "Sol Ruca" },
+        { name: "Lola Vice" },
+        { name: "Jacy Jayne" },
+        { name: "Roxanne Perez" },
+        { name: "Lash Legend" },
+        { name: "Tiffany Stratton" },
+      ],
+      [9.5, 13.0, 13.0, 1.67, 2.25, 4.0],
+    ),
     mq(
       "mitb26-whc",
       "World Heavyweight Championship",
