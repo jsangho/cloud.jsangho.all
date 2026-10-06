@@ -16,6 +16,7 @@ import {
   type PleBoard,
   type PleBoardMatch,
 } from "@/lib/ple-api";
+import { fetchAiPredictions, type AiPrediction } from "@/lib/ple-ai-predictions";
 import { useAuth } from "@/context/auth-context";
 import { getPleClientId } from "@/lib/ple-client-id";
 import { MatchBracketCard } from "@/components/ple/match-bracket-card";
@@ -221,6 +222,14 @@ type BracketUiState = {
   committed: boolean;
   submitting: boolean;
   submitError: string | null;
+  /**
+   * 경기별 AI 예측 — 승률·근거까지 들어 있다.
+   *
+   * **보드와 따로 받는다.** 보드가 주는 AI 값은 고른 쪽 이름과 채점 결과뿐이고,
+   * 카드에 승률·근거를 세우려면 이쪽이 필요하다. 못 받으면 `null`로 남고 카드는
+   * 이름만으로 띠를 세운다 — 예측 보기·확정은 이 요청과 무관하게 돌아간다.
+   */
+  aiPredictions: Record<string, AiPrediction> | null;
 };
 
 const initialBracketUiState: BracketUiState = {
@@ -230,6 +239,7 @@ const initialBracketUiState: BracketUiState = {
   committed: false,
   submitting: false,
   submitError: null,
+  aiPredictions: null,
 };
 
 function countDraftPicks(matchIds: string[], state: StoredBracketState): number {
@@ -335,6 +345,21 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
       cancelled = true;
     };
   }, [slug, boardQuery]);
+
+  /* AI 예측은 로그인·보드와 무관한 읽기라 따로 한 번 받는다. 실패는 조용히 둔다 —
+     카드가 이름만으로도 서고, 여기서 오류를 띄우면 예측 화면이 AI 때문에 막힌 것처럼
+     읽힌다. */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchAiPredictions(slug);
+      if (cancelled) return;
+      patchUi({ aiPredictions: result.status === "ready" ? result.byMatch : null });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
 
   useEffect(() => {
     if (!ui.offline) return;
@@ -572,6 +597,8 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
                 showResults={ui.useApi && matchShowsResult(matchRow)}
                 aiPickName={matchRow.aiPickName}
                 aiCorrect={matchRow.aiCorrect}
+                prediction={ui.aiPredictions?.[match.id] ?? null}
+                slug={slug}
               />
             </li>
           );

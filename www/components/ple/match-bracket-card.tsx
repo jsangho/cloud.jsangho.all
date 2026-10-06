@@ -16,6 +16,8 @@ import type {
 } from "@/lib/wwe-ple-matches";
 import { isMultiMatch } from "@/lib/wwe-ple-matches";
 import type { PleMatchResult } from "@/lib/ple-api";
+import { isBookmakerFallback, toPercent, type AiPrediction } from "@/lib/ple-ai-predictions";
+import { AiReportDialog } from "@/components/ple/ai-report-dialog";
 
 type Side = "left" | "right";
 
@@ -33,37 +35,99 @@ type MatchBracketCardProps = {
   showResults?: boolean;
   aiPickName?: string | null;
   aiCorrect?: boolean | null;
+  /** 근거·승률까지 받은 예측. 못 불러왔으면 `null`이고, 이름만으로 띠가 선다. */
+  prediction?: AiPrediction | null;
+  slug: string;
 };
 
+/**
+ * AI 예측 띠.
+ *
+ * **예전에는 10px 한 줄이었다** (2026-10-06 사용자 — "예측이 너무 숨겨져 있어서
+ * 찾기 힘들어"). 카드 머리말 아래 회색 글자 한 줄이라, 이 카드에 AI 의견이 있다는
+ * 사실 자체가 안 읽혔다. 지금은 이름을 카드 제목과 같은 크기로 세우고 승률 미터와
+ * 근거 버튼을 함께 둔다.
+ *
+ * **색은 블루다**(DESIGN.md §1 — 블루 = AI·데이터). 예전 골드는 "가져갈 수 있는
+ * 것"이라는 뜻을 가진 액션 색이라 이 자리에 설 색이 아니었다.
+ *
+ * 승률은 **예측을 실제로 받아왔을 때만** 적는다. 보드가 주는 것은 고른 쪽 이름과
+ * 채점 결과뿐이라, 못 불러온 경우에 숫자를 만들어 채우지 않는다(§7).
+ */
 function AiPickBanner({
+  slug,
+  matchTitle,
   aiPickName,
   aiCorrect,
   showResults,
+  prediction,
 }: {
+  slug: string;
+  matchTitle: string;
   aiPickName?: string | null;
   aiCorrect?: boolean | null;
   showResults?: boolean;
+  prediction?: AiPrediction | null;
 }) {
-  if (!aiPickName) return null;
+  const pickName = prediction?.pickName ?? aiPickName;
+  if (!pickName) return null;
+
+  const percent = prediction ? toPercent(prediction.winProbability) : null;
+  const graded = showResults === true && aiCorrect != null;
+  /* 면은 **하나만** 고른다 — 두 `bg-`를 겹쳐 두고 병합기가 뒤를 살려 주기를
+     기대하지 않는다. 채점된 뒤에는 적중/실패가 이 띠의 주제이므로 블루가 빠진다. */
+  const surface = !graded ? "bg-data-surface" : aiCorrect ? "bg-chart-win/10" : "bg-live/10";
+
   return (
-    <p
+    <div
       className={cn(
-        "border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-white/[0.03] px-3 py-1.5 text-center text-[10px] text-stone-400 sm:text-xs",
-        showResults &&
-          aiCorrect === true &&
-          "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300",
-        showResults &&
-          aiCorrect === false &&
-          "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300",
+        "border-t border-stone-200/50 dark:border-white/8 px-3 py-2.5 sm:px-4",
+        surface,
       )}
     >
-      <span className="font-semibold text-brand-400/90">AI 예측</span>
-      <span className="mx-1 text-stone-600">·</span>
-      <span className="font-medium text-stone-700 dark:text-stone-300">{aiPickName}</span>
-      {showResults && aiCorrect != null && (
-        <span className="ml-2 font-bold">{aiCorrect ? "✓ 적중" : "✗ 실패"}</span>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <span className="shrink-0 text-xs font-semibold text-data">AI 예측</span>
+        <span className="min-w-0 flex-1 text-sm font-semibold text-stone-800 dark:text-stone-100">
+          {pickName}
+        </span>
+        {percent !== null && (
+          <span className="shrink-0 text-xs tabular-nums text-stone-600 dark:text-stone-300">
+            승률 <span className="font-semibold">{percent}%</span>
+          </span>
+        )}
+        {prediction && isBookmakerFallback(prediction) && (
+          <span className="shrink-0 rounded-md border border-stone-300/70 dark:border-stone-600/70 px-1.5 py-0.5 text-[11px] text-stone-500">
+            배당 폴백
+          </span>
+        )}
+        {/* 적중/실패는 **색과 글자를 함께** 단다 — 이 초록↔빨강 짝은 적록 색각에서
+            붙는다(DESIGN.md §2). */}
+        {graded && (
+          <span
+            className={cn(
+              "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
+              aiCorrect
+                ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
+                : "border border-live/50 bg-live/10 text-live",
+            )}
+          >
+            {aiCorrect ? "적중" : "실패"}
+          </span>
+        )}
+        {prediction && (
+          <AiReportDialog slug={slug} matchTitle={matchTitle} prediction={prediction} />
+        )}
+      </div>
+      {percent !== null && (
+        <div
+          className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200/70 dark:bg-white/10"
+          role="img"
+          aria-label={`AI가 매긴 ${pickName} 승률 ${percent}%`}
+        >
+          <div className="h-full bg-data-400" style={{ width: `${percent}%` }} />
+        </div>
       )}
-    </p>
+    </div>
   );
 }
 
@@ -387,6 +451,8 @@ export function MatchBracketCard({
   showResults = false,
   aiPickName,
   aiCorrect,
+  prediction,
+  slug,
 }: MatchBracketCardProps) {
   const leftStyle = bracketTheme.sideA;
   const rightStyle = bracketTheme.sideB;
@@ -404,9 +470,12 @@ export function MatchBracketCard({
             {match.title}
           </div>
           <AiPickBanner
+            slug={slug}
+            matchTitle={match.title}
             aiPickName={aiPickName}
             aiCorrect={aiCorrect}
             showResults={displayResults}
+            prediction={prediction}
           />
 
           <div className="border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-black/20 p-2">
@@ -466,7 +535,14 @@ export function MatchBracketCard({
         <div className="ple-match-card-header px-3 py-2.5 text-center text-xs font-semibold leading-snug text-white sm:text-sm">
           {match.title}
         </div>
-        <AiPickBanner aiPickName={aiPickName} aiCorrect={aiCorrect} showResults={displayResults} />
+        <AiPickBanner
+          slug={slug}
+          matchTitle={match.title}
+          aiPickName={aiPickName}
+          aiCorrect={aiCorrect}
+          showResults={displayResults}
+          prediction={prediction}
+        />
 
         <div className="relative flex border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-black/20">
           <CompetitorPick
