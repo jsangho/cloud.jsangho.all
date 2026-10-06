@@ -232,7 +232,9 @@ export function FlowLegend() {
         <div key={kind} className="flex items-baseline gap-2">
           <dt
             className={cn(
-              "w-9 shrink-0 rounded-md border px-1.5 py-0.5 text-center tracking-[0.08em]",
+              /* 폭을 고정하지 않는다 — 두 글자에 맞춰 잡았더니 자간이 더해져
+                 글자가 세로로 쪼개졌다. 라벨이 전부 두 글자라 자연폭이 이미 같다. */
+              "shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 tracking-[0.08em]",
               KIND_STYLE[kind],
               kind === "model" ? "text-data" : "text-muted-foreground",
             )}
