@@ -1,0 +1,116 @@
+import { BackendError, getBackend, type PlayerCard, type Squad, type User } from '@/supersub/server/backend'
+import { getMyCardOrNull, requireUser } from '@/supersub/server/currentUser'
+import { cookies } from 'next/headers'
+import { SESSION_COOKIE } from '@/supersub/server/session'
+import { HOME_TEAM_COOKIE, pickTeamId } from '@/supersub/lib/homeTeam'
+import HomeStage from '@/supersub/components/HomeStage'
+import { DEFAULT_FEATURED, DESTINATIONS, FEATURED } from '@/supersub/lib/destinations'
+
+/**
+ * 마크업만 따로 뺀 것 — `Home` 이 서버 컴포넌트로 쿠키 · 백엔드를 부르게
+ * 되면서 테스트가 이 함수를 직접 렌더한다(쿠키/백엔드 호출 분기를 타지
+ * 않는다).
+ *
+ * 홈은 격자가 아니라 화면 한 장을 통째로 쓰므로 `(app)` 레이아웃처럼
+ * `max-w-[1120px]` 로 가운데 폭을 좁히지 않는다 — 헤더 · 하단 줄을
+ * `HomeStage` 가 `position: fixed` 로 화면 전체 기준으로 배치한다.
+ */
+export function HomeBody({
+  user,
+  card = null,
+  squad = null,
+  sportCode = null,
+  teamName = null,
+  isCaptain = false,
+}: {
+  user: Pick<User, 'nickname'> | null
+  card?: PlayerCard | null
+  /** 팀의 스쿼드. 팀이 없거나 아직 안 만들었으면 null 이다. */
+  squad?: Squad | null
+  /**
+   * 그 팀의 종목 — 스쿼드 판이 **포지션 목록을 받아 올 때** 쓴다(CCC 28).
+   * 🔴 코드만으로는 포지션을 못 찾는다(야구 `C`·농구 `C`가 다르다).
+   */
+  sportCode?: string | null
+  /**
+   * 홈에 그리는 그 팀의 이름 — 스쿼드 판의 머리글이 된다. 소속이 없으면
+   * `null` 이고 그때는 「MY SQUAD」로 둔다.
+   */
+  teamName?: string | null
+  /**
+   * 내가 그 팀의 **팀장인가**(`role === 'owner'`) — 스쿼드 판을 고칠 수 있는
+   * 사람이 팀장 하나이기 때문이다(사용자 요청, 2026-09-17).
+   * 🔴 **기본이 `false`** — 안 넘기면 못 만지는 쪽으로 떨어진다.
+   */
+  isCaptain?: boolean
+}) {
+  return (
+    <HomeStage
+      user={user}
+      card={card}
+      squad={squad}
+      sportCode={sportCode}
+      teamName={teamName}
+      isCaptain={isCaptain}
+      myCardId={card?.id ?? null}
+      destinations={DESTINATIONS}
+      featured={FEATURED}
+      defaultActive={DEFAULT_FEATURED}
+    />
+  )
+}
+
+// `/` 가 곧 홈이다 — 앱처럼 홈이 하나뿐이다(공개 랜딩과 로그인 후 런처로
+// 나뉘어 있지 않다). 인트로(`IntroGate`, 루트 레이아웃)를 지나면 이 화면이 나온다.
+//
+// 2026-08-28 부터 **로그인해야 들어올 수 있다.** 앞단의 `proxy.ts` 가 쿠키
+// 없는 요청을 이미 `/login` 으로 보내지만, 그건 쿠키가 "있는지"까지만 본다 —
+// 썩은 토큰을 들고 온 경우까지 막으려면 여기서 백엔드에 확인해야 한다.
+// `requireUser()` 가 그 일을 하고, 401 이면 `/login` 으로 보낸다.
+//
+// `HomeBody` 는 여전히 `user: null` 을 받을 수 있게 두었다 — 인사말 자리가
+// 갈리는 마크업은 테스트가 직접 렌더해 검증한다.
+export default async function Home() {
+  const user: User = await requireUser()
+
+  // 헤더의 프로필 자리와 스쿼드 판 가운데가 같은 카드를 쓴다 — /me 와도 같다.
+  // 카드가 아직 없는 것은 정상이라 화면 안에서 닉네임 글자로 대신한다.
+  const card = await getMyCardOrNull()
+
+  /* 🔴 스쿼드는 **고른 소속 팀** 것을 읽는다. 계약에 "내 스쿼드" 하나짜리
+     경로가 없고 `GET /teams/{id}/squad` 뿐이라, 팀을 먼저 골라야 한다.
+     소속이 여럿이면 프로필에서 고른 팀(`ss-home-team` 쿠키)을 쓰고, 안
+     골랐거나 그 팀이 더는 내 소속이 아니면 첫 팀으로 떨어진다
+     (`lib/homeTeam.ts` — 🔴 쿠키 값을 그대로 믿지 않는다).
+
+     🔴 404(`SQUAD_NOT_FOUND`)는 **정상이다.** 아직 안 만든 팀이라는 뜻이라
+     빈 판을 그린다 — 계약이 "만들지 않은 것"과 "비어 있는 것"을 일부러
+     갈라 두었다(3-7절). 그 밖의 실패도 판을 죽이지 않는다. */
+  const jar = await cookies()
+  const token = jar.get(SESSION_COOKIE)?.value
+  const teamId = pickTeamId(user.teams, jar.get(HOME_TEAM_COOKIE)?.value)
+  let squad: Squad | null = null
+  if (token && teamId) {
+    try {
+      squad = await getBackend().getSquad(token, teamId)
+    } catch (e) {
+      if (!(e instanceof BackendError)) throw e
+    }
+  }
+
+  const team = user.teams.find((t) => t.team_id === teamId) ?? null
+  return (
+    <HomeBody
+      user={user}
+      card={card}
+      squad={squad}
+      sportCode={team?.sport_code ?? null}
+      teamName={team?.name ?? null}
+      /* 🔴 **판을 만질 수 있는 사람은 팀장 하나다**(사용자 요청, 2026-09-17).
+         서버는 이미 주장만 쓰게 막고 있었는데(계약 3-7절, 전부 403 FORBIDDEN)
+         화면이 그걸 안 보여 줘서, 팀원이 카드를 옮기고 ⊗ 로 팀장까지 뺄 수
+         있는 것처럼 보였다 — 그리고 아무것도 저장되지 않았다. */
+      isCaptain={team?.role === 'owner'}
+    />
+  )
+}
