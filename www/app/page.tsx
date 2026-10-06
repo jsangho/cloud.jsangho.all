@@ -269,8 +269,14 @@ const PROJECTS: PortfolioProject[] = [
     role: { team: "팀 프로젝트 · 4명", mine: "AI 영상 분석 에이전트" },
     description:
       "생활체육 경기 영상을 분석해 선수의 실력을 재고, 그 근거로 팀이 빈 자리에 맞는 용병을 찾는 플랫폼입니다. 저는 영상에서 플레이 이벤트를 뽑아 색인하는 영상 분석 에이전트를 맡았습니다 — 프레임 추출 간격이 비용과 정확도를 동시에 정하는 자리라, 전 구간을 같은 간격으로 훑는 대신 거칠게 훑어 구간을 추리고 그 구간만 다시 봅니다.",
-    href: "https://supersub-ai.com",
-    hrefLabel: "supersub-ai.com",
+    /* 🔴 **팀 운영 도메인(`supersub-ai.com`)이 아니라 목업 데모로 보낸다**
+       (2026-10-06). 그쪽은 백엔드가 살아 있어야 보이고 사이트 전체가 로그인
+       뒤에 있어서, 처음 오는 사람이 눌러도 볼 것이 없다. 이쪽은 AWS 없이
+       끝까지 도는 사본이고 데모 계정이 로그인 화면에 적혀 있다
+       (`www/supersub/README.md`). **목업이라는 것을 누르기 전에 알린다** —
+       레이블에 적어 두지 않으면 운영 중인 서비스로 읽는다. */
+    href: "https://supersub.jsangho.cloud",
+    hrefLabel: "supersub.jsangho.cloud · 목업 데모",
     image: "/projects/supersub-home.jpg",
     imageAlt: "SUPER-SUB 서비스 첫 화면 — 초록 배경 위의 SUPERSUB 워드마크",
     facts: ["에이전트 3종", "보고서 9장", "2026.08 – 10 진행 중"],
