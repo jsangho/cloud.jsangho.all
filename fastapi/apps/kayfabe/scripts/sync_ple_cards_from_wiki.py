@@ -25,6 +25,14 @@
 
 **고친 뒤 `cd www && pnpm format`을 돌린다** — 이 스크립트의 서식은 prettier 흉내다.
 
+## 배당·주석이 있는 대회는 손으로 고친다
+
+`--apply`는 그 대회 블록을 **통째로 새로 찍는다.** 위키는 배당을 모르므로 입력에
+없고, 그래서 `bookmakerDecimal`·`mq` 호가·손으로 쓴 주석은 덮어쓰기와 함께 사라진다.
+2026-10-06부터 그런 블록은 **쓰지 않고 멈춘다** — 계획은 그대로 출력하니 보고
+사람이 옮긴다. 자동 보존 대신 멈추기를 고른 이유는 `unreproducible_in_event`
+독스트링에 적었다.
+
 ## 끝난 대회는 건드리지 않는다
 
 위키는 같은 `matchN` 키에 두 종류를 담는다.
@@ -41,7 +49,8 @@
 실측(2026-09-29): 17개 대회를 병렬로 물으면 12개가 429로 실패하고, 1.2초 간격
 순차도 같았다. 그래서 대회 사이에 넉넉히 쉰다 — 느린 대신 한 번에 끝난다.
 
-종료 코드: 0 정상 · 1 위키 읽기 실패가 하나라도 있음 · 2 픽스처 파일을 못 찾음
+종료 코드: 0 정상 · 1 위키 읽기 실패 **또는 사람 손이 필요한 대회가 있음** ·
+2 픽스처 파일을 못 찾음
 
 읽기 실패는 대개 **요청 제한**이고 다시 돌리면 통과한다. 실패한 대회만 `--event`로
 좁혀 다시 부르면 된다.
@@ -63,6 +72,7 @@ from kayfabe.app.services.ple_fixture_file import (  # noqa: E402
     read_event_cards,
     render_event_block,
     replace_event_block,
+    unreproducible_in_event,
 )
 from kayfabe.app.services.ple_match_id_prefixes import (  # noqa: E402
     id_prefix_for,
@@ -177,6 +187,7 @@ async def main(*, apply: bool, only: str | None) -> int:
         return 2
 
     failures = 0
+    manual = 0
     changed: list[str] = []
     new_ids: list[tuple[str, str]] = []
 
@@ -222,6 +233,17 @@ async def main(*, apply: bool, only: str | None) -> int:
 
         print_plan(plan, revision)
         new_ids.extend((slug, card.id) for card in plan.added)
+
+        # **덮어쓰면 잃는 것이 있으면 쓰지 않는다.** 블록을 통째로 새로 찍으므로
+        # 배당·호가·주석은 입력에 없는 값이라 조용히 사라진다. 계획은 이미 위에
+        # 찍었으니 사람이 그것을 보고 손으로 옮기면 된다.
+        blockers = unreproducible_in_event(source, slug)
+        if apply and blockers:
+            print(f"  [멈춤] 덮어쓰면 잃는다: {' · '.join(blockers)}")
+            print("         위 계획을 보고 픽스처를 손으로 고친다.")
+            manual += 1
+            continue
+
         if apply:
             updated = replace_event_block(source, slug, build_block(plan))
             if updated is None:
@@ -230,6 +252,9 @@ async def main(*, apply: bool, only: str | None) -> int:
                 continue
             source = updated
             changed.append(slug)
+
+    if manual:
+        print(f"\n{manual}개 대회는 **손으로** 고친다 — 덮어쓰기가 배당·주석을 지운다.")
 
     if apply and changed:
         FIXTURE_PATH.write_text(source, encoding="utf-8")
@@ -245,7 +270,7 @@ async def main(*, apply: bool, only: str | None) -> int:
         for slug, card_id in new_ids:
             print(f"  {slug:22} {card_id}")
 
-    return 1 if failures else 0
+    return 1 if failures or manual else 0
 
 
 if __name__ == "__main__":
