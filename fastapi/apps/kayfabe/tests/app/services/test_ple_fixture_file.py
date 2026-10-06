@@ -11,6 +11,7 @@ from kayfabe.app.services.ple_fixture_file import (
     read_event_cards,
     render_event_block,
     replace_event_block,
+    unreproducible_in_event,
 )
 
 SOURCE = """export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
@@ -139,3 +140,112 @@ class TestReplacing:
 
     def test_replacing_an_absent_event_is_none(self) -> None:
         assert replace_event_block(SOURCE, "halloween-havoc", "x") is None
+
+
+# --- mq 와 덮어쓰기 거부 (2026-10-06) ----------------------------------------
+#
+# **이 모양이 실제로 데이터를 잃을 뻔했다.** `mq`를 리더가 못 봐서 멀쩡한
+# `mitb26-whc`가 「신규」로 잡혔고, 적용했으면 배포 뒤 `sync-from-client`가 옛
+# `match_key`를 지워 예측이 CASCADE로 사라졌다.
+
+MQ_SOURCE = """export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
+  "money-in-the-bank": [
+    // 배당 출처: BetOnline · 2026-10-05 관측
+    mm(
+      "mitb26-women",
+      "Women's Money in the Bank Ladder Match",
+      "sideA",
+      [{ name: "Sol Ruca" }, { name: "Roxanne Perez" }],
+      [9.5, 1.67],
+    ),
+    mq(
+      "mitb26-whc",
+      "World Heavyweight Championship",
+      "sideB",
+      { name: "Roman Reigns", isChampion: true },
+      { name: "LA Knight" },
+      [{ book: "BetOnline", decimals: [1.07, 7.0], observedAt: "2026-09-27" }],
+    ),
+  ],
+
+  "royal-rumble": [
+    rumbleWinner("rr26-men", "Men's Royal Rumble", "sideA", ["Gunther", "Jey Uso"], [
+      2.5, 3.0,
+    ]),
+  ],
+
+  backlash: [
+    m2("bl26-one", "Single Match", "sideA", { name: "Cody Rhodes" }, {
+      name: "Gunther",
+    }),
+  ],
+};
+"""
+
+
+class TestMqIsVisible:
+    def test_an_mq_match_is_read_like_any_other(self) -> None:
+        """**못 보면 「신규」가 된다** — 그 뒤가 삭제다."""
+        cards = read_event_cards(MQ_SOURCE, "money-in-the-bank")
+
+        assert cards is not None
+        assert [c.id for c in cards] == ["mitb26-women", "mitb26-whc"]
+
+    def test_the_mq_competitors_are_read(self) -> None:
+        cards = read_event_cards(MQ_SOURCE, "money-in-the-bank")
+        assert cards is not None
+        whc = next(c for c in cards if c.id == "mitb26-whc")
+
+        assert whc.names == ("Roman Reigns", "LA Knight")
+
+    def test_the_prefix_still_comes_out(self) -> None:
+        cards = read_event_cards(MQ_SOURCE, "money-in-the-bank")
+        assert cards is not None
+
+        assert id_prefix_of(cards) == "mitb26"
+
+
+class TestUnreproducibleData:
+    """렌더러가 다시 만들 수 없는 것이 있으면 **덮어쓰지 않는다.**"""
+
+    def test_odds_quotes_and_comments_are_all_reported(self) -> None:
+        found = unreproducible_in_event(MQ_SOURCE, "money-in-the-bank")
+
+        assert "호가 여러 벌(mq)" in found
+        assert "배당 배열(bookmakerDecimal)" in found
+        assert "손으로 쓴 주석" in found
+
+    def test_the_rumble_constructor_is_unreproducible_too(self) -> None:
+        """`rumbleWinner`도 렌더러가 `mm`으로 바꿔 버린다."""
+        found = unreproducible_in_event(MQ_SOURCE, "royal-rumble")
+
+        assert "럼블 우승 생성자(rumbleWinner)" in found
+
+    def test_a_comment_above_the_key_is_outside_the_block(self) -> None:
+        """**블록은 `[` 다음부터다.** 키 위의 주석은 덮어써도 살아남으므로 막지 않는다."""
+        source = (
+            "export const X = {\n  // 이 주석은 블록 밖이다\n  backlash: [\n"
+            '    m2("bl26-one", "Single Match", "sideA",'
+            ' { name: "A" }, { name: "B" }),\n'
+            "  ],\n};\n"
+        )
+
+        assert unreproducible_in_event(source, "backlash") == ()
+
+    def test_a_plain_block_is_safe_to_rewrite(self) -> None:
+        """평범한 블록까지 막으면 도구가 쓸모없어진다."""
+        assert unreproducible_in_event(MQ_SOURCE, "backlash") == ()
+
+    def test_an_absent_event_reports_nothing(self) -> None:
+        assert unreproducible_in_event(MQ_SOURCE, "summerslam") == ()
+
+    def test_the_url_in_a_string_is_not_a_comment(self) -> None:
+        """`https://`의 `//`를 주석으로 세면 모든 블록이 막힌다."""
+        source = (
+            "export const X = {\n  backlash: [\n"
+            '    m2("bl26-one", "Single Match", "sideA",'
+            ' { name: "A", note: "https://x.test/a" }, { name: "B" }),\n'
+            "  ],\n};\n"
+        )
+
+        assert unreproducible_in_event(source, "backlash") == ()

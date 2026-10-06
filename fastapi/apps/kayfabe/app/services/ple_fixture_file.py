@@ -25,8 +25,17 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-#: `m2("id", ...)` · `mm("id", ...)` · `rumbleWinner("id", ...)` — 픽스처가 쓰는 생성자 셋.
-_CALL = re.compile(r"\b(m2|mm|rumbleWinner)\(\s*\"([^\"]+)\"")
+#: 픽스처가 쓰는 생성자 **넷**. `m2`·`mm`·`mq`·`rumbleWinner`.
+#:
+#: **`mq`는 2026-10-06에 더했다.** 그 전에는 셋만 알아서, 호가를 여러 벌 아는
+#: 단일전(`mq`로 적는다)을 **통째로 못 봤다.** 결과가 조용한 데이터 손실이었다:
+#: `mitb26-whc`가 `existing`에 안 들어가니 `plan_cards`가 그 경기를 「신규」로 보고
+#: 새 id(`mitb26-reigns-knight`)를 제안했고, 그대로 적용했으면 배포 뒤
+#: `sync-from-client`가 옛 `match_key`를 **DELETE** 해 예측이 CASCADE로 사라졌다.
+#: `only_in_fixture` 경고조차 안 떴다 — 아예 안 보였으니 "남은 것"에도 못 든다.
+#:
+#: **새 생성자를 추가하면 여기도 고친다.** 안 고치면 에러가 아니라 침묵이다.
+_CALL = re.compile(r"\b(m2|mm|mq|rumbleWinner)\(\s*\"([^\"]+)\"")
 
 #: `{ name: "Bron Breakker" }` · `{ name: "Roman Reigns", isChampion: true }`
 _NAME = re.compile(r"name:\s*\"([^\"]+)\"")
@@ -167,6 +176,40 @@ def render_event_block(
         lines.append("    ]),\n")
     lines.append("  ")
     return "".join(lines)
+
+
+#: `render_event_block`이 **다시 만들 수 없는** 것들. 블록을 통째로 새로 쓰므로,
+#: 여기 걸리는 것이 하나라도 있으면 덮어쓰기는 곧 삭제다.
+_UNREPRODUCIBLE: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bmq\("), "호가 여러 벌(mq)"),
+    (re.compile(r"\brumbleWinner\("), "럼블 우승 생성자(rumbleWinner)"),
+    # 렌더러는 숫자를 내보내지 않는다 — 숫자로 시작하는 배열은 배당이다.
+    (re.compile(r"\[\s*\d"), "배당 배열(bookmakerDecimal)"),
+    (re.compile(r"^[ \t]*//", re.MULTILINE), "손으로 쓴 주석"),
+    (re.compile(r"/\*"), "손으로 쓴 주석"),
+)
+
+
+def unreproducible_in_event(source: str, slug: str) -> tuple[str, ...]:
+    """그 대회 블록을 다시 쓰면 **잃게 되는 것들**. 없으면 빈 튜플.
+
+    `render_event_block`은 `(id, 제목, 좌우, 참가자)`만 받아 블록을 통째로 새로
+    찍는다. 배당·호가·주석은 위키가 모르는 값이라 입력에 없고, 그래서 **조용히
+    사라진다.** `replace_event_block` 독스트링이 "다른 대회의 배당과 주석은 남는다"고
+    약속하는데, 그 약속은 **대상 대회에는 해당되지 않는다** — 2026-10-06에
+    `money-in-the-bank`에서 실제로 확인했다(BetOnline 호가 2벌 + 설명 주석 10줄이
+    덮어쓰기 대상이었다).
+
+    그래서 쓰기 전에 사람에게 넘긴다. 자동으로 보존하는 쪽이 아니라 **멈추는 쪽**을
+    고른 이유는, 보존하려면 TS 인자를 제대로 파싱해야 하는데 그 파서가 틀리면 같은
+    손실이 더 조용히 일어나기 때문이다. 멈추는 것은 틀려도 아무것도 잃지 않는다.
+    """
+    span = _event_block_span(source, slug)
+    if span is None:
+        return ()
+    block = source[span[0] : span[1]]
+    found = {label for pattern, label in _UNREPRODUCIBLE if pattern.search(block)}
+    return tuple(sorted(found))
 
 
 def replace_event_block(source: str, slug: str, rendered: str) -> str | None:
