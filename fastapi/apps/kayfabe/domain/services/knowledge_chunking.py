@@ -23,15 +23,24 @@ _SENTENCE_END = re.compile(r"(?<=[.!?。？！])\s+")
 
 _WHITESPACE = re.compile(r"\s+")
 
-#: MediaWiki가 모든 문서 앞에 붙이는 고정 문구. 운영 코퍼스에서 **문서당 정확히
-#: 한 번**(57문서 57건) 나오므로 머리 표지로 신뢰할 수 있다.
-_LEAD_CHROME = "Jump to content From Wikipedia, the free encyclopedia"
+#: 문서 앞에 붙는 고정 머리 문구. 이 뒤부터가 본문이다.
+#:
+#: 위키 것은 운영 코퍼스에서 **문서당 정확히 한 번**(57문서 57건) 나오므로 표지로
+#: 신뢰할 수 있다. wwe.com 것은 2026-10-06에 더했다 — 선수 문서가 코퍼스에 50청크
+#: 들어와 있는데 이 사이트는 표지가 전혀 없어 크롬이 통째로 통과하고 있었다.
+_LEAD_CHROME = (
+    "Jump to content From Wikipedia, the free encyclopedia",
+    "Skip to main content",
+)
 
 #: 본문이 끝나고 **장치**가 시작되는 제목들. 이 뒤에는 각주 목록과 내비게이션
 #: 상자가 붙는데, 그것들은 근거가 아니라 잡음이다.
 #:
 #: `[ edit ]`가 붙은 형태만 본다 — 본문에도 "See also: …"가 인라인으로 나오는데
 #: 그것은 문단이지 절 제목이 아니다.
+#:
+#: `Continue Reading`은 wwe.com 선수 문서에서 소개글이 끝나고 「Latest News」
+#: 위젯이 시작되는 자리다 — 위키의 `References [ edit ]`와 같은 역할을 한다.
 _TAIL_HEADINGS = (
     "References [ edit ]",
     "Notes [ edit ]",
@@ -39,7 +48,23 @@ _TAIL_HEADINGS = (
     "External links [ edit ]",
     "Further reading [ edit ]",
     "Bibliography [ edit ]",
+    "Continue Reading",
 )
+
+#: 문서 **어디에나** 끼어드는 공유 버튼 덩어리 (wwe.com). 머리도 꼬리도 아니라
+#: 잘라낼 수 없고, 소개글 한가운데 박혀 있어 그대로 두면 본문 청크를 오염시킨다.
+_SHARE_WIDGET = re.compile(
+    r"(?:More Share Options\s*)+Share close(?:\s+\w+){0,6}",
+)
+
+#: 목록 판정 기준 — 이보다 길면서 문장 종결부가 이 개수 이하면 **글이 아니라 목록**이다.
+#:
+#: 2026-10-06 운영 코퍼스 1016청크 실측에서 종결부 개수가 **0개 50 · 1개 46 ·
+#: 2개 8 · 3개 이상 912**로 갈렸다. 1과 3 사이가 절벽이라 경계를 거기에 둔다.
+LIST_LIKE_MIN_CHARS = 400
+LIST_LIKE_MAX_SENTENCE_ENDS = 1
+
+_SENTENCE_END_CHAR = re.compile(r"[.!?。？！]")
 
 #: 각주 목록의 되돌이 화살표. 절 제목을 못 찾았을 때의 차선책이다.
 _CITATION_ARROW = "↑"
@@ -65,8 +90,11 @@ def strip_source_boilerplate(text: str) -> str:
     공간에서 이름 목록끼리 가장 가까우므로, **내용이 0인 조각이 구조적으로 이긴다.**
     에이전트가 "근거 부족"이라고 답한 것은 정확한 판단이었다.
 
-    걷어내는 것은 넷이다 — 머리 내비게이션 · 꼬리(각주·외부링크·navbox) ·
-    `[ edit ]` 표시 · `[ 12 ]` 인라인 각주 번호.
+    걷어내는 것은 다섯이다 — 머리 내비게이션 · 꼬리(각주·외부링크·navbox) ·
+    공유 버튼 덩어리 · `[ edit ]` 표시 · `[ 12 ]` 인라인 각주 번호.
+
+    **머리와 꼬리만 본다.** 본문 한가운데 박힌 navbox는 이 함수가 못 잡고
+    `is_list_like`가 청크 단위로 거른다 — 자리가 아니라 모양으로 가려야 한다.
 
     **본문이 거의 사라지면 자르지 않는다.** 표지가 엉뚱한 자리에 맞았다는 뜻이고,
     그때는 잡음을 남기는 편이 문서를 통째로 잃는 것보다 낫다.
@@ -75,9 +103,13 @@ def strip_source_boilerplate(text: str) -> str:
     if not normalized:
         return ""
 
-    lead = normalized.find(_LEAD_CHROME)
-    if lead != -1:
-        normalized = normalized[lead + len(_LEAD_CHROME) :].strip()
+    normalized = _SHARE_WIDGET.sub(" ", normalized)
+
+    for marker in _LEAD_CHROME:
+        lead = normalized.find(marker)
+        if lead != -1:
+            normalized = normalized[lead + len(marker) :].strip()
+            break
 
     cut = _tail_cut(normalized)
     body = normalized[:cut].strip() if cut is not None else normalized
@@ -130,7 +162,39 @@ def chunk_document(text: str) -> list[str]:
         split.extend(_hard_split(chunk))
 
     long_enough = [c for c in split if len(c) >= MIN_CHUNK_CHARS]
-    return long_enough or [normalized[:MAX_CHUNK_CHARS]]
+    if not long_enough:
+        # 짧은 문서가 통째로 사라지지 않게 하는 길. 목록 판정에는 길이 하한이
+        # 있으므로 여기 걸리는 조각은 애초에 목록으로 잡히지 않는다.
+        return [normalized[:MAX_CHUNK_CHARS]]
+
+    # **목록은 여기서 버린다.** 머리·꼬리를 잘라도 본문 **한가운데** 박힌 navbox는
+    # 남는데(위키의 「Part of a series on …」 사이드바), 그건 위치로는 못 거르고
+    # 모양으로만 걸러진다 — 문장이 없다.
+    return [c for c in long_enough if not is_list_like(c)]
+
+
+def is_list_like(chunk: str) -> bool:
+    """**글이 아니라 목록인가.** 길면서 문장 종결부가 거의 없으면 목록이다.
+
+    2026-10-06 실측이 이 함수를 만든 이유다. MITB 여성 세계왕좌전 예측이 계속
+    실패했는데, 지식이 없어서가 아니라 검색 상위 10위를 **무관한 선수의 navbox와
+    사이트 크롬이 독식**해서 참가자 문서가 `top_k=5` 안에 한 건도 못 들어갔다
+    (경쟁자 문서 최상위가 11위였다).
+
+    `strip_source_boilerplate`는 머리·꼬리만 자른다. 그 가정이 깨지는 자리가 있다 —
+    위키의 「Part of a series on Professional wrestling …」 사이드바는 `References`
+    **앞**, 본문 한복판에 있어 꼬리 자르기로는 닿지 않는다. 위치가 아니라 **모양**을
+    봐야 한다.
+
+    이름 목록은 쉼표도 마침표도 없이 고유명사만 이어지므로 종결부가 0~1개다.
+    운영 코퍼스 1016청크의 종결부 분포가 **0개 50 · 1개 46 · 2개 8 · 3개 이상 912**로
+    절벽이라, 경계를 1과 3 사이에 둔다. 이 규칙이 잡는 것은 85건(8.4%)이다.
+
+    **길이 하한이 안전장치다.** 짧은 조각은 한 문장짜리 정상 본문일 수 있다.
+    """
+    if len(chunk) < LIST_LIKE_MIN_CHARS:
+        return False
+    return len(_SENTENCE_END_CHAR.findall(chunk)) <= LIST_LIKE_MAX_SENTENCE_ENDS
 
 
 def content_fingerprint(text: str) -> str:
