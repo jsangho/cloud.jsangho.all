@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Github, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProjectBanner, type PortfolioProject } from "@/components/portfolio/project-banner";
@@ -143,10 +144,18 @@ const STACK: StackGroup[] = [
           "찾아낸 사람의 어깨·팔꿈치·무릎 등 17곳을 짚어 자세를 읽습니다. 그걸 관절이 꺾인 각도로 바꿔 실력을 재는 재료로 씁니다.",
         project: "supersub",
       },
+      /* 🔴 **설명을 고쳤다** (2026-10-06). 전에는 "먼저 띄엄띄엄 훑어 중요한
+         구간만 고른 뒤 그 부분만 자세히 다시 본다"고 적혀 있었는데, 코드는
+         그렇게 하지 않는다 — 원본 fps에 가장 가까운 **정수 간격 한 번**으로
+         고르고 끝이다(`pose.py` 의 `step = round(src_fps / target_fps)`).
+         게다가 실측이 그 반대 방향을 가리켰다: 목표를 15fps로 낮췄을 때
+         임팩트 프레임이 샘플링 격자에 **아예 없는** 경우가 많아 측정이
+         성립하지 않아서, 거칠게 훑는 쪽이 아니라 30fps로 **올리는** 쪽으로
+         갔다. 하지도 않은 최적화를 적어 두면 면접에서 그 자리가 무너진다. */
       {
         name: "OpenCV",
         where:
-          "영상을 사진 여러 장으로 쪼갭니다. 전부 똑같이 보면 비용이 커서, 먼저 띄엄띄엄 훑어 중요한 구간만 고른 뒤 그 부분만 자세히 다시 봅니다.",
+          "영상을 사진 여러 장으로 쪼갭니다. 1초에 30장을 목표로 고르는데, 이보다 적게 고르면 발이 공에 닿는 순간이 뽑힌 사진들 사이로 빠져 버려 측정 자체가 성립하지 않았습니다.",
         project: "supersub",
       },
       {
@@ -257,29 +266,28 @@ const PROJECTS: PortfolioProject[] = [
     tagline: "WWE 경기 예측 · 데이터 분석 플랫폼",
     description:
       "세 개의 AI 에이전트가 각본 · 배당 · 소식을 근거로 경기 결과를 예측하고, 그 예측이 무엇을 읽고 나온 것인지를 함께 남깁니다. 적중률을 자랑하는 대신 그 숫자를 성적에 세도 되는지를 시스템이 스스로 판정합니다.",
-    href: "https://kayfabe.jsangho.cloud",
-    hrefLabel: "kayfabe.jsangho.cloud",
+    href: "/cases/kayfabe",
+    hrefLabel: "흐름도 4장과 설계 결정 — 운영 사이트 링크는 그 안에 있습니다",
     image: "/projects/kayfabe-home.jpg",
     imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
-    facts: ["화면 19개", "테스트 1,235건", "아키텍처 계약 4", "커밋 385"],
+    facts: ["라우트 37개", "테스트 1,283건", "아키텍처 계약 4", "커밋 394"],
   },
   {
     name: "SUPER-SUB",
     tagline: "멀티모달 용병 스카우팅 · RAG 검증 플랫폼",
     role: { team: "팀 프로젝트 · 4명", mine: "AI 영상 분석 에이전트" },
     description:
-      "생활체육 경기 영상을 분석해 선수의 실력을 재고, 그 근거로 팀이 빈 자리에 맞는 용병을 찾는 플랫폼입니다. 저는 영상에서 플레이 이벤트를 뽑아 색인하는 영상 분석 에이전트를 맡았습니다 — 프레임 추출 간격이 비용과 정확도를 동시에 정하는 자리라, 전 구간을 같은 간격으로 훑는 대신 거칠게 훑어 구간을 추리고 그 구간만 다시 봅니다.",
-    /* 🔴 **팀 운영 도메인(`supersub-ai.com`)이 아니라 목업 데모로 보낸다**
-       (2026-10-06). 그쪽은 백엔드가 살아 있어야 보이고 사이트 전체가 로그인
-       뒤에 있어서, 처음 오는 사람이 눌러도 볼 것이 없다. 이쪽은 AWS 없이
-       끝까지 도는 사본이고 데모 계정이 로그인 화면에 적혀 있다
-       (`www/supersub/README.md`). **목업이라는 것을 누르기 전에 알린다** —
-       레이블에 적어 두지 않으면 운영 중인 서비스로 읽는다. */
-    href: "https://supersub.jsangho.cloud",
-    hrefLabel: "supersub.jsangho.cloud · 목업 데모",
+      "생활체육 경기 영상을 분석해 선수의 실력을 재고, 그 근거로 팀이 빈 자리에 맞는 용병을 찾는 플랫폼입니다. 저는 영상에서 자세를 수치로 재고 등급을 매겨 근거 문장까지 만드는 분석 에이전트를 맡았습니다 — 등급은 코드가 수치 구간으로 정하고, 언어 모델은 이미 정해진 등급의 설명만 씁니다.",
+    /* 🔴 **상세 페이지로 보낸다** (2026-10-06). 전에는 목업 데모로 곧장 나갔다.
+       목업이라는 안내가 레이블에만 있어서 누르고 나서야 보이는 구조였고,
+       무엇보다 이 프로젝트의 알맹이(측정과 판단의 분리 · 8GB 제약 · 측정 신뢰
+       장치 넷)는 데모 화면에 안 나타난다 — 데모는 GPU도 에이전트도 없는 사본이다.
+       데모 링크는 `/cases/supersub` 안에 「목업」이라고 적어 함께 둔다. */
+    href: "/cases/supersub",
+    hrefLabel: "흐름도 4장과 설계 결정 — 목업 데모 링크는 그 안에 있습니다",
     image: "/projects/supersub-home.jpg",
     imageAlt: "SUPER-SUB 서비스 첫 화면 — 초록 배경 위의 SUPERSUB 워드마크",
-    facts: ["에이전트 3종", "보고서 9장", "2026.08 – 10 진행 중"],
+    facts: ["담당 커밋 290", "테스트 575건", "2026.08.20 – 10.27"],
   },
 ];
 
@@ -340,12 +348,14 @@ export default function PortfolioPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a
+          {/* 상세 페이지로 보낸다 — 운영 사이트 링크는 그 안에 있다. 내부 경로라
+              `<a>` 가 아니라 `Link` 다(눌렀을 때 새로 받아 오지 않는다). */}
+          <Link
             href={PROJECTS[0].href}
             className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-brand-hover"
           >
-            KAYFABE 보러 가기
-          </a>
+            KAYFABE 자세히 보기
+          </Link>
           <a
             href={GITHUB_URL}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-5 text-sm font-semibold text-foreground transition-colors hover:bg-card-2"
@@ -375,7 +385,8 @@ export default function PortfolioPage() {
           만든 것
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          카드를 누르면 해당 사이트로 이동합니다.
+          카드를 누르면 설명 페이지로 들어갑니다 — 기술 흐름도와 왜 그렇게 정했는지가 거기 있고,
+          실제 사이트 링크도 그 안에 있습니다.
         </p>
 
         <div className="mt-5 flex flex-col gap-4">
