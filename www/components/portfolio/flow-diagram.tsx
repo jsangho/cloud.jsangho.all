@@ -1,4 +1,4 @@
-import { ChevronDown, CornerDownRight, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import { Emphasis } from "@/components/portfolio/emphasis";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,12 @@ import { cn } from "@/lib/utils";
  * 그대로 먹고, 긴 한글 라벨이 칸을 넘기지 않고, 글자가 선택·검색된다. 대가는
  * 자유로운 분기선을 못 그리는 것이다 — 그래서 모델이 세로 한 줄이고, 병렬은
  * 한 단계에 칸을 나란히 두는 것으로, 빠지는 길은 단계 아래 갈라진 칸으로 적는다.
+ *
+ * **흐름은 레일 하나로 말한다** (2026-10-06). 전에는 단계마다 가운데 정렬된
+ * 화살표를 두고 칸은 전폭, 빠지는 길은 또 다른 들여쓰기에 뒀다 — 왼쪽 끝이
+ * 세 군데라 눈이 매 단계 좌우로 튀었고, 그것이 화면을 난잡하게 만든 원인이다.
+ * 지금은 **왼쪽 세로선 하나가 모든 줄의 기준**이고, 화살표 글리프는 없앴다.
+ * 순서는 `<ol>` 과 그 선이 말하고, 화살표에 적혀 있던 말은 칸 위로 올라갔다.
  *
  * **색은 둘만 쓴다** (DESIGN.md §2): 모델이 서는 자리에 블루, 빠지는 길에 레드.
  * 나머지 종류는 전부 중립 표면이고 칸마다 붙는 작은 머리말이 종류를 말한다 —
@@ -72,18 +78,31 @@ export type Flow = {
 
 export function FlowDiagram({ flow }: { flow: Flow }) {
   return (
-    <figure className="rounded-xl border border-border bg-background">
+    <figure
+      id={flowAnchorId(flow.no)}
+      className="scroll-mt-4 rounded-xl border border-border bg-background"
+    >
       <figcaption className="border-b border-border px-4 py-3 sm:px-5">
         <p className="font-sport text-xs tracking-[0.2em] text-muted-foreground">도 {flow.no}</p>
         <h3 className="mt-1 text-base font-semibold text-foreground">{flow.title}</h3>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{flow.summary}</p>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {flow.summary}
+        </p>
       </figcaption>
 
       <div className="px-4 py-5 sm:px-5">
-        <ol className="flex flex-col">
-          {flow.steps.map((step, index) => (
-            <li key={step.nodes.map((n) => n.label).join("|")}>
-              {index > 0 && <Connector label={step.edge} />}
+        {/* 레일은 `<li>` 의 왼쪽 테두리다. 마지막 단계만 선을 끊어 흐름이
+            거기서 끝났음을 말한다 — 선이 허공으로 더 내려가지 않는다. */}
+        <ol className="flex max-w-2xl flex-col">
+          {flow.steps.map((step) => (
+            <li
+              key={step.nodes.map((n) => n.label).join("|")}
+              className="relative border-l border-border pb-4 pl-5 last:border-transparent last:pb-0 sm:pl-6"
+            >
+              <span
+                aria-hidden
+                className="absolute -left-[3.5px] top-1.5 size-[7px] rounded-full bg-border"
+              />
               <StepBlock step={step} />
             </li>
           ))}
@@ -106,31 +125,20 @@ export function FlowDiagram({ flow }: { flow: Flow }) {
   );
 }
 
-/**
- * 단계 사이의 화살표. `aria-hidden` 인 이유: 순서는 `<ol>` 이 이미 말하고,
- * 화살표 글리프를 읽어 주면 단계마다 "아래쪽 꺾쇠"가 끼어든다. 화살표에 적힌
- * **말**(`label`)은 정보라 남긴다.
- */
-function Connector({ label }: { label?: string }) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-1.5">
-      <div className="flex flex-col items-center" aria-hidden>
-        <span className="h-3 w-px bg-border" />
-        <ChevronDown className="size-3.5 text-muted-foreground" />
-      </div>
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-    </div>
-  );
+/** 섹션 머리의 도면 목차가 가리키는 앵커. 도면과 목차가 같은 함수를 쓴다. */
+export function flowAnchorId(no: string): string {
+  return `flow-${no}`;
 }
 
 function StepBlock({ step }: { step: FlowStep }) {
   const isParallel = step.nodes.length > 1;
+  /* 화살표에 적혀 있던 말과 병렬 사유는 같은 자리(칸 위 한 줄)에 선다.
+     데이터에 `edge: ""` 가 섞여 있어 빈 문자열은 그냥 떨어져 나간다. */
+  const lead = step.edge || (isParallel ? step.parallel : undefined);
 
   return (
     <div className="flex flex-col gap-2">
-      {isParallel && step.parallel && (
-        <p className="text-center text-xs text-muted-foreground">{step.parallel}</p>
-      )}
+      {lead && <p className="text-xs leading-5 text-muted-foreground">{lead}</p>}
 
       <div
         className={cn(
@@ -147,24 +155,19 @@ function StepBlock({ step }: { step: FlowStep }) {
       </div>
 
       {step.loop && (
-        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <RotateCcw aria-hidden className="size-3.5" />
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <RotateCcw aria-hidden className="size-3.5 shrink-0" />
           {step.loop}
         </p>
       )}
 
-      {/* 빠져나가는 길. **본 흐름보다 좁게 둔다** — 같은 폭이면 다음 단계로
-          이어지는 칸처럼 읽히고, 그러면 반려가 흐름의 일부가 된다. 들여쓰기와
-          꺾인 화살표, 좁은 폭 셋이 "여기서 끝난다"를 말하는 장치다. */}
+      {/* 빠져나가는 길. **칸이 아니라 주석으로 읽혀야 한다** — 테두리를 두른
+          같은 모양이면 다음 단계로 이어지는 칸처럼 보이고, 그러면 반려가
+          흐름의 일부가 된다. 그래서 들여쓰기 + 왼쪽 레드 막대만 남겼다. */}
       {step.exit && (
-        <div className="flex gap-2 pl-4 sm:pl-10">
-          <CornerDownRight aria-hidden className="mt-2 size-4 shrink-0 text-live" />
-          <div className="min-w-0 rounded-lg border border-live/40 bg-live/5 px-3 py-2 sm:max-w-lg">
-            <p className="text-xs font-semibold text-live">{step.exit.label}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {step.exit.detail}
-            </p>
-          </div>
+        <div className="ml-4 rounded-md border-l-2 border-live/60 bg-live/5 px-3 py-2">
+          <p className="text-xs font-semibold text-live">{step.exit.label}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.exit.detail}</p>
         </div>
       )}
     </div>
@@ -174,15 +177,19 @@ function StepBlock({ step }: { step: FlowStep }) {
 function NodeCard({ node }: { node: FlowNode }) {
   return (
     <div className={cn("rounded-xl border px-3 py-2.5", KIND_STYLE[node.kind])}>
-      <p
-        className={cn(
-          "text-[0.6875rem] tracking-[0.12em]",
-          node.kind === "model" ? "text-data" : "text-muted-foreground",
-        )}
-      >
-        {KIND_LABEL[node.kind]}
+      {/* 머리말과 이름이 **같은 줄**에 선다. 두 줄로 쌓으면 칸마다 높이가
+          한 줄씩 늘고, 단계가 여덟이면 그것만으로 화면 한 장이 된다. */}
+      <p className="flex flex-wrap items-baseline gap-x-2">
+        <span
+          className={cn(
+            "text-[0.6875rem] tracking-[0.12em]",
+            node.kind === "model" ? "text-data" : "text-muted-foreground",
+          )}
+        >
+          {KIND_LABEL[node.kind]}
+        </span>
+        <span className="text-sm font-semibold leading-snug text-foreground">{node.label}</span>
       </p>
-      <p className="mt-0.5 text-sm font-semibold leading-snug text-foreground">{node.label}</p>
 
       {node.detail && node.detail.length > 0 && (
         <ul className="mt-1.5 flex flex-col gap-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -219,19 +226,20 @@ export function FlowLegend() {
   };
 
   return (
-    <dl className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+    // 줄바꿈에 맡기면 여섯 항목의 왼쪽 끝이 전부 어긋난다 — 격자로 고정한다.
+    <dl className="grid gap-x-5 gap-y-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
       {items.map((kind) => (
-        <div key={kind} className="flex items-center gap-1.5">
+        <div key={kind} className="flex items-baseline gap-2">
           <dt
             className={cn(
-              "rounded-md border px-1.5 py-0.5 tracking-[0.12em]",
+              "w-9 shrink-0 rounded-md border px-1.5 py-0.5 text-center tracking-[0.08em]",
               KIND_STYLE[kind],
               kind === "model" ? "text-data" : "text-muted-foreground",
             )}
           >
             {KIND_LABEL[kind]}
           </dt>
-          <dd className="text-muted-foreground">{WHAT[kind]}</dd>
+          <dd className="leading-5 text-muted-foreground">{WHAT[kind]}</dd>
         </div>
       ))}
     </dl>

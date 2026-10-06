@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Github, Mail } from "lucide-react";
 
 import { Emphasis } from "@/components/portfolio/emphasis";
-import { FlowDiagram, FlowLegend } from "@/components/portfolio/flow-diagram";
+import { FlowDiagram, FlowLegend, flowAnchorId } from "@/components/portfolio/flow-diagram";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CASES, findCase, type CaseStudy } from "@/lib/portfolio-cases";
 
@@ -228,14 +228,33 @@ function Flows({ study }: { study: CaseStudy }) {
         기술 흐름
       </h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        도면 {study.flows.length}장입니다. 위에서 아래로 흐르고, 나란한 칸은 동시에 일어나는
-        일입니다. 빨간 칸은 그 자리에서{" "}
+        도면 {study.flows.length}장입니다. 왼쪽 세로선을 따라 위에서 아래로 흐르고, 나란한 칸은
+        동시에 일어나는 일입니다. 빨간 줄이 붙은 칸은 그 자리에서{" "}
         <strong className="font-semibold text-foreground">빠져나가는 길</strong> —
         반려·보류·폴백입니다.
       </p>
 
-      <div className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
-        <FlowLegend />
+      {/* 목차와 범례를 **한 상자에** 둔다. 따로 쌓으면 도면이 시작되기 전에
+          테두리 친 블록이 둘이고, 그것만으로 섹션 머리가 복잡해진다. */}
+      <div className="mt-4 rounded-xl border border-border bg-surface-2">
+        <ol className="flex flex-wrap gap-2 px-4 py-3">
+          {study.flows.map((flow) => (
+            <li key={flow.no}>
+              <a
+                href={`#${flowAnchorId(flow.no)}`}
+                className="inline-flex items-baseline gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-card-2"
+              >
+                <span className="font-sport tracking-[0.2em] text-muted-foreground">
+                  도 {flow.no}
+                </span>
+                {flow.title}
+              </a>
+            </li>
+          ))}
+        </ol>
+        <div className="border-t border-border px-4 py-3">
+          <FlowLegend />
+        </div>
       </div>
 
       <div className="mt-5 flex flex-col gap-5">
