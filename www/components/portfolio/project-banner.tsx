@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export type PortfolioProject = {
   name: string;
@@ -10,8 +11,13 @@ export type PortfolioProject = {
    */
   role?: { team: string; mine: string };
   description: string;
+  /**
+   * 상세 페이지 경로(`/cases/<slug>`). **바깥 사이트가 아니다** — 2026-10-06에
+   * 바꿨다. 카드가 곧장 제품으로 나가면 *무엇을 어떻게 만들었는지*를 적을 자리가
+   * 없어서, 실제 사이트 링크는 상세 페이지 안으로 내렸다.
+   */
   href: string;
-  /** 주소를 사람이 읽는 형태로 — 버튼이 어디로 가는지 눌러 보기 전에 보여 준다. */
+  /** 카드 아래에 적는 안내. 눌렀을 때 어디로 가는지를 눌러 보기 전에 말한다. */
   hrefLabel: string;
   /** 프로젝트 메인 화면 캡처. `public/projects/` 아래. */
   image: string;
@@ -28,7 +34,7 @@ export type PortfolioProject = {
  */
 export function ProjectBanner({ project }: { project: PortfolioProject }) {
   return (
-    <a
+    <Link
       href={project.href}
       className="group block overflow-hidden rounded-xl border border-border bg-card transition-colors hover:bg-card-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link"
     >
@@ -52,7 +58,7 @@ export function ProjectBanner({ project }: { project: PortfolioProject }) {
               <h3 className="font-sport text-2xl leading-tight text-foreground">{project.name}</h3>
               <p className="mt-1 text-sm text-brand-link">{project.tagline}</p>
             </div>
-            <ArrowUpRight
+            <ArrowRight
               aria-hidden
               className="mt-1 size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-brand-link"
             />
@@ -79,9 +85,9 @@ export function ProjectBanner({ project }: { project: PortfolioProject }) {
             ))}
           </ul>
 
-          <p className="font-mono text-xs text-muted-foreground">{project.hrefLabel}</p>
+          <p className="text-xs text-muted-foreground">{project.hrefLabel}</p>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

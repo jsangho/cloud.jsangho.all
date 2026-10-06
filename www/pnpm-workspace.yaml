@@ -2,5 +2,10 @@ packages:
   - .
 
 allowBuilds:
+  # 🔴 pnpm 이 물어보려고 적어 둔 자리표시자를 **false 로 못 박았다** (2026-10-06).
+  # 둘 다 Super-Sub 목업을 들여오며 따라온 설치 스크립트인데, 돌리지 않은 채로
+  # `next build` 가 통과한다 — 안 쓰는 스크립트를 열어 두지 않는다.
+  "@google/genai": false
+  protobufjs: false
   sharp: true
   unrs-resolver: true

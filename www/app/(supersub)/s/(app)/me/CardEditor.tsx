@@ -1,0 +1,537 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { ApiCallError, apiDelete, apiErrorMessage, apiPost } from '@/supersub/lib/api/client'
+import { uploadCardPhoto } from '@/supersub/lib/cardPhoto'
+import PillButton from '@/supersub/components/ui/PillButton'
+import type { PlayerCard } from '@/supersub/server/backend'
+import CardMark, { HIDDEN_MARKS, MARKS } from '@/supersub/components/CardMark'
+import { TEXT_MIN_Y, saveFirstLook, useCardStyle } from './cardStyle'
+
+/**
+ * 선 아래의 카드 편집기.
+ *
+ * ✅ **바탕 · 로고 · 글자(`tagline`) · 글자 색 · 글자 자리 · 붓자국이 서버에
+ * 저장된다**(`PATCH /me/card`, CCC 35). 사진(누끼 인물)은 아직 붙박이다 —
+ * 올린 사진을 담을 저장 위치가 정해지지 않아서 이 세션 동안만 브라우저에
+ * 남는다(`cardStyle.tsx` 주석). 호칭은 분석 결과로 붙어서 여전히 사람이
+ * 고를 수 없다.
+ *
+ * 그래서 이 자리는 지금 **둘로 갈린다**:
+ *   카드가 없으면 → 만들기 (미결 jin-7 이 요청한 자리)
+ *   카드가 있으면 → 꾸미개
+ *
+ * ⚠️ 한때 여기에 "카드에 담긴 것"(공유 주소 · 호칭)도 함께 뒀다가 걷어냈다
+ * (사용자 요청) — 편집기는 **고치는 자리**이지 읽는 자리가 아니고, 호칭은
+ * 왼쪽 `정보` 절에 이미 있다.
+ */
+export default function CardEditor({ card }: { card: PlayerCard | null }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function make() {
+    setError(null)
+    setBusy(true)
+    try {
+      /* 🔴 멱등이라 여러 번 눌러도 카드는 하나고 슬러그도 그대로다 —
+         재시도해도 이미 공유한 주소가 죽지 않는다(계약 3장). */
+      const made = await apiPost<PlayerCard>('/api/me/card', {})
+      // 🔴 **처음 만든 카드는 정해 둔 모습으로**(사용자 지정 — X 붓자국). 이미
+      // 꾸민 카드(style 이 있다)면 건드리지 않는다 — 멱등이라 이미 있던 카드가
+      // 돌아올 수 있다.
+      if (!made.style) await saveFirstLook()
+      router.refresh()
+    } catch (e) {
+      setError(apiErrorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!card) {
+    return (
+      <div className="ss-profile-editor">
+        <h2 className="ss-profile-h">선수 카드 만들기</h2>
+        {/* 🔴 **한 줄만**(사용자 요청, 2026-09-19). 전에는 「분석을 기다리지 않아도
+            됩니다 … 호칭은 나중에 경기 영상이 분석되면 카드에 붙습니다」까지 적었는데,
+            호칭은 이제 **사람이 직접 정한다**(`paik` 36번) — 그 문장이 틀린 말이 됐다. */}
+        <p className="ss-profile-muted">지금 바로 만들 수 있습니다</p>
+        {error && (
+          <p role="alert" className="ss-profile-video-reason">
+            {error}
+          </p>
+        )}
+        <PillButton type="button" onClick={make} disabled={busy} className="self-start">
+          카드 만들기
+        </PillButton>
+      </div>
+    )
+  }
+
+  return <CardTools />
+}
+
+/** 꾸미개의 갈래. 한 번에 **하나만** 편다. */
+const TOOLS = [
+  { key: 'card', label: '카드' },
+  { key: 'photo', label: '사진' },
+  { key: 'brush', label: '붓' },
+] as const
+
+type Tool = (typeof TOOLS)[number]['key']
+
+/**
+ * 🔴 설정을 갈래로 나눠 **고른 것만** 편다(사용자 요청). 한 화면에 다 쌓았더니
+ * 아래로 길어져 판을 넘쳤고, 무엇이 무엇에 딸린 설정인지도 흐렸다.
+ */
+function CardTools() {
+  const [tool, setTool] = useState<Tool>('card')
+
+  return (
+    <div className="ss-profile-editor">
+      <div className="ss-profile-tabs" role="tablist" aria-label="카드 꾸미기">
+        {TOOLS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tool === t.key}
+            className="ss-profile-tab"
+            data-on={tool === t.key}
+            onClick={() => setTool(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tool === 'card' && <CardLooks />}
+      {tool === 'photo' && <CardPhoto />}
+      {tool === 'brush' && <CardBrushTool />}
+    </div>
+  )
+}
+
+/** 색 하나를 고르는 줄 — 이름표 · 색판 · 값. */
+function ColorRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="ss-profile-info-row">
+      <dt className="ss-profile-info-label">{label}</dt>
+      <dd className="ss-profile-info-value">
+        <label className="ss-card-color">
+          {/* 🔴 색 고르개는 브라우저 것을 쓴다. 직접 만들면 화면 하나에
+              고르개가 또 생기고, 손·키보드·모바일을 다 다시 다뤄야 한다. */}
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            aria-label={label}
+          />
+          <span className="ss-card-color-hex">{value.toUpperCase()}</span>
+        </label>
+      </dd>
+    </div>
+  )
+}
+
+/** 1단계 — 바탕 · 로고 · 글자와 그 색. 사진 · 붓은 다음 단계다. */
+/** 초기화를 누르면 묻는 말 — 되돌릴 수 없는 일이라 한 번 확인한다. */
+export const WIPE_CONFIRM =
+  '카드를 지우고 처음(카드를 안 만든) 상태로 돌아갑니다.\n공유 링크와 스쿼드 판 자리가 사라지고 되돌릴 수 없습니다.'
+
+function CardLooks() {
+  const { style, tagline, set, setTagline, reset, save } = useCardStyle()
+  const router = useRouter()
+  const [wipeNote, setWipeNote] = useState<string | null>(null)
+
+  /* 🔴 **「초기화」는 카드를 지운다**(사용자 요청, 2026-09-19) — 카드를 안 만든
+     처음 상태(기본 빈 카드)로 돌아가고, 편집을 닫아도 그대로다. 전에는 화면의
+     값만 공장 기본값으로 되돌렸다(저장을 눌러야 반영). 되돌릴 수 없는 일이라
+     **한 번 묻는다.**
+     ⚠️ 서버가 아직 지우기를 모르면(배포 전 — 404·405) **예전 동작**(화면 값만
+     기본값)으로 물러나고 그렇다고 말한다. 지운 척하지 않는다. */
+  async function wipe() {
+    if (!window.confirm(WIPE_CONFIRM)) return
+    setWipeNote(null)
+    reset()
+    try {
+      await apiDelete('/api/me/card')
+      router.refresh()
+    } catch (err) {
+      if (err instanceof ApiCallError && (err.status === 404 || err.status === 405)) {
+        setWipeNote('서버가 아직 카드 지우기를 모릅니다 — 꾸밈만 기본값으로 되돌렸습니다(저장을 눌러야 반영).')
+      } else {
+        setWipeNote(apiErrorMessage(err))
+      }
+    }
+  }
+  /** 방금 저장했는가 — `null` 이면 아직 아무 말도 안 한다. */
+  const [savedOk, setSavedOk] = useState<boolean | null>(null)
+  const [saving, setSaving] = useState(false)
+  return (
+    <div className="ss-card-looks">
+      <dl>
+        <ColorRow label="카드 바탕" value={style.bg} onChange={(v) => set({ bg: v })} />
+        <ColorRow label="로고 색" value={style.logo} onChange={(v) => set({ logo: v })} />
+
+        <div className="ss-profile-info-row">
+          <dt className="ss-profile-info-label">글자</dt>
+          <dd className="ss-profile-info-value">
+            <input
+              type="text"
+              className="ss-card-text-input"
+              value={tagline}
+              // 🔴 서버 저장 한계(20자, `tagline`)와 같다 — 여기서 안 막으면
+              // 늘려 써도 되는 것처럼 보이다가 저장할 때 422 로 튕긴다.
+              maxLength={20}
+              placeholder="비우면 글자 없이"
+              aria-label="카드에 넣을 글자"
+              onChange={(e) => setTagline(e.target.value)}
+            />
+          </dd>
+        </div>
+
+        <ColorRow
+          label="글자 색"
+          value={style.textColor}
+          onChange={(v) => set({ textColor: v })}
+        />
+
+        {/* 🔴 **글자 자리를 여기서도 옮긴다**(사용자 요청, 2026-09-19). 카드 위
+            글자를 끄는 길(`StyledCard`)은 원래 있었는데 **아무 표시가 없어 아무도
+            몰랐다.** 같은 값(`textX`·`textY`, 저장되는 `text_x`·`text_y`)을 미는
+            것이라 둘 중 어느 쪽으로 옮겨도 같다. 범위도 끌기와 같다 — 가장자리에
+            안 붙고(6~94), 위로는 로고·머리글 자리(TEXT_MIN_Y)까지만. */}
+        <SlideRow
+          label="글자 좌우"
+          value={Math.round(style.textX)}
+          min={6}
+          max={94}
+          step={1}
+          suffix="%"
+          onChange={(v) => set({ textX: v })}
+        />
+        <SlideRow
+          label="글자 위아래"
+          value={Math.round(style.textY)}
+          min={TEXT_MIN_Y}
+          max={94}
+          step={1}
+          suffix="%"
+          onChange={(v) => set({ textY: v })}
+        />
+      </dl>
+      <p className="ss-profile-muted ss-card-hint">카드 위 글자를 끌어서 옮길 수도 있습니다.</p>
+
+      {/* 🔴 **초기화는 카드를 지운다**(위 `wipe`, 2026-09-19 사용자 요청으로
+          뒤집음). 전에는 「화면 값만 기본값으로 — 지우면 무섭게 쓰인다」였고,
+          그 걱정은 **확인 한 번**으로 받는다. */}
+      <div className="ss-card-actions">
+        <button type="button" className="ss-profile-tab" onClick={() => void wipe()}>
+          초기화
+        </button>
+        <button
+          type="button"
+          className="ss-profile-tab"
+          data-on="true"
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true)
+            const ok = await save()
+            setSaving(false)
+            setSavedOk(ok)
+          }}
+        >
+          저장
+        </button>
+      </div>
+
+      {/* ✅ 서버에 담긴다(CCC 35) — 다른 기기 · 공개 카드 링크에도 반영된다. */}
+      {wipeNote && (
+        <p className="ss-profile-video-reason" role="alert">
+          {wipeNote}
+        </p>
+      )}
+      {savedOk === true && (
+        <p className="ss-profile-publish-note" role="status">
+          저장했습니다 — 다른 기기와 공개 카드 링크에도 반영됩니다.
+        </p>
+      )}
+      {savedOk === false && (
+        <p className="ss-profile-video-reason" role="alert">
+          저장하지 못했습니다. 잠시 후 다시 시도해 주세요.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** 값 하나를 미는 줄 — 이름표 · 슬라이더 · 지금 값. */
+function SlideRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix = '',
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  suffix?: string
+  onChange: (v: number) => void
+}) {
+  return (
+    <div className="ss-profile-info-row">
+      <dt className="ss-profile-info-label">{label}</dt>
+      <dd className="ss-profile-info-value">
+        <label className="ss-card-slide">
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            aria-label={label}
+            onChange={(e) => onChange(Number(e.target.value))}
+          />
+          <span className="ss-card-slide-value">
+            {value}
+            {suffix}
+          </span>
+        </label>
+      </dd>
+    </div>
+  )
+}
+
+/**
+ * 사진 — 고르면 **바로 카드에 들어가고, 뒤에서 올라간다**(사용자 요청).
+ *
+ * 🔴 **정정 (2026-09-18): 이제 진짜로 저장된다.** 앞서 여기에 "파일을 서버로
+ * 보내지 않는다 — 둘 자리가 계약에 아직 없다"고 적어 두었는데 자리가 났다
+ * (계약 3-5절). 파일은 **브라우저가 S3 에 직접** 올리고(PER-002), 카드에는
+ * 그 키만 붙는다.
+ *
+ * 🔴 **미리보기를 먼저 세운다.** 올리는 동안 카드가 그대로면 「눌렀는데 아무
+ * 일도 안 난다」로 보인다 — 고르는 즉시 `blob:` 으로 그려 놓고, 키는 올리기가
+ * 끝나면 채운다.
+ *
+ * 🔴 **실패를 삼키지 않는다.** 조용히 넘어가면 사람은 사진이 바뀐 줄 알고
+ * 저장까지 하는데 실제로는 옛 사진이 남는다.
+ */
+function CardPhoto() {
+  const { style, set } = useCardStyle()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function pick(file: File | undefined) {
+    if (!file) return
+    setError(null)
+    setBusy(true)
+    /* 미리보기부터. 🔴 **키는 여기서 비운다** — 옛 사진의 키가 남아 있으면
+       올리기가 실패했을 때 **새 그림 + 옛 키**로 저장돼 남이 보는 카드와
+       내가 보는 카드가 갈린다. */
+    const preview = URL.createObjectURL(file)
+    set({ photo: preview, photoKey: null })
+    try {
+      const made = await uploadCardPhoto(file)
+      set({ photo: made.previewUrl, photoKey: made.storageKey })
+    } catch {
+      setError('사진을 올리지 못했습니다 — 다시 시도해 주세요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="ss-card-looks">
+      {/* 🔴 두 길을 **먼저** 고르게 한다. 누끼를 따야 하는지 아닌지가
+          사진을 준비하는 방법을 통째로 바꾸기 때문이다(사용자 요청). */}
+      <div className="ss-profile-tabs" role="group" aria-label="사진 놓는 방법">
+        <button
+          type="button"
+          className="ss-profile-tab"
+          data-on={style.mode === 'cutout'}
+          aria-pressed={style.mode === 'cutout'}
+          onClick={() => set({ mode: 'cutout' })}
+        >
+          사람만 오려서
+        </button>
+        <button
+          type="button"
+          className="ss-profile-tab"
+          data-on={style.mode === 'full'}
+          aria-pressed={style.mode === 'full'}
+          onClick={() => set({ mode: 'full' })}
+        >
+          사진 그대로
+        </button>
+      </div>
+
+      <p className="ss-profile-muted">
+        {style.mode === 'cutout'
+          ? '배경을 지운 그림(PNG)이면 카드에 자연스럽게 섭니다.'
+          : '오려 내지 않은 사진을 그대로 깝니다 — 로고와 PLAYER CARD 만 위에 얹힙니다.'}
+      </p>
+
+      <label className="ss-card-file">
+        <input
+          type="file"
+          accept="image/*"
+          aria-label="사진 고르기"
+          onChange={(e) => pick(e.target.files?.[0])}
+        />
+        <span>
+          {busy ? '올리는 중…' : style.photo ? '다른 사진으로' : '사진 고르기'}
+        </span>
+      </label>
+
+      {error && (
+        <p role="alert" className="ss-profile-video-reason">
+          {error}
+        </p>
+      )}
+      {/* 🔴 **올라가기 전에 저장하면 사진이 안 남는다** — 키가 아직 없어서다.
+          그 사이를 말해 주지 않으면 「저장했는데 사라졌다」가 된다. */}
+      {!busy && style.photo && !style.photoKey && !error && (
+        <p className="ss-profile-muted">아직 안 올라갔습니다 — 다시 골라 주세요.</p>
+      )}
+
+      {style.photo && (
+        <>
+          <dl>
+            <SlideRow
+              label="크기"
+              value={style.photoScale}
+              min={0.4}
+              max={2.4}
+              step={0.05}
+              suffix="배"
+              onChange={(v) => set({ photoScale: v })}
+            />
+            <SlideRow
+              label="좌우"
+              value={style.photoX}
+              min={-50}
+              max={50}
+              step={1}
+              suffix="%"
+              onChange={(v) => set({ photoX: v })}
+            />
+            <SlideRow
+              label="위아래"
+              value={style.photoY}
+              min={-50}
+              max={50}
+              step={1}
+              suffix="%"
+              onChange={(v) => set({ photoY: v })}
+            />
+          </dl>
+
+          <button
+            type="button"
+            className="ss-profile-tab self-start"
+            /* 🔴 **키도 같이 비운다**(2026-09-18) — 안 비우면 화면에서는
+               사라지는데 저장하면 서버에 사진이 그대로 남아, 남이 보는
+               카드에만 사진이 계속 있다. */
+            onClick={() =>
+              set({ photo: null, photoKey: null, photoScale: 1, photoX: 0, photoY: 0 })
+            }
+          >
+            사진 빼기
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** 붓 — 자국(`CardMark.MARKS`) 하나를 고르고 색 · 크기 · 자리를 정한다. */
+function CardBrushTool() {
+  const { style, set } = useCardStyle()
+  return (
+    <div className="ss-card-looks">
+      {/* 🔴 이름만 늘어놓지 않고 **모양을 보여준다** — 「빗살」과 「격자」는
+          글자로는 구별이 안 된다. */}
+      <ul className="ss-card-marks">
+        {/* 🔴 `filter` 로 걸러내지 않는다 — 걸러내면 `i` 가 다시 매겨져
+            **저장되는 번호가 밀린다.** 자리는 그대로 두고 그리지만 않는다. */}
+        {MARKS.map((name, i) =>
+          HIDDEN_MARKS.has(i) ? null : (
+            <li key={name}>
+              <button
+                type="button"
+                className="ss-card-mark-pick"
+                data-on={style.brush === i}
+                aria-pressed={style.brush === i}
+                aria-label={name}
+                onClick={() => set({ brush: i })}
+              >
+                {/* 🔴 고르는 칸에도 **같은 컴포넌트**를 그린다. 미리보기를 따로
+                    만들면 자국을 고칠 때 두 벌이 따로 늙는다. */}
+                {i === 1 ? (
+                  <span className="ss-card-mark-none">없음</span>
+                ) : (
+                  <CardMark index={i} seed="pick" />
+                )}
+              </button>
+            </li>
+          ),
+        )}
+      </ul>
+
+      {/* '없음'(1) 일 때만 조정할 것이 없다 — 기본(0)도 색 · 크기 · 자리를 따른다. */}
+      {style.brush !== 1 && (
+        <dl>
+          <ColorRow
+            label="자국 색"
+            value={style.brushColor}
+            onChange={(v) => set({ brushColor: v })}
+          />
+          <SlideRow
+            label="크기"
+            value={style.brushScale}
+            min={0.4}
+            max={2}
+            step={0.05}
+            suffix="배"
+            onChange={(v) => set({ brushScale: v })}
+          />
+          <SlideRow
+            label="좌우"
+            value={style.brushX}
+            min={-50}
+            max={50}
+            step={1}
+            suffix="%"
+            onChange={(v) => set({ brushX: v })}
+          />
+          <SlideRow
+            label="위아래"
+            value={style.brushY}
+            min={-50}
+            max={50}
+            step={1}
+            suffix="%"
+            onChange={(v) => set({ brushY: v })}
+          />
+        </dl>
+      )}
+    </div>
+  )
+}

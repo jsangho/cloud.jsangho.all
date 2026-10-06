@@ -443,11 +443,15 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ),
   ],
 
-  // `Money in the Bank (2026)` rev 1376940088의 `matchN` 그대로 — 래더 둘 + 타이틀전 하나.
+  // `Money in the Bank (2026)` rev 1378774435(2026-10-06)의 `matchN` 그대로 — 다섯이다.
   // 이전 다섯 경기는 2025 카드를 베낀 픽스처였다(실재하지 않는 IC·여성IC·태그 셋이
   // 섞여 있었다). 2026-09-22에 위키 대진으로 교체했다.
-  // 2026-09-28에 래더 둘의 다섯째 칸이 채워졌다 — 남자 CM Punk · 여자 Lash Legend.
-  // **`TBD`는 이제 각 래더 한 칸씩이다.** 배당은 아직 없다 — 둘 다 지어내지 않는다.
+  //
+  // **2026-10-06에 대진이 닫혔다 — `TBD`가 0칸이다.** 래더 둘의 마지막 칸이
+  // 채워졌고(남자 Kevin Owens · 여자 Tiffany Stratton), 여성 세계왕좌전은
+  // 「Becky Lynch or Liv Morgan」이라는 미결 표기가 아니라 **3자 경기**로 확정됐다
+  // (stip5 = Triple threat match). 배당은 WHC 한 경기에만 있다 — 나머지는
+  // 시장이 열리지 않았고, 지어내지 않는다.
   "money-in-the-bank": [
     mm("mitb26-men", "Men's Money in the Bank Ladder Match", "sideB", [
       { name: "Bron Breakker" },
@@ -455,16 +459,33 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       { name: "Trick Williams" },
       { name: "Penta" },
       { name: "CM Punk" },
-      { name: BRACKET_LABELS.tbd },
+      { name: "Kevin Owens" },
     ]),
-    mm("mitb26-women", "Women's Money in the Bank Ladder Match", "sideA", [
-      { name: "Sol Ruca" },
-      { name: "Lola Vice" },
-      { name: "Jacy Jayne" },
-      { name: "Roxanne Perez" },
-      { name: "Lash Legend" },
-      { name: BRACKET_LABELS.tbd },
-    ]),
+    // 배당 출처: BetOnline · **2026-10-05 12:00PM 관측** · 미국식 호가를 소수로 옮겼다
+    // (Perez -150 · Lash +125 · Stratton +300 · Sol +850 · Jacy +1,200 · Lola +1,200).
+    // https://www.wweleaks.org/2026/10/mitb-2026-betting-update-5th-october-afternoon.html
+    //
+    // **`bookmakerQuotes`가 아니라 `bookmakerDecimal`로 적는다.** 호가 배열을 쓰려면
+    // `mq` 같은 새 생성자가 필요한데, 픽스처 리더(`ple_fixture_file.py`)가 `m2`·`mm`·
+    // `rumbleWinner` 셋만 알아서 **그 경기를 통째로 못 본다** — 동기화 스크립트가
+    // 멀쩡한 경기를 「신규」로 다시 만들어 버린다. 그 버그를 고치기 전까지는 늘리지 않는다.
+    //
+    // 순서는 위 참가자 순서와 **반드시** 같아야 한다 — 길이가 선택지 수와 다르면
+    // `odds_consensus`가 그 호가를 조용히 버린다.
+    mm(
+      "mitb26-women",
+      "Women's Money in the Bank Ladder Match",
+      "sideA",
+      [
+        { name: "Sol Ruca" },
+        { name: "Lola Vice" },
+        { name: "Jacy Jayne" },
+        { name: "Roxanne Perez" },
+        { name: "Lash Legend" },
+        { name: "Tiffany Stratton" },
+      ],
+      [9.5, 13.0, 13.0, 1.67, 2.25, 4.0],
+    ),
     mq(
       "mitb26-whc",
       "World Heavyweight Championship",
@@ -490,13 +511,11 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
       ],
     ),
     m2("mitb26-reed-femi", "Single Match", "sideA", { name: "Bronson Reed" }, { name: "Oba Femi" }),
-    m2(
-      "mitb26-women-world",
-      "Women's World Championship",
-      "sideB",
+    mm("mitb26-women-world", "Women's World Championship", "sideB", [
       { name: "Stephanie Vaquer", isChampion: true },
-      { name: "Becky Lynch or Liv Morgan" },
-    ),
+      { name: "Becky Lynch" },
+      { name: "Liv Morgan" },
+    ]),
   ],
 
   "night-of-champions": [

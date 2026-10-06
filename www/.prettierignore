@@ -11,3 +11,15 @@ CLAUDE.md
 AGENTS.md
 DESIGN.md
 .omd/
+
+# 다른 저장소에서 옮겨 온 코드 — Super-Sub 목업 (2026-10-06).
+#
+# 🔴 **포맷을 여기 규칙으로 다시 쓰지 않는다.** 원본(`super-sub.cloud/www`)은
+# 세미콜론 없는 스타일이라 `--write` 를 돌리면 218개 파일이 통째로 바뀐다.
+# 그러면 ⑴ 원본과 대조가 불가능해지고 ⑵ `supersub/port-from-team.sh` 로 다시
+# 옮길 때마다 전부 다시 포맷해야 한다. 가져온 코드는 **가져온 모양 그대로** 둔다.
+#
+# 이 저장소가 직접 쓴 코드는 그대로 검사한다 — 아래 셋만 빠진다.
+supersub/
+app/(supersub)/
+app/api/supersub/

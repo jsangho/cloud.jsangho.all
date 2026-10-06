@@ -6,3 +6,13 @@
 # 바이너리 — 변환 금지 (git 자동 판별에 의존하지 않고 명시)
 *.png binary
 *.jpg binary
+# 🔴 영상·webp 를 **더했다** (2026-10-06, Super-Sub 목업을 들여오며).
+# `git add` 가 `www/public/demo.mp4` 에 대고 "CRLF will be replaced by LF" 를
+# 경고했다 — 위 `* text=auto` 아래에서 git 이 그 파일을 **글자로 판정**했다는
+# 뜻이고, 그대로 두면 바이트가 바뀌어 **영상이 깨진다.** 자동 판별에 맡기지
+# 않는다는 이 절의 원칙이 그래서 있다.
+*.mp4 binary
+*.mov binary
+*.webm binary
+*.webp binary
+*.ico binary
