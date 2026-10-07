@@ -504,7 +504,7 @@ const KAYFABE: CaseStudy = {
       note: "운영 중 — 지금 열리는 화면입니다",
       primary: true,
     },
-    { href: "https://github.com/jsangho", label: "GitHub 저장소 보기" },
+    { href: "https://github.com/jsangho/cloud.jsangho.all", label: "GitHub 저장소 보기" },
   ],
   image: "/projects/kayfabe-home.jpg",
   imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
@@ -984,8 +984,7 @@ const SUPERSUB: CaseStudy = {
     name: "Wanted AI Championship 2026",
     host: "원티드랩 · 메인 파트너 KRAFTON",
     schedule: "접수 8.24–9.18 · 구현 마감 9.20 · 예선 9.21–10.5 · 데모데이 10.17",
-    result: "예선 심사 중",
-    resultNote: "TOP 20 발표가 2026-10-07 입니다 — 이 줄은 그날 기준입니다",
+    result: "출품",
   },
   links: [
     {
