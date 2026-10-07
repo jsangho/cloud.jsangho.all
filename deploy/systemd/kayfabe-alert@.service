@@ -1,0 +1,18 @@
+[Unit]
+# 실패한 유닛의 이름을 인스턴스로 받아 알림을 보내는 템플릿 유닛.
+# 부르는 쪽은 `OnFailure=kayfabe-alert@%n.service` 로 쓴다 (%n = 실패한 유닛 이름).
+Description=KayFabe: 유닛 실패 알림 — %i
+
+# **이 유닛에는 OnFailure 를 달지 않는다.** 알림기가 실패했을 때 또 알림기를 부르면
+# 서로를 무한히 부른다. 스크립트가 어떤 경우에도 0 으로 끝내는 이유도 같다.
+
+[Service]
+Type=oneshot
+
+# **root 로 돈다.** `journalctl -u <유닛>` 으로 실패한 유닛의 로그를 읽어야 하는데
+# ec2-user 는 systemd-journal 그룹에 없다(2026-10-07 시점). 읽을 대상은 서버의
+# 자기 저널과 `.env` 두 개뿐이다.
+ExecStart=/home/ec2-user/cloud.jsangho.all/deploy/systemd/notify-unit-failure.sh %i
+
+# 알림 하나가 오래 붙들 일이 없다. 텔레그램이 안 받으면 포기한다.
+TimeoutStartSec=60
