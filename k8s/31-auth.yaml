@@ -32,13 +32,17 @@ spec:
           volumeMounts:
             - name: repo
               mountPath: /app
+          # backend와 같은 이유로 httpGet이다 (k8s/30-backend.yaml 주석 참조).
+          # `/healthz`는 auth_main.py가 이미 갖고 있다.
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: 9000
             periodSeconds: 5
             failureThreshold: 60
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: 9000
             periodSeconds: 10
       volumes:

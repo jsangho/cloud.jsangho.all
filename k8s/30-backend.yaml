@@ -42,14 +42,20 @@ spec:
               mountPath: /app
             - name: hf-cache
               mountPath: /root/.cache/huggingface
+          # tcpSocket 은 포트가 열렸는지만 본다 — uvicorn 은 lifespan 보다 먼저 소켓을
+          # 바인드하므로, 앱이 아직(또는 영영) 응답하지 못해도 통과한다. 그래서 둘 다
+          # `/healthz` 를 부른다. DB 가 안 닿아도 그 경로는 200 이므로(main.py 참조)
+          # 외부 의존 때문에 파드가 내려가지는 않는다.
           # torch·transformers import가 길어서 기동이 느리다. 그동안 죽이지 않는다.
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: 8000
             periodSeconds: 5
             failureThreshold: 60
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: 8000
             periodSeconds: 10
       volumes:
