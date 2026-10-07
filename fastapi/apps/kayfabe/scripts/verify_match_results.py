@@ -4,6 +4,25 @@
 인지는 `app/use_cases/result_verification_interactor.py`와
 `domain/entities/result_verification.py`의 독스트링에 적혀 있다.
 
+## 엔진 둘 — 기본은 모델이 아니다 (2026-10-07)
+
+위키의 결과 절은 산문이 아니라 `{{Pro wrestling results table}}` 템플릿이고 승자가
+파라미터 안에 있다(`|match5 = Drew McIntyre (c) defeated Sami Zayn by pinfall`).
+그래서 **먼저 정규식으로 읽고**, 못 읽은 경기만 모델에게 넘긴다.
+
+실측(2026년 대회 12개): 83경기 전부가 이 문법을 따랐고, 운영 DB에 이미 확정돼 있던
+63건을 **100% 재현**했다(승자 불일치 0). 모델 호출이 경기당 2~6회에서 **0회**로
+떨어지므로, 무료 등급의 하루 한도가 더는 처리량의 천장이 아니다.
+
+모델을 지우지 않는 이유는 폴백이 실제로 필요하기 때문이다 — `Results` 절이 없는
+문서가 있고(실측: `wrestlepalooza`), 무승부·노컨테스트는 승자를 안 적는다.
+
+    --engine wiki      기본. 위키를 먼저 읽고 못 읽은 것만 모델에게 넘긴다
+    --engine gemini    모델만 쓰는 예전 경로. 두 엔진의 답을 견줄 때 쓴다
+
+**어느 엔진이 읽었는지는 보고에 적힌다**(`엔진=위키` · `엔진=모델`). 관문은 둘 다
+같다 — 결정론이라고 인용 대조·카드 대조를 건너뛰지 않는다.
+
 ## 이 스크립트가 하지 않는 것
 
 - **대회 `status`를 건드리지 않는다.** 대상은 이미 `finished`인 대회뿐이다. 날짜가
@@ -78,6 +97,17 @@ EXIT_NO_DATABASE = 4
 
 DEFAULT_LIMIT = 20
 
+#: 엔진 둘. **기본은 `wiki`** — 결과 표가 템플릿이라 모델 없이 읽힌다
+#: (2026-10-07 실측: 운영 확정값 63건 100% 재현). `gemini`는 모델만 쓰는 예전 경로로,
+#: 두 엔진의 답을 견줄 때만 쓴다.
+ENGINES = ("wiki", "gemini")
+DEFAULT_ENGINE = "wiki"
+
+
+def _engine_of(match: MatchVerification) -> str:
+    """이 경기를 무엇이 읽었나. **모델 호출 0회가 곧 결정론 경로다.**"""
+    return "위키" if match.tool_calls == 0 else "모델"
+
 
 def _line(match: MatchVerification) -> str:
     head = f"  {match.event_slug}/{match.match_key:<18}"
@@ -85,10 +115,10 @@ def _line(match: MatchVerification) -> str:
         mark = "기록" if match.written else "드라이런"
         return (
             f"{head} {match.winner_name} (pick={match.pick}) "
-            f"[{mark}] 호출={match.tool_calls} "
+            f"[{mark}] 엔진={_engine_of(match)} 호출={match.tool_calls} "
             f"출처={match.source_title}@{match.source_revision_id or '판본미상'}"
         )
-    return f"{head} 보류({match.hold}) 호출={match.tool_calls}"
+    return f"{head} 보류({match.hold}) 엔진={_engine_of(match)} 호출={match.tool_calls}"
 
 
 def _report(run: VerificationRun) -> None:
@@ -124,14 +154,20 @@ def _report(run: VerificationRun) -> None:
 
 
 async def main(
-    *, apply: bool, event_slug: str | None = None, limit: int = DEFAULT_LIMIT
+    *,
+    apply: bool,
+    event_slug: str | None = None,
+    limit: int = DEFAULT_LIMIT,
+    engine: str = DEFAULT_ENGINE,
 ) -> int:
     if AsyncSessionLocal is None:
         print("DATABASE_URL이 비어 있습니다 — 더미 모드에서는 확인할 수 없습니다.")
         return EXIT_NO_DATABASE
 
     async with AsyncSessionLocal() as session:
-        use_case = get_result_verification_use_case(session)
+        use_case = get_result_verification_use_case(
+            session, use_wiki_engine=engine == "wiki"
+        )
         run = await use_case.verify(
             VerifyResultsCommand(event_slug=event_slug, limit=limit, apply=apply)
         )
@@ -142,10 +178,11 @@ async def main(
     return 0
 
 
-def _parse(argv: list[str]) -> tuple[bool, str | None, int] | None:
+def _parse(argv: list[str]) -> tuple[bool, str | None, int, str] | None:
     apply = False
     event_slug: str | None = None
     limit = DEFAULT_LIMIT
+    engine = DEFAULT_ENGINE
 
     rest = list(argv)
     while rest:
@@ -165,18 +202,27 @@ def _parse(argv: list[str]) -> tuple[bool, str | None, int] | None:
                 return None
             if limit <= 0:
                 return None
+        elif arg == "--engine":
+            if not rest:
+                return None
+            engine = rest.pop(0)
+            if engine not in ENGINES:
+                return None
         else:
             return None
-    return apply, event_slug, limit
+    return apply, event_slug, limit, engine
 
 
 if __name__ == "__main__":
     parsed = _parse(sys.argv[1:])
     if parsed is None:
         print(
-            "사용법: verify_match_results.py [--event <slug>] [--limit <n>] [--apply]"
+            "사용법: verify_match_results.py [--event <slug>] [--limit <n>] "
+            f"[--engine {'|'.join(ENGINES)}] [--apply]"
         )
         raise SystemExit(EXIT_USAGE)
 
-    _apply, _event, _limit = parsed
-    raise SystemExit(asyncio.run(main(apply=_apply, event_slug=_event, limit=_limit)))
+    _apply, _event, _limit, _engine = parsed
+    raise SystemExit(
+        asyncio.run(main(apply=_apply, event_slug=_event, limit=_limit, engine=_engine))
+    )

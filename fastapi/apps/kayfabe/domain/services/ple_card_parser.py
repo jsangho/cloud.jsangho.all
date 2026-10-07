@@ -63,6 +63,44 @@ _TBD = re.compile(r"^\d*\s*TBD$", re.IGNORECASE)
 #: `(with Paul Heyman)` · `(with Nikki Bella)` — 동행자는 경기 참가자가 아니다.
 _WITH = re.compile(r"\s*\(with [^)]*\)", re.IGNORECASE)
 
+#: 승자를 가리키는 동사. **`_RESULT_VERB`보다 넓다** — 럼블은 `defeated`를 안 쓰고
+#: `won by last eliminating`으로 적는다.
+#:
+#: 🔴 **`is_card` 판정에는 쓰지 않는다.** 저쪽을 넓히면 `vs.`로 적힌 카드 중 `won`이
+#: 들어간 줄이 결과형으로 뒤집히고, 대진 동기화(`sync_ple_cards_from_wiki`)가 그
+#: 영향을 그대로 받는다. 승자 추출 경로에서만 쓴다.
+#:
+#: 긴 쪽을 먼저 둔다 — `\bwon\b`가 앞에 서면 나중에 패턴을 늘릴 때 함정이 된다.
+_WINNER_VERB = re.compile(
+    r"\bwon by last eliminating\b|\bdefeated\b|\bdef\.\s|\bwon\b", re.IGNORECASE
+)
+
+#: 승자가 없는 결말. 무승부·노컨테스트가 여기다.
+#:
+#: **"못 읽었다"와 "승자가 없다"를 구분하려고 둔다.** 결과 확정 에이전트가 이 둘을
+#: 각각 `HoldReason.NO_CLAIM`과 `NO_WINNER`로 가르고 있고, 섞으면 다시 돌리면 되는
+#: 것과 사람이 봐야 하는 것이 뒤섞인다.
+_NO_WINNER = re.compile(
+    r"\bno[- ]contest\b"
+    r"|\bdouble (?:count-?out|disqualification|pin|knockout)\b"
+    r"|\btime[- ]limit draw\b"
+    r"|\bended in a draw\b"
+    r"|\bfought to a draw\b",
+    re.IGNORECASE,
+)
+
+#: 챔피언 표시 — 승자 쪽 문자열 **안쪽**에 선다 (`Drew McIntyre (c) defeated ...`).
+#: `_CHAMPION`은 줄 끝에 고정돼 있어 이 자리에 못 쓴다. `(c1)`처럼 번호가 붙는
+#: 복수 벨트 표기도 받는다.
+_CHAMPION_ANY = re.compile(r"\s*\(c\d*\)", re.IGNORECASE)
+
+#: 괄호 한 겹. 승자 쪽에서는 **멤버 나열**이다 (`The Wyatt Sicks (Dexter Lumis and
+#: Joe Gacy)`). 중첩은 실측에 없었다.
+_PAREN = re.compile(r"\(([^()]*)\)")
+
+#: 이름 구분자. `, and`를 `,`보다 먼저 둬야 `and`가 빈 칸으로 남지 않는다.
+_NAME_SEP = re.compile(r",\s*and\s+|,\s*|\s+and\s+|\s*&\s*|\s*/\s*", re.IGNORECASE)
+
 
 @dataclass(frozen=True)
 class WikiCompetitor:
@@ -197,6 +235,120 @@ def parse_results_tables(section_text: str) -> tuple[WikiResultsTable, ...]:
             )
         tables.append(WikiResultsTable(caption=caption, matches=tuple(rows)))
     return tuple(tables)
+
+
+def _winner_names(text: str) -> tuple[str, ...]:
+    """승자 쪽 문자열 → 대조용 이름들.
+
+    **팀명과 멤버를 모두 담는다.** DB가 어느 표기를 들고 있을지 모르기 때문이다 —
+    2026년 전수 실측에서 `Danhausen & Minihausen`(팀명)과 `CM Punk, Rey Mysterio &
+    El Grande Americano`(멤버 나열)가 같은 DB에 섞여 있었다. 한쪽만 담으면 그
+    절반이 대조에서 빗나간다.
+    """
+    text = _CHAMPION_ANY.sub("", _WITH.sub("", text))
+    inner = _PAREN.findall(text)
+    outer = _PAREN.sub(" ", text)
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for chunk in (outer, *inner):
+        for part in _NAME_SEP.split(chunk):
+            name = part.strip().strip(",").strip()
+            if not name:
+                continue
+            key = name.casefold()
+            if key not in seen:
+                seen.add(key)
+                out.append(name)
+    return tuple(out)
+
+
+@dataclass(frozen=True)
+class WikiMatchWinner:
+    """결과형 한 줄에서 읽은 승자."""
+
+    row: WikiMatchRow
+    #: 승부 동사 **왼쪽 원문**. 파싱을 못 믿을 때 사람이 볼 자리라 그대로 들고 다닌다.
+    text: str
+    #: 대조용 이름들 — 팀명과 멤버가 함께 들어 있다.
+    names: tuple[str, ...]
+    #: `(c)`가 붙어 있었다 — 챔피언이 방어했다.
+    defended: bool
+
+
+def is_no_winner(row: WikiMatchRow) -> bool:
+    """무승부·노컨테스트로 끝났는가.
+
+    **승부 동사가 있으면 거짓이다.** 두 표시가 한 줄에 같이 서는 서술(재경기 언급
+    등)에서는 승부 쪽이 이긴다 — 승자가 적혀 있는데 "없다"고 읽으면 안 된다.
+    """
+    if _WINNER_VERB.search(row.raw):
+        return False
+    return bool(_NO_WINNER.search(row.raw))
+
+
+def winner_of(row: WikiMatchRow) -> WikiMatchWinner | None:
+    """결과형 한 줄에서 승자를 읽는다. **순수 함수다.**
+
+    위키의 결과 표는 산문이 아니라 `{{Pro wrestling results table}}` 템플릿이고
+    승부 동사 왼쪽이 승자다. 2026년 대회 12개 실측에서 83경기 전부가 이 문법을
+    따랐고, DB에 이미 확정돼 있던 63건과 전수 대조해 모두 같은 승자가 나왔다.
+
+    `None`을 내는 이유는 둘이다 — 승부 동사가 없거나(무승부면 `is_no_winner`가
+    참이다), 동사 왼쪽에서 이름을 못 건졌다. **둘을 섞지 않는 것이 부르는 쪽의 일**
+    이다.
+    """
+    found = _WINNER_VERB.search(row.raw)
+    if not found:
+        return None
+    text = row.raw[: found.start()].strip()
+    if not text:
+        return None
+    names = _winner_names(text)
+    if not names:
+        return None
+    return WikiMatchWinner(
+        row=row,
+        text=text,
+        names=names,
+        defended=bool(_CHAMPION_ANY.search(text)),
+    )
+
+
+#: 결말 표시 꼬리 — `by pinfall` · `by technical submission`. 사람 이름이 아니다.
+_FINISH_TAIL = re.compile(r"\s*\bby\s+[A-Za-z][A-Za-z \-]*$", re.IGNORECASE)
+
+
+def competitor_names(row: WikiMatchRow) -> tuple[str, ...]:
+    """결과형 줄에 적힌 **모든 이름** — 이긴 쪽과 진 쪽을 가리지 않는다.
+
+    경기 짝짓기에 쓴다. 승자 이름만으로 DB 경기와 위키 줄을 맞추면 같은 선수가 한
+    대회에서 두 번 이겼을 때 어긋나고, 럼블처럼 본문에 참가자가 둘만 적히는 경기는
+    아예 못 맞춘다.
+    """
+    found = _WINNER_VERB.search(row.raw)
+    if found:
+        left, right = row.raw[: found.start()], row.raw[found.end() :]
+    else:
+        left, right = row.raw, ""
+    right = _FINISH_TAIL.sub("", right)
+    return tuple(dict.fromkeys(_winner_names(left) + _winner_names(right)))
+
+
+def result_matches(tables: tuple[WikiResultsTable, ...]) -> tuple[WikiMatchRow, ...]:
+    """표 전체에서 **결과형만** 순서대로 모은다. `card_matches`의 거울이다.
+
+    `is_card`가 거짓인 줄에는 `vs.`를 못 쪼갠 카드형도 섞여 있다. 승부 동사도
+    무승부 표시도 없는 줄은 결과가 아니므로 여기서 뺀다 — 사람이 원문을 봐야 하는
+    자리이지 결과로 셀 자리가 아니다.
+    """
+    return tuple(
+        row
+        for table in tables
+        for row in table.matches
+        if not row.is_card
+        and (_WINNER_VERB.search(row.raw) or _NO_WINNER.search(row.raw))
+    )
 
 
 def card_matches(tables: tuple[WikiResultsTable, ...]) -> tuple[WikiMatchRow, ...]:

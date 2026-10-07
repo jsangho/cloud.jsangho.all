@@ -42,7 +42,7 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -57,6 +57,10 @@ from kayfabe.app.ports.input.result_verification_use_case import (
 from kayfabe.app.ports.output.match_result_writer import MatchResultWriter
 from kayfabe.app.ports.output.pending_result_repository import PendingResultRepository
 from kayfabe.app.services.wiki_event_titles import article_title_for
+from kayfabe.app.services.wiki_result_lookup import (
+    WikiResultFinding,
+    WikiResultLookup,
+)
 from kayfabe.domain.entities.result_verification import (
     Evidence,
     HoldReason,
@@ -206,6 +210,7 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         titles: WikiTitlePort,
         articles: WikiArticlePort,
         *,
+        wiki: WikiResultLookup | None = None,
         model: str | None = None,
         sleep: Callable[[float], Awaitable[None]] | None = None,
         monotonic: Callable[[], float] | None = None,
@@ -215,6 +220,8 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         self._tools = tools
         self._titles = titles
         self._articles = articles
+        #: 결정론 엔진. `None`이면 예전처럼 모델만 쓴다.
+        self._wiki = wiki
         self._model = model
         self._sleep = sleep or asyncio.sleep
         self._monotonic = monotonic or time.monotonic
@@ -243,17 +250,51 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
             command.apply,
         )
 
+        # **위키를 먼저 읽는다.** 결과 표는 산문이 아니라 템플릿이고 승자가 파라미터
+        # 안에 있어서, 2026년 12개 대회 83경기가 전부 모델 없이 읽혔다(2026-10-07
+        # 실측 · 운영 DB 확정값 63건 100% 재현). 여기서 읽힌 경기는 모델을 부르지
+        # 않으므로 무료 등급 한도가 더는 처리량의 천장이 아니다.
+        #
+        # 대회 단위로 한 번 읽는다 — 같은 문서를 경기 수만큼 받지 않기 위해서이고,
+        # 한 줄이 두 경기에 쓰이는 것도 그래야 막힌다.
+        from_wiki: dict[str, WikiResultFinding] = {}
+        if self._wiki is not None:
+            by_event: dict[str, list[MatchUnderReview]] = {}
+            for match in targets:
+                by_event.setdefault(match.event_slug, []).append(match)
+            for event_slug, group in by_event.items():
+                from_wiki.update(await self._wiki.find(event_slug, group))
+
         results: list[MatchVerification] = []
         for match in targets:
-            results.append(await self._verify_one(match, apply=command.apply))
+            results.append(
+                await self._verify_one(
+                    match, apply=command.apply, found=from_wiki.get(match.match_key)
+                )
+            )
 
         return VerificationRun(
             matches=tuple(results), applied=command.apply, found=len(found)
         )
 
     async def _verify_one(
-        self, match: MatchUnderReview, *, apply: bool
+        self,
+        match: MatchUnderReview,
+        *,
+        apply: bool,
+        found: WikiResultFinding | None = None,
     ) -> MatchVerification:
+        if found is not None:
+            # 결정론으로 읽었다. **관문은 그대로 탄다** — 인용이 본문에 있는지,
+            # 이름이 카드에 있는지, 모호하지 않은지를 `adjudicate`가 똑같이 본다.
+            return await self._decide(
+                match,
+                found.claim,
+                found.evidence,
+                apply=apply,
+                calls=0,
+                model=None,
+            )
         try:
             claim, evidence, calls, model = await self._investigate(match)
         except ToolCallUnavailableError as exc:
@@ -274,6 +315,25 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
                 model=None,
             )
 
+        return await self._decide(
+            match, claim, evidence, apply=apply, calls=calls, model=model
+        )
+
+    async def _decide(
+        self,
+        match: MatchUnderReview,
+        claim: ResultClaim | None,
+        evidence: Sequence[Evidence],
+        *,
+        apply: bool,
+        calls: int,
+        model: str | None,
+    ) -> MatchVerification:
+        """관문 → 쓰기 → 보고. **엔진이 무엇이든 이 길은 하나다.**
+
+        결정론으로 읽었다고 관문을 건너뛰지 않는다 — 파서가 틀릴 수도 있고, 그때
+        인용 대조와 카드 대조가 마지막 그물이다.
+        """
         verdict = adjudicate(match, claim, evidence)
 
         written = False
