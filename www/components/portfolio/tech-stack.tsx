@@ -19,12 +19,21 @@ export type StackChip = {
   /** 이 기술이 실제로 쓰이는 자리. 호버·포커스·탭에서 보인다. */
   where: string;
   /** 비우면 이 저장소(KAYFABE)의 것. 팀 프로젝트 몫은 칩 색이 갈린다. */
-  project?: "supersub";
+  project?: TeamProject;
 };
+
+/** 팀 프로젝트에서 맡은 몫. 어느 팀의 것인지는 **색이 아니라 툴팁 첫 줄**이 말한다. */
+type TeamProject = "supersub" | "gaon";
 
 export type StackGroup = { group: string; items: StackChip[] };
 
-const SUPERSUB_LABEL = "SUPER-SUB 팀 프로젝트 · AI 영상 분석 에이전트";
+/* 팀이 둘로 늘어도 **색은 하나다** (2026-10-07). 파랑은 이 시스템에서 AI·데이터의
+   색이고 여기서는 「내 저장소 밖」이라는 한 가지 뜻으로 쓴다 — 팀마다 색을 주면
+   네 번째 색이 생기고 DESIGN.md §7 의 "세 색 세 뜻"이 깨진다. */
+const TEAM_LABEL: Record<TeamProject, string> = {
+  supersub: "SUPER-SUB 팀 프로젝트 · AI 영상 분석 에이전트",
+  gaon: "GAON 팀 프로젝트 · 관광동선 지도 · 문화재 3D",
+};
 
 /** 블루는 이 시스템에서 AI·데이터의 색이다 (DESIGN.md §2) — 네 번째 색을 만들지 않는다. */
 const TEAM_CHIP = "border-data/40 bg-data/10 text-data hover:bg-data/20";
@@ -33,9 +42,9 @@ const OWN_CHIP = "border-border bg-card text-muted-foreground hover:bg-card-2";
 export function TechStack({ groups }: { groups: readonly StackGroup[] }) {
   return (
     <TooltipProvider delayDuration={120}>
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className={cn("rounded-md border px-2 py-0.5", TEAM_CHIP)}>파란 칩</span>
-        {SUPERSUB_LABEL}
+      <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <span className={cn("rounded-md border px-2 py-0.5", TEAM_CHIP)}>파란 칩</span>팀
+        프로젝트에서 맡은 몫입니다 — 어느 팀인지는 칩을 눌러 보면 나옵니다
       </p>
 
       <dl className="mt-5 flex flex-col gap-4">
@@ -61,7 +70,7 @@ function StackChipButton({ item }: { item: StackChip }) {
   // 호버·포커스는 Radix가 열어 주지만 터치는 열어 주지 않는다. 탭으로도 보이게
   // 열림 상태를 직접 쥔다 — 휴대폰에서 읽을 수 없는 설명은 없는 것과 같다.
   const [open, setOpen] = React.useState(false);
-  const isTeam = item.project === "supersub";
+  const teamLabel = item.project ? TEAM_LABEL[item.project] : null;
 
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
@@ -69,13 +78,13 @@ function StackChipButton({ item }: { item: StackChip }) {
         onClick={() => setOpen(true)}
         className={cn(
           "cursor-help rounded-md border px-2 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link",
-          isTeam ? TEAM_CHIP : OWN_CHIP,
+          teamLabel ? TEAM_CHIP : OWN_CHIP,
         )}
       >
         {item.name}
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-80 text-left leading-relaxed">
-        {isTeam && <p className="font-semibold text-background/70">{SUPERSUB_LABEL}</p>}
+        {teamLabel && <p className="font-semibold text-background/70">{teamLabel}</p>}
         <p>{item.where}</p>
       </TooltipContent>
     </Tooltip>

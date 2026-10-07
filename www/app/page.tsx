@@ -102,6 +102,18 @@ const STACK: StackGroup[] = [
       },
       { name: "Recharts", where: "기록과 순위를 그래프로 그립니다." },
       { name: "Flutter", where: "코드 한 벌로 안드로이드와 아이폰 앱을 함께 만듭니다." },
+      {
+        name: "Leaflet",
+        where:
+          "웹 화면에 지도를 띄우고 관광지 위치를 찍습니다. 지도를 한반도 밖으로 못 나가게 묶고, 그래도 보이는 바깥은 덮어서 가렸습니다.",
+        project: "gaon",
+      },
+      {
+        name: "A-Frame",
+        where:
+          "복원된 문화재 건물 안을 키보드로 걸어 다니며 볼 수 있게 만듭니다. 브라우저만 있으면 되고 앱을 깔 필요가 없습니다.",
+        project: "gaon",
+      },
     ],
   },
   {
@@ -288,6 +300,18 @@ const PROJECTS: PortfolioProject[] = [
     image: "/projects/supersub-home.jpg",
     imageAlt: "SUPER-SUB 서비스 첫 화면 — 초록 배경 위의 SUPERSUB 워드마크",
     facts: ["담당 커밋 290", "테스트 575건", "2026.08.20 – 10.27"],
+  },
+  {
+    name: "GAON",
+    tagline: "문화유산 관광 플랫폼 — 관광동선 지도와 3D 복원 공간",
+    role: { team: "팀 프로젝트 · 4명", mine: "관광동선 지도 · 문화재 3D" },
+    description:
+      "문화유산을 지도 위에서 고르고, 복원된 건물 안을 걸어 다니며 보는 관광 플랫폼입니다. 저는 지도 화면과 3D 공간을 맡았습니다 — 지도는 한반도 밖을 덮어 시선을 가두고, 433MB짜리 복원 모델은 저장소에 두지 않고 바깥 저장소에서 받아 옵니다.",
+    href: "/cases/gaon",
+    hrefLabel: "흐름도 2장과 설계 결정 — 운영 사이트 링크는 그 안에 있습니다",
+    image: "/projects/gaon-home.jpg",
+    imageAlt: "GAON 관광동선 화면 — 한국 지도와 관광지 카드, AI 관광 가이드",
+    facts: ["담당 커밋 11", "지도 화면 568/770줄", "2026.06.22 – 06.26"],
   },
 ];
 
