@@ -12,6 +12,9 @@ export const BRACKET_LABELS = {
   rumbleOther: "다른 선수",
   /** 대진에 자리는 있는데 참가자가 아직 발표되지 않은 칸 (위키의 TBD) */
   tbd: "미정",
+  /** 접힌 근거 블록 — AI 예측 아래에서 투표·배당을 연다 */
+  evidenceShow: "근거 더 보기 (투표 · 배당)",
+  evidenceHide: "근거 접기",
   win: "승",
   loss: "패",
   liveResults: "실시간 결과",

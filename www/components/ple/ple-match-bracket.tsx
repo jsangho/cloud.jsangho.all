@@ -529,21 +529,26 @@ export function PleMatchBracket({ slug, className }: PleMatchBracketProps) {
 
   return (
     <section className={cn("space-y-4 pb-28", className)}>
+      {/*
+       * **제목을 여기서 다시 달지 않는다** (2026-10-07). 부모(`ple-event-detail`)가
+       * 이미 「경기」로 이 구역을 소개하고 있어서, 같은 것을 두 번 소개하고 있었다.
+       *
+       * 설명도 한 줄에 넷이 겹쳐 있었다 — 로그인 상태 · 확정 안내 · 지표 설명 ·
+       * 실시간 결과. 지표 설명("사이트 투표와 북메이커 승률은 별도 표시")은
+       * 이제 카드 안 「근거 더 보기」가 스스로 말하므로 뺀다. 남는 것은 **지금
+       * 내가 무엇을 해야 하는가** 한 줄이다.
+       */}
       <div>
-        <h2 className="font-kr-hero text-xl text-stone-900 dark:text-white sm:text-2xl">
-          전체 경기 · 예측
-        </h2>
-        <p className="mt-1.5 text-xs text-stone-500">
+        <p className="text-sm text-stone-600 dark:text-stone-400">
           {user
             ? ui.committed
               ? "예측이 확정되었습니다 · 아래에서 다시 정할 수 있습니다"
               : "모든 경기를 고른 뒤 맨 아래 「예측 확정」을 눌러 주세요"
             : "승부 예측은 로그인한 회원만 할 수 있습니다 · 경기 카드는 조회만 가능"}
-          {" · 사이트 투표와 북메이커 승률은 별도 표시"}
-          {eventFinished && (
-            <span className="ml-1 text-emerald-400">· {BRACKET_LABELS.liveResults}</span>
-          )}
         </p>
+        {eventFinished && (
+          <p className="mt-1 text-xs font-medium text-chart-win">{BRACKET_LABELS.liveResults}</p>
+        )}
         {!user && !eventFinished && (
           <div className="ple-login-callout mt-3 rounded-xl px-4 py-3 text-sm text-stone-700 dark:text-stone-300">
             <Link
