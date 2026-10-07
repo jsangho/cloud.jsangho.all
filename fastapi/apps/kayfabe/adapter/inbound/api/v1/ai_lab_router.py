@@ -592,6 +592,7 @@ def readiness_to_schema(response: AiLabReadinessResponse) -> AiLabReadinessSchem
                         title=mine.title,
                         chunks=mine.chunks,
                         chunks_with_revision=mine.chunks_with_revision,
+                        revision_before_event=mine.revision_before_event,
                     )
                     for mine in item.mines
                 ],

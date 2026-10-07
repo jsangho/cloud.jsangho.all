@@ -123,6 +123,25 @@ class TestSelfReferenceMines:
     def test_a_document_about_the_event_is_a_mine(self) -> None:
         _, _, items = _summarize(documents=[_document(url=_OWN)])
         assert [mine.source_url for mine in items[0].mines] == [_OWN]
+
+    def test_a_mine_with_a_proven_revision_does_not_raise_the_risk(self) -> None:
+        """**목록에는 남고 위험은 안 올린다** (2026-10-07).
+
+        판정은 2026-09-30부터 "경기보다 앞선 판본"을 통과시킨다. 이 화면이 그 조건을
+        안 보는 동안, 판정이 통과시킬 대회를 화면이 실격 위험으로 보고했다 — 실제로
+        MITB(2026-10-10)가 계보 완전한 지뢰 둘로 `disqualify_risk`였다.
+
+        **경고를 지우는 변경이 아니다**: 지뢰는 목록에 그대로 서서 다음 수집에서
+        무엇을 뺄지 말한다. 바뀐 것은 위험 등급뿐이다.
+        """
+        _, _, items = _summarize(documents=[_document(url=_OWN)])
+        assert [mine.revision_before_event for mine in items[0].mines] == [True]
+        assert items[0].risk == RISK_CLEAR
+
+    def test_a_mine_with_an_unknown_revision_still_disqualifies(self) -> None:
+        """증명하지 못하면 예전 그대로다 — 모르는 것을 괜찮은 것으로 접지 않는다."""
+        _, _, items = _summarize(documents=[_document(url=_OWN, revisions=1)])
+        assert [mine.revision_before_event for mine in items[0].mines] == [False]
         assert items[0].risk == RISK_DISQUALIFY
 
     def test_an_unrelated_document_is_not_a_mine(self) -> None:
@@ -186,11 +205,26 @@ class TestRisk:
         assert items[0].risk == RISK_HOLD
 
     def test_self_reference_outranks_an_incomplete_lineage(self) -> None:
-        """둘 다일 때 가벼운 쪽을 말하면 화면이 위험을 낮춰 보고한다."""
+        """둘 다일 때 가벼운 쪽을 말하면 화면이 위험을 낮춰 보고한다.
+
+        **지뢰 쪽의 계보가 불완전해야 실격이다.** 판본이 증명된 지뢰는 판정이
+        통과시키므로, 여기서 무게를 겨룰 상대가 되지 못한다.
+        """
+        _, _, items = _summarize(
+            documents=[_document(url=_OWN, revisions=1), _document(revisions=1)]
+        )
+        assert items[0].risk == RISK_DISQUALIFY
+
+    def test_a_proven_mine_does_not_outrank_an_incomplete_lineage(self) -> None:
+        """증명된 지뢰는 위험을 못 올리므로, 남은 보류가 그대로 드러나야 한다.
+
+        여기서 `RISK_CLEAR`가 나오면 계보 불완전을 지뢰가 가린 것이다.
+        """
         _, _, items = _summarize(
             documents=[_document(url=_OWN), _document(revisions=1)]
         )
-        assert items[0].risk == RISK_DISQUALIFY
+        assert items[0].unverifiable_documents == 1
+        assert items[0].risk == RISK_HOLD
 
     def test_a_clean_corpus_is_clear(self) -> None:
         totals, _, items = _summarize()

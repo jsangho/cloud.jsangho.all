@@ -775,6 +775,13 @@ export type ReadinessMine = {
   chunks: number;
   /** 계보를 아는 청크 수. `chunks`보다 작으면 시간 확인도 함께 막힌다. */
   chunksWithRevision: number;
+  /**
+   * 개정본이 경기보다 앞선 것으로 **증명되는가**.
+   *
+   * true면 목록에는 남지만 실격 위험을 만들지 않는다 — 판정이 2026-09-30부터
+   * 쓰는 조건과 같다. 앞선 판본에는 결과가 적혀 있을 수 없다.
+   */
+  revisionBeforeEvent: boolean;
 };
 
 export type ReadinessEvent = {
