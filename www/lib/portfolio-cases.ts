@@ -64,7 +64,18 @@ export type CaseStudy = {
     /** 결과가 아직 확정이 아닐 때, 언제 기준의 상태인지. */
     resultNote?: string;
   };
-  links: readonly { href: string; label: string; note?: string }[];
+  /**
+   * 이 프로젝트를 직접 볼 수 있는 곳.
+   *
+   * 🔴 **`label` 은 URL 이 아니라 동사다** (2026-10-07). 전에는 주소 자체가
+   * 레이블이라 12px 모노스페이스가 읽어야 할 글자였다 — 사용자가 "너무 작아
+   * 보기 쉽지 않다"고 했고, 원인은 크기보다 **무엇을 누르는 버튼인지 글자가
+   * 말하지 않는 것**이었다. 주소는 `href` 에서 뽑아 아래에 작게 깐다.
+   *
+   * `primary` 는 **페이지당 하나만** 둔다 — 골드는 이 시스템의 단일 액션
+   * 색이고 퍼뜨리면 뜻이 사라진다 (DESIGN.md §7).
+   */
+  links: readonly { href: string; label: string; note?: string; primary?: boolean }[];
   image: string;
   imageAlt: string;
   /** 왜 만들었나. 단락. */
@@ -487,8 +498,13 @@ const KAYFABE: CaseStudy = {
   tagline: "WWE 경기 예측 · 데이터 분석 플랫폼",
   period: "2026.07 – 진행 중",
   links: [
-    { href: "https://kayfabe.jsangho.cloud", label: "kayfabe.jsangho.cloud", note: "운영 중" },
-    { href: "https://github.com/jsangho", label: "github.com/jsangho" },
+    {
+      href: "https://kayfabe.jsangho.cloud",
+      label: "운영 사이트 열기",
+      note: "운영 중 — 지금 열리는 화면입니다",
+      primary: true,
+    },
+    { href: "https://github.com/jsangho", label: "GitHub 저장소 보기" },
   ],
   image: "/projects/kayfabe-home.jpg",
   imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
@@ -974,8 +990,9 @@ const SUPERSUB: CaseStudy = {
   links: [
     {
       href: "https://supersub.jsangho.cloud",
-      label: "supersub.jsangho.cloud",
-      note: "목업 데모 — 분석 결과는 본보기입니다",
+      label: "목업 데모 열기",
+      note: "분석 결과는 본보기입니다 — GPU도 에이전트도 없는 사본입니다",
+      primary: true,
     },
   ],
   image: "/projects/supersub-home.jpg",
@@ -1215,11 +1232,16 @@ const GAON: CaseStudy = {
     result: "출품",
   },
   links: [
-    { href: "https://gaonai.cloud", label: "gaonai.cloud", note: "운영 중" },
+    {
+      href: "https://gaonai.cloud",
+      label: "운영 사이트 열기",
+      note: "운영 중 — 「관광동선」 메뉴가 제가 만든 화면입니다",
+      primary: true,
+    },
     {
       href: "https://gaonai.cloud/vr/jongmyo.html",
-      label: "gaonai.cloud/vr/jongmyo.html",
-      note: "종묘 3D — 키보드로 걷습니다",
+      label: "종묘 3D 공간 걸어 보기",
+      note: "키보드로 움직이고 마우스로 둘러봅니다",
     },
   ],
   image: "/projects/gaon-home.jpg",
