@@ -38,7 +38,44 @@ export type CaseStudy = {
     mine: string;
     members: readonly { name: string; part: string }[];
   };
-  links: readonly { href: string; label: string; note?: string }[];
+  /**
+   * 출품한 대회. 혼자 만든 것이거나 어디에도 안 낸 것은 비운다.
+   *
+   * 🔴 **`result` 는 비울 수 없다**: 대회 이름만 적고 이 칸을 빼면 읽는 사람은
+   * 수상했다고 읽는다. 그 자리를 채우는 것이 이 칸의 일이다.
+   *
+   * 다만 **못 받은 상을 굳이 적지는 않는다** (2026-10-07 사용자). 「출품」은
+   * 그 자체로 완결된 답이다 — 냈다는 사실을 말하고 상을 주장하지 않는다.
+   * 「수상하지 않았습니다」까지 적는 것은 사실을 더하는 게 아니라 같은 사실을
+   * 스스로 깎아 말하는 것이다. **단, 받지 않은 상을 적지 않는다는 규칙은
+   * 그대로다** — 여기에 쓸 수 있는 것은 실제로 도달한 단계뿐이다.
+   *
+   * **링크는 두지 않는다** (2026-10-07 사용자 결정). 대회 공고·이벤트
+   * 페이지는 끝나면 내려가고, 그러면 포트폴리오에 죽은 링크가 남는다.
+   * 이름·주최·일정을 글자로 적어 두면 링크 없이도 검증할 수 있다.
+   */
+  contest?: {
+    name: string;
+    host: string;
+    /** 대회 일정. **프로젝트 기간과 다르다** — 둘을 섞지 않는다. */
+    schedule: string;
+    /** 어디까지 갔는지. 수상하지 않았으면 그대로 적는다. */
+    result: string;
+    /** 결과가 아직 확정이 아닐 때, 언제 기준의 상태인지. */
+    resultNote?: string;
+  };
+  /**
+   * 이 프로젝트를 직접 볼 수 있는 곳.
+   *
+   * 🔴 **`label` 은 URL 이 아니라 동사다** (2026-10-07). 전에는 주소 자체가
+   * 레이블이라 12px 모노스페이스가 읽어야 할 글자였다 — 사용자가 "너무 작아
+   * 보기 쉽지 않다"고 했고, 원인은 크기보다 **무엇을 누르는 버튼인지 글자가
+   * 말하지 않는 것**이었다. 주소는 `href` 에서 뽑아 아래에 작게 깐다.
+   *
+   * `primary` 는 **페이지당 하나만** 둔다 — 골드는 이 시스템의 단일 액션
+   * 색이고 퍼뜨리면 뜻이 사라진다 (DESIGN.md §7).
+   */
+  links: readonly { href: string; label: string; note?: string; primary?: boolean }[];
   image: string;
   imageAlt: string;
   /** 왜 만들었나. 단락. */
@@ -461,8 +498,13 @@ const KAYFABE: CaseStudy = {
   tagline: "WWE 경기 예측 · 데이터 분석 플랫폼",
   period: "2026.07 – 진행 중",
   links: [
-    { href: "https://kayfabe.jsangho.cloud", label: "kayfabe.jsangho.cloud", note: "운영 중" },
-    { href: "https://github.com/jsangho", label: "github.com/jsangho" },
+    {
+      href: "https://kayfabe.jsangho.cloud",
+      label: "운영 사이트 열기",
+      note: "운영 중 — 지금 열리는 화면입니다",
+      primary: true,
+    },
+    { href: "https://github.com/jsangho", label: "GitHub 저장소 보기" },
   ],
   image: "/projects/kayfabe-home.jpg",
   imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
@@ -938,11 +980,19 @@ const SUPERSUB: CaseStudy = {
       { name: "정상호", part: "AI 에이전트 — 포즈 추정 · 등급 판정 · 근거 문장 · GPU 배포" },
     ],
   },
+  contest: {
+    name: "Wanted AI Championship 2026",
+    host: "원티드랩 · 메인 파트너 KRAFTON",
+    schedule: "접수 8.24–9.18 · 구현 마감 9.20 · 예선 9.21–10.5 · 데모데이 10.17",
+    result: "예선 심사 중",
+    resultNote: "TOP 20 발표가 2026-10-07 입니다 — 이 줄은 그날 기준입니다",
+  },
   links: [
     {
       href: "https://supersub.jsangho.cloud",
-      label: "supersub.jsangho.cloud",
-      note: "목업 데모 — 분석 결과는 본보기입니다",
+      label: "목업 데모 열기",
+      note: "분석 결과는 본보기입니다 — GPU도 에이전트도 없는 사본입니다",
+      primary: true,
     },
   ],
   image: "/projects/supersub-home.jpg",
@@ -1019,7 +1069,239 @@ const SUPERSUB: CaseStudy = {
   ],
 };
 
-export const CASES: readonly CaseStudy[] = [KAYFABE, SUPERSUB];
+/* ────────────────────────────────────────────────────────────────────────────
+   GAON
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const GAON_FLOWS: readonly Flow[] = [
+  {
+    no: "01",
+    title: "관광동선 지도",
+    summary:
+      "지도는 전국을 띄우되 한국 바깥을 덮어 시선을 가둔다. 관광지는 지역으로 추리고, 고른 한 곳만 지도에 세운다.",
+    steps: [
+      {
+        nodes: [
+          {
+            label: "지역 선택",
+            kind: "gate",
+            detail: ["시도 17개 드롭다운", "안 고르면 등록된 곳 전부를 그대로 보여 준다"],
+          },
+        ],
+      },
+      {
+        edge: "province 로",
+        nodes: [
+          {
+            label: "관광지 추리기",
+            kind: "code",
+            detail: ["화면 밖 호출 없이 코드 안 상수를 거른다"],
+            measured: "관광지 6곳 · 그중 VR 있는 곳 2곳 · 축제 18건 (2026-10-07 실측)",
+          },
+        ],
+        exit: {
+          label: "고른 지역에 등록된 곳이 없으면",
+          detail:
+            "빈 목록을 그대로 두지 않고 「추후 추가 예정입니다」를 적는다. 고장과 미등록은 다른 상태다.",
+        },
+      },
+      {
+        edge: "지도를 그린다",
+        parallel: "한 지도 위에 겹친다 · 순서 고정",
+        nodes: [
+          {
+            label: "배경 타일",
+            kind: "external",
+            detail: ["OpenStreetMap 래스터 타일", "줌 7–13 · 한반도 바깥으로 못 나가게 묶었다"],
+          },
+          {
+            label: "바깥 덮기",
+            kind: "code",
+            detail: [
+              "세계 전체 폴리곤 하나에 한국 외곽선을 **구멍**으로 뚫는다",
+              "evenodd 채움 규칙 — 타일을 자르지 않는다",
+            ],
+            measured: "외곽 MultiPolygon 7개 · 35.8KB (시도 17개 7.19MB 를 미리 합친 결과)",
+          },
+        ],
+      },
+      {
+        edge: "카드나 핀을 고르면",
+        nodes: [
+          {
+            label: "그 한 곳으로 날아간다",
+            kind: "code",
+            detail: ["flyTo · 줌 14 · 1.2초", "핀은 고른 한 곳만 세운다 — 전국 핀을 뿌리지 않는다"],
+          },
+        ],
+      },
+      {
+        edge: "자세히 보기",
+        nodes: [
+          {
+            label: "관광지 상세",
+            kind: "output",
+            detail: ["사진 3장 · 개요 · 축제 일정", "VR 이 있는 곳은 슬라이드 한 칸이 더 붙는다"],
+          },
+        ],
+      },
+    ],
+    notes: [
+      "현재 위치 버튼은 브라우저 geolocation 을 쓴다. 거부당하면 알림 한 줄로 끝나고 지도는 그대로 돈다.",
+      "지도 화면 전체가 하나의 파일이다 — `MapPage.tsx` 770줄 중 568줄이 제 몫이고 나머지는 팀원이 붙인 레이아웃·스타일이다 (git blame · 2026-10-07).",
+    ],
+  },
+  {
+    no: "02",
+    title: "문화재 3D 공간",
+    summary:
+      "복원 모델을 걸어 다니며 보는 화면. 모델 파일은 저장소에 두지 않고 바깥 저장소에서 받아 온다.",
+    steps: [
+      {
+        nodes: [
+          {
+            label: "VR 슬라이드",
+            kind: "gate",
+            detail: ["관광지 상세의 마지막 칸", "VR 이 없는 곳에는 이 칸이 생기지 않는다"],
+          },
+        ],
+      },
+      {
+        edge: "iframe 으로",
+        nodes: [
+          {
+            label: "A-Frame 장면",
+            kind: "code",
+            detail: [
+              "WebXR 씬 한 장 — 종묘 · 문묘/성균관",
+              "키보드로 걷고 마우스로 둘러본다 (wasd + look)",
+            ],
+            measured: "씬 2개 · 590줄 (jongmyo 330 · munmyo 260)",
+          },
+        ],
+      },
+      {
+        edge: "모델을 받아 온다",
+        nodes: [
+          {
+            label: "3D 모델 저장소",
+            kind: "external",
+            detail: ["Supabase Storage 공개 버킷", "저장소에는 URL 만 남는다"],
+            measured: "glb 8개 · 합 433MB (2026-06-24 에 옮겼다)",
+          },
+        ],
+        exit: {
+          label: "저장소 안에 두면",
+          detail:
+            "clone 할 때마다 433MB 를 받고, 지워도 git 이력에는 영원히 남는다. 실제로 이 저장소의 `.git` 은 아직 293MB 다 — 옮긴 뒤에도 이미 쌓인 이력은 줄지 않는다.",
+        },
+      },
+      {
+        edge: "적재 끝",
+        nodes: [
+          {
+            label: "걸어 다니는 복원 공간",
+            kind: "output",
+            detail: ["건물 단위로 모델을 나눠 붙였다 — 문묘/성균관은 7채"],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+const GAON: CaseStudy = {
+  slug: "gaon",
+  name: "GAON",
+  tagline: "문화유산 관광 플랫폼 — 관광동선 지도와 3D 복원 공간",
+  period: "2026.06.22 – 06.26 (5일)",
+  role: {
+    team: "팀 프로젝트 · 4명",
+    mine: "관광동선 지도 · 문화재 3D",
+    members: [
+      { name: "박민호", part: "팀장 · AI 관광 챗봇 · 관광정보·티켓·예약 화면 · 배포" },
+      { name: "백성검", part: "프론트 — 앱 셸, 스토어·관광정보 화면" },
+      { name: "정어진", part: "백엔드 — 문화유산 퀴즈·포인트, 시드 데이터" },
+      { name: "정상호", part: "관광동선 지도 · 문화재 3D 공간 · 문화유산 라우터" },
+    ],
+  },
+  contest: {
+    name: "2026 충청북도 공공데이터·AI 활용 창업경진대회",
+    host: "충청북도 주최 · 충북과학기술혁신원 주관",
+    schedule: "접수 4.13–6.28 · 서류평가 7.7 · 시상식 7.28",
+    result: "출품",
+  },
+  links: [
+    {
+      href: "https://gaonai.cloud",
+      label: "운영 사이트 열기",
+      note: "운영 중 — 「관광동선」 메뉴가 제가 만든 화면입니다",
+      primary: true,
+    },
+    {
+      href: "https://gaonai.cloud/vr/jongmyo.html",
+      label: "종묘 3D 공간 걸어 보기",
+      note: "키보드로 움직이고 마우스로 둘러봅니다",
+    },
+  ],
+  image: "/projects/gaon-home.jpg",
+  imageAlt: "GAON 관광동선 화면 — 한국 지도와 관광지 카드, AI 관광 가이드",
+  lede: [
+    "짧은 팀 프로젝트였습니다. 닷새 동안 넷이 붙어 **문화유산 관광 플랫폼의 첫 형태**를 만들었고, 저는 관광지를 지도 위에서 고르는 「관광동선」 화면과 문화재를 걸어 다니며 보는 3D 공간을 맡았습니다.",
+    "지도에서 먼저 정한 것은 **보여 주지 않을 범위**였습니다. 전국 관광 서비스인데 지도가 세계 지도면 사용자는 매번 한국을 찾아 끌어와야 합니다. 그래서 줌과 이동 범위를 한반도로 묶고, 그래도 가장자리에 보이는 바깥을 덮었습니다.",
+    "3D 쪽에서 실제로 부딪힌 문제는 모델 품질이 아니라 **파일 크기**였습니다. 복원 모델 여덟 개가 433MB였고, 처음에는 그게 저장소 안에 있었습니다. 팀원 세 명이 매번 그걸 받아야 하는 구조는 닷새짜리 일정에서 그대로 비용이 됩니다.",
+    "제 몫은 전체의 19%입니다. 이 페이지는 그 19%에 대해서만 적었습니다 — 챗봇·스토어·티켓은 팀원이 만든 것이라 여기 없습니다.",
+  ],
+  facts: [
+    { label: "담당 커밋", value: "11", note: "사람 커밋 35건 중 · 머지 제외 · 2026-10-07 실측" },
+    { label: "지도 화면", value: "568줄", note: "MapPage.tsx 770줄 중 74% · git blame" },
+    { label: "전체 기여", value: "2,392줄", note: "소스 12,796줄 중 19% · tsx·ts·css·py·html" },
+    { label: "저장소 밖으로", value: "433MB", note: "3D 모델 8개 · Supabase Storage 로" },
+    { label: "외곽선 압축", value: "205배", note: "시도 17개 7.19MB → 외곽 7개 35.8KB" },
+    { label: "VR 공간", value: "2곳", note: "종묘 · 문묘/성균관 — 건물 모델 8채" },
+  ],
+  flows: GAON_FLOWS,
+  decisions: [
+    {
+      title: "지도 바깥을 자르지 않고 덮었다",
+      body: "한국만 보이게 하는 흔한 방법은 타일을 잘라 쓰는 것입니다. 그러면 타일 서버를 따로 두거나 미리 받아 둬야 합니다. 대신 **세계 전체를 덮는 폴리곤 하나에 한국 외곽선을 구멍으로 뚫었습니다** — evenodd 채움 규칙이면 구멍 안쪽만 비칩니다. 타일은 공개 OpenStreetMap 을 그대로 쓰고, 덮개는 벡터 한 장이라 줌을 바꿔도 다시 받지 않습니다.",
+    },
+    {
+      title: "외곽선은 브라우저가 아니라 미리 합쳤다",
+      body: "시도 17개 폴리곤을 그대로 들고 덮개를 만들면 **7.19MB 를 받아서 브라우저가 매번 합쳐야** 합니다. 경계선은 변하지 않는 값이라 그 계산을 화면에서 할 이유가 없습니다. shapely 로 한 번 합쳐 외곽 MultiPolygon 7개만 내보냈고 35.8KB 가 됐습니다.",
+    },
+    {
+      title: "3D 모델을 저장소에서 들어냈다",
+      body: "glb 8개가 433MB였습니다. 저장소에 두면 clone 마다 그만큼을 받고, 나중에 지워도 **이력에는 영원히 남습니다.** Supabase Storage 로 옮기고 A-Frame 의 모델 주소만 URL 로 바꿨습니다. 다만 이건 늦은 조치였습니다 — 이미 들어간 이력 때문에 `.git` 은 아직 293MB 입니다.",
+    },
+    {
+      title: "핀을 전부 뿌리지 않는다",
+      body: "관광지 전부를 지도에 찍어 두면 어느 것이 지금 보고 있는 것인지 알 수 없습니다. **고른 한 곳만** 핀으로 세우고 그쪽으로 날아갑니다. 목록은 오른쪽 카드가 맡고, 지도는 「지금 이 한 곳」만 말합니다.",
+    },
+    {
+      title: "VR 은 별도 화면이 아니라 사진 슬라이드의 마지막 칸이다",
+      body: "3D 를 따로 메뉴에 두면 들어가 볼 사람만 봅니다. 관광지 상세에서 사진을 넘기다 보면 마지막에 나오게 두면, VR 이 있다는 사실 자체를 따로 설명할 필요가 없습니다. VR 이 없는 곳에는 그 칸이 생기지 않습니다.",
+    },
+  ],
+  stack: [
+    { group: "언어", items: ["TypeScript", "Python"] },
+    { group: "프론트", items: ["React 19", "Vite", "Leaflet", "react-leaflet"] },
+    { group: "3D · VR", items: ["A-Frame 1.4.2", "WebXR", "glTF/glb"] },
+    { group: "지리 데이터", items: ["GeoJSON", "shapely", "OpenStreetMap 타일"] },
+    { group: "백엔드", items: ["FastAPI", "SQLite"] },
+    { group: "인프라", items: ["Docker", "Supabase Storage", "Railway"] },
+  ],
+  limits: [
+    "**화면 위쪽 숫자(이번 주 방문객 2,840 · 진행 중인 행사 8 · 등록 관광지 156)는 데모 데이터입니다.** 코드에 박힌 고정값이고 어디서도 세지 않습니다. 위 실측 칸에 그 숫자들이 없는 이유가 그것입니다.",
+    "관광지 6곳과 축제 18건도 코드 안 상수입니다. 백엔드에 문화유산 API 가 있지만 이 화면은 아직 거기에 붙어 있지 않습니다 — 닷새 안에 화면을 세우는 쪽을 먼저 골랐습니다.",
+    "검색창과 「필터」 버튼은 자리만 있고 동작하지 않습니다. 실제로 거르는 것은 오른쪽 지역 드롭다운 하나입니다.",
+    "테스트가 없습니다. 이 저장소의 테스트 파일은 프로젝트와 무관한 샘플 1개뿐입니다.",
+    "저장소에 쓰지 않는 파일이 남아 있습니다 — 시도 폴리곤 원본 7.19MB 와 미리 받아 둔 타일 이미지 25장은 현재 어디서도 불러오지 않습니다.",
+    "이 프로젝트의 코드는 팀 저장소에 있고 이 포트폴리오 저장소에는 없습니다. 위 수치는 그 저장소를 2026-10-07 에 직접 재서 옮긴 값입니다.",
+  ],
+};
+
+export const CASES: readonly CaseStudy[] = [KAYFABE, SUPERSUB, GAON];
 
 export function findCase(slug: string): CaseStudy | undefined {
   return CASES.find((item) => item.slug === slug);

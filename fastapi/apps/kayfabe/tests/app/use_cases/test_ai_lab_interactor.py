@@ -953,7 +953,14 @@ class TestLeakage:
 
     @pytest.mark.asyncio
     async def test_the_graph_and_the_evaluation_agree_on_every_status(self) -> None:
-        """**같은 예측을 두고 두 화면이 다른 상태를 말할 수 없다.**"""
+        """**같은 예측을 두고 두 화면이 다른 상태를 말할 수 없다.**
+
+        **판본이 경기(2026-08-10) 뒤여야 한다** (2026-10-07). 자기참조는
+        2026-09-30부터 경기보다 앞선 판본을 통과시키므로, 개정본을 경기 앞(08-01)에
+        두면 이 예측이 자격을 얻어 **막힌 예측이 0건이 되고** 비교할 간선 자체가
+        사라진다. 이 테스트가 재는 것은 두 화면의 일치이므로 먼저 막혀야 한다 —
+        서비스 테스트의 `_own_doc`이 같은 이유로 같은 선택을 한다.
+        """
         own = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
         repository = FakeAiLabRepository(
             predictions=[_prediction(match_key="m1")],
@@ -969,7 +976,7 @@ class TestLeakage:
                     first_published_at=None,
                     last_collected_at=datetime(2026, 8, 20, tzinfo=UTC),
                     chunks_with_revision=1,
-                    latest_revised_at=datetime(2026, 8, 1, tzinfo=UTC),
+                    latest_revised_at=datetime(2026, 8, 20, tzinfo=UTC),
                 )
             ],
         )
@@ -1067,7 +1074,13 @@ class TestReadiness:
 
     @pytest.mark.asyncio
     async def test_the_boundary_keeps_the_risk_words_and_camel_case(self) -> None:
-        """경계를 지나도 위험이 상태로 둔갑하지 않는다."""
+        """경계를 지나도 위험이 상태로 둔갑하지 않는다.
+
+        **지뢰가 있는데 `clear`인 것이 맞다** (2026-10-07). 이 문서는 계보가 완전하고
+        개정본(2026-08-01)이 경기(2099-08-01)보다 앞선 것으로 증명되므로, 판정이
+        통과시키는 것과 같은 이유로 위험을 올리지 않는다. 목록에는 그대로 남는다 —
+        `mineDocuments`가 1인 것이 그 증거다.
+        """
         from kayfabe.adapter.inbound.api.v1.ai_lab_router import readiness_to_schema
 
         own = "https://en.wikipedia.org/wiki/SummerSlam_(2026)"
@@ -1095,9 +1108,10 @@ class TestReadiness:
             ).get_readiness()
         )
 
-        assert schema.events[0].risk == "disqualify_risk"
+        assert schema.events[0].risk == "clear"
         assert schema.events[0].mines[0].source_url == own
         payload = schema.model_dump(by_alias=True)
         assert payload["totals"]["mineDocuments"] == 1
         assert payload["events"][0]["unverifiableDocuments"] == 0
         assert payload["corpus"]["incompleteLineage"] == 0
+        assert payload["events"][0]["mines"][0]["revisionBeforeEvent"] is True

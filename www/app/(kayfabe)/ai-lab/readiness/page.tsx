@@ -37,6 +37,12 @@ type PageState =
  * **판정하지 않는다.** 여기 나오는 것은 상태가 아니라 위험이다 — 아직 예측이
  * 없으므로 자격을 말할 대상 자체가 없다. 검색도 돌리지 않으므로 지뢰가 실제로
  * 뽑힐지는 모르고, 그래서 이 화면은 **과대평가 쪽으로 틀린다.**
+ *
+ * **그래도 판정보다 엄격해지면 안 된다** (2026-10-07). 판정은 개정본이 경기보다
+ * 앞선 것으로 증명되면 자기참조로 막지 않는데, 이 화면이 그 조건을 안 보는 동안
+ * 통과할 대회를 실격 위험으로 보고했다. 지뢰는 계속 목록에 서지만 위험 등급은
+ * **증명 못 한 것만** 올린다 — 과대평가는 "안 밟을 지뢰를 세우는" 쪽이지
+ * "멀쩡한 대회를 막으라고 권하는" 쪽이 아니다.
  */
 export default function AiLabReadinessPage() {
   const [state, setState] = useState<PageState>({ status: "loading" });
@@ -261,6 +267,16 @@ function EventCard({ event }: { event: ReadinessEvent }) {
         </ul>
       )}
 
+      {/* **지뢰가 있는데 통과인 경우를 설명한다.** 설명이 없으면 위의 위험 배지와
+          아래 목록이 서로 모순돼 보인다 — 판정이 쓰는 조건을 그대로 적용한 결과다. */}
+      {event.mines.length > 0 && event.mines.every((mine) => mine.revisionBeforeEvent) && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          위 글은 전부 <strong className="font-semibold">경기보다 앞선 판본</strong>으로 확인됩니다
+          — 결과가 적혀 있을 수 없으므로 실격 위험으로 세지 않습니다. 다음 수집에서 무엇을 뺄지
+          보려고 목록에는 남겨 둡니다.
+        </p>
+      )}
+
       {/* 0이면 적지 않는다 — "0건"은 화면에서 배경이 된다. */}
       {event.unverifiableDocuments > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
@@ -293,9 +309,22 @@ function RiskBadge({ risk }: { risk: ReadinessRisk }) {
 function MineRow({ mine }: { mine: ReadinessMine }) {
   return (
     <li className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
-      <span className="rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-live">
+      {/* **증명된 지뢰에 레드를 쓰지 않는다** (DESIGN.md §7 — 레드는 LIVE·실패 전용).
+          판정이 통과시키는 글이므로 실패가 아니다. 사실은 그대로 적고 무게만 내린다. */}
+      <span
+        className={
+          mine.revisionBeforeEvent
+            ? "rounded border border-border px-1.5 py-0.5 text-muted-foreground"
+            : "rounded border border-live/50 bg-live/10 px-1.5 py-0.5 text-live"
+        }
+      >
         그 대회를 다룬 글
       </span>
+      {mine.revisionBeforeEvent && (
+        <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-muted-foreground">
+          경기 이전 판본
+        </span>
+      )}
       <a
         href={mine.sourceUrl}
         target="_blank"

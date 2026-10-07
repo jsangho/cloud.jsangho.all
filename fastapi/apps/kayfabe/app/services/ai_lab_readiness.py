@@ -14,6 +14,15 @@ AI LAB의 화면 여섯은 전부 **뒤를 본다**. 무엇을 예측했고(3-2)
 
 * `self_reference` — 코퍼스에 **그 대회 자체를 다룬 문서**가 있으면, 그것이 검색에
   걸리는 순간 예측이 아니라 열람이 된다. 대회마다 다른 문제다.
+
+  **단, 개정본이 경기보다 앞선 것으로 증명되면 위험으로 세지 않는다**
+  (2026-10-07에 맞췄다). 판정이 2026-09-30(`cdce41a`)에 그 조건을 받았는데 이 화면은
+  따라오지 않아서, **판정은 통과시킬 대회를 화면이 실격 위험으로 보고하고 있었다** —
+  MITB(2026-10-10)가 지뢰 둘로 `disqualify_risk`였고 그 둘의 계보는 완전했다.
+  `_event`의 주석이 경고한 드리프트가 예상과 **반대 방향**으로 난 것이다 — 그쪽은
+  "화면이 괜찮다고 한 대회를 판정이 막는다"를 걱정했는데, 실제로는 화면이 막고
+  판정이 통과시켰다. `cites_own_event`는 공유했지만 판본 비교는 공유하지 않아서다.
+  지금은 `_predates_event` 하나를 함께 쓴다.
 * `unverifiable_corpus` — 계보가 불완전한 문서는 "경기보다 앞선 글"임을 증명할 수
   없어 보류를 만든다. **대회와 무관한 문서의 성질이다**(아래).
 
@@ -87,6 +96,9 @@ class ReadinessMine:
     chunks: int
     #: 계보를 아는 청크 수. `chunks`보다 작으면 시간 확인도 함께 막힌다.
     chunks_with_revision: int
+    #: 개정본이 **경기 시작일보다 앞선 것으로 증명되는가**. True면 이 문서는 목록에
+    #: 남지만 실격 위험을 만들지 않는다 — 판정과 같은 조건이다(`_self_reference`).
+    revision_before_event: bool
 
 
 @dataclass(frozen=True)
@@ -216,6 +228,7 @@ def _event(
             title=doc.title,
             chunks=doc.chunks,
             chunks_with_revision=doc.chunks_with_revision,
+            revision_before_event=_predates_event(doc, start_date),
         )
         for doc in documents
         # **임베딩 유무를 보지 않는다.** 임베딩이 없는 문서는 지금 검색에 안 잡히지만
@@ -223,11 +236,10 @@ def _event(
         # "지금 뽑히는가"가 아니라 **"코퍼스에 있는가"** 다 — 조치도 그쪽이다(뺀다).
         if cites_own_event((doc.source_url,), row.label)
     )
-    unverifiable = sum(
-        1
-        for doc in documents
-        if _temporal_position(_known_revision(doc), start_date) != EVIDENCE_BEFORE_EVENT
-    )
+    # **판정과 같은 조건으로 거른다** (2026-10-07). 목록에는 전부 남는다 — 사실을
+    # 지우는 것이 아니라 막던 것을 멈추는 변경이다(`_self_reference`의 같은 주석).
+    unproven_mines = tuple(mine for mine in mines if not mine.revision_before_event)
+    unverifiable = sum(1 for doc in documents if not _predates_event(doc, start_date))
 
     return ReadinessEvent(
         slug=row.slug,
@@ -242,8 +254,14 @@ def _event(
         unverifiable_documents=unverifiable,
         # **자기참조가 이긴다.** 그쪽은 실격이고 이쪽은 보류라, 둘 다일 때 더 무거운
         # 쪽을 말하지 않으면 화면이 위험을 낮춰 보고한다(규칙의 적용 순서와 같다).
+        #
+        # 세는 것은 `mines`가 아니라 `unproven_mines`다. 판본이 경기보다 앞선 것으로
+        # 증명된 지뢰는 판정이 통과시키므로, 그것으로 위험을 올리면 이 화면이 판정보다
+        # 엄격해져 **멀쩡한 대회를 막으라고 권한다.**
         risk=(
-            RISK_DISQUALIFY if mines else (RISK_HOLD if unverifiable else RISK_CLEAR)
+            RISK_DISQUALIFY
+            if unproven_mines
+            else (RISK_HOLD if unverifiable else RISK_CLEAR)
         ),
     )
 
@@ -254,6 +272,20 @@ def _corpus(documents: Sequence[DocumentRow]) -> ReadinessCorpus:
         incomplete_lineage=sum(1 for doc in documents if _known_revision(doc) is None),
         unembedded_documents=sum(1 for doc in documents if doc.chunks_embedded <= 0),
     )
+
+
+def _predates_event(doc: DocumentRow, start_date: date) -> bool:
+    """그 문서의 개정본이 **경기 시작일보다 앞선 것으로 증명되는가**.
+
+    `_self_reference`가 쓰는 조건과 같은 뜻이다 — 앞선 판본에는 결과가 적혀 있을 수
+    없으므로, 증명되면 자기참조로 막지 않는다. 비교 자체는 규칙이 쓰는
+    `_temporal_position`을 그대로 부른다. **여기서 따로 적으면 다시 갈라진다.**
+
+    계보가 불완전하면(`_known_revision`이 `None`) False다. 모르는 것을 괜찮은 것으로
+    접지 않는다 — 아직 열리지 않은 대회에서는 이것이 유일한 실패 방식이다(개정본은
+    과거에만 있으므로 시각을 알면 반드시 경기보다 앞선다).
+    """
+    return _temporal_position(_known_revision(doc), start_date) == EVIDENCE_BEFORE_EVENT
 
 
 def _known_revision(doc: DocumentRow) -> datetime | None:

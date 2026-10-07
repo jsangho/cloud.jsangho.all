@@ -8,6 +8,7 @@ import { Emphasis } from "@/components/portfolio/emphasis";
 import { FlowDiagram, FlowLegend, flowAnchorId } from "@/components/portfolio/flow-diagram";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CASES, findCase, type CaseStudy } from "@/lib/portfolio-cases";
+import { cn } from "@/lib/utils";
 
 /**
  * 프로젝트 상세 — `jsangho.cloud/cases/<slug>` (2026-10-06).
@@ -126,6 +127,8 @@ function Hero({ study }: { study: CaseStudy }) {
         )}
       </dl>
 
+      {study.contest && <Contest contest={study.contest} />}
+
       <div className="relative mt-7 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
         <Image
           src={study.image}
@@ -137,21 +140,113 @@ function Hero({ study }: { study: CaseStudy }) {
         />
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {study.links.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            className="inline-flex max-w-full items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground transition-colors hover:bg-card-2"
-          >
-            <span className="truncate font-mono text-xs">{link.label}</span>
-            {link.note && (
-              <span className="shrink-0 text-xs text-muted-foreground">· {link.note}</span>
-            )}
-            <ArrowUpRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-          </a>
+          <LinkButton key={link.href} link={link} />
         ))}
       </div>
+    </section>
+  );
+}
+
+/**
+ * 「사이트 보기」 버튼.
+ *
+ * 전에는 테두리만 있는 작은 pill 이었고 **레이블이 주소 자체**였다 — 읽어야
+ * 할 글자가 12px 모노스페이스였고, 테두리뿐이라 보조 크롬으로 읽혀 아무도
+ * 누르지 않게 생겼다. 셋을 같이 고쳤다:
+ *
+ * 1. 레이블을 **동사**로 올린다 (16px / 600) — 주소가 아니라 할 일을 적는다.
+ * 2. 주소는 그 아래 작게 깐다 — **눌러 보기 전에 어디로 가는지**는 여전히
+ *    보여야 한다. 주소는 `href` 에서 뽑으므로 두 벌로 적을 일이 없다.
+ * 3. 대표 링크 하나만 **골드로 채운다** — 이 페이지의 단일 액션이다.
+ *    나머지는 중립 카드다 (DESIGN.md §7: 골드를 퍼뜨리지 않는다).
+ *
+ * 모서리는 pill(9000px)이 아니라 `rounded-xl` 이다 — 세 줄짜리 블록이라
+ * 풀 pill 이면 글자가 둥근 끝에 끼인다. 12px 는 사다리 안의 값이다(§5).
+ */
+function LinkButton({ link }: { link: CaseStudy["links"][number] }) {
+  // 주소는 `href` 에서 뽑는다 — 스킴과 끝 슬래시만 떼면 읽기 좋은 형태가 된다.
+  const shown = link.href.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+  return (
+    <a
+      href={link.href}
+      className={cn(
+        "group flex items-start gap-3 rounded-xl border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-link",
+        link.primary
+          ? "border-transparent bg-primary hover:bg-brand-hover"
+          : "border-border bg-card hover:bg-card-2",
+      )}
+    >
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block text-base font-semibold leading-tight",
+            link.primary ? "text-primary-foreground" : "text-foreground",
+          )}
+        >
+          {link.label}
+        </span>
+        <span
+          className={cn(
+            "mt-1 block truncate font-mono text-xs",
+            /* 골드 위 12px 글자다. 75%로 깔면 라이트(`#dd7400`)에서 대비가
+               4.44로 AA(4.5) 바로 아래로 떨어진다 — 80%면 4.84다. 위계는
+               투명도가 아니라 모노스페이스 서체와 자리가 이미 만든다. */
+            link.primary ? "text-primary-foreground/80" : "text-muted-foreground",
+          )}
+        >
+          {shown}
+        </span>
+        {link.note && (
+          <span
+            className={cn(
+              "mt-2 block text-xs leading-relaxed",
+              link.primary ? "text-primary-foreground/85" : "text-muted-foreground",
+            )}
+          >
+            {link.note}
+          </span>
+        )}
+      </span>
+
+      <ArrowUpRight
+        aria-hidden
+        className={cn(
+          "size-5 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5",
+          link.primary ? "text-primary-foreground" : "text-muted-foreground",
+        )}
+      />
+    </a>
+  );
+}
+
+/**
+ * 출품한 대회 한 줄.
+ *
+ * **결과 배지에 골드를 쓰지 않는다.** 골드는 이 시스템에서 "가져갈 수 있는 것" —
+ * 랭킹·성취의 색이다 (DESIGN.md §2). 출품은 성취가 아니고, 떨어진 출품에 금색을
+ * 칠하면 화면이 거짓말을 한다. 수상 기록이 생기면 **그때** 골드를 쓸지 정한다.
+ */
+function Contest({ contest }: { contest: NonNullable<CaseStudy["contest"]> }) {
+  return (
+    <section className="mt-5 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="출품">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-sport text-xs tracking-[0.2em] text-muted-foreground">출품</span>
+        <h2 className="text-base font-semibold text-foreground">{contest.name}</h2>
+      </div>
+      <p className="mt-1.5 text-sm text-muted-foreground">{contest.host}</p>
+      <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">{contest.schedule}</p>
+
+      <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="rounded-md border border-border bg-card-2 px-2 py-1 text-xs text-foreground">
+          {contest.result}
+        </span>
+        {contest.resultNote && (
+          <span className="text-xs text-muted-foreground">{contest.resultNote}</span>
+        )}
+      </p>
     </section>
   );
 }

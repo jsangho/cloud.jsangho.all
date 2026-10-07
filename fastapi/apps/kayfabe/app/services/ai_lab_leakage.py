@@ -303,7 +303,18 @@ def _contributions(
     for ground in grounds:
         codes: list[str] = []
         # 자기참조는 **언제나 인용 출처**를 본다(`_self_reference`).
-        if ground.in_sources and cites_own_event((ground.url,), row.event_label):
+        #
+        # **판본 조건도 함께 본다** (2026-10-07). 판정은 2026-09-30(`cdce41a`)부터
+        # 경기보다 앞선 판본을 통과시키는데 여기는 따라오지 않아서, 그 규칙이 막지
+        # 않은 문서에 `self_reference`를 귀속시킬 수 있었다 — 위 docstring이 경고한
+        # "그래프가 판정과 다른 이야기를 한다"가 바로 그것이다. 비교식은 아래
+        # `unverifiable_corpus`가 쓰는 것과 **같은 것 하나**다.
+        if (
+            ground.in_sources
+            and cites_own_event((ground.url,), row.event_label)
+            and _temporal_position(ground.revised_at, row.event_start_date)
+            != EVIDENCE_BEFORE_EVENT
+        ):
             codes.append("self_reference")
         if (ground.in_retrievals if uses_retrievals else ground.in_sources) and (
             _temporal_position(ground.revised_at, row.event_start_date)

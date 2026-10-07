@@ -315,6 +315,26 @@ def test_a_source_only_document_carries_no_time_blame_when_records_exist() -> No
     assert entry.codes == ("self_reference",)
 
 
+def test_an_event_document_proven_older_than_the_match_is_not_blamed() -> None:
+    """**판정이 막지 않은 것을 그래프가 원인으로 지목하면 안 된다** (2026-10-07).
+
+    자기참조는 2026-09-30부터 "경기보다 앞선 판본"을 통과시키는데 `_contributions`가
+    그 조건을 안 봐서, 통과한 규칙을 문서에 귀속시킬 수 있었다. `_own_doc`이 판본을
+    일부러 경기 뒤로 두는 탓에 기존 테스트로는 드러나지 않았다.
+
+    여기서는 **판본이 경기보다 앞선** 대회 문서를 주고, 막는 일은 다른 규칙
+    (`temporal_inversion`)에 맡긴다 — 그래야 `_contributions`가 돌면서도 자기참조는
+    통과한 상태가 된다. 이 문서는 아무 코드도 받지 않으므로 그래프에서 빠진다.
+    """
+    _, graph = summarize_leakage(
+        [_prediction(generated_at=_AFTER_EVENT)],
+        [_report(sources=(_OWN,))],
+        [_document(url=_OWN, revised_at=_CLEAN)],
+    )
+
+    assert [doc.source_url for doc in graph] == []
+
+
 def test_the_revision_rule_only_speaks_where_there_is_a_record() -> None:
     """예측보다 나중에 고쳐진 글은 **기록이 있을 때만** 물을 수 있다.
 

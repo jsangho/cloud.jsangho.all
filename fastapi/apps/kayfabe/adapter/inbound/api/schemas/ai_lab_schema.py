@@ -674,6 +674,9 @@ class ReadinessMineSchema(_Camel):
     title: str | None = None
     chunks: int
     chunks_with_revision: int = Field(alias="chunksWithRevision")
+    revision_before_event: bool = Field(alias="revisionBeforeEvent")
+    """개정본이 경기보다 앞선 것으로 **증명되는가**. True면 목록에는 남지만 실격
+    위험을 만들지 않는다 — 판정(`_self_reference`)과 같은 조건이다."""
 
 
 class ReadinessEventSchema(_Camel):

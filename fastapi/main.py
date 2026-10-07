@@ -27,7 +27,7 @@ _APPS_DIR = os.path.join(os.path.dirname(__file__), "apps")
 if _APPS_DIR not in sys.path:
     sys.path.insert(0, _APPS_DIR)
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -79,6 +79,19 @@ class SeoulWeatherResponse(BaseModel):
     temp_c: float
     description: str
     condition_id: int
+
+
+class HealthzResponse(BaseModel):
+    """`/healthz` 본문. 값은 아래 셋뿐이다.
+
+    - `ok`: DB가 **설정됐는데 안 닿는** 상태가 아니면 True
+    - `db`: `ok` · `unconfigured` · `error`
+    - `gemini`: `ready` · `unconfigured`
+    """
+
+    ok: bool
+    db: str
+    gemini: str
 
 
 @asynccontextmanager
@@ -146,6 +159,48 @@ async def log_auth_requests(request: Request, call_next):
 @app.get("/")
 def read_root():
     return {"message": "FAST API 메인 페이지 ", "docs": "/docs"}
+
+
+@app.get("/healthz", response_model=HealthzResponse)
+async def healthz(response: Response) -> HealthzResponse:
+    """probe와 외부 uptime 감시가 함께 보는 상태 점검.
+
+    **왜 `/` 로 안 되는가**: `k8s/30-backend.yaml`의 probe가 `tcpSocket: 8000`이라
+    포트만 열려 있으면 통과한다 — 앱이 모든 요청에 500을 뿜어도 Ready로 읽힌다.
+    probe를 이 경로로 돌려서 ASGI 앱이 실제로 응답하는지까지 본다.
+
+    **DB가 안 닿아도 503을 내지 않는다.** 소비자가 둘이고 목적이 다르기 때문이다:
+
+    - probe는 *재시작·라우팅*을 결정한다. Supabase가 한 번 끊겼다고 파드를 내리면
+      단일 레플리카에서는 DB를 쓰지 않는 엔드포인트까지 같이 죽는다. 재시작으로
+      고쳐지지 않는 외부 의존을 readiness에 걸지 않는다.
+    - 외부 uptime 감시는 *알림*을 결정한다. 그쪽은 본문의 `"ok": true` 키워드를 보게
+      해 두면 파드를 건드리지 않고도 DB 이상을 알린다.
+
+    **`unconfigured`는 고장이 아니라 선언된 모드다.** 로컬 `.env`는 `DATABASE_URL`이
+    비어 있어 `engine`이 None인 채로 기동하는 것이 정상이다(루트 CLAUDE.md). 이 값을
+    실패로 세면 로컬 파드가 영영 Ready가 되지 않는다.
+    """
+    db = "unconfigured"
+    if engine is not None:
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            db = "ok"
+        except Exception:
+            # 본문으로 상태를 알리는 것이 이 엔드포인트의 일이므로 예외를 올리지
+            # 않는다. 대신 원인을 로그에 남긴다 — 알림을 받고 들어와서 읽을 자리다.
+            logger.exception("[healthz] DB 점검 실패")
+            db = "error"
+
+    # 200을 유지하는 이유는 위 docstring에 있다. 헤더는 캐시만 막는다.
+    response.headers["Cache-Control"] = "no-store"
+
+    return HealthzResponse(
+        ok=db != "error",
+        db=db,
+        gemini="ready" if keymaker.is_gemini_ready() else "unconfigured",
+    )
 
 
 @app.post("/chat", response_model=ChatResponse)
