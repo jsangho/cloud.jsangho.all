@@ -126,6 +126,8 @@ function Hero({ study }: { study: CaseStudy }) {
         )}
       </dl>
 
+      {study.contest && <Contest contest={study.contest} />}
+
       <div className="relative mt-7 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
         <Image
           src={study.image}
@@ -152,6 +154,35 @@ function Hero({ study }: { study: CaseStudy }) {
           </a>
         ))}
       </div>
+    </section>
+  );
+}
+
+/**
+ * 출품한 대회 한 줄.
+ *
+ * **결과 배지에 골드를 쓰지 않는다.** 골드는 이 시스템에서 "가져갈 수 있는 것" —
+ * 랭킹·성취의 색이다 (DESIGN.md §2). 출품은 성취가 아니고, 떨어진 출품에 금색을
+ * 칠하면 화면이 거짓말을 한다. 수상 기록이 생기면 **그때** 골드를 쓸지 정한다.
+ */
+function Contest({ contest }: { contest: NonNullable<CaseStudy["contest"]> }) {
+  return (
+    <section className="mt-5 rounded-xl border border-border bg-card p-4 sm:p-5" aria-label="출품">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-sport text-xs tracking-[0.2em] text-muted-foreground">출품</span>
+        <h2 className="text-base font-semibold text-foreground">{contest.name}</h2>
+      </div>
+      <p className="mt-1.5 text-sm text-muted-foreground">{contest.host}</p>
+      <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">{contest.schedule}</p>
+
+      <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="rounded-md border border-border bg-card-2 px-2 py-1 text-xs text-foreground">
+          {contest.result}
+        </span>
+        {contest.resultNote && (
+          <span className="text-xs text-muted-foreground">{contest.resultNote}</span>
+        )}
+      </p>
     </section>
   );
 }

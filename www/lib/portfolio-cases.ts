@@ -38,6 +38,32 @@ export type CaseStudy = {
     mine: string;
     members: readonly { name: string; part: string }[];
   };
+  /**
+   * 출품한 대회. 혼자 만든 것이거나 어디에도 안 낸 것은 비운다.
+   *
+   * 🔴 **`result` 는 비울 수 없다**: 대회 이름만 적고 이 칸을 빼면 읽는 사람은
+   * 수상했다고 읽는다. 그 자리를 채우는 것이 이 칸의 일이다.
+   *
+   * 다만 **못 받은 상을 굳이 적지는 않는다** (2026-10-07 사용자). 「출품」은
+   * 그 자체로 완결된 답이다 — 냈다는 사실을 말하고 상을 주장하지 않는다.
+   * 「수상하지 않았습니다」까지 적는 것은 사실을 더하는 게 아니라 같은 사실을
+   * 스스로 깎아 말하는 것이다. **단, 받지 않은 상을 적지 않는다는 규칙은
+   * 그대로다** — 여기에 쓸 수 있는 것은 실제로 도달한 단계뿐이다.
+   *
+   * **링크는 두지 않는다** (2026-10-07 사용자 결정). 대회 공고·이벤트
+   * 페이지는 끝나면 내려가고, 그러면 포트폴리오에 죽은 링크가 남는다.
+   * 이름·주최·일정을 글자로 적어 두면 링크 없이도 검증할 수 있다.
+   */
+  contest?: {
+    name: string;
+    host: string;
+    /** 대회 일정. **프로젝트 기간과 다르다** — 둘을 섞지 않는다. */
+    schedule: string;
+    /** 어디까지 갔는지. 수상하지 않았으면 그대로 적는다. */
+    result: string;
+    /** 결과가 아직 확정이 아닐 때, 언제 기준의 상태인지. */
+    resultNote?: string;
+  };
   links: readonly { href: string; label: string; note?: string }[];
   image: string;
   imageAlt: string;
@@ -938,6 +964,13 @@ const SUPERSUB: CaseStudy = {
       { name: "정상호", part: "AI 에이전트 — 포즈 추정 · 등급 판정 · 근거 문장 · GPU 배포" },
     ],
   },
+  contest: {
+    name: "Wanted AI Championship 2026",
+    host: "원티드랩 · 메인 파트너 KRAFTON",
+    schedule: "접수 8.24–9.18 · 구현 마감 9.20 · 예선 9.21–10.5 · 데모데이 10.17",
+    result: "예선 심사 중",
+    resultNote: "TOP 20 발표가 2026-10-07 입니다 — 이 줄은 그날 기준입니다",
+  },
   links: [
     {
       href: "https://supersub.jsangho.cloud",
@@ -1174,6 +1207,12 @@ const GAON: CaseStudy = {
       { name: "정어진", part: "백엔드 — 문화유산 퀴즈·포인트, 시드 데이터" },
       { name: "정상호", part: "관광동선 지도 · 문화재 3D 공간 · 문화유산 라우터" },
     ],
+  },
+  contest: {
+    name: "2026 충청북도 공공데이터·AI 활용 창업경진대회",
+    host: "충청북도 주최 · 충북과학기술혁신원 주관",
+    schedule: "접수 4.13–6.28 · 서류평가 7.7 · 시상식 7.28",
+    result: "출품",
   },
   links: [
     { href: "https://gaonai.cloud", label: "gaonai.cloud", note: "운영 중" },
