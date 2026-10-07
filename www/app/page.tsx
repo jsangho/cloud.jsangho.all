@@ -3,6 +3,7 @@ import { Github, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProjectBanner, type PortfolioProject } from "@/components/portfolio/project-banner";
 import { TechStack, type StackGroup } from "@/components/portfolio/tech-stack";
+import { CASES } from "@/lib/portfolio-cases";
 
 /**
  * 개인 포트폴리오 — `www.jsangho.cloud` 의 첫 화면 (2026-09-30).
@@ -420,6 +421,9 @@ export default function PortfolioPage() {
         </div>
       </section>
 
+      {/* ── 출품 ────────────────────────────────────────────────────────── */}
+      <Contests />
+
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-muted-foreground">
           <span>정상호 · 2026</span>
@@ -440,5 +444,69 @@ export default function PortfolioPage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+/**
+ * 출품 기록 — 해커톤·경진대회에 낸 것.
+ *
+ * **여기에 사실을 새로 적지 않는다.** 내용은 전부 `lib/portfolio-cases.ts` 의
+ * `contest` 에서 읽어 온다. 첫 화면과 상세 페이지에 같은 사실을 두 벌로 적으면
+ * 한쪽만 고치는 날이 오고, 그때 어느 쪽이 맞는지 알 수 없게 된다.
+ *
+ * 순서는 `CASES` 를 따른다 — 위 「만든 것」 카드와 같은 순서라 눈이 두 섹션을
+ * 오갈 때 어긋나지 않는다.
+ *
+ * **결과 배지에 골드를 쓰지 않는다.** 골드는 "가져갈 수 있는 것" — 랭킹·성취의
+ * 색이다(DESIGN.md §2). 출품은 성취가 아니다.
+ */
+function Contests() {
+  const entries = CASES.filter((item) => item.contest != null);
+  if (entries.length === 0) return null;
+
+  return (
+    <section className="mx-auto w-full max-w-4xl px-4 pb-16" aria-labelledby="contests">
+      <h2 id="contests" className="font-sport text-xl text-foreground">
+        출품
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        해커톤과 경진대회에 낸 기록입니다. 받지 않은 상은 적지 않습니다.
+      </p>
+
+      <ul className="mt-5 flex flex-col gap-3">
+        {entries.map((item) => {
+          // `filter` 는 타입을 좁혀 주지 않는다. 위에서 걸렀으므로 여기서는 있다.
+          const contest = item.contest;
+          if (!contest) return null;
+
+          return (
+            <li key={item.slug}>
+              <Link
+                href={`/cases/${item.slug}`}
+                className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-card-2 sm:flex-row sm:items-start sm:gap-5 sm:p-5"
+              >
+                <span className="font-sport text-base leading-tight text-foreground sm:w-28 sm:shrink-0">
+                  {item.name}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-foreground">
+                    {contest.name}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{contest.host}</span>
+                  <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                    {contest.schedule}
+                  </span>
+                </span>
+
+                <span className="shrink-0 rounded-md border border-border bg-card-2 px-2 py-1 text-xs text-foreground">
+                  {contest.result}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
