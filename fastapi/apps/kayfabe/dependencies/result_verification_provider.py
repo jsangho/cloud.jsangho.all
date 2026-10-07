@@ -42,6 +42,7 @@ from kayfabe.adapter.outbound.pg.ple_events_pg_repository import PleEventsPgRepo
 from kayfabe.app.ports.input.result_verification_use_case import (
     ResultVerificationUseCase,
 )
+from kayfabe.app.services.wiki_result_lookup import WikiResultLookup
 from kayfabe.app.use_cases.result_verification_interactor import (
     ResultVerificationInteractor,
 )
@@ -61,12 +62,26 @@ def get_result_verification(
     return get_result_verification_use_case(db)
 
 
-def get_result_verification_use_case(db: AsyncSession) -> ResultVerificationUseCase:
+def get_result_verification_use_case(
+    db: AsyncSession, *, use_wiki_engine: bool = True
+) -> ResultVerificationUseCase:
+    """**기본이 위키 엔진이다** (2026-10-07).
+
+    결과 표가 템플릿이라 승자를 모델 없이 읽을 수 있고, 운영 DB의 확정값 63건을
+    100% 재현했다(`app/services/wiki_result_lookup` 독스트링에 실측이 적혀 있다).
+    모델은 위키가 못 읽은 경기에만 붙는 **폴백**으로 남는다 — 템플릿을 안 쓰는
+    문서와 무승부가 실제로 있다.
+
+    `use_wiki_engine=False`면 예전처럼 모델만 쓴다. 두 엔진의 답을 견줘야 할 때
+    쓰는 문이고, 평소에 끌 이유는 없다.
+    """
+    articles = get_wiki_article_port()
     return ResultVerificationInteractor(
         pending=PendingResultPgRepository(db=db),
         writer=MatchResultPgWriter(events=PleEventsPgRepository(db)),
         tools=get_gemini_tool_use_case(),
         titles=get_wiki_title_port(),
-        articles=get_wiki_article_port(),
+        articles=articles,
+        wiki=WikiResultLookup(articles) if use_wiki_engine else None,
         model=_model(),
     )

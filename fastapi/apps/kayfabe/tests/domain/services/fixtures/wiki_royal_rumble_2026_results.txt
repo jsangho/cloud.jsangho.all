@@ -1,0 +1,226 @@
+==Results==
+{{Pro wrestling results table
+|times  = 
+|match1 = The Wyatt Sicks (Dexter Lumis and Joe Gacy) defeated The MFTs (Solo Sikoa and Tama Tonga)
+|stip1  = Tag team match
+|time1  = 10:27
+|note1  = dark
+|match2 = Motor City Machine Guns (Alex Shelley and Chris Sabin) and Shinsuke Nakamura defeated The New Day (Kofi Kingston and Xavier Woods) and Grayson Waller
+|stip2  = Six-man tag team match
+|time2  = 11:15
+|note2  = dark
+|match3 = Liv Morgan won by last eliminating Tiffany Stratton
+|stip3  = 30-woman Royal Rumble match for a world championship match at WrestleMania 42
+|time3  = 1:07:00
+|match4 = Gunther defeated AJ Styles by technical submission
+|stip4  = Career Threatening match<br />{{small|Since Styles lost, he was forced to retire from in-ring competition.}}
+|time4  = 24:15
+|match5 = Drew McIntyre (c) defeated Sami Zayn by pinfall
+|stip5  = Singles match for the Undisputed WWE Championship
+|time5  = 16:15
+|match6 = Roman Reigns won by last eliminating Gunther
+|stip6  = 30-man Royal Rumble match for a world championship match at WrestleMania 42
+|time6  = 56:10 
+}}
+
+===Women's Royal Rumble match entrances and eliminations===
+:{{Color box|#FBB|border=black}} – Raw
+:{{Color box|#BBF|border=black}} – SmackDown
+:{{Color box|#FFB|border=black}} – NXT
+:{{Color box|beige|border=black}} – Hall of Famer (HOF)
+:{{Color box|gold|border=black}} – Winner
+
+{{Sticky header}}
+{| class="wikitable sortable sticky-header"
+|-
+!Draw
+!Entrant
+!Brand/Status
+!Order
+!Eliminated by
+!Time
+!Elimination(s)
+|- style="background: #BBF ;
+| {{sort|01|1}}||Charlotte Flair||SmackDown||23||Lash Legend||59:49||2
+|- style="background: #BBF ;
+| {{sort|02|2}}||Alexa Bliss||SmackDown||5||Charlotte Flair||13:29||0
+|- style="background: #BBF ;
+| {{sort|03|3}}||Kiana James||SmackDown||9||Raquel Rodriguez||27:30||0
+|- style="background: #BBF ;
+| {{sort|04|4}}||Nia Jax||SmackDown||4||Charlotte Flair||09:29||0
+|- style="background: #FBB ;
+| {{sort|05|5}}||Ivy Nile||Raw||3||Jordynne Grace||06:24||0
+|- style="background: #FFB ;
+| {{sort|06|6}}||Lola Vice||NXT||1||Jordynne Grace||04:32||0
+|- style="background: #BBF ;
+| {{sort|07|7}}||Candice LeRae||SmackDown||2||Jordynne Grace||02:13||0
+|- style="background: #BBF ;
+| {{sort|08|8}}||Jordynne Grace||SmackDown||8||Lash Legend||14:47||3
+|- style="background: #FBB ;
+| {{sort|09|9}}||Becky Lynch||Raw||7||Nattie||07:35||1
+|- style="background: #FFB ;
+| {{sort|10|10}}||Sol Ruca||NXT||28||Tiffany Stratton||50:47||1
+|- style="background: #FBB ;
+| {{sort|11|11}}||Roxanne Perez||Raw||12||Rhea Ripley||22:12||0
+|- style="background: #FBB ;
+| {{sort|12|12}}||Maxxine Dupri||Raw||6||Becky Lynch||02:47||0
+|- style="background: #FBB ;
+| {{sort|13|13}}||Nattie||Raw||13||Liv Morgan||23:01||1
+|- style="background: gold ;
+| {{sort|14|14}}||Liv Morgan||Raw||{{sort|30|—}}||Winner||43:50||3
+|- style="background: #BBF ;
+| {{sort|15|15}}||Lash Legend||SmackDown||25||Rhea Ripley||38:46||5
+|- style="background: #BBF ;
+| {{sort|16|16}}||Zelina||SmackDown||10||Giulia||10:54||0
+|- style="background: #FBB ;
+| {{sort|17|17}}||Raquel Rodriguez||Raw||27||Liv Morgan||35:29||2
+|- style="background: #BBF ;
+| {{sort|18|18}}||Chelsea Green||SmackDown||11||Rhea Ripley||08:35||0
+|- style="background: #BBF ;
+| {{sort|19|19}}||Giulia||SmackDown||14||Lyra Valkyria||15:15||1
+|- style="background: #FBB ;
+| {{sort|20|20}}||Iyo Sky||Raw||24||Lash Legend||27:31||1
+|- style="background: #FBB ;
+| {{sort|21|21}}||Asuka||Raw||15||Kairi Sane||14:36||0
+|- style="background: #FBB ;
+| {{sort|22|22}}||Rhea Ripley||Raw||26||Raquel Rodriguez||25:40||3
+|- style="background: #FBB ;
+| {{sort|23|23}}||Bayley||Raw||18||Nikki Bella||16:22||0
+|- style="background: #FFB ;
+| {{sort|24|24}}||Jacy Jayne||NXT||20||Sol Ruca||16:11||1
+|- style="background: #FBB ;
+| {{sort|25|25}}||Nikki Bella||Raw (HOF)||21||Lash Legend||14:02||1
+|- style="background: #FBB ;
+| {{sort|26|26}}||Lyra Valkyria||Raw||17||Brie Bella||10:44||1
+|- style="background: #FFB ;
+| {{sort|27|27}}||Kelani Jordan||NXT||19||Jacy Jayne||09:22||0
+|- style="background: #FBB ;
+| {{sort|28|28}}||Kairi Sane||Raw||16||Iyo Sky||01:36||1
+|- style="background: beige ;
+| {{sort|29|29}}||Brie Bella||HOF||22||Lash Legend||06:50||1
+|- style="background: #BBF ;
+| {{sort|30|30}}||Tiffany Stratton||SmackDown||29||Liv Morgan||12:48||1
+|}
+
+===Men's Royal Rumble match entrances and eliminations===
+:{{Color box|#FBB|border=black}} – Raw
+:{{Color box|#BBF|border=black}} – SmackDown
+:{{Color box|lightgreen|border=black}} – AAA
+:{{Color box|#FFF|border=black}} – Unaffiliated
+:{{Color box|beige|border=black}} – Hall of Famer (HOF)
+:{{Color box|gold|border=black}} – Winner
+
+{{Sticky header}}
+{| class="wikitable sortable sticky-header"
+|-
+!Draw
+!Entrant
+!Brand/Status
+!Order
+!Eliminated by
+!Time
+!Elimination(s)
+|- style="background: #FFF ;
+| {{sort|01|1}}||Oba Femi||Unaffiliated||18||Brock Lesnar||39:04||5
+|- style="background: #FBB ;
+| {{sort|02|2}}||Bron Breakker||Raw||1||Oba Femi||00:10||0
+|- style="background: #BBF ;
+| {{sort|03|3}}||Solo Sikoa||SmackDown||3||Oba Femi||03:51||0
+|- style="background: #FBB ;
+| {{sort|04|4}}||Rey Mysterio||Raw (HOF)||4||Oba Femi||02:43||0
+|- style="background: #FBB ;
+| {{sort|05|5}}||Rusev||Raw||2||Oba Femi||00:32||0
+|- style="background: #BBF ;
+| {{sort|06|6}}||Matt Cardona||SmackDown||5||Oba Femi||00:55||0
+|- style="background: #BBF ;
+| {{sort|07|7}}||Damian Priest||SmackDown||10||Royce Keys||11:06||0
+|- style="background: #FBB ;
+| {{sort|08|8}}||Je'Von Evans||Raw||22||Randy Orton||40:58||0
+|- style="background: lightgreen;
+| {{sort|09|9}}||Mr. Iguana||AAA||6||Trick Williams||02:05||0
+|- style="background: #BBF ;
+| {{sort|10|10}}||Trick Williams||SmackDown||9||Cody Rhodes||06:19||2
+|- style="background: #BBF ;
+| {{sort|11|11}}||Cody Rhodes||SmackDown||24||Drew McIntyre{{efn|Drew McIntyre was not an official participant in the match.}}||36:50||3
+|- style="background: #FBB ;
+| {{sort|12|12}}||El Grande Americano||Raw||7|||"The Original" El Grande Americano||02:45||0
+|- style="background: #FBB ;
+| {{sort|13|13}}||"The Original" El Grande Americano||Raw||8||Trick Williams||01:21||1
+|- style="background: #FFF ;
+| {{sort|14|14}}||Royce Keys||Unaffiliated||11||Bronson Reed||09:55||1
+|- style="background: #FBB ;
+| {{sort|15|15}}||Austin Theory||Raw||14||LA Knight||10:08||1
+|- style="background: #FBB ;
+| {{sort|16|16}}||Bronson Reed||Raw||15||LA Knight||09:02||2
+|- style="background: #BBF ;
+| {{sort|17|17}}||Ilja Dragunov||SmackDown||16||Brock Lesnar||11:00||0
+|- style="background: lightgreen ;
+| {{sort|18|18}}
+|La Parka
+|AAA||12||Austin Theory||04:26||0
+|- style="background: #FBB ;
+| {{sort|19|19}}||Dragon Lee||Raw||13||Bronson Reed||03:01||0
+|- style="background: #FBB ;
+| {{sort|20|20}}||Logan Paul||Raw||27||Roman Reigns||25:07||0
+|- style="background: #FBB ;
+| {{sort|21|21}}||LA Knight||Raw||21||Cody Rhodes||14:25||3
+|- style="background: #FFF ;
+| {{sort|22|22}}||Brock Lesnar||Unaffiliated||19||Cody Rhodes and LA Knight||05:32||3
+|- style="background: #BBF ;
+| {{sort|23|23}}||The Miz||SmackDown||20||Roman Reigns||07:05||0
+|- style="background: #BBF ;
+| {{sort|24|24}}||Rey Fenix||SmackDown||17||Brock Lesnar||00:28||0
+|- style="background: #FBB ;
+| {{sort|25|25}}||Jey Uso||Raw||26||Roman Reigns||13:08||0
+|- style="background: gold
+| {{sort|26|26}}||Roman Reigns||Raw||{{sort|30|—}}||Winner||15:48||5
+|- style="background: #BBF ;
+| {{sort|27|27}}||Jacob Fatu||SmackDown||25||Roman Reigns||09:01||0
+|- style="background: #FBB ;
+| {{sort|28|28}}||Penta||Raw||23||Gunther||06:01||0
+|- style="background: #BBF ;
+| {{sort|29|29}}||Randy Orton||SmackDown||28||Gunther||07:40||1
+|- style="background: #FBB ;
+| {{sort|30|30}}||Gunther||Raw||29||Roman Reigns||07:51||2
+|}
+
+=== WWE Championship No. 1 Contender's Tournament ===
+{{See also|List of WWE tournaments}}
+<div style="display: table; margin: 0 auto;">
+{{8TeamBracket-4WayFinal
+| score-width = 70
+
+| RD1 = Qualifiers<br>SmackDown<br />{{small|January 16, 2026}}
+| RD2 = Final<br>Saturday Night's Main Event<br />{{small|January 24, 2026}}
+
+| RD1-team1 = Randy Orton
+| RD1-team2 = The Miz
+| RD1-score1 = <div style="background-color:#ffb; padding:0em">{{small|Pinfall}}</div>
+| RD1-score2 = 4:30
+
+| RD1-team3 = Matt Cardona
+| RD1-team4 = Trick Williams
+| RD1-score3 = 8:50
+| RD1-score4 = <div style="background-color:#ffb; padding:0em">{{small|Pinfall}}</div>
+
+| RD1-team5 = Damian Priest
+| RD1-team6 = Solo Sikoa
+| RD1-score5 = <div style="background-color:#ffb; padding:0em">{{small|Pinfall}}</div>
+| RD1-score6 = 9:45
+
+| RD1-team7 = Sami Zayn
+| RD1-team8 = Ilja Dragunov
+| RD1-score7 = <div style="background-color:#ffb; padding:0em">{{small|Pinfall}}</div>
+| RD1-score8 = 12:30
+
+| RD2-team1 = Randy Orton
+| RD2-team2 = Trick Williams
+| RD2-team3 = Damian Priest
+| RD2-team4 = Sami Zayn
+| RD2-score1 = —
+| RD2-score2 = —
+| RD2-score3 = 17:00
+| RD2-score4 = <div style="background-color:#ffb; padding:0em">{{small|Pinfall}}</div>
+
+}}
+</div>

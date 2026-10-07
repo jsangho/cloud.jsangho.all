@@ -96,7 +96,7 @@ function AiPickBanner({
           </span>
         )}
         {prediction && isBookmakerFallback(prediction) && (
-          <span className="shrink-0 rounded-md border border-stone-300/70 dark:border-stone-600/70 px-1.5 py-0.5 text-[11px] text-stone-500">
+          <span className="shrink-0 rounded-md border border-stone-300/70 dark:border-stone-600/70 px-1.5 py-0.5 text-xs text-stone-500">
             배당 폴백
           </span>
         )}
@@ -105,7 +105,7 @@ function AiPickBanner({
         {graded && (
           <span
             className={cn(
-              "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
+              "shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold",
               aiCorrect
                 ? "border border-chart-win/50 bg-chart-win/10 text-chart-win"
                 : "border border-live/50 bg-live/10 text-live",
@@ -128,6 +128,34 @@ function AiPickBanner({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * 접히는 근거 블록.
+ *
+ * **카드 한 장에 퍼센트 막대가 셋이었다** (2026-10-07 사용자 — "뭘 어떻게 봐야할지도
+ * 모르겠다"). AI 승률 · 사이트 투표 · 북메이커 배당이 전부 「가로 막대 + %」로 생겨
+ * 뜻이 다른 셋을 눈이 구분하지 못했다. 셋 다 지우지 않고 **기본 상태에서 하나만**
+ * 세운다 — AI 예측이 이 카드의 결론이고, 투표와 배당은 그 결론을 재는 근거다.
+ *
+ * `<details>` 를 쓰는 이유: 열림 상태가 DOM에 있어 JS 없이도 동작하고, 스크린리더가
+ * 접힌 사실을 그대로 읽는다. 상태를 React로 들고 있을 이유가 없다.
+ */
+function EvidenceDisclosure({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="group border-t border-stone-200/50 dark:border-white/8">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2.5 text-xs font-medium text-stone-500 transition-colors hover:text-stone-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-400/60 dark:hover:text-stone-300 sm:px-4 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="transition-transform group-open:rotate-90">
+          ›
+        </span>
+        <span className="group-open:hidden">{BRACKET_LABELS.evidenceShow}</span>
+        <span className="hidden group-open:inline">{BRACKET_LABELS.evidenceHide}</span>
+      </summary>
+      <div className="space-y-2.5 bg-stone-50/50 px-3 pb-3 dark:bg-white/[0.03] sm:px-4">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -230,7 +258,7 @@ function CompetitorPick({
       {isSelected && (
         <span
           className={cn(
-            "mt-0.5 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white",
+            "mt-0.5 rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white",
             outcome == null ? "bg-brand-600" : "bg-brand-700",
           )}
         >
@@ -238,12 +266,12 @@ function CompetitorPick({
         </span>
       )}
       {outcome === "win" && (
-        <span className="mt-0.5 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+        <span className="mt-0.5 rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
           {BRACKET_LABELS.win}
         </span>
       )}
       {outcome === "loss" && (
-        <span className="mt-0.5 rounded bg-stone-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+        <span className="mt-0.5 rounded-md bg-stone-400 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
           {BRACKET_LABELS.loss}
         </span>
       )}
@@ -265,7 +293,7 @@ function SiteVoteBarTwoWay({
   if (total === 0) {
     return (
       <div className="space-y-1">
-        <div className="flex items-center justify-between text-[10px] sm:text-xs">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-stone-500">{BRACKET_LABELS.siteVote}</span>
           <span className="text-stone-600">{BRACKET_LABELS.noVotesYet}</span>
         </div>
@@ -302,7 +330,7 @@ function SiteVoteMulti({
   if (total === 0) {
     return (
       <div className="space-y-1">
-        <div className="flex items-center justify-between text-[10px] sm:text-xs">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-stone-500">{BRACKET_LABELS.siteVote}</span>
           <span className="text-stone-600">{BRACKET_LABELS.noVotesYet}</span>
         </div>
@@ -313,15 +341,13 @@ function SiteVoteMulti({
 
   return (
     <div className="space-y-2">
-      <span className="text-[10px] font-medium text-stone-500 sm:text-xs">
-        {BRACKET_LABELS.siteVote}
-      </span>
+      <span className="text-xs font-medium text-stone-500">{BRACKET_LABELS.siteVote}</span>
       <ul className="space-y-1.5">
         {competitors.map((c, i) => {
           const pct = Math.round((votes[i]! / total) * 1000) / 10;
           return (
             <li key={`${c.name}-${i}`} className="space-y-0.5">
-              <div className="flex justify-between gap-2 text-[10px] sm:text-xs">
+              <div className="flex justify-between gap-2 text-xs">
                 <span className="truncate font-medium text-stone-400">{c.name}</span>
                 <span className="shrink-0 tabular-nums font-semibold text-stone-300">{pct}%</span>
               </div>
@@ -356,7 +382,7 @@ function DualStatBar({
 }) {
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-[10px] sm:text-xs">
+      <div className="flex items-center justify-between text-xs">
         <span className={cn("font-medium", muted ? "text-stone-400" : "text-stone-500")}>
           {label}
         </span>
@@ -394,7 +420,7 @@ function BookmakerSources({ consensus }: { consensus: { books: string[]; dispers
   if (books.length === 0) return null;
 
   return (
-    <p className="text-center text-[9px] text-stone-600 tabular-nums">
+    <p className="text-center text-xs text-stone-600 tabular-nums">
       {books.length > 1
         ? `북메이커 ${books.length}곳 합의 · ${books.join(", ")} · 편차 ${Math.round(consensus.dispersion * 1000) / 10}%p`
         : `${books[0]} 단독`}
@@ -422,14 +448,12 @@ function BookmakerMulti({
 
   return (
     <div className="space-y-2">
-      <span className="text-[10px] font-medium text-stone-400 sm:text-xs">
-        {BRACKET_LABELS.bookmaker}
-      </span>
+      <span className="text-xs font-medium text-stone-400">{BRACKET_LABELS.bookmaker}</span>
       <ul className="space-y-1">
         {competitors.map((c, i) => (
           <li
             key={`${c.name}-${i}`}
-            className="flex justify-between gap-2 text-[10px] tabular-nums text-stone-500 sm:text-xs"
+            className="flex justify-between gap-2 text-xs tabular-nums text-stone-500"
           >
             <span className="truncate">{c.name}</span>
             <span className="shrink-0 font-semibold">{percents[i]}%</span>
@@ -469,17 +493,8 @@ export function MatchBracketCard({
           <div className="ple-match-card-header px-3 py-2.5 text-center text-xs font-semibold leading-snug text-stone-900 dark:text-white sm:text-sm">
             {match.title}
           </div>
-          <AiPickBanner
-            slug={slug}
-            matchTitle={match.title}
-            aiPickName={aiPickName}
-            aiCorrect={aiCorrect}
-            showResults={displayResults}
-            prediction={prediction}
-          />
-
           <div className="border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-black/20 p-2">
-            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wide text-stone-500">
+            <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-stone-500">
               {BRACKET_LABELS.participants}
             </p>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -502,15 +517,24 @@ export function MatchBracketCard({
             </div>
           </div>
 
-          <div className="space-y-2.5 border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-white/[0.03] px-3 py-2.5 sm:px-4">
+          <AiPickBanner
+            slug={slug}
+            matchTitle={match.title}
+            aiPickName={aiPickName}
+            aiCorrect={aiCorrect}
+            showResults={displayResults}
+            prediction={prediction}
+          />
+
+          <EvidenceDisclosure>
             <SiteVoteMulti competitors={match.competitors} votes={multiVotes} barClass={barClass} />
             <BookmakerMulti
               competitors={match.competitors}
               decimals={match.bookmakerDecimal}
               quotes={match.bookmakerQuotes}
             />
-            <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
-          </div>
+            <p className="text-center text-xs text-stone-600">{BRACKET_LABELS.bookNote}</p>
+          </EvidenceDisclosure>
         </div>
       </article>
     );
@@ -535,15 +559,6 @@ export function MatchBracketCard({
         <div className="ple-match-card-header px-3 py-2.5 text-center text-xs font-semibold leading-snug text-white sm:text-sm">
           {match.title}
         </div>
-        <AiPickBanner
-          slug={slug}
-          matchTitle={match.title}
-          aiPickName={aiPickName}
-          aiCorrect={aiCorrect}
-          showResults={displayResults}
-          prediction={prediction}
-        />
-
         <div className="relative flex border-t border-stone-200/50 dark:border-white/8 bg-stone-50/50 dark:bg-black/20">
           <CompetitorPick
             competitor={match.left}
@@ -566,7 +581,16 @@ export function MatchBracketCard({
           />
         </div>
 
-        <div className="space-y-2.5 border-t border-white/8 bg-white/[0.03] px-3 py-2.5 sm:px-4">
+        <AiPickBanner
+          slug={slug}
+          matchTitle={match.title}
+          aiPickName={aiPickName}
+          aiCorrect={aiCorrect}
+          showResults={displayResults}
+          prediction={prediction}
+        />
+
+        <EvidenceDisclosure>
           <SiteVoteBarTwoWay
             votes={singlesVotes}
             leftBarClass={leftStyle.voteBar}
@@ -583,8 +607,8 @@ export function MatchBracketCard({
             />
           )}
           {consensus && <BookmakerSources consensus={consensus} />}
-          <p className="text-center text-[9px] text-stone-600">{BRACKET_LABELS.bookNote}</p>
-        </div>
+          <p className="text-center text-xs text-stone-600">{BRACKET_LABELS.bookNote}</p>
+        </EvidenceDisclosure>
       </div>
     </article>
   );

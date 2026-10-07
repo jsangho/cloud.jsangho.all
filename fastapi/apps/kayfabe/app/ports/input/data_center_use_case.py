@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
+    BeltDetailResponse,
     ChampionshipStatsResponse,
     DataCenterOverviewResponse,
     MatchPageQuery,
@@ -31,6 +32,11 @@ class DataCenterUseCase(ABC):
 
     @abstractmethod
     async def get_championship_stats(self) -> ChampionshipStatsResponse: ...
+
+    @abstractmethod
+    async def get_belt_detail(self, belt_name: str) -> BeltDetailResponse | None:
+        """현 벨트 하나의 획득 이력. 현존하지 않는 이름이면 `None`."""
+        ...
 
     @abstractmethod
     async def get_analytics(self) -> AnalyticsResponse: ...

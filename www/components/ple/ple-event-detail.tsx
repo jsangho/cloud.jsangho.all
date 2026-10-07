@@ -98,7 +98,8 @@ export function PleEventDetailView({ ple, detail }: PleEventDetailViewProps) {
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 className="font-sport text-lg text-foreground">경기</h2>
             <p className="text-sm text-muted-foreground">
-              카드마다 <span className="text-data">AI 예측</span> · 내 예측 · 결과가 함께 있습니다.
+              이길 쪽을 고르면 <span className="text-data">AI 예측</span>과 나란히 놓입니다. 투표와
+              배당은 카드 안 「근거 더 보기」에 있습니다.
             </p>
           </div>
           <PleMatchBracket slug={ple.slug as PleSlug} />

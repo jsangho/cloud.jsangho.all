@@ -81,16 +81,40 @@ export type BeltStat = {
   holders: number;
   topHolder: string | null;
   topHolderReigns: number;
+  /** 이 집계에 합쳐진 옛 이름. 없으면 빈 배열이다. */
+  formerNames: string[];
 };
+
+/** 현 벨트로 이어지지 않아 집계에서 뺀 이름 — 화면이 사유를 그대로 적는다. */
+export type ExcludedBelt = { beltName: string; reigns: number; reason: string };
 
 export type HolderStat = { name: string; reigns: number; belts: number };
 
+/**
+ * **`belts`는 지금 있는 벨트만** 담는다 (20종 · 현 챔피언 보드 기준).
+ * `totalAcquisitions`·`holderCount`·`topHolders`는 폐지 벨트까지 포함한 전체 기록이라
+ * 범위가 다르다 — 화면이 그 차이를 적는다.
+ */
 export type ChampionshipStats = {
   totalAcquisitions: number;
   beltCount: number;
   holderCount: number;
   belts: BeltStat[];
   topHolders: HolderStat[];
+  excludedBelts: ExcludedBelt[];
+};
+
+/** 획득 한 건. `beltName`은 **그때 불리던 이름**이다. */
+export type BeltReign = { competitorName: string; beltName: string; wonAt: string };
+
+export type BeltHolder = { name: string; reigns: number; history: BeltReign[] };
+
+export type BeltDetail = {
+  beltName: string;
+  formerNames: string[];
+  reigns: number;
+  holderCount: number;
+  holders: BeltHolder[];
 };
 
 export type EventStat = {
@@ -177,6 +201,11 @@ export function fetchMatchPage(options?: {
 
 export function fetchChampionshipStats(): Promise<ChampionshipStats | null> {
   return getJson<ChampionshipStats>("/championships");
+}
+
+/** 벨트 하나의 획득 이력. **현 챔피언 보드가 쓰는 이름**으로 묻는다 — 옛 이름은 404다. */
+export function fetchBeltDetail(beltName: string): Promise<BeltDetail | null> {
+  return getJson<BeltDetail>(`/championships/${encodeURIComponent(beltName)}`);
 }
 
 export function fetchDataCenterAnalytics(): Promise<DataCenterAnalytics | null> {

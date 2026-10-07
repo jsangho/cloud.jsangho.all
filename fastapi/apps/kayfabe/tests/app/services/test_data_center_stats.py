@@ -114,18 +114,54 @@ class TestFacts:
 
 
 class TestBeltStats:
+    """**현존하는 벨트만 센다** (2026-10-07 사용자 결정).
+
+    옛 이름(`WWE Championship`·`United States Championship`)은 후신으로 합치고,
+    폐지된 이름(`ECW Championship`)은 사유와 함께 빠진다.
+    """
+
     ROWS = [
         stats.TitleRow("John Cena", "WWE Championship", "WrestleMania 21"),
         stats.TitleRow("John Cena", "WWE Championship", "Royal Rumble 2008"),
         stats.TitleRow("Randy Orton", "WWE Championship", "SummerSlam 2007"),
         stats.TitleRow("Randy Orton", "United States Championship", "Backlash 2004"),
+        stats.TitleRow("CM Punk", "ECW Championship", "ECW 2007"),
     ]
 
-    def test_reigns_and_top_holder_per_belt(self) -> None:
-        by_belt = {b.belt_name: b for b in stats.belt_stats(self.ROWS)}
-        wwe = by_belt["WWE Championship"]
+    def test_former_names_merge_into_the_current_belt(self) -> None:
+        by_belt = {b.belt_name: b for b in stats.current_belt_stats(self.ROWS).belts}
+        wwe = by_belt["Undisputed WWE Championship"]
         assert (wwe.reigns, wwe.holders) == (3, 2)
         assert (wwe.top_holder, wwe.top_holder_reigns) == ("John Cena", 2)
+        assert "WWE Championship" in wwe.former_names
+
+    def test_retired_belts_leave_with_a_reason(self) -> None:
+        excluded = stats.current_belt_stats(self.ROWS).excluded
+        by_name = {e.belt_name: e for e in excluded}
+        assert "ECW Championship" in by_name
+        assert by_name["ECW Championship"].reigns == 1
+        assert by_name["ECW Championship"].reason
+        assert "ECW Championship" not in {
+            b.belt_name for b in stats.current_belt_stats(self.ROWS).belts
+        }
+
+    def test_belts_without_rows_stay_at_zero(self) -> None:
+        """보드에 있는 벨트는 기록이 없어도 사라지지 않는다 — 화면이 "기록 없음"을 적는다."""
+        by_belt = {b.belt_name: b for b in stats.current_belt_stats(self.ROWS).belts}
+        evolve = by_belt["WWE Evolve Championship"]
+        assert (evolve.reigns, evolve.holders, evolve.top_holder) == (0, 0, None)
+
+    def test_belt_detail_keeps_the_name_of_the_day(self) -> None:
+        detail = stats.belt_detail(self.ROWS, "Undisputed WWE Championship")
+        assert detail is not None
+        assert detail.reigns == 3
+        assert [h.name for h in detail.holders] == ["John Cena", "Randy Orton"]
+        assert {r.belt_name for h in detail.holders for r in h.history} == {
+            "WWE Championship"
+        }
+
+    def test_belt_detail_refuses_a_belt_that_is_gone(self) -> None:
+        assert stats.belt_detail(self.ROWS, "ECW Championship") is None
 
     def test_top_holders_count_belts_and_reigns(self) -> None:
         top = stats.top_holders(self.ROWS)

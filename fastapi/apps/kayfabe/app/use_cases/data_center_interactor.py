@@ -10,6 +10,9 @@ import logging
 
 from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
+    BeltDetailResponse,
+    BeltHolderResponse,
+    BeltReignResponse,
     BeltStatResponse,
     BrandCountResponse,
     ChampionshipStatsResponse,
@@ -17,6 +20,7 @@ from kayfabe.app.dtos.data_center_dto import (
     DataCenterOverviewResponse,
     EventOptionResponse,
     EventStatResponse,
+    ExcludedBeltResponse,
     HolderStatResponse,
     MatchPageQuery,
     MatchPageResponse,
@@ -189,14 +193,16 @@ class DataCenterInteractor(DataCenterUseCase):
     async def get_championship_stats(self) -> ChampionshipStatsResponse:
         logger.info("[DataCenterInteractor] get_championship_stats -> Repository")
         titles = await self._repo.list_title_acquisitions()
-        belts = stats.belt_stats(titles)
+        current = stats.current_belt_stats(titles)
         holders = stats.top_holders(titles)
         logger.info(
-            "[DataCenterInteractor] get_championship_stats <- belts=%d", len(belts)
+            "[DataCenterInteractor] get_championship_stats <- belts=%d excluded=%d",
+            len(current.belts),
+            len(current.excluded),
         )
         return ChampionshipStatsResponse(
             total_acquisitions=len(titles),
-            belt_count=len(belts),
+            belt_count=len(current.belts),
             holder_count=len(stats.titles_by_wrestler(titles)),
             belts=[
                 BeltStatResponse(
@@ -205,12 +211,48 @@ class DataCenterInteractor(DataCenterUseCase):
                     holders=b.holders,
                     top_holder=b.top_holder,
                     top_holder_reigns=b.top_holder_reigns,
+                    former_names=list(b.former_names),
                 )
-                for b in belts
+                for b in current.belts
             ],
             top_holders=[
                 HolderStatResponse(name=h.name, reigns=h.reigns, belts=h.belts)
                 for h in holders
+            ],
+            excluded_belts=[
+                ExcludedBeltResponse(
+                    belt_name=e.belt_name, reigns=e.reigns, reason=e.reason
+                )
+                for e in current.excluded
+            ],
+        )
+
+    async def get_belt_detail(self, belt_name: str) -> BeltDetailResponse | None:
+        logger.info("[DataCenterInteractor] get_belt_detail -> belt=%s", belt_name)
+        titles = await self._repo.list_title_acquisitions()
+        detail = stats.belt_detail(titles, belt_name)
+        if detail is None:
+            logger.info("[DataCenterInteractor] get_belt_detail <- 현존하지 않는 벨트")
+            return None
+        return BeltDetailResponse(
+            belt_name=detail.belt_name,
+            former_names=list(detail.former_names),
+            reigns=detail.reigns,
+            holder_count=len(detail.holders),
+            holders=[
+                BeltHolderResponse(
+                    name=h.name,
+                    reigns=h.reigns,
+                    history=[
+                        BeltReignResponse(
+                            competitor_name=r.competitor_name,
+                            belt_name=r.belt_name,
+                            won_at=r.won_at,
+                        )
+                        for r in h.history
+                    ],
+                )
+                for h in detail.holders
             ],
         )
 

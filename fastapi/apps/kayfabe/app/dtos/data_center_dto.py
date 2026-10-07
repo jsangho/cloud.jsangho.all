@@ -115,6 +115,14 @@ class BeltStatResponse:
     holders: int
     top_holder: str | None
     top_holder_reigns: int
+    former_names: list[str]
+
+
+@dataclass(frozen=True)
+class ExcludedBeltResponse:
+    belt_name: str
+    reigns: int
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -131,6 +139,30 @@ class ChampionshipStatsResponse:
     holder_count: int
     belts: list[BeltStatResponse]
     top_holders: list[HolderStatResponse]
+    excluded_belts: list[ExcludedBeltResponse]
+
+
+@dataclass(frozen=True)
+class BeltReignResponse:
+    competitor_name: str
+    belt_name: str
+    won_at: str
+
+
+@dataclass(frozen=True)
+class BeltHolderResponse:
+    name: str
+    reigns: int
+    history: list[BeltReignResponse]
+
+
+@dataclass(frozen=True)
+class BeltDetailResponse:
+    belt_name: str
+    former_names: list[str]
+    reigns: int
+    holder_count: int
+    holders: list[BeltHolderResponse]
 
 
 @dataclass(frozen=True)

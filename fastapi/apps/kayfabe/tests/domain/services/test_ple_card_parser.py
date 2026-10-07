@@ -4,8 +4,9 @@
 첫 판이 실제 본문에 한 번도 안 돌아간 채 세 가지를 동시에 틀렸다(사진 두 장 행을
 챔피언으로 집고, 사진 없는 행 넷을 통째로 버렸다). 픽스처 둘은 그래서 실측이다:
 
-    wiki_mitb_2026_matches.txt        Money in the Bank (2026) · rev 1377369432 · 카드형
-    wiki_wrestlemania_42_results.txt  WrestleMania 42 · rev 1376818511 · 결과형 · 2일제
+    wiki_mitb_2026_matches.txt          Money in the Bank (2026) · rev 1377369432 · 카드형
+    wiki_wrestlemania_42_results.txt    WrestleMania 42 · rev 1376818511 · 결과형 · 2일제
+    wiki_royal_rumble_2026_results.txt  Royal Rumble (2026) · rev 1376819544 · 결과형 · 럼블 문법
 """
 
 from __future__ import annotations
@@ -16,7 +17,10 @@ import pytest
 
 from kayfabe.domain.services.ple_card_parser import (
     card_matches,
+    is_no_winner,
     parse_results_tables,
+    result_matches,
+    winner_of,
 )
 
 _FIXTURES = Path(__file__).parent / "fixtures"
@@ -30,6 +34,13 @@ def mitb() -> str:
 @pytest.fixture(scope="module")
 def wrestlemania() -> str:
     return (_FIXTURES / "wiki_wrestlemania_42_results.txt").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def royal_rumble() -> str:
+    return (_FIXTURES / "wiki_royal_rumble_2026_results.txt").read_text(
+        encoding="utf-8"
+    )
 
 
 class TestCardForm:
@@ -128,6 +139,109 @@ class TestResultFormIsNotACard:
 
     def test_collecting_cards_flattens_an_announced_event(self, mitb: str) -> None:
         assert len(card_matches(parse_results_tables(mitb))) == 5
+
+
+class TestWinnerExtraction:
+    """승자는 **승부 동사 왼쪽**이다.
+
+    2026년 대회 12개를 실측했을 때 83경기 전부가 이 문법을 따랐고, DB에 이미
+    확정돼 있던 63건과 전수 대조해 전부 같은 승자가 나왔다. 그래서 이 경로는
+    언어 모델 없이 돈다.
+    """
+
+    def test_a_singles_winner_is_the_name_left_of_the_verb(
+        self, wrestlemania: str
+    ) -> None:
+        row = parse_results_tables(wrestlemania)[0].matches[4]
+        won = winner_of(row)
+        assert won is not None
+        assert won.names == ("Gunther",)
+        assert won.defended is False
+
+    def test_a_defending_champion_is_marked_and_the_marker_is_lifted(
+        self, wrestlemania: str
+    ) -> None:
+        """`Cody Rhodes (c) defeated Randy Orton` — 이름에 `(c)`가 남으면 안 된다."""
+        row = parse_results_tables(wrestlemania)[0].matches[6]
+        won = winner_of(row)
+        assert won is not None
+        assert won.names == ("Cody Rhodes",)
+        assert won.defended is True
+
+    def test_a_team_keeps_both_its_name_and_its_members(
+        self, wrestlemania: str
+    ) -> None:
+        """DB가 팀명으로 들고 있을 수도, 멤버 나열로 들고 있을 수도 있다."""
+        row = parse_results_tables(wrestlemania)[0].matches[0]
+        won = winner_of(row)
+        assert won is not None
+        assert set(won.names) == {"The Usos", "LA Knight", "Jey Uso", "Jimmy Uso"}
+
+    def test_an_escort_on_the_winning_side_is_not_a_winner(
+        self, wrestlemania: str
+    ) -> None:
+        """`Brie Bella and Paige (with Nikki Bella)` — 동행자는 이긴 사람이 아니다."""
+        row = parse_results_tables(wrestlemania)[0].matches[2]
+        won = winner_of(row)
+        assert won is not None
+        assert set(won.names) == {"Brie Bella", "Paige"}
+
+    def test_the_rumble_verb_is_read_too(self, royal_rumble: str) -> None:
+        """럼블은 `defeated`를 안 쓴다 — `won by last eliminating`이다."""
+        rows = parse_results_tables(royal_rumble)[0].matches
+        womens, mens = winner_of(rows[2]), winner_of(rows[5])
+        assert womens is not None and womens.names == ("Liv Morgan",)
+        assert mens is not None and mens.names == ("Roman Reigns",)
+
+    def test_the_loser_never_leaks_into_the_winner(self, royal_rumble: str) -> None:
+        """`Roman Reigns won by last eliminating Gunther` — Gunther는 진 사람이다."""
+        won = winner_of(parse_results_tables(royal_rumble)[0].matches[5])
+        assert won is not None
+        assert "Gunther" not in won.names
+
+    def test_every_finished_match_yields_a_winner(self, royal_rumble: str) -> None:
+        rows = result_matches(parse_results_tables(royal_rumble))
+        assert len(rows) == 6
+        assert all(winner_of(row) is not None for row in rows)
+
+    def test_results_and_cards_are_mirrors(self, royal_rumble: str, mitb: str) -> None:
+        """끝난 대회에는 카드가 없고, 안 열린 대회에는 결과가 없다."""
+        finished = parse_results_tables(royal_rumble)
+        announced = parse_results_tables(mitb)
+        assert card_matches(finished) == ()
+        assert result_matches(announced) == ()
+        assert len(result_matches(finished)) == 6
+
+    def test_a_no_contest_is_not_a_missing_winner(self) -> None:
+        """ "승자가 없다"와 "못 읽었다"를 섞으면 다시 돌릴 것과 사람이 볼 것이 뒤섞인다."""
+        text = (
+            "{{Pro wrestling results table\n"
+            "|match1 = Roman Reigns and Cody Rhodes fought to a draw\n"
+            "|match2 = Gunther vs. Seth Rollins ended in a no contest\n"
+            "}}"
+        )
+        rows = parse_results_tables(text)[0].matches
+        for row in rows:
+            assert winner_of(row) is None
+            assert is_no_winner(row) is True
+
+    def test_a_row_we_cannot_read_is_not_called_a_draw(self) -> None:
+        text = "{{Pro wrestling results table\n|match1 = Battle royal\n}}"
+        row = parse_results_tables(text)[0].matches[0]
+        assert winner_of(row) is None
+        assert is_no_winner(row) is False
+        assert result_matches(parse_results_tables(text)) == ()
+
+    def test_widening_the_winner_verb_did_not_widen_the_card_test(self) -> None:
+        """🔴 회귀. `won`을 `is_card` 판정에 넣으면 대진 동기화가 카드를 잃는다."""
+        text = (
+            "{{Pro wrestling results table\n"
+            "|match1 = Roman Reigns vs. the Royal Rumble winner\n"
+            "}}"
+        )
+        row = parse_results_tables(text)[0].matches[0]
+        assert row.is_card is True
+        assert len(card_matches(parse_results_tables(text))) == 1
 
 
 class TestEdges:
