@@ -481,3 +481,53 @@ Introduced off-scale border radius rounded-md(6px) in /home/ho/projects/cloud.js
 
 > **반영됨** (2026-10-01) — radius 사다리를 DESIGN.md §5에 실측으로 문서화했다 (2026-10-01)
 
+
+## 2026-10-07T01:02:32.647Z — introduced-off-palette-color-s-7c3aed-0f
+
+```omd-meta
+id: pref_muxekvk7_3c2e8fba
+timestamp: 2026-10-07T01:02:32.647Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #7c3aed, #0f766e in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-10-07T01:02:41.001Z — introduced-off-palette-color-s-0f766e-0d
+
+```omd-meta
+id: pref_muxel209_b56e24d0
+timestamp: 2026-10-07T01:02:41.001Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/app/globals.css"
+```
+
+Introduced off-palette color(s) #0f766e, #0d9488 in /home/ho/projects/cloud.jsangho.all/www/app/globals.css — not in DESIGN.md
+
+## 2026-10-07T01:03:12.143Z — introduced-off-palette-color-s-7c3aed-in
+
+```omd-meta
+id: pref_muxelq1b_21ee15ff
+timestamp: 2026-10-07T01:03:12.143Z
+scope: color
+signal: ambient
+confidence: inferred
+status: pending
+source_agent: claude-code
+source_context: "/home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx"
+```
+
+Introduced off-palette color(s) #7c3aed in /home/ho/projects/cloud.jsangho.all/www/components/portfolio/tech-stack.tsx — not in DESIGN.md
+
+> **반영됨** (2026-10-07) — 위 세 건은 같은 변경 하나다. `#0f766e`·`#0d9488`(티얼)은
+> DESIGN.md §2 「팀 프로젝트 출처」에 `--team-b` 로 문서화했고, §7 의 "네 번째 색을
+> 섞지 않는다"에 이 예외를 적었다. `#7c3aed`(바이올렛)는 **칠하지 않는다** — 녹색약에서
+> 파랑과 ΔE 0.6 으로 붙어 탈락한 후보이고, 탈락 이유를 적은 주석에만 남아 있다.
