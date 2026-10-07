@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import {
   DataCenterShell,
   DataUnavailable,
@@ -190,37 +191,46 @@ export default function BeltDetailPage() {
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {detail.holders.map((holder, index) => (
-                      <li
-                        key={holder.name}
-                        className="rounded-xl border border-border bg-card px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-5 shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
-                            {index + 1}
-                          </span>
-                          <Link
-                            href={`/records/${encodeURIComponent(holder.name)}`}
-                            className="min-w-0 flex-1 truncate text-sm text-brand-link underline-offset-4 hover:underline"
-                          >
-                            {holder.name}
-                          </Link>
-                          <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
-                            {holder.reigns}회
-                          </span>
-                        </div>
-                        <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2">
-                          {holder.history.map((reign, reignIndex) => (
-                            <li
-                              key={`${reign.beltName}-${reign.wonAt}-${reignIndex}`}
-                              className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground"
+                      <li key={holder.name} className="rounded-xl border border-border bg-card">
+                        {/* **접어 둔다.** 13명 × 최대 14회를 한꺼번에 펴면 순위가 안 읽힌다 —
+                            이 목록이 먼저 답하는 질문은 "누가 몇 번"이고, 언제인지는 그다음이다.
+                            `<details>`를 쓰는 이유는 JS 없이도 열리고, 브라우저 안에서 찾기가
+                            닫힌 내용까지 뒤지기 때문이다. */}
+                        <details className="group">
+                          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                            <span className="w-5 shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
+                              {index + 1}
+                            </span>
+                            <Link
+                              href={`/records/${encodeURIComponent(holder.name)}`}
+                              className="min-w-0 flex-1 truncate text-sm text-brand-link underline-offset-4 hover:underline"
                             >
-                              <span className="tabular-nums">{reign.wonAt}</span>
-                              {reign.beltName !== detail.beltName && (
-                                <span className="text-muted-foreground/80">({reign.beltName})</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                              {holder.name}
+                            </Link>
+                            <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                              {holder.reigns}회
+                            </span>
+                            <ChevronDown
+                              aria-hidden
+                              className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                            />
+                          </summary>
+                          <ul className="mx-4 mb-3 flex flex-col gap-1 border-t border-border pt-2">
+                            {holder.history.map((reign, reignIndex) => (
+                              <li
+                                key={`${reign.beltName}-${reign.wonAt}-${reignIndex}`}
+                                className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground"
+                              >
+                                <span className="tabular-nums">{reign.wonAt}</span>
+                                {reign.beltName !== detail.beltName && (
+                                  <span className="text-muted-foreground/80">
+                                    ({reign.beltName})
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
                       </li>
                     ))}
                   </ul>

@@ -34,6 +34,13 @@ from kayfabe.app.services.real_title_catalog import (
     CATALOG_REVISION,
     individual_title_acquisitions,
 )
+from kayfabe.app.services.reign_history import (
+    BoardReign,
+    ExistingReign,
+    format_won_at,
+    missing_board_reigns,
+    won_at_to_date,
+)
 from kayfabe.app.services.title_match_classifier import is_championship_match
 from kayfabe.domain.services.championship_succession import (
     FinishedTitleMatch,
@@ -62,9 +69,14 @@ class TitleAcquisitionsPgRepository(TitleAcquisitionsRepository):
     async def needs_real_resync(self) -> bool:
         if await self.count() == 0:
             return True
+        # **개정본 표기 이전의 행이 남아 있으면 다시 만든다.** 예전에는 이 조건이
+        # `source != "real"`이었는데, 카탈로그에 개정본을 붙이면서 모든 행이
+        # `real:20`이 되어 **항상 참**이 됐다 — 선수 이력을 열 때마다 367행을 지우고
+        # 다시 쓰고 있었고, 바로 아래 개정본 검사는 닿지도 않았다.
+        # 보드에서 온 행(`source='board'`)은 카탈로그가 아니므로 재생성 사유가 아니다.
         result = await self.db.execute(
             select(TitleAcquisitionModel.id)
-            .where(TitleAcquisitionModel.source != "real")
+            .where(TitleAcquisitionModel.source == "real")
             .limit(1)
         )
         if result.scalar_one_or_none() is not None:
@@ -104,7 +116,15 @@ class TitleAcquisitionsPgRepository(TitleAcquisitionsRepository):
 
     async def sync_from_real_catalog(self) -> int:
         async with _sync_lock:
-            await self.db.execute(delete(TitleAcquisitionModel))
+            # **카탈로그가 만든 행만 지운다.** 예전에는 표 전체를 지웠는데, 그러면
+            # 보드에서 기록한 재위(`source='board'`)가 개정본을 올릴 때마다 사라진다
+            # — 이력이 다시 카탈로그의 거울로 돌아간다.
+            await self.db.execute(
+                delete(TitleAcquisitionModel).where(
+                    TitleAcquisitionModel.source.like("real:%")
+                    | (TitleAcquisitionModel.source == "real")
+                )
+            )
             await self.db.flush()
 
             inserted = 0
@@ -130,6 +150,74 @@ class TitleAcquisitionsPgRepository(TitleAcquisitionsRepository):
                     inserted += 1
             await self.db.flush()
             return inserted
+
+    async def record_board_reigns(self) -> list[tuple[str, str, str]]:
+        """보드의 현 재위 중 이력에 없는 것을 기록. (선수, 벨트, 표기) 목록을 돌려준다.
+
+        **`get_board()`가 돌려준 보드를 기준으로 삼는다** — 저장된
+        `championship_titles`와 읽기 시점 PLE 승계가 거기서 이미 합쳐지므로, 두 경로에
+        각각 기록을 심지 않아도 된다(`reign_history` 독스트링).
+
+        쓰기는 `flush`까지만 한다. **커밋은 부른 쪽이 정한다** — 드라이런을 지원하는
+        스크립트가 쓰기 때문이다.
+        """
+        board = await self.get_board()
+        candidates: list[BoardReign] = []
+        for brand in board.brands:
+            for title in brand.titles:
+                date = won_at_to_date(title.won_at)
+                if date is None:
+                    logger.warning(
+                        "[kayfabe.title_acquisitions] 획득 일자를 못 읽어 건너뛴다 "
+                        "| belt=%s won_at=%s",
+                        title.belt_name,
+                        title.won_at,
+                    )
+                    continue
+                for champion in title.champions:
+                    candidates.append(
+                        BoardReign(
+                            competitor_name=champion,
+                            belt_name=title.belt_name,
+                            won_at=format_won_at(title.won_event, date),
+                            won_at_date=date,
+                        )
+                    )
+
+        rows = (
+            await self.db.execute(
+                select(
+                    TitleAcquisitionModel.competitor_name,
+                    TitleAcquisitionModel.belt_name,
+                    TitleAcquisitionModel.won_at,
+                )
+            )
+        ).all()
+        missing = missing_board_reigns(
+            board=candidates,
+            existing=[
+                ExistingReign(
+                    competitor_name=row.competitor_name,
+                    belt_name=row.belt_name,
+                    won_at=row.won_at,
+                )
+                for row in rows
+            ],
+        )
+        for reign in missing:
+            self.db.add(
+                TitleAcquisitionModel(
+                    competitor_name=reign.competitor_name,
+                    belt_name=reign.belt_name,
+                    won_at=reign.won_at,
+                    won_at_slug=None,
+                    match_key=None,
+                    match_id=None,
+                    source="board",
+                )
+            )
+        await self.db.flush()
+        return [(r.competitor_name, r.belt_name, r.won_at) for r in missing]
 
     async def get_board(self) -> ChampionshipBoardResponse:
         result = await self.db.execute(

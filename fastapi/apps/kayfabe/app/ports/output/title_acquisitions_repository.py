@@ -33,3 +33,11 @@ class TitleAcquisitionsRepository(ABC):
 
     @abstractmethod
     async def get_board(self) -> ChampionshipBoardResponse: ...
+
+    @abstractmethod
+    async def record_board_reigns(self) -> list[tuple[str, str, str]]:
+        """보드의 현 재위 중 이력에 없는 것을 기록. (선수, 벨트, 표기) 목록 반환.
+
+        **커밋하지 않는다** — 드라이런을 지원하려면 부른 쪽이 정해야 한다.
+        """
+        ...
