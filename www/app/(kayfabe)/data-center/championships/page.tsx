@@ -51,9 +51,9 @@ export default function DataCenterChampionshipsPage() {
         <div className="flex flex-col gap-8">
           {stats && (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile value={stats.beltCount} label="Belts" tone="gold" />
-              <StatTile value={stats.totalAcquisitions} label="Reigns" />
-              <StatTile value={stats.holderCount} label="Champions" />
+              <StatTile value={stats.beltCount} label="Belts" note="현존" tone="gold" />
+              <StatTile value={stats.totalAcquisitions} label="Reigns" note="폐지 벨트 포함" />
+              <StatTile value={stats.holderCount} label="Champions" note="폐지 벨트 포함" />
               <StatTile
                 value={stats.topHolders[0]?.name ?? null}
                 label="Most Reigns"
@@ -153,6 +153,9 @@ export default function DataCenterChampionshipsPage() {
               <section aria-labelledby="belt-table">
                 <h2 id="belt-table" className="mb-3 font-sport text-lg text-foreground">
                   벨트별 획득 횟수
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    지금 있는 벨트 {stats.belts.length}종
+                  </span>
                 </h2>
                 <div className="overflow-x-auto rounded-xl border border-border">
                   <table className="w-full min-w-[34rem] border-collapse text-sm">
@@ -167,12 +170,24 @@ export default function DataCenterChampionshipsPage() {
                     <tbody>
                       {stats.belts.map((belt) => (
                         <tr key={belt.beltName} className="border-t border-border bg-card">
-                          <td className="px-4 py-2 text-foreground">{belt.beltName}</td>
+                          <td className="px-4 py-2">
+                            <Link
+                              href={`/data-center/championships/${encodeURIComponent(belt.beltName)}`}
+                              className="text-brand-link underline-offset-4 hover:underline"
+                            >
+                              {belt.beltName}
+                            </Link>
+                            {belt.formerNames.length > 0 && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                옛 이름 {belt.formerNames.join(" · ")} 포함
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-right tabular-nums text-foreground">
-                            {belt.reigns}
+                            {belt.reigns > 0 ? belt.reigns : "—"}
                           </td>
                           <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
-                            {belt.holders}
+                            {belt.holders > 0 ? belt.holders : "—"}
                           </td>
                           <td className="px-4 py-2 text-muted-foreground">
                             {belt.topHolder ? (
@@ -186,7 +201,7 @@ export default function DataCenterChampionshipsPage() {
                                 <span className="ml-1 tabular-nums">{belt.topHolderReigns}회</span>
                               </>
                             ) : (
-                              "—"
+                              "기록 없음"
                             )}
                           </td>
                         </tr>
@@ -198,6 +213,22 @@ export default function DataCenterChampionshipsPage() {
                   원본의 획득 일자가 자유 텍스트(예: “Payback — June 16, 2013”)라 재위 기간은
                   계산하지 않습니다. 데이터 구조가 정리되면 최장 재위를 더합니다.
                 </p>
+                {stats.excludedBelts.length > 0 && (
+                  <details className="mt-2 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">
+                      집계에서 뺀 벨트 {stats.excludedBelts.length}종 ·{" "}
+                      {stats.excludedBelts.reduce((sum, b) => sum + b.reigns, 0)}회
+                    </summary>
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {stats.excludedBelts.map((belt) => (
+                        <li key={belt.beltName}>
+                          <span className="text-foreground">{belt.beltName}</span>{" "}
+                          <span className="tabular-nums">{belt.reigns}회</span> — {belt.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </section>
             </>
           )}

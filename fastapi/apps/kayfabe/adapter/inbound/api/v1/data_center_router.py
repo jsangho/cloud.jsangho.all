@@ -14,10 +14,13 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     AnalyticsSchema,
+    BeltDetailSchema,
+    BeltHolderSchema,
+    BeltReignSchema,
     BeltStatSchema,
     BrandCountSchema,
     ChampionshipStatsSchema,
@@ -25,6 +28,7 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     DataCenterOverviewSchema,
     EventOptionSchema,
     EventStatSchema,
+    ExcludedBeltSchema,
     HolderStatSchema,
     MatchPageSchema,
     MatchRowSchema,
@@ -34,6 +38,7 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
 )
 from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
+    BeltDetailResponse,
     BeltStatResponse,
     BrandCountResponse,
     ChampionshipStatsResponse,
@@ -41,6 +46,7 @@ from kayfabe.app.dtos.data_center_dto import (
     DataCenterOverviewResponse,
     EventOptionResponse,
     EventStatResponse,
+    ExcludedBeltResponse,
     HolderStatResponse,
     MatchPageQuery,
     MatchPageResponse,
@@ -130,9 +136,33 @@ async def get_championship_stats(
 
     **현 챔피언은 여기서 안 준다** — 이미 `GET /api/title-acquisitions/`가 브랜드별
     보드를 준다. 같은 것을 두 곳에서 만들지 않는다.
+
+    `belts`는 **지금 있는 벨트만** 담는다. 폐지·개명 전 이름의 처리는
+    `ChampionshipStatsSchema` 설명 참조.
     """
     logger.info("[DataCenterRouter] get_championship_stats")
     return championship_stats_to_schema(await use_case.get_championship_stats())
+
+
+@data_center_router.get(
+    "/championships/{belt_name}",
+    response_model=BeltDetailSchema,
+    response_model_by_alias=True,
+)
+async def get_belt_detail(
+    belt_name: str,
+    use_case: DataCenterUseCase = Depends(get_data_center),
+):
+    """벨트 하나의 획득 이력 (보유자별).
+
+    `belt_name`은 **현 챔피언 보드가 쓰는 이름**이다 — 옛 이름으로 물으면 404다.
+    옛 이름으로 적힌 획득은 응답 안에 그 이름 그대로 들어 있다.
+    """
+    logger.info("[DataCenterRouter] get_belt_detail | belt=%s", belt_name)
+    detail = await use_case.get_belt_detail(belt_name)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="현존하는 벨트가 아닙니다")
+    return belt_detail_to_schema(detail)
 
 
 @data_center_router.get(
@@ -228,6 +258,37 @@ def belt_stat_to_schema(dto: BeltStatResponse) -> BeltStatSchema:
         holders=dto.holders,
         top_holder=dto.top_holder,
         top_holder_reigns=dto.top_holder_reigns,
+        former_names=dto.former_names,
+    )
+
+
+def excluded_belt_to_schema(dto: ExcludedBeltResponse) -> ExcludedBeltSchema:
+    return ExcludedBeltSchema(
+        belt_name=dto.belt_name, reigns=dto.reigns, reason=dto.reason
+    )
+
+
+def belt_detail_to_schema(dto: BeltDetailResponse) -> BeltDetailSchema:
+    return BeltDetailSchema(
+        belt_name=dto.belt_name,
+        former_names=dto.former_names,
+        reigns=dto.reigns,
+        holder_count=dto.holder_count,
+        holders=[
+            BeltHolderSchema(
+                name=h.name,
+                reigns=h.reigns,
+                history=[
+                    BeltReignSchema(
+                        competitor_name=r.competitor_name,
+                        belt_name=r.belt_name,
+                        won_at=r.won_at,
+                    )
+                    for r in h.history
+                ],
+            )
+            for h in dto.holders
+        ],
     )
 
 
@@ -244,6 +305,7 @@ def championship_stats_to_schema(
         holder_count=dto.holder_count,
         belts=[belt_stat_to_schema(b) for b in dto.belts],
         top_holders=[holder_stat_to_schema(h) for h in dto.top_holders],
+        excluded_belts=[excluded_belt_to_schema(e) for e in dto.excluded_belts],
     )
 
 

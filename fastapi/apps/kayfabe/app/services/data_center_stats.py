@@ -225,39 +225,157 @@ def titles_by_wrestler(rows: Iterable[TitleRow]) -> dict[str, int]:
 
 @dataclass(frozen=True)
 class BeltStat:
-    belt_name: str
-    reigns: int
-    holders: int
-    top_holder: str | None
-    top_holder_reigns: int
-
-
-def belt_stats(rows: Sequence[TitleRow]) -> list[BeltStat]:
     """벨트별 획득 집계 (§9).
 
     **재위 기간은 세지 않는다.** `won_at`이 `"Payback — June 16, 2013"` 같은 자유
     텍스트이고 끝난 날짜가 없어서, 최장 재위는 지금 데이터로 만들 수 없다 — 날짜를
     추정해 넣으면 그건 가짜 통계다(2026-08-20 사용자 결정). 획득 **횟수**만 센다.
     """
+
+    belt_name: str
+    reigns: int
+    holders: int
+    top_holder: str | None
+    top_holder_reigns: int
+    #: 이 집계에 합쳐진 옛 이름 (`belt_lineage`). 없으면 빈 목록이다.
+    former_names: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ExcludedBelt:
+    """현 벨트로 이어지지 않아 집계에서 뺀 이름."""
+
+    belt_name: str
+    reigns: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class CurrentBeltStats:
+    belts: list[BeltStat]
+    excluded: list[ExcludedBelt]
+
+
+def current_belt_stats(rows: Sequence[TitleRow]) -> CurrentBeltStats:
+    """**현존하는 벨트만** 집계한다 (2026-10-07 사용자 결정).
+
+    옛 이름의 획득은 `belt_lineage.BELT_LINEAGE`를 따라 후신 벨트로 합친다 — 그러지
+    않으면 `WWE Championship` 45회가 "없는 벨트"로 빠지고 `Undisputed WWE
+    Championship`은 개명 이후 몇 회만 든 채로 보인다.
+
+    **합치지 못한 이름은 `excluded`로 돌려준다.** 화면이 몇 종을 왜 뺐는지 적을 수
+    있어야 집계가 조용히 줄어드는 일이 없다.
+
+    보드에 있지만 획득 기록이 없는 벨트(Evolve·ID 넷)도 `reigns=0`으로 **남긴다** —
+    "0회 획득"이 아니라 이력 카탈로그에 행이 없다는 뜻이고, 화면이 그렇게 적는다.
+    """
+    from kayfabe.app.services import belt_lineage
     from kayfabe.app.services.records_scoring import normalize_name
 
-    per_belt: dict[str, Counter[str]] = defaultdict(Counter)
-    for row in rows:
-        per_belt[row.belt_name][normalize_name(row.competitor_name)] += 1
+    order = belt_lineage.current_belt_names()
+    per_belt: dict[str, Counter[str]] = {belt: Counter() for belt in order}
+    dropped: dict[str, int] = defaultdict(int)
 
-    stats: list[BeltStat] = []
-    for belt, holders in per_belt.items():
-        top_name, top_count = holders.most_common(1)[0]
-        stats.append(
+    for row in rows:
+        current = belt_lineage.resolve_belt(row.belt_name)
+        if current is None:
+            dropped[row.belt_name] += 1
+            continue
+        per_belt[current][normalize_name(row.competitor_name)] += 1
+
+    belts: list[BeltStat] = []
+    for belt in order:
+        holders = per_belt[belt]
+        top_name, top_count = holders.most_common(1)[0] if holders else (None, 0)
+        belts.append(
             BeltStat(
                 belt_name=belt,
                 reigns=sum(holders.values()),
                 holders=len(holders),
                 top_holder=top_name,
                 top_holder_reigns=top_count,
+                former_names=tuple(belt_lineage.former_names(belt)),
             )
         )
-    return sorted(stats, key=lambda s: (-s.reigns, s.belt_name))
+
+    excluded = [
+        ExcludedBelt(
+            belt_name=name,
+            reigns=count,
+            reason=belt_lineage.retirement_reason(name),
+        )
+        for name, count in sorted(dropped.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+    return CurrentBeltStats(
+        belts=sorted(belts, key=lambda s: (-s.reigns, s.belt_name)),
+        excluded=excluded,
+    )
+
+
+@dataclass(frozen=True)
+class BeltReign:
+    """벨트 하나의 획득 한 건. `belt_name`은 **그때 불리던 이름**이다."""
+
+    competitor_name: str
+    belt_name: str
+    won_at: str
+
+
+@dataclass(frozen=True)
+class HolderReigns:
+    """한 사람이 그 벨트를 든 기록. `reigns`는 목록 길이와 같다."""
+
+    name: str
+    reigns: int
+    history: list[BeltReign]
+
+
+@dataclass(frozen=True)
+class BeltDetail:
+    belt_name: str
+    former_names: tuple[str, ...]
+    reigns: int
+    holders: list[HolderReigns]
+
+
+def belt_detail(rows: Sequence[TitleRow], belt_name: str) -> BeltDetail | None:
+    """현 벨트 하나의 획득 이력. 현존하지 않는 이름이면 `None`.
+
+    **옛 이름으로 들어온 획득도 포함하고, 그 이름을 지우지 않는다** — 각 건은 그때
+    불리던 이름을 그대로 들고 간다. 그래야 "WWE Championship 시절 획득"임이 화면에
+    남는다.
+
+    **시간순으로 늘어놓지 않는다.** `won_at`이 자유 텍스트라 정렬하면 틀린 순서가
+    된다(§9). 보유자를 획득 횟수 순으로 세운다.
+    """
+    from kayfabe.app.services import belt_lineage
+    from kayfabe.app.services.records_scoring import normalize_name
+
+    if belt_name not in set(belt_lineage.current_belt_names()):
+        return None
+
+    per_person: dict[str, list[BeltReign]] = defaultdict(list)
+    for row in rows:
+        if belt_lineage.resolve_belt(row.belt_name) != belt_name:
+            continue
+        name = normalize_name(row.competitor_name)
+        per_person[name].append(
+            BeltReign(competitor_name=name, belt_name=row.belt_name, won_at=row.won_at)
+        )
+
+    holders = sorted(
+        (
+            HolderReigns(name=name, reigns=len(history), history=history)
+            for name, history in per_person.items()
+        ),
+        key=lambda h: (-h.reigns, h.name),
+    )
+    return BeltDetail(
+        belt_name=belt_name,
+        former_names=tuple(belt_lineage.former_names(belt_name)),
+        reigns=sum(h.reigns for h in holders),
+        holders=holders,
+    )
 
 
 @dataclass(frozen=True)

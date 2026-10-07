@@ -14,6 +14,7 @@ import pytest
 import kayfabe.adapter.inbound.api  # noqa: F401
 from kayfabe.app.dtos.data_center_dto import MatchPageQuery, WrestlerPageQuery
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
+from kayfabe.app.services.belt_lineage import current_belt_names
 from kayfabe.app.services.data_center_stats import MatchRow, TitleRow, WrestlerRow
 from kayfabe.app.use_cases.data_center_interactor import DataCenterInteractor
 
@@ -213,10 +214,39 @@ class TestChampionshipStats:
     ) -> None:
         stats = await interactor.get_championship_stats()
         assert stats.total_acquisitions == 2
-        assert stats.belt_count == 2
         assert stats.holder_count == 1
         assert stats.top_holders[0].name == "Cody Rhodes"
         assert stats.top_holders[0].reigns == 2
+
+    @pytest.mark.asyncio
+    async def test_belt_list_is_the_current_board(
+        self, interactor: DataCenterInteractor
+    ) -> None:
+        """**벨트 칸은 지금 있는 벨트 전부**다 (2026-10-07). 기록이 있는 벨트만이 아니다.
+
+        `Intercontinental Championship`은 옛 이름이라 `WWE Intercontinental
+        Championship`으로 합쳐진다 — 그 이름으로는 표에 서지 않는다.
+        """
+        stats = await interactor.get_championship_stats()
+        assert stats.belt_count == len(current_belt_names())
+        by_belt = {b.belt_name: b for b in stats.belts}
+        assert by_belt["WWE Intercontinental Championship"].reigns == 1
+        assert "Intercontinental Championship" not in by_belt
+
+    @pytest.mark.asyncio
+    async def test_belt_detail_refuses_a_name_that_is_gone(
+        self, interactor: DataCenterInteractor
+    ) -> None:
+        assert await interactor.get_belt_detail("ECW Championship") is None
+
+    @pytest.mark.asyncio
+    async def test_belt_detail_lists_holders(
+        self, interactor: DataCenterInteractor
+    ) -> None:
+        detail = await interactor.get_belt_detail("Undisputed WWE Championship")
+        assert detail is not None
+        assert (detail.reigns, detail.holder_count) == (1, 1)
+        assert detail.holders[0].name == "Cody Rhodes"
 
     @pytest.mark.asyncio
     async def test_no_reign_length_is_reported(
