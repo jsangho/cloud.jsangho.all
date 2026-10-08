@@ -901,6 +901,41 @@
     }
   }
 
+  /* 인트로 워드마크 (랜딩 진입 · 세션 1회).
+     DESIGN.md §15가 표현적 모션을 허용하는 자리는 랜딩·마케팅 표면뿐이다 —
+     그래서 이 셋은 `/kayfabe` 첫 진입에만 돌고 제품 화면 위로 넘어가지 않는다.
+     곡선은 ease-enter(0.2, 0.6, 0.25, 1), 전체 1.2초. */
+  @keyframes kayfabe-intro-mark {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes kayfabe-intro-rule {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes kayfabe-intro-lift {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+
   .ple-card--royal-rumble {
     background: linear-gradient(
       145deg,

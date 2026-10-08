@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { GeminiChatPanel } from "@/components/gemini-chat-panel";
 import { AiPredictionCard } from "@/components/home/ai-prediction-card";
+import { KayfabeIntro } from "@/components/home/kayfabe-intro";
 import { KpiStrip } from "@/components/home/kpi-strip";
 import { PleAiScoreboard } from "@/components/ple-ai-scoreboard";
 import { LeaderboardPreview } from "@/components/leaderboard-preview";
@@ -17,6 +18,8 @@ export default function HomePage() {
 
   return (
     <WweArenaShell>
+      {/* 인트로는 이 화면에만 선다 — 제품 화면·공유 링크는 막지 않는다 */}
+      <KayfabeIntro />
       <div className="flex flex-col">
         {/*
          * ── 히어로 (KAYFABE 2.0 §2) ─────────────────────────────────────
