@@ -293,8 +293,13 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: var(--surface-card);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* **`--primary` 를 여기서 정하지 않는다.** 원래 shadcn 기본값(근백색)이
+     있었는데, 같은 `.dark` 블록 아래쪽(§시맨틱 역할)의 `--primary: var(--brand)`
+     보다 **컴파일된 CSS 에서 뒤로 밀려** 다크의 주 CTA가 골드가 아니라 흰색으로
+     떴다 — 빌드가 `.dark` 를 두 블록으로 가르면서 순서가 뒤집힌다(실측
+     2026-10-08: 「PLE 예측하기」 배경 `lab(98.26 0 0)`). DESIGN.md §2는 그 자리를
+     챔피언십 골드로 못 박으므로 잔재 쪽을 지운다. 같은 이유로
+     `--primary-foreground` 도 아래 한 곳에서만 정한다. */
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
