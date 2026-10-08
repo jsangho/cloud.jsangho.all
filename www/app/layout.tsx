@@ -29,7 +29,13 @@ export const metadata: Metadata = {
     default: "정상호 — 백엔드·데이터 중심 풀스택",
     template: "%s · 정상호",
   },
-  description: "Wiki + LLM 개인 지식 시스템과 WWE 예측 플랫폼을 만듭니다.",
+  /* 포트폴리오의 설명문이다 — 제품(KAYFABE)은 `app/(kayfabe)/layout.tsx` 가
+     자기 것을 따로 들고 있어서 여기 값이 제품 페이지로 새지 않는다.
+     첫 화면 제목과 **같은 문장**을 쓴다: 검색 결과에서 읽은 한 줄과 눌러서
+     보는 화면이 다른 말을 하면 그 자체가 신뢰를 깎는다. 전에 적혀 있던
+     「Wiki + LLM 개인 지식 시스템」은 저장소 내부 용어였다. */
+  description:
+    "모델은 자신 있게 틀립니다. 그 출력을 업무에 넣어도 되는지 판정하는 구조를 만듭니다 — WWE 경기 예측 플랫폼을 혼자 만들어 운영 중입니다.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },

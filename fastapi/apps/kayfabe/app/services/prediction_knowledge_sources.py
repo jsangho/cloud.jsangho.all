@@ -8,7 +8,12 @@
 "의견 없음"을 낸 것은 고장이 아니라 그 구성의 결과였다. 아래 도메인은 전부
 **robots.txt를 실제로 받아 확인**했고, 확인한 내용을 각 항목에 적었다.
 
-여기에 **없는 것**도 그대로 결정이다 — 아래 `_EXCLUDED` 참조.
+**2026-10-08에 `wrestlingheadlines.com`을 더했다.** 위키가 청크의 92%를 차지하고 있어
+루머 축이 읽을 것이 8%뿐이었다 — 매체 수를 늘리는 것이 목적이 아니라 **그 8%를
+두껍게** 만드는 것이 목적이다. 같은 날 `cultaholic.com`·`www.ewrestlingnews.com`도
+같은 절차로 쟀고, 둘은 넣지 않았다(`_DEFERRED`).
+
+여기에 **없는 것**도 그대로 결정이다 — 아래 `_EXCLUDED`·`_DEFERRED` 참조.
 """
 
 from __future__ import annotations
@@ -43,13 +48,19 @@ REPORTING_DOMAINS = frozenset(
 #: 줄어든다. 자체 취재 매체와 **등급을 나눠 둔 이유**는 나중에 무게를 달리 주거나
 #: 한쪽만 끄기 위해서다 — 지금은 둘 다 같은 자격으로 수집된다.
 #:
-#: robots.txt 실측 (2026-09-30):
+#: robots.txt 실측 (2026-09-30 · `wrestlingheadlines.com`은 2026-10-08):
 #: * `www.wrestlinginc.com` — 기사 경로 허용(`/wp-admin/`·`/search/` 등만 차단).
 #: * `wrestletalk.com` — `User-agent: * / Disallow:` (전체 허용).
+#: * `wrestlingheadlines.com` — `User-agent: * / Disallow:` (전체 허용). 응답·robots
+#:   어디에도 `Content-Signal` 선언이 없고, 우리 UA로 200이다(nginx · 챌린지 없음).
+#:   같은 날 사이트맵 최신 기사가 **MITB 2026 카드에 타이틀전이 늦게 추가됐다**는
+#:   566단어짜리 글이었다 — 이 축이 찾는 "경기 전에 알아야 할 사실"이 실제로 실리는
+#:   자리라는 뜻이다. 다만 **자체 취재가 아니라 받아쓰기**이므로 등급은 종합이다.
 AGGREGATOR_DOMAINS = frozenset(
     {
         "www.wrestlinginc.com",
         "wrestletalk.com",
+        "wrestlingheadlines.com",
     }
 )
 
@@ -76,12 +87,32 @@ ALLOWED_DOMAINS: frozenset[str] = (
 #:   잦다. **공신력을 기준으로 뺐다** — 기술적으로 가능한 것과 실어도 되는 것은 다르다.
 #: * X(트위터) — 스크래핑 금지(§4-8·§4-9). 선수 본인 발표가 가장 먼저 올라오는 곳이라
 #:   아깝지만 이 결정은 그대로다.
+#:
+#: **막혀서가 아니라 지금은 아니라서 보류한 곳** (2026-10-08 실측). 아래 둘은 robots도
+#: 열려 있고 우리 UA로 200이며 `Content-Signal`도 없다 — 즉 **넣을 수 있는데 안 넣었다.**
+#: 이 축이 찾는 것은 "WWE 뉴스가 많은 곳"이 아니라 "경기 전에 알아야 할 새 사실"이다.
+#:
+#: * `cultaholic.com` — 사이트맵 최신이 퀴즈·해설 콘텐츠였고(「How Well Do You Know
+#:   John Cena?」 189단어) `article:published_time`도 없었다. 영국 기반이라 미국
+#:   매체와 다른 흐름을 볼 수 있다는 장점은 그대로 남아 있다.
+#: * `www.ewrestlingnews.com` — 최신 기사가 「검색량이 작년보다 60% 줄었다」류 집계
+#:   글(348단어)이었다. 같은 자리를 `wrestlingheadlines.com`이 더 두껍게 채운다.
+#:
+#: **표본이 한 건씩이라 단정이 아니라 보류다.** 먼저 넣은 곳이 실제로 얼마나 인용되는지
+#: 보고 다시 판단한다 — 매체를 늘리는 것보다 **쓰이는 매체를 늘리는 것**이 목적이다.
 _EXCLUDED = (
     "www.f4wonline.com",
     "www.sescoops.com",
     "www.411mania.com",
     "www.cagematch.net",
     "ringsidenews.com",
+)
+
+#: 기술적으로는 가능하나 **지금 넣지 않기로** 한 곳. 위 `_EXCLUDED`와 뜻이 다르다 —
+#: 저쪽은 못 넣는 곳이고 이쪽은 안 넣은 곳이다. 코드가 읽지 않는 기록인 것은 같다.
+_DEFERRED = (
+    "cultaholic.com",
+    "www.ewrestlingnews.com",
 )
 
 #: **응답 헤더(`ETag` + `Last-Modified`)를 계보로 인정하는 도메인** (2026-09-28).
