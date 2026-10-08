@@ -22,6 +22,17 @@ export type CaseFact = {
   note?: string;
 };
 
+/**
+ * 시연영상의 출처.
+ *
+ * `file` 은 이 저장소가 `public/` 에서 직접 내주는 영상이고, `youtube` 는 임베드다.
+ * 둘을 한 칸에 섞지 않는 이유는 **접었을 때 받는 것이 다르기 때문**이다 — 파일은
+ * 포스터 한 장, 임베드는 아무것도 받지 않는다(눌러야 iframe 이 생긴다).
+ */
+export type CaseDemoSource =
+  | { kind: "file"; src: string; poster: string }
+  | { kind: "youtube"; youtubeId: string };
+
 /** 거부한 것과 그 이유. 이 페이지의 알맹이다 — 만든 것보다 안 만든 것이 설계다. */
 export type CaseDecision = { title: string; body: string };
 
@@ -78,6 +89,22 @@ export type CaseStudy = {
   links: readonly { href: string; label: string; note?: string; primary?: boolean }[];
   image: string;
   imageAlt: string;
+  /**
+   * 시연영상. 없으면 섹션 자체가 서지 않는다.
+   *
+   * 🔴 **접힌 상태가 기본이다** (2026-10-08 사용자). 3MB짜리 영상이 페이지를
+   * 열자마자 깔리면 읽으러 온 사람의 회선을 먼저 쓴다. 눌러야 `<video>` 가
+   * 마운트되므로 접혀 있는 동안은 **포스터 한 장 말고는 받지 않는다.**
+   *
+   * `length` 는 누르기 전에 **얼마나 걸리는지** 알려 주는 칸이다 — 길이를
+   * 숨기고 재생을 유도하지 않는다.
+   */
+  demo?: CaseDemoSource & {
+    /** "90초" 처럼 재생 시간. */
+    length: string;
+    /** 음성 유무·누가 만든 것인지 한 줄. */
+    note: string;
+  };
   /** 왜 만들었나. 단락. */
   lede: readonly string[];
   facts: readonly CaseFact[];
@@ -508,6 +535,13 @@ const KAYFABE: CaseStudy = {
   ],
   image: "/projects/kayfabe-home.jpg",
   imageAlt: "KAYFABE 메인 화면 — WWE DATA & PREDICTION PLATFORM 히어로와 AI 예측 카드",
+  demo: {
+    kind: "file",
+    src: "/kayfabe-demo-90s.mp4",
+    poster: "/projects/kayfabe-demo-poster.jpg",
+    length: "90초",
+    note: "음성 없음 · 자막 · 실제 운영 화면",
+  },
   lede: [
     "경기 결과를 맞히는 서비스는 많습니다. 그런 서비스가 내놓는 적중률을 저는 믿지 못했습니다 — 그 숫자가 **무엇을 읽고 나온 것인지**가 적혀 있지 않기 때문입니다. 끝난 경기의 문서를 읽고 맞힌 것과 경기 전 자료로 맞힌 것은 같은 숫자여도 다른 일입니다.",
     "그래서 이 플랫폼의 주제는 예측이 아니라 **예측의 자격**입니다. 세 개의 축이 각본 · 배당 · 소식을 따로 읽어 결론을 내고, 그 결론이 어느 문서의 어느 구절에서 왔는지를 함께 남깁니다. 그러고 나서 시스템이 스스로 묻습니다 — 이 근거를 성적에 세도 되는가.",
@@ -995,6 +1029,14 @@ const SUPERSUB: CaseStudy = {
     },
   ],
   image: "/projects/supersub-home.jpg",
+  /* 팀이 만든 영상이고 올린 사람도 내가 아니다 — 그 사실을 `note` 가 적는다.
+     이 페이지는 내 몫을 따로 적어 두는 페이지라, 영상의 출처도 같이 적어야 말이 맞는다. */
+  demo: {
+    kind: "youtube",
+    youtubeId: "g5xvyBxsPHM",
+    length: "2분",
+    note: "팀 프로젝트 시연영상 · 업로드 박민호(팀장)",
+  },
   imageAlt: "SUPER-SUB 서비스 첫 화면 — 초록 배경 위의 SUPERSUB 워드마크",
   lede: [
     "아마추어 축구에서 용병을 구할 때 가장 큰 불신은 **실력을 확인할 방법이 없다**는 것입니다. 자기 신고 등급은 검증이 안 되고, 후기는 표본이 적을 때 한 사람의 인상에 좌우됩니다. 영상은 이미 누구나 찍고 있는데, 그 영상을 재현 가능한 근거로 바꿔 주는 도구가 없었습니다.",

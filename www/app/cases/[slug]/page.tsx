@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Github, Mail } from "lucide-react";
 
+import { CaseDemo } from "@/components/portfolio/case-demo";
 import { Emphasis } from "@/components/portfolio/emphasis";
 import { FlowDiagram, FlowLegend, flowAnchorId } from "@/components/portfolio/flow-diagram";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -139,6 +140,9 @@ function Hero({ study }: { study: CaseStudy }) {
           priority
         />
       </div>
+
+      {/* 메인 사진과 사이트 주소 사이다 — 화면을 본 다음에 열어 보는 순서가 된다 */}
+      {study.demo && <CaseDemo demo={study.demo} name={study.name} />}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {study.links.map((link) => (
