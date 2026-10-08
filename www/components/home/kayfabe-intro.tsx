@@ -5,8 +5,14 @@ import { createPortal } from "react-dom";
 
 const SEEN_KEY = "kayfabe_intro_seen";
 
-/** 전체 길이(ms). 들어오는 사람을 1.2초 넘게 막지 않는다. */
-const TOTAL_MS = 1200;
+/**
+ * 전체 길이(ms) — 0.7초 등장 · 0.7초 룰 · 1.3초 정지 · 0.4초 걷힘.
+ *
+ * 1.2초로 시작했다가 **3초로 늘렸다** (2026-10-08 사용자). 늘어난 시간은 전부
+ * 가운데 **정지 구간**으로 갔다 — 모션을 길게 끌면 느려 보이지만, 다 그려진
+ * 워드마크가 잠깐 서 있는 것은 길이가 아니라 무게로 읽힌다.
+ */
+const TOTAL_MS = 3000;
 
 /**
  * 랜딩 인트로 — Oswald 워드마크와 골드 룰 한 줄.
@@ -34,7 +40,7 @@ export function KayfabeIntro() {
     if (hasSeenIntro()) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       // 모션을 줄여 달라고 한 사람에게는 **아예 띄우지 않는다.** 정지된
-      // 화면으로 1.2초를 막는 것은 배려가 아니라 그냥 지연이다.
+      // 화면으로 3초를 막는 것은 배려가 아니라 그냥 지연이다.
       markIntroSeen();
       return;
     }
@@ -50,8 +56,8 @@ export function KayfabeIntro() {
     };
     const timer = window.setTimeout(end, TOTAL_MS);
 
-    // 아무 데나 누르거나 아무 키나 치면 바로 걷는다 — 1.2초라도 기다리는
-    // 쪽을 선택하게 둔다.
+    // 아무 데나 누르거나 아무 키나 치면 바로 걷는다 — 3초를 기다릴지 말지는
+    // 들어온 사람이 정한다.
     window.addEventListener("pointerdown", end);
     window.addEventListener("keydown", end);
     return () => {
@@ -75,12 +81,12 @@ export function KayfabeIntro() {
       aria-hidden
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-background"
       style={{
-        animation: `kayfabe-intro-lift 300ms cubic-bezier(0.2, 0.6, 0.25, 1) ${TOTAL_MS - 300}ms both`,
+        animation: `kayfabe-intro-lift 400ms cubic-bezier(0.2, 0.6, 0.25, 1) ${TOTAL_MS - 400}ms both`,
       }}
     >
       <span
         className="font-sport text-5xl leading-none tracking-[0.04em] text-foreground sm:text-7xl"
-        style={{ animation: "kayfabe-intro-mark 420ms cubic-bezier(0.2, 0.6, 0.25, 1) both" }}
+        style={{ animation: "kayfabe-intro-mark 700ms cubic-bezier(0.2, 0.6, 0.25, 1) both" }}
       >
         KAYFABE
       </span>
@@ -90,7 +96,7 @@ export function KayfabeIntro() {
            테마별로 바로 가리키는 토큰은 `--brand` 쪽이다: 라이트 `#dd7400` ·
            다크 `#fcbb00` (DESIGN.md §2). */
         className="mt-6 block h-1 w-24 origin-left bg-brand sm:w-28"
-        style={{ animation: "kayfabe-intro-rule 360ms cubic-bezier(0.2, 0.6, 0.25, 1) 340ms both" }}
+        style={{ animation: "kayfabe-intro-rule 700ms cubic-bezier(0.2, 0.6, 0.25, 1) 600ms both" }}
       />
     </div>,
     document.body,
