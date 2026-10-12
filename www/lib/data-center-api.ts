@@ -269,7 +269,12 @@ export function formatDaysAway(daysAway: number): string {
   return daysAway === 0 ? "오늘" : `D-${daysAway}`;
 }
 
-export type OriginCount = { name: string; count: number };
+export type OriginCount = {
+  name: string;
+  count: number;
+  /** 그 지역 출신 선수 이름. 지역을 누르면 명단으로 펼친다. */
+  members: string[];
+};
 
 export type Origins = {
   countries: OriginCount[];

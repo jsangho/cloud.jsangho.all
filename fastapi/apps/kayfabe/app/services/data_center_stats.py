@@ -726,6 +726,15 @@ UNITED_STATES = "United States"
 
 
 @dataclass(frozen=True)
+class OriginGroup:
+    """한 지역과 **거기 출신이 누구인지**. 화면이 눌렀을 때 이름을 보여 준다."""
+
+    name: str
+    count: int
+    members: list[str]
+
+
+@dataclass(frozen=True)
 class OriginDistribution:
     """출신 분포. **나라와 미국 주를 따로 센다.**
 
@@ -733,10 +742,10 @@ class OriginDistribution:
     67명이 사라진다. 화면이 지도 둘을 나란히 세우는 이유와 같다.
     """
 
-    #: (나라, 인원) 내림차순.
-    countries: list[tuple[str, int]]
-    #: (주, 인원) 내림차순. 미국 사람만.
-    us_states: list[tuple[str, int]]
+    #: 나라별. 인원 내림차순.
+    countries: list[OriginGroup]
+    #: 미국 주별. 인원 내림차순.
+    us_states: list[OriginGroup]
     #: 미국 사람인데 주를 모르는 수 (`Florida, U.S.`처럼 주가 적힌 경우는 센다).
     us_state_unknown: int
     #: 출신지를 아는 사람 수 / 전체.
@@ -765,8 +774,8 @@ def _origin_of(birth_place: str | None) -> tuple[str, str | None] | None:
 
 def origin_distribution(rows: Iterable[WrestlerRow]) -> OriginDistribution:
     """출신 나라·미국 주 분포. **없는 값을 추정하지 않는다** — 모르면 안 센다."""
-    countries: Counter[str] = Counter()
-    states: Counter[str] = Counter()
+    countries: defaultdict[str, list[str]] = defaultdict(list)
+    states: defaultdict[str, list[str]] = defaultdict(list)
     unknown_state = 0
     total = 0
     located = 0
@@ -777,15 +786,25 @@ def origin_distribution(rows: Iterable[WrestlerRow]) -> OriginDistribution:
             continue
         located += 1
         country, state = origin
-        countries[country] += 1
+        countries[country].append(row.name)
         if country == UNITED_STATES:
             if state:
-                states[state] += 1
+                states[state].append(row.name)
             else:
                 unknown_state += 1
+
+    def grouped(source: dict[str, list[str]]) -> list[OriginGroup]:
+        return sorted(
+            (
+                OriginGroup(name=name, count=len(members), members=sorted(members))
+                for name, members in source.items()
+            ),
+            key=lambda g: (-g.count, g.name),
+        )
+
     return OriginDistribution(
-        countries=sorted(countries.items(), key=lambda kv: (-kv[1], kv[0])),
-        us_states=sorted(states.items(), key=lambda kv: (-kv[1], kv[0])),
+        countries=grouped(countries),
+        us_states=grouped(states),
         us_state_unknown=unknown_state,
         located=located,
         total=total,

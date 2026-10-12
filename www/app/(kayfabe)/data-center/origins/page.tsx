@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Choropleth } from "@/components/data-center/choropleth";
 import {
@@ -7,21 +8,22 @@ import {
   DataUnavailable,
   LoadingBlock,
 } from "@/components/data-center/data-center-shell";
-import { fetchOrigins, type Origins } from "@/lib/data-center-api";
+import { fetchOrigins, type OriginCount, type Origins } from "@/lib/data-center-api";
 import { shapeNameOf } from "@/lib/geo/shape-aliases";
 import { US_STATES, US_STATES_VIEWBOX } from "@/lib/geo/us-states-paths";
 import { WORLD_COUNTRIES, WORLD_COUNTRIES_VIEWBOX } from "@/lib/geo/world-countries-paths";
+import { cn } from "@/lib/utils";
 
 /**
  * 출신 분포 (2026-10-12).
  *
  * **지도가 둘인 이유.** 세계 전도 하나로는 아무것도 안 보인다 — 178명 중 118명이
  * 미국이라 램프가 미국 한 칸에 몰리고, 2위 England(11명)는 세계 지도에서 점만 하다.
- * 그래서 미국 **안**은 주 단위로(31개 주, 최대 20), 미국 **밖**은 세계 지도로
- * 나눠 그린다. 각 지도 안에서 값의 폭이 좁아져야 색이 실제로 구분된다.
+ * 그래서 미국 **안**은 주 단위로, 미국 **밖**은 세계 지도로 나눠 그린다.
  *
  * **목록을 지도 옆에 함께 둔다.** 지도는 어디인지를 보여 주지만 몇 명인지는
  * 순위로 읽는 게 정확하다 (DESIGN.md §16 — 항목 간 크기 비교는 막대·목록의 일).
+ * 지도와 목록은 **같은 선택 상태**를 공유한다: 어느 쪽을 눌러도 아래에 명단이 선다.
  */
 type PageState = { status: "loading" } | { status: "ready"; data: Origins } | { status: "error" };
 
@@ -43,7 +45,7 @@ export default function DataCenterOriginsPage() {
   return (
     <DataCenterShell
       title="출신"
-      description="선수가 실제로 태어난 곳입니다. 방송이 부르는 연고지와는 다를 수 있어, 선수 목록에서 둘을 함께 볼 수 있습니다."
+      description="선수가 실제로 태어난 곳입니다. 지도나 옆 목록에서 지역을 누르면 그곳 출신이 누구인지 볼 수 있습니다."
     >
       {state.status === "loading" ? (
         <LoadingBlock rows={6} />
@@ -61,13 +63,6 @@ function OriginsBody({ data }: { data: Origins }) {
   const abroad = data.countries.filter((c) => c.name !== "United States");
   const abroadTotal = abroad.reduce((sum, c) => sum + c.count, 0);
 
-  const stateValues = new Map(data.usStates.map((s) => [s.name, s.count]));
-  /** 같은 도형에 둘 이상이 붙는다 — England와 Scotland가 둘 다 United Kingdom이다. */
-  const countryValues = new Map<string, number>();
-  for (const row of abroad) {
-    const shape = shapeNameOf(row.name);
-    countryValues.set(shape, (countryValues.get(shape) ?? 0) + row.count);
-  }
   const unmapped = abroad.filter(
     (row) => !WORLD_COUNTRIES.some((s) => s.id === shapeNameOf(row.name)),
   );
@@ -81,79 +76,170 @@ function OriginsBody({ data }: { data: Origins }) {
         <span className="tabular-nums text-foreground">{abroadTotal}</span>명이 그 밖
       </p>
 
-      <section aria-labelledby="us-map" className="flex flex-col gap-4">
-        <div>
-          <h2 id="us-map" className="font-sport text-lg text-foreground">
-            미국 어느 주에서 왔나
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            미국 출신 {usTotal}명 · {data.usStates.length}개 주
-            {data.usStateUnknown > 0 && ` · 주를 모르는 ${data.usStateUnknown}명은 빼고 칠했습니다`}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
-          <Choropleth
-            shapes={US_STATES}
-            viewBox={US_STATES_VIEWBOX}
-            values={stateValues}
-            className="min-w-0"
-          />
-          <RankList rows={data.usStates} />
-        </div>
-      </section>
+      <OriginSection
+        id="us-map"
+        heading="미국 어느 주에서 왔나"
+        note={`미국 출신 ${usTotal}명 · ${data.usStates.length}개 주${
+          data.usStateUnknown > 0 ? ` · 주를 모르는 ${data.usStateUnknown}명은 빼고 칠했습니다` : ""
+        }`}
+        rows={data.usStates}
+        shapes={US_STATES}
+        viewBox={US_STATES_VIEWBOX}
+        /* 주 이름은 지도 도형 이름과 그대로 같다 — 별칭이 필요 없다. */
+        toShape={(name) => name}
+      />
 
-      <section aria-labelledby="world-map" className="flex flex-col gap-4">
-        <div>
-          <h2 id="world-map" className="font-sport text-lg text-foreground">
-            미국 밖에서 온 {abroadTotal}명
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {abroad.length}개 나라. 미국은 이 지도에서 뺐습니다 — 함께 칠하면 나머지가 전부 가장
-            옅은 한 단계로 몰립니다.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
-          <Choropleth
-            shapes={WORLD_COUNTRIES}
-            viewBox={WORLD_COUNTRIES_VIEWBOX}
-            values={countryValues}
-            className="min-w-0"
-          />
-          <RankList rows={abroad} />
-        </div>
-        {/* **지도가 못 그리는 것을 적는다.** 경계 데이터는 공식 국가만 그리므로
-            잉글랜드·스코틀랜드가 영국 한 칸으로 합쳐지고, 아주 작은 섬나라는
-            도형 자체가 없다. 목록은 그대로 나누어 보여 주므로 둘을 대조하면 된다. */}
-        <p className="text-xs text-muted-foreground">
-          지도는 잉글랜드·스코틀랜드를 영국 한 칸으로 칠합니다 — 경계 데이터에 그 둘이 따로
-          없습니다.
-          {unmapped.length > 0 &&
-            ` 지도에 도형이 없어 칠하지 못한 곳: ${unmapped.map((r) => r.name).join(" · ")}.`}
-        </p>
-      </section>
+      <OriginSection
+        id="world-map"
+        heading={`미국 밖에서 온 ${abroadTotal}명`}
+        note={`${abroad.length}개 나라. 미국은 이 지도에서 뺐습니다 — 함께 칠하면 나머지가 전부 가장 옅은 한 단계로 몰립니다.`}
+        rows={abroad}
+        shapes={WORLD_COUNTRIES}
+        viewBox={WORLD_COUNTRIES_VIEWBOX}
+        toShape={shapeNameOf}
+        footnote={
+          <>
+            지도는 잉글랜드·스코틀랜드를 영국 한 칸으로 칠합니다 — 경계 데이터에 그 둘이 따로
+            없습니다.
+            {unmapped.length > 0 &&
+              ` 지도에 도형이 없어 칠하지 못한 곳: ${unmapped.map((r) => r.name).join(" · ")}.`}
+          </>
+        }
+      />
     </div>
   );
 }
 
-function RankList({ rows }: { rows: { name: string; count: number }[] }) {
-  const max = rows[0]?.count ?? 1;
+/**
+ * 지도 + 순위 목록 + 명단 한 묶음.
+ *
+ * **선택은 도형 이름으로 쥔다.** 잉글랜드와 스코틀랜드가 같은 영국 도형을 쓰므로
+ * 데이터 이름으로 쥐면 지도에서 어느 쪽을 칠해야 할지 알 수 없다. 반대로 명단은
+ * 그 도형에 묶인 데이터 행을 **모두** 모아 보여 준다 — 영국을 누르면 잉글랜드와
+ * 스코틀랜드가 함께 나온다.
+ */
+function OriginSection({
+  id,
+  heading,
+  note,
+  rows,
+  shapes,
+  viewBox,
+  toShape,
+  footnote,
+}: {
+  id: string;
+  heading: string;
+  note: string;
+  rows: OriginCount[];
+  shapes: { id: string; name: string; d: string }[];
+  viewBox: string;
+  toShape: (name: string) => string;
+  footnote?: React.ReactNode;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const values = new Map<string, number>();
+  const members = new Map<string, string[]>();
+  for (const row of rows) {
+    const shape = toShape(row.name);
+    values.set(shape, (values.get(shape) ?? 0) + row.count);
+    members.set(shape, [...(members.get(shape) ?? []), ...row.members]);
+  }
+
+  const picked = selected ? rows.filter((row) => toShape(row.name) === selected) : [];
+
   return (
-    <ol className="flex max-h-[28rem] flex-col gap-1 overflow-y-auto pr-1">
-      {rows.map((row) => (
-        <li key={row.name} className="flex items-center gap-2 text-sm">
-          <span className="min-w-0 flex-1 truncate text-foreground">{row.name}</span>
-          {/* 막대는 목록 안에서 비율을 보여 주는 보조선이다 — 숫자가 먼저다. */}
-          <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-sm bg-surface-2">
-            <span
-              className="block h-full rounded-sm bg-chart-1"
-              style={{ width: `${Math.max(6, (row.count / max) * 100)}%` }}
-            />
-          </span>
-          <span className="w-6 shrink-0 text-right tabular-nums text-muted-foreground">
-            {row.count}
-          </span>
-        </li>
-      ))}
-    </ol>
+    <section aria-labelledby={id} className="flex flex-col gap-4">
+      <div>
+        <h2 id={id} className="font-sport text-lg text-foreground">
+          {heading}
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
+        <Choropleth
+          shapes={shapes}
+          viewBox={viewBox}
+          values={values}
+          members={members}
+          selected={selected}
+          onSelect={setSelected}
+          className="min-w-0"
+        />
+        <ol className="flex max-h-[28rem] flex-col gap-0.5 overflow-y-auto pr-1">
+          {rows.map((row) => {
+            const shape = toShape(row.name);
+            const isSelected = selected === shape;
+            const max = rows[0]?.count ?? 1;
+            return (
+              <li key={row.name}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(isSelected ? null : shape)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm transition-colors hover:bg-card-2",
+                    isSelected && "bg-card-2",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate text-foreground">{row.name}</span>
+                  {/* 막대는 목록 안에서 비율을 보여 주는 보조선이다 — 숫자가 먼저다. */}
+                  <span className="h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-surface-2">
+                    <span
+                      className="block h-full rounded-sm bg-chart-1"
+                      style={{ width: `${Math.max(6, (row.count / max) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="w-6 shrink-0 text-right tabular-nums text-muted-foreground">
+                    {row.count}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+
+      {picked.length > 0 && <RosterPanel groups={picked} onClose={() => setSelected(null)} />}
+      {footnote && <p className="text-xs text-muted-foreground">{footnote}</p>}
+    </section>
+  );
+}
+
+/** 고른 지역의 **전체 명단**. 이름은 그 선수의 기록 페이지로 간다. */
+function RosterPanel({ groups, onClose }: { groups: OriginCount[]; onClose: () => void }) {
+  const total = groups.reduce((sum, g) => sum + g.count, 0);
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">
+          {groups.map((g) => g.name).join(" · ")} 출신{" "}
+          <span className="tabular-nums text-muted-foreground">{total}명</span>
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          닫기
+        </button>
+      </div>
+      <ul className="flex flex-wrap gap-1.5">
+        {groups.flatMap((group) =>
+          group.members.map((name) => (
+            <li key={`${group.name}-${name}`}>
+              <Link
+                href={`/records/${encodeURIComponent(name)}`}
+                className="inline-block rounded-md border border-border px-2 py-1 text-xs text-foreground transition-colors hover:bg-card-2"
+              >
+                {name}
+              </Link>
+            </li>
+          )),
+        )}
+      </ul>
+    </div>
   );
 }
