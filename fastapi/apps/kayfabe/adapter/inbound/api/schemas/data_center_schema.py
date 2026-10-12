@@ -196,7 +196,8 @@ class BirthdaySchema(_Camel):
     role: str | None = None
     month_day: str = Field(alias="monthDay")
     birth_date: str = Field(alias="birthDate")
-    age: int
+    age: int | None = None
+    """**`null`은 태어난 해를 모른다는 뜻**이다. 화면이 나이 칸을 비운다."""
     days_away: int = Field(alias="daysAway")
 
 

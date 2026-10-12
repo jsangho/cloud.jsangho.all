@@ -168,7 +168,8 @@ export type Birthday = {
   /** `MM-DD` */
   monthDay: string;
   birthDate: string;
-  age: number;
+  /** **`null`이면 태어난 해를 모른다** — 그 사람도 목록에는 선다. */
+  age: number | null;
   /** 오늘이면 0. */
   daysAway: number;
 };

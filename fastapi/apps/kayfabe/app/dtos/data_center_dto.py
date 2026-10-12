@@ -228,7 +228,8 @@ class BirthdayResponse:
     #: `MM-DD`
     month_day: str
     birth_date: str
-    age: int
+    #: **`None`이면 태어난 해를 모른다** — 0이 아니다. 화면이 나이 칸을 비운다.
+    age: int | None
     days_away: int
 
 

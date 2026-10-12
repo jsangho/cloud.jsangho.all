@@ -484,7 +484,10 @@ def top_win_rates(
 #: 무엇이든 들어갈 수 있고, 실제로 로스터 CSV에는 `1974-??-??`처럼 월·일을 모르는
 #: 행이 있다. **모르는 날짜를 1월 1일로 접지 않는다** — 그 순간 생일이 아닌 사람이
 #: 생일인 것처럼 뜬다.
-_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
+#: 연도는 `????`일 수 있다 — **월·일만 알아도 달력에 올릴 수 있다.** 그때 나이는
+#: `None`이고 화면이 그 칸을 비운다. 반대로 `1974-??-??`처럼 월·일을 모르면 올릴
+#: 자리가 없으므로 건너뛴다. 실측(2026-10-12): 전자 1명·후자 2명.
+_BIRTH_DATE = re.compile(r"^(\d{4}|\?{4})-(\d{2})-(\d{2})$")
 
 
 @dataclass(frozen=True)
@@ -522,7 +525,9 @@ class Birthday:
     #: `MM-DD`. 연도를 빼는 이유는 이 값이 "다가오는 날짜"라서다.
     month_day: str
     birth_date: str
-    age: int
+    #: **`None`은 태어난 해를 모른다는 뜻**이다. 그 사람도 생일은 있으므로 목록에
+    #: 서되 나이 칸만 비운다 — 모르는 값을 0이나 추정치로 채우지 않는다.
+    age: int | None
     #: 오늘부터 며칠 뒤인가. 오늘이면 0이다.
     days_away: int
 
@@ -561,10 +566,12 @@ def upcoming_birthdays(
     """
     found: list[Birthday] = []
     for row in rows:
-        matched = _ISO_DATE.match((row.birth_date or "").strip())
+        matched = _BIRTH_DATE.match((row.birth_date or "").strip())
         if matched is None:
             continue
-        year, month, day = (int(g) for g in matched.groups())
+        raw_year, raw_month, raw_day = matched.groups()
+        year = None if raw_year.startswith("?") else int(raw_year)
+        month, day = int(raw_month), int(raw_day)
         try:
             this_year = date(today.year, month, day)
         except ValueError:
@@ -584,7 +591,7 @@ def upcoming_birthdays(
                 role=row.role,
                 month_day=f"{month:02d}-{day:02d}",
                 birth_date=matched.group(0),
-                age=next_birthday.year - year,
+                age=None if year is None else next_birthday.year - year,
                 days_away=(next_birthday - today).days,
             )
         )
