@@ -139,12 +139,11 @@ done
 
 # --- 4. 기동 대기 -----------------------------------------------------------
 echo "==> rollout 대기"
-for d in pgadmin n8n backend auth; do
+for d in pgadmin backend auth; do
   kubectl -n "$NS" rollout status "deploy/$d" --timeout=10m
 done
 
 kubectl -n "$NS" get pods,svc
 echo
 echo "backend  http://localhost:8000"
-echo "n8n      http://localhost:5678"
 echo "pgadmin  http://localhost:5050"

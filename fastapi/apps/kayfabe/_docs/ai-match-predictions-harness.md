@@ -497,6 +497,68 @@ cd www && pnpm lint && pnpm type-check && pnpm format
   - 대신 **증명할 수 있는 것**을 쓴다: "이 본문을 우리가 그때 쥐고 있었다." 본문 SHA-256이 `revision_id`로 함께 남아 자기 증명이 되고(`sha256:` 접두사로 위키 `revid`·wwe.com `ETag`와 구분된다), 발행 뒤의 조용한 수정에 흔들리지 않는다. `published_at`은 **지금처럼 별도 칸으로 남아** 감사 화면에 계속 보인다 — 둘을 한 칸에 접으면 "언제 쓰였나"와 "언제 읽었나"가 같은 이름으로 보고된다.
   - **틀리는 방향이 안전하다.** 수집이 늦으면 멀쩡한 기사도 "경기 전임을 못 보증한다"며 걸리지만, 통과시키면 안 될 것을 통과시키지는 않는다.
   - **운영 규칙이 하나 생긴다: 대회 전에 수집해야 그 기사가 증거로 쓰인다.** 구현은 허브 `PublicSourceInteractor._revision_from_collection`이고, 어느 도메인에 적용할지는 부르는 앱이 정한다(`COLLECTION_LINEAGE_DOMAINS`). 위키·wwe.com은 더 강한 주장을 이미 갖고 있어 **여기 들어가지 않는다.**
+- [x] **Q9. 두 번째 북메이커를 어디서 얻는가 · 호가 수가 경기마다 다른 것을 어떻게 다룰 것인가** → **MyBookie를 `www.fightful.com` 경유로 얻고, 호가 수의 비대칭을 숨기지 않는다** (2026-10-08). 후보 조사는 §3-D10의 절차를 그대로 썼고 **허용 목록은 한 줄도 바뀌지 않았다** — 필요한 것이 새 도메인이 아니라 **이미 수집하는 도메인을 오즈 축에서도 읽는 운영 절차**였기 때문이다.
+  - **아그리게이터를 쓰지 않는다.** `oddspedia.com`은 robots·`Content-Signal` 부재·실제 접근(EC2 백엔드 컨테이너 200 · 586KB)이 전부 통과하는데 **숫자의 출처와 시각을 주지 않는다.** 실측이 결정적이었다: MITB 2026 기사가 "Updated: Oct 05 01:07 PM UTC"로 적혀 있는데 남녀 래더 열두 값이 BetOnline의 **10/04 9:15PM 호가와 한 자리도 다르지 않았다** — 하루 묵은 복제다. 이것을 `book: "Oddspedia"`로 적으면 `odds_consensus`가 BetOnline과 **별개 북메이커 둘로 세어** 분산을 0 쪽으로 눌러 `confidence_from`을 부풀리고, `_summary`가 "북메이커 2곳 합의"라는 **틀린 문장**을 근거란에 남긴다. `www.actionnetwork.com`은 다른 이유로 뺐다 — 이용약관이 "page-scrape"·"robot"·"spider"로 사이트 어느 부분에도 접근·복제하지 못한다고 명시하고(사전 서면 동의 필요), WWE 배당 기사가 2024-04에서 끊겼다(월별 사이트맵 24개월분에 `/wwe/` 1건, 그마저 배당이 아니다).
+  - **직접 bookmaker는 전부 막혔다.** 실측(로컬·EC2 컨테이너 결과 일치): `mybookie.ag`·`sports.betmgm.com`·`sportsbook.fanduel.com`·`sportsbook.draftkings.com`은 **robots.txt조차 403**이고, `betus.com.pa`는 robots가 `Allow: /`인데 WWE 페이지가 403이다(Cloudflare). **우회하지 않는다.** `betrivers.com`은 열려 있으나 12KB JS 셸뿐이고, 미국 규제 북메이커라 예정된 결과에 시장을 열지 않는다.
+  - **`bovada.lv`만 아깝고, 그래서 재확인 대상으로 남긴다.** robots가 전면 허용이고 공개 coupon API가 그대로 열리며(축구 4.1MB·테니스 299KB 실측), 응답이 `price.american`·`price.decimal`과 함께 **`lastModified`** 를 준다 — 관측 시각을 *북메이커가* 주는 유일한 후보다. 막은 것은 기술이 아니라 **지금 WWE 시장이 없다는 사실**이다: 라이브 메뉴 34개에 `wrestling`이 없고 taxonomy에는 `{"code":"WRES","showInHome":"false"}`로 숨어 있다. 큰 대회 전에 `GET /services/sports/event/coupon/events/A/description/wrestling?marketFilterId=def&lang=en`을 한 번 찔러보면 재확인이 끝난다. ⚠️ **이 API의 `{}`를 단독 근거로 쓰지 말 것** — `boxing`·`academy-awards`도 `{}`를 돌려주는데 그 둘은 실재한다.
+  - **MyBookie가 BetOnline과 독립이라는 근거는 "값이 다르다"가 아니라 "순위가 뒤집힌다"다.** 같은 시기 실측 — 남자 래더에서 BetOnline은 Bron -110 / Penta +140인데 MyBookie는 Penta -110 / Bron +125이고, 여자 래더도 Perez -150 / Lash +125 ↔ Lash -120 / Perez +125로 1·2위가 바뀐다. 경유지 `www.fightful.com`은 이미 `REPORTING_DOMAINS`·`COLLECTION_LINEAGE_DOMAINS` 양쪽에 있고 제목·본문·태그 세 곳에 book 이름을 적는다("Courtesy Of MyBookie"). **다만 제휴가 공시돼 있다**("our partners at MyBookie") — 숫자를 틀리게 만들지는 않지만, 이 경로는 *여러 book을 비교해 주는* 경로가 아니라 **한 book을 꾸준히 전해 주는** 경로라는 뜻이다.
+  - **커버리지는 불규칙하다.** `/tag/mybookie/` 실측 7건/14개월(2025-08 TripleMania · 2025-10 Halloween Havoc · 2026-01 Royal Rumble · 2026-05 Backlash prop · 2026-05 Clash in Italy · 2026-10-05 MITB · 2026-10-06 MITB 이동) — **WrestleMania 42와 SummerSlam 2026이 없다.** 그러므로 2-book은 시스템의 상태가 아니라 **경기마다 다른 조건**이다.
+  - **그래서 모든 경기의 오즈 확신도가 같은 정보량을 갖지 않는다.** 호가가 하나인 경기는 분산이 0이라 `confidence_from`이 합의 확률을 그대로 내고, 둘인 경기는 곳별 편차만큼 균등분포 쪽으로 당겨진 값을 낸다 — **같은 이름의 값이 다른 질문에 답한다.** 화면에서는 `_summary`가 "북메이커 n곳"으로 정직하게 적으므로 사용자가 속지는 않는다. 하지만 **AI 성적을 경기 간에 집계할 때 1-book 경기와 2-book 경기를 섞으면 안 된다** — 분석은 호가 수로 갈라 비교할 수 있어야 하고, 그 분모는 `bookmakerQuotes`의 서로 다른 `book` 개수다.
+  - **MITB 2026에는 소급하지 않는다.** 다섯 경기 예측이 10/05 기준으로 이미 생성돼 있고, 10/08에 발견한 호가를 넣어 재생성하면 그 예측은 대회 사흘 전 정보로 다시 만든 것이 된다 — Q8이 막으려던 누수와 같은 모양이다. MITB는 BetOnline 단일 호가로 **고정한다.**
+  - **서사·루머가 빈 것은 검색 상한 때문이 아니다 — 재보고 상한을 넣지 않았다** (2026-10-08). MITB에서 서사는 5경기 중 4건, 루머는 1건만 말했다. 당시 검색 기록을 보면 같은 문서가 top5에서 여러 자리를 먹고 있어(`mitb26-men`은 `wwe.com/superstars/cmpunk` 한 문서가 3자리) **문서당 상한**이 원인처럼 보였다. 운영 코퍼스(1069청크)에 다섯 질의를 그대로 넣고 상한 0·1·2를 실측한 결과 **참가자 커버리지가 셋 다 똑같았다**(6/6 · 2/2 · 2/2 · 3/3 · 6/6, 참가자를 언급한 첫 청크의 순위도 다섯 경기 모두 1위). 바뀌는 것은 서로 다른 문서 수뿐이다(`mitb26-reed-femi` 3→5). **중복은 눈에 거슬리지만 커버리지를 깎지 않으므로 상한은 근거 없는 변경이다** — `.limit(top_k)`을 그대로 둔다.
+    - **진짜 원인은 코퍼스가 그때 없었다는 것이다.** 오늘 상위를 채우는 문서 넷의 `collected_at`이 전부 예측 **뒤**다: `pwinsider/212522`(10-08 03:37) · `pwtorch` 여자 래더 전망(10-08 03:38) · `pwtorch` SmackDown 10/2(10-08 03:38) · 위키 `Bronson_Reed`(10-06 06:46). 예측은 10-06 05:59~07:39에 만들어졌다. 그래서 위 절차에 6번(생성 전 검색 점검)이 생겼다.
+    - **다만 이 측정이 증명한 것은 커버리지까지다.** "그 자료를 받았으면 에이전트가 말했을 것"은 예측을 다시 돌려야 아는 일이고, MITB에는 할 수 없다(ex-ante). 특히 루머는 자료가 늘어도 승자 방향 보도가 없으면 여전히 거부하는 것이 맞다.
+  - **운영 절차 — 순서가 규칙이다** (Survivor Series 2026-11-28부터 적용). **생성 버튼을 배당보다 먼저 누르면 그 대회의 오즈 축은 영구히 빈다.** MITB 2026이 그렇게 됐다: 세 에이전트가 5경기 전부 돌아 리포트 15개를 남겼는데 의견은 **7개**뿐이고 오즈는 **5경기 중 2건**만 말했다. `mitb26-men`·`mitb26-reed-femi`는 생성 시점(2026-10-06)에 BetOnline 숫자가 이미 공개돼 있었는데도(WWELeaks 10/05 글에 남자 래더 **4행 표** + "Oba Femi has been kept at -500 to overcome Bronson Reed (+300)") 카드가 비어 있었다. **예측이 생긴 뒤에는 메꿀 수 없다** — 채우고 재생성하면 대회 직전 정보로 다시 만든 것이 되어 Q8이 막으려던 누수와 같은 모양이 된다.
+    1. **대회 전에 그 대회 전 경기의 배당 칸을 전수 확인한다.** 빈 칸이 남아 있으면 **생성하지 않는다.** 한 경기씩 눌러 보고 "오즈가 말했나"로 사후에 알아내는 것이 아니라, 누르기 전에 카드에서 센다.
+    2. **빈 칸을 두 종류로 갈라 적는다.** *메꿀 수 있는 공백*(시장은 열렸는데 안 적음)은 채운다. *시장이 없는 공백*은 **비워 두는 것이 맞다** — MITB `mitb26-women-world`가 그 예다(Fightful 2026-10-06: "The odds have not been released for the Triple Threat bout"). 그럴듯한 숫자로 메우지 않는다 — `PleMatchCardSingles.bookmakerDecimal` 주석이 그 이유를 적어 뒀다("북메이커 승률 막대가 근거 없는 값을 사실처럼 그린다").
+    3. **`bookmakerDecimal`이 아니라 `bookmakerQuotes`로 적는다.** 값이 맞아도 칸이 틀리면 출처와 관측일이 사라진다 — MITB `mitb26-women`이 그렇다: `[9.5, 13, 13, 1.67, 2.25, 4.0]`은 BetOnline 10/05 12:00PM 행과 정확히 일치하는데(`+850 / +1200 / +1200 / -149 / +125 / +300`) 옛 단일 칸에 들어가 `book`·`observedAt`을 잃었고, 그래서 그 경기 요약만 "BetOnline 배당 기준"이 아니라 그냥 "배당 기준"이다. 위에서 말한 1-book/2-book 분모(서로 다른 `book` 개수)도 이 칸에서만 나온다.
+    4. **Fightful의 MyBookie 기사가 있으면 한 벌 더 적는다** — `book: "MyBookie"` · `observedAt`=기사 발행일. 없으면 1-book으로 그냥 간다(커버리지가 불규칙한 것은 위에 적은 대로다).
+    5. **뉴스 수집을 돌린다.** Q8대로 대회 **전**이어야 그 기사가 증거로 쓰인다.
+    6. **수집이 충분했는지 검색으로 확인한다** — `scripts/check_knowledge_coverage.py <slug>`. 경기마다 생성 경로와 **같은 질의**(`build_knowledge_query`)·**같은 개수**(`KNOWLEDGE_TOP_K`)로 검색해 참가자 문서가 top5에 들어오는지 센다. 참가자를 한 명도 못 잡은 경기가 있으면(종료코드 1) **생성하지 않고 5번으로 돌아간다.** MITB 2026이 이 단계가 없어서 샜다: 수집과 생성이 같은 시간대에 섞여 돌았고(생성 05:59 → 수집 06:46 → 생성 07:38 → 수집 07:37 UTC), `mitb26-reed-femi`는 Bronson Reed 문서가 코퍼스에 들어오기 **44분 전에** 만들어져 그 경기 검색 1순위가 「why Bron Breakker isn't WWE world champion」이었다. 검색이 이상해서가 아니라 **더 나은 게 없어서**였고, 누르기 전에 그것을 알 방법이 없었다. **이 점검이 재는 것은 검색 커버리지이지 에이전트 출력이 아니다** — 자료가 다 들어와도 루머 축은 승자 방향 보도가 없으면 의견 없음을 내고, 그것은 설계다.
+    7. **예측 생성** → 대회 후 채점.
+
+    계보 게이트는 Q8대로 **수집 시각**으로 따로 돌고 `observedAt`은 호가가 언제 걸렸는지를 말한다 — 두 값은 다른 질문에 답하므로 충돌하지 않는다.
+- [ ] **Q10. 루머 축의 빈칸은 채울 수 있는가** — **일부만. 그리고 수집으로는 안 된다**(2026-10-08 실측). MITB에서 루머는 5경기 중 **1건**만 말했다. 빈칸 넷을 하나씩 조사했다.
+  - **먼저 빈칸을 두 종류로 갈랐다.** *채울 수 있는 것*(보도가 세상에 있다)과 *못 채우는 것*(보도가 없다)이다.
+    - `mitb26-men` ✅ 이미 채워짐 — 근거는 `wrestlinginc/2268406`「Report: WWE Creative Plans May Have Shifted」("reportedly circled as a **heavy favorite** in the upcoming Men's MITB by those inside WWE", WrestleVotes/Fightful Select 재작성).
+    - `mitb26-whc` ✅ **보도 있음(강함)** — "the **current plan is for Reigns to cling to the gold until WrestleMania 43**, where likely Royal Rumble winner Oba Femi will challenge and potentially defeat him"(`wrestlinginc/2256392` · `wrestlingheadlines` 교차). 대진 발표가 아니라 **MITB 구간을 직접 덮는 보도된 계획**이다.
+    - `mitb26-reed-femi` ⚠️ **약함** — 같은 보도가 Femi를 WM43 도전자 궤도로 말하지만 **이 경기 승자를 직접 말하지 않는다.** 모델이 물러서도 그것이 맞는 거부다.
+    - `mitb26-women-world` ❌ **보도 없음** — 있는 것은 전부 대진 발표(Fightful·WrestleTalk·Raw 결과)거나 예측 칼럼(Sportskeeda「5 possible finishes」·cagesideseats).
+    - `mitb26-women` ❌ **보도 없음** — WrestleTalk features「2026 Women's MITB Winner」는 예측 칼럼이다. **남의 예측을 되읽으면 적중률이 남의 칼럼의 적중률이 된다**(이미 내린 결정).
+  - **제한된 원본이 무료 재작성으로 도달한다.** whc 보도의 원출처는 Meltzer/Wrestling Observer이고 `www.f4wonline.com`은 `Content-Signal` 때문에 §3-D10의 `_EXCLUDED`에 있다. 그런데 `www.wrestlinginc.com`·`wrestlingheadlines.com`의 **재작성본은 허용 목록 안**이다 — Q9의 MyBookie가 Fightful을 지나 도달한 것과 같은 모양이다(막힌 원본, 열린 경유지).
+  - **수집해 봤고, 안 채워졌다.** 보도 3건을 운영 코퍼스에 넣었다(`wrestlinginc` 2256392·2279075·2280616 → 6청크, **계보없음 0**). 그런데 `top_k=5`에 **한 건도 못 들어왔다** — 새 문서의 최고 순위가 `mitb26-whc` **61위**(d=0.5007), `mitb26-reed-femi` **42위**다. top5의 거리는 0.34~0.39다.
+    - **원인은 질의 모양이다.** `build_knowledge_query`는 「제목 + 참가자 이름」을 잇는다(`World Heavyweight Championship Roman Reigns LA Knight`). 계획 보도는 **다른 대회·다른 선수를 말하므로 이름이 안 겹친다** — WM43 기사에 LA Knight가 없다. 즉 **참가자 이름이 겹치지 않는 「보도된 계획」은 구조적으로 밀린다.** [[kayfabe-retrieval-boilerplate-crowding]]가 적어 둔 "질의가 선수 이름 나열 형태인 한 구조적이다"의 다른 얼굴이다.
+    - 넣은 것이 낭비는 아니다 — 계보 완비된 보도가 16→19문서가 됐고, 참가자가 겹치는 다음 대회(Reigns가 나오는 카드)에서는 걸린다. 다만 **이번 빈칸은 못 메웠다.**
+  - **그래서 남은 수단은 수집이 아니라 검색이다.** 지금은 경기당 **검색 한 번**이고 서사·루머가 **같은 5청크를 공유한다**(`_collect_reports`). 두 축이 찾는 것이 다른데 질의가 하나다. 후보는 **축별 질의**(루머 축에만 「plans·reported·backstage·injury」류를 섞은 두 번째 검색)이고, `top_k`를 올려 때우는 길은 쓰지 않는다(61위를 잡으려면 70까지 올려야 하고, `ingest_prediction_knowledge.py` 독스트링이 경고한다 — 검색 설정이 바뀌면 과거 예측과 비교가 안 된다). **이것은 산식 변경이므로 `AGENT_VERSION`을 올려야 한다. 아직 결정하지 않았다.**
+  - **축별 질의를 여섯 벌 재봤다 — 효과가 한 경기뿐이다** (2026-10-08). 구현 전에 운영 코퍼스(1075청크)에서 질의만 바꿔 쟀다. 목표는 그 경기의 루머 등급 문서를 `top_k=5` 안에 넣는 것이다.
+
+        질의                                        men(2268406)  whc(2256392)  reed-femi(2256392)
+        base  `{제목} {이름들}` (현재)                      1위 ★        61위            42위
+        A     `{제목} {이름들} reported plans backstage`    1위 ★        26위            17위
+        B     `{이름들} WWE reported creative plans backstage` 2위 ★     12위          **3위 ★**
+        C     `{이름들} WWE plans`                         3위 ★        16위          **4위 ★**
+        D     `{이름들} WWE reportedly planned to win booking plans` 3위 ★ **10위**     —
+        E     `{이름들} backstage report creative plans injury return` 4위 ★ 16위        —
+
+    - **B가 가장 낫고, 그래도 `whc`는 못 넣는다.** 최선이 D의 10위다 — **이 변경이 겨냥한 가장 강한 사례가 실패한다.** 얻는 것은 `reed-femi` 하나(42위 → 3위)이고, `men`은 1위 → 2위로 유지된다(깨지지 않는다).
+    - **실제로 움직인 것은 순위가 아니라 위키 축출이다.** `reed-femi`의 top5 비위키 비율이 base **2/5 → B 5/5**다(base는 `Oba_Femi` 위키 2건 + `SummerSlam_(2026)` 위키가 세 자리를 먹었다). 즉 축별 질의의 효능은 "계획 보도를 찾아낸다"보다 **"백과사전을 밀어낸다"** 쪽이다. 그렇다면 같은 효과를 **보도 비중을 올려서도** 얻을 수 있고, 그쪽은 산식을 안 건드린다 — 지금 코퍼스는 **943/1075청크(88%)가 위키**이고 보도는 19문서뿐이다.
+    - **여자 경기 둘은 어떤 질의로도 변하지 않는다**(목표 문서가 애초에 없다). 위에서 "보도가 없다"고 판정한 그대로다.
+    - **값을 못 치를 만큼 비싸다.** 축별 질의는 경기당 검색 1회 → 2회이고, `knowledge_query`가 **20개 파일**에 걸려 있다(감사 라우터·스키마·`ai_lab_replay`·`ai_lab_integrity`·프론트 감사 화면·테스트 6종). `ple_prediction_retrievals`에는 축 칸이 없어 **마이그레이션**이 필요하다 — 축을 안 남기면 감사 화면이 "어느 에이전트가 무엇을 읽었나"를 답할 수 없게 되어 Phase 5·12가 세운 것이 깨진다. 거기에 `AGENT_VERSION`(rumor) 올림과 **과거 예측과의 비교 불가**가 붙는다. **얻는 것이 한 경기 한 칸이라 이 값을 치르지 않는다 — 보류한다.**
+  - **대신 보도 비중을 올렸고, 그것이 통했다** (2026-10-08). 축별 질의 측정에서 "실제로 움직인 것은 위키 축출"이라고 본 그 가설을 산식을 건드리지 않고 실행했다. 순서는 **배포 → 수집**이었다 — `wrestlingheadlines.com`이 `aws`에 없어 수집이 막혀 있었으므로 먼저 배포했다(`645def4` · 백엔드 변경은 허용 목록 한 파일뿐 · 마이그레이션·재빌드 없음).
+    - 선정 기준을 두 번 걸렀다. ① 슬러그가 **보도**를 가리키는 것만(`backstage`·`plans-for`·`direction-for`·`absence`·`injury`·`contract`·`return`) ② **예측·의견·목록은 제외**(`prediction`·`who-wins`·`preview`·`ranking`·`best-`·`quiz`·`odds`) ③ **AEW·TNA·AAA 중심 글도 제외** — WWE PLE 예측에 쓸 수 없고 넣으면 검색을 더럽힌다(첫 후보 40건 중 절반이 AEW 시청률·해설자 소식이었다). 남은 383건에 현 로스터 이름으로 점수를 줘 **상위 48건**을 넣었다.
+    - 결과: **문서 93 → 143 · 보도 청크 126 → 302 · 보도 문서 16 → 66 · 위키 비중 88% → 74.5%**(실패 0 · **계보없음 0**).
+
+          도메인                   문서   청크
+          en.wikipedia.org          65    943
+          wrestlingheadlines.com    39    163   ← 0 이었다
+          www.wrestlinginc.com      14     55
+          www.pwtorch.com            3     35
+
+    - **top5가 백과사전에서 보도로 바뀌었다.** `mitb26-reed-femi`의 비위키 비율이 **2/5 → 4/5**가 됐고(1위가 `wrestlingheadlines/backstage-reaction-to-unscripted-oba-femi-bronson-reed-moment`), `mitb26-women-world`에는 `backstage-news-on-wwes-plans-for-stephanie-vaquer…`가 들어왔다. 나머지 세 경기는 비위키 5/5다. Q9 절차 6번 게이트는 다섯 경기 전부 통과한다(종료코드 0).
+    - ⚠️ **"그 문서를 top5에 넣는다"는 목표 자체가 잘못된 지표였다.** 쫓던 WM43 보도(`2256392`)는 오히려 **밀렸다**(whc 61위 → 72위, reed-femi 42위 → 67위). 더 가까운 보도가 그 위를 채웠기 때문이고, 그것이 개선이다. **한 문서의 순위가 아니라 top5의 구성으로 재야 한다.**
+    - **이것이 루머 축이 말한다는 뜻은 아니다.** 입력이 좋아진 것이고, 그 보도들이 「승자 방향」을 말하는지는 모델이 판단한다. 확인은 **Survivor Series에서** 한다 — MITB에 적용하면 ex-ante가 깨진다(Q9).
+  - **Q9 절차 6번의 한계가 여기서 드러난다.** 6번은 **참가자 커버리지**를 센다. `mitb26-whc`는 지금 커버리지 **2/2로 통과**인데 루머 등급 문서는 없다. **커버리지는 "그 경기 선수 이야기가 있나"를 묻고 루머는 "그 경기 결과 방향 보도가 있나"를 묻는다 — 다른 질문이다.** 6번을 통과한 것이 루머 축이 말한다는 뜻은 아니다.
+  - **운영에 허용 목록이 아직 없다는 것도 같이 드러났다.** `wrestlingheadlines.com`은 2026-10-08 `3e28d16`으로 넣었는데 그 커밋이 `ho`·`main`·`messi`에만 있고 **`aws`에는 없다**(aws HEAD `ee12520`, 2026-10-07 17:46). 그래서 그 도메인 수집 0건은 "넣었는데 안 모았다"가 아니라 **운영에는 들어오지도 않았다**가 정확하다. 그 매체 기사 3건을 같은 배치에 넣으려다 허용 목록에서 거부당해 알았다 — 배포 전까지 수집 불가다.
 
 ---
 

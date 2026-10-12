@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { fetchRankings, formatAccuracy, type RankingRow } from "@/lib/rankings-api";
+import {
+  clamp01,
+  fetchRankings,
+  formatAccuracy,
+  formatAccuracySample,
+  type RankingRow,
+} from "@/lib/rankings-api";
 
 type MyInfoPageState = {
   statsLoading: boolean;
@@ -84,13 +90,6 @@ export default function MyInfoPage() {
 
   const { statsLoading, stats, statsUnavailable } = statsState;
 
-  // 보유 포인트는 순위표 score(적중 배점 합계)와 같은 값이라 별도 요청이 필요하지 않다.
-  const pointsValue = statsLoading
-    ? "불러오는 중…"
-    : statsUnavailable
-      ? "확인할 수 없음"
-      : `${(stats?.score ?? 0).toLocaleString("ko-KR")} P`;
-
   return (
     <main className="mx-auto max-w-lg px-4 py-10">
       <div className="rounded-3xl border border-stone-300/70 dark:border-stone-700/70 bg-stone-50/80 dark:bg-stone-950/58 p-6 shadow-2xl shadow-black/35 backdrop-blur-xl sm:p-8">
@@ -103,7 +102,6 @@ export default function MyInfoPage() {
           <InfoRow label="이메일" value={user.email ?? "미제공"} />
           <InfoRow label="역할" value={user.role} />
           <InfoRow label="로그인 방식" value={oauthProviderLabel(user.oauthProvider)} />
-          <InfoRow label="획득 포인트" value={pointsValue} highlight />
         </dl>
 
         <section className="mt-6 border-t border-stone-200/70 dark:border-stone-700/70 pt-6">
@@ -114,17 +112,37 @@ export default function MyInfoPage() {
             결과가 확정된 경기만 점수·성공률에 반영됩니다.
           </p>
           {statsLoading ? (
-            <p className="mt-4 text-sm text-stone-500">기록 불러오는 중…</p>
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-[5.5rem] animate-pulse rounded-xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-100/70 dark:bg-stone-900/70"
+                />
+              ))}
+            </div>
           ) : statsUnavailable ? (
             <p className="mt-4 text-sm text-stone-500">
               순위 정보를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.
             </p>
           ) : stats ? (
-            <dl className="mt-4 space-y-3">
-              <InfoRow label="순위" value={`${stats.rank}위`} highlight />
-              <InfoRow label="점수" value={String(stats.score)} highlight />
-              <InfoRow label="예측 성공률" value={formatAccuracy(stats.accuracy)} highlight />
-            </dl>
+            <>
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                <StatTile label="순위" value={`${stats.rank}위`} accent />
+                <StatTile
+                  label="적중률"
+                  value={formatAccuracy(stats.accuracy)}
+                  note={formatAccuracySample(stats)}
+                  meter={stats.accuracy}
+                />
+                <StatTile label="적중 배점" value={`${stats.score.toLocaleString("ko-KR")} P`} />
+              </div>
+              {/* 내비의 P(상점 잔액)와 숫자가 다른 이유를 화면에서 설명한다 —
+                  잔액은 적중 배점에 지급·환급을 더하고 지출을 뺀 값이다. */}
+              <p className="mt-3 text-xs text-stone-500">
+                상단 내비의 P는 상점에서 쓰는 잔액입니다. 적중 배점에 지급·환급을 더하고 지출을 뺀
+                값이라 위 숫자와 다릅니다.
+              </p>
+            </>
           ) : (
             <p className="mt-4 rounded-2xl border border-dashed border-stone-300/60 dark:border-stone-600/60 bg-stone-100/40 dark:bg-stone-900/40 px-4 py-3 text-sm text-stone-500 dark:text-stone-400">
               아직 채점된 예측이 없습니다. PLE 페이지에서 예측하고 결과가 나오면 점수가 쌓입니다.
@@ -145,33 +163,60 @@ export default function MyInfoPage() {
   );
 }
 
-function InfoRow({
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-100/70 dark:bg-stone-900/70 px-4 py-3">
+      <dt className="text-stone-500">{label}</dt>
+      <dd className="mt-1 font-medium text-stone-800 dark:text-stone-100">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * 예측 성적 KPI 타일 — 숫자가 먼저, 라벨이 그 아래 (DESIGN.md §16).
+ *
+ * 타일 모양·타입 스케일은 홈의 `components/home/kpi-strip.tsx`를 따른다.
+ * 골드(`accent`)는 **순위 하나에만** 쓴다 — 여러 칸에 퍼뜨리면 "랭킹·성취"라는
+ * 뜻이 희석된다 (DESIGN.md §7).
+ */
+function StatTile({
   label,
   value,
-  highlight,
+  note,
+  meter,
+  accent,
 }: {
   label: string;
   value: string;
-  highlight?: boolean;
+  note?: string | null;
+  /** 0~1. 주면 값 아래 가로 미터 바를 그린다 — 비율 하나의 기본 형태다 (§16). */
+  meter?: number;
+  accent?: boolean;
 }) {
   return (
-    <div
-      className={
-        highlight
-          ? "rounded-2xl border border-brand-500/25 bg-brand-500/5 px-4 py-3"
-          : "rounded-2xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-100/70 dark:bg-stone-900/70 px-4 py-3"
-      }
-    >
-      <dt className="text-stone-500">{label}</dt>
-      <dd
+    <div className="flex flex-col justify-center rounded-xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-100/70 dark:bg-stone-900/70 px-3 py-3 sm:px-4">
+      <p
         className={
-          highlight
-            ? "mt-1 text-lg font-bold tabular-nums text-brand-800 dark:text-brand-100"
-            : "mt-1 font-medium text-stone-800 dark:text-stone-100"
+          accent
+            ? "text-2xl font-bold tabular-nums text-brand-600 dark:text-brand-300/90 sm:text-3xl"
+            : "text-2xl font-bold tabular-nums text-stone-900 dark:text-stone-50 sm:text-3xl"
         }
       >
         {value}
-      </dd>
+      </p>
+      <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-stone-500">{label}</p>
+      {meter != null && (
+        <div
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-sm bg-stone-200 dark:bg-stone-800"
+          aria-hidden
+        >
+          <div
+            className="h-full rounded-sm bg-chart-win"
+            style={{ width: `${Math.round(clamp01(meter) * 100)}%` }}
+          />
+        </div>
+      )}
+      {note && <p className="mt-1 text-xs text-stone-500">{note}</p>}
     </div>
   );
 }

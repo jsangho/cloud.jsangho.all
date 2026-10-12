@@ -11,6 +11,12 @@ export type RankingRow = {
   nickname: string;
   score: number;
   accuracy: number;
+  /**
+   * 적중률의 분자·분모. 이 둘을 내보내기 전 백엔드가 떠 있을 수 있어 옵셔널이다 —
+   * 프론트(Vercel)와 백엔드(EC2)는 따로 배포된다.
+   */
+  correct?: number;
+  graded?: number;
   /** 상점에서 사서 장착한 아이템 — 없으면 `null` */
   title?: CosmeticItem | null;
   nicknameColor?: CosmeticItem | null;
@@ -29,6 +35,16 @@ export function clamp01(value: number) {
 export function formatAccuracy(value: number) {
   const pct = Math.round(clamp01(value) * 100);
   return `${pct}%`;
+}
+
+/**
+ * 적중률의 표본을 "2/3 경기"로 적는다 — 분모 없는 백분율은 과장이다 (DESIGN.md §14).
+ *
+ * 분모를 못 받았으면 `null`이다. 지어내지 않는다.
+ */
+export function formatAccuracySample(row: RankingRow): string | null {
+  if (row.correct == null || row.graded == null || row.graded <= 0) return null;
+  return `${row.correct}/${row.graded} 경기`;
 }
 
 export async function fetchRankings(options?: {

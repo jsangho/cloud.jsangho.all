@@ -180,7 +180,7 @@ pre-commit run --all-files
 
 5. **임시 설치 소멸 안내** — 파드가 재생성되면 exec로 설치한 패키지는 사라진다. 필요할 때 한 번 알려줘도 되지만, 그것을 이유로 먼저 빌드하지 않는다.
 
-6. **`kubectl delete ns jsangho`를 함부로 쓰지 않는다** — n8n·pgadmin PVC와 HF 모델 캐시(약 2.2GB 재다운로드)가 날아간다. DB는 클러스터 밖(Supabase)이라 영향이 없다. 데이터를 남기고 내리려면 `kubectl -n jsangho scale deploy --all --replicas=0`.
+6. **`kubectl delete ns jsangho`를 함부로 쓰지 않는다** — pgadmin PVC와 HF 모델 캐시(약 2.2GB 재다운로드)가 날아간다. DB는 클러스터 밖(Supabase)이라 영향이 없다. 데이터를 남기고 내리려면 `kubectl -n jsangho scale deploy --all --replicas=0`.
 
 7. **`k8s/*.yaml`을 `kubectl apply -f`로 직접 적용하지 않는다** — `__REPO_ROOT__`·`__NODE_IP__` 자리표시자를 `k3s-up.sh`가 채운다. 자리표시자가 그대로 남은 채 apply되면 hostPath가 깨진다.
 
@@ -234,7 +234,7 @@ Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 
 | 파일 | 용도 |
 |------|------|
-| `fastapi/.env` | **스택 전체**(backend·auth·pgadmin·n8n)가 읽는 단일 파일. **git 제외** |
+| `fastapi/.env` | **스택 전체**(backend·auth·pgadmin)가 읽는 단일 파일. **git 제외** |
 | `fastapi/.env.example` | 키 목록 템플릿. 새 키를 추가하면 여기에도 반영한다 |
 | `www/.env.local` | 프론트 `NEXT_PUBLIC_*`. **git 제외** |
 
@@ -246,13 +246,12 @@ Wiki + LLM PKS(§0-1)를 구현하는 **멀티스택 모노레포**.
 **EC2(compose)**: 서버 `docker-compose.yaml`의 `env_file`이 `./fastapi/.env`를 가리킨다.
 
 **env 파일은 하나로 유지한다.** 인프라 이미지가 직접 읽는 값
-(`POSTGRES_PASSWORD`·`NEO4J_AUTH`·`PGADMIN_*`·`N8N_ENCRYPTION_KEY`)도 `.env`에 함께 둔다.
+(`POSTGRES_PASSWORD`·`NEO4J_AUTH`·`PGADMIN_*`)도 `.env`에 함께 둔다.
 값을 맞춰야 하는 쌍이 있다: `POSTGRES_PASSWORD` ↔ `DATABASE_URL`·`PGVECTOR_PASSWORD`,
 `NEO4J_AUTH` ↔ `NEO4J_PASSWORD`. 한쪽만 바꾸면 인증이 깨진다.
 
-**감수한 트레이드오프**: 파일 하나를 통으로 주입하므로 DB·n8n 워크로드에도
-`JWT_PRIVATE_KEY`·`GEMINI_API_KEY` 같은 앱 비밀값이 들어간다. 특히 n8n 워크플로는 이
-값들을 `$env`로 읽을 수 있다. 파일 개수를 줄이려고 이 노출을 받아들인 구성이므로,
+**감수한 트레이드오프**: 파일 하나를 통으로 주입하므로 DB·pgadmin 워크로드에도
+`JWT_PRIVATE_KEY`·`GEMINI_API_KEY` 같은 앱 비밀값이 들어간다. 파일 개수를 줄이려고 이 노출을 받아들인 구성이므로,
 분리하자는 제안을 다시 꺼내기 전에 사용자에게 확인한다. k3s의 Secret `app-env`도
 compose의 `env_file`과 같은 전부-또는-전무 방식이라 이 성질이 그대로다.
 

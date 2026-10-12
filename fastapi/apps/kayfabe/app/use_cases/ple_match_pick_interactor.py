@@ -29,6 +29,8 @@ class PleMatchPickInteractor(PleMatchPickUseCase):
             nickname=row.nickname,
             score=row.score,
             accuracy=round(accuracy, 4),
+            correct=row.correct,
+            graded=graded,
             cosmetics=row.cosmetics,
         )
 
