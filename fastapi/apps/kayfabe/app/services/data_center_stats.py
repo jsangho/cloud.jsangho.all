@@ -871,7 +871,7 @@ _TRAINER_ALIASES = {
 }
 
 
-def _trainer_names(raw: str | None) -> list[str]:
+def trainer_names(raw: str | None) -> list[str]:
     """`trainer` 칸 한 줄 → 트레이너 이름들. `|`로 가르고 괄호를 푼다."""
     out: list[str] = []
     for part in (raw or "").split("|"):
@@ -903,7 +903,7 @@ def trainer_distribution(rows: Iterable[WrestlerRow]) -> TrainerDistribution:
     total = 0
     for row in rows:
         total += 1
-        parts = _trainer_names(row.trainer)
+        parts = trainer_names(row.trainer)
         if not parts:
             continue
         known += 1

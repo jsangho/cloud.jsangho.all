@@ -10,7 +10,12 @@ import {
   RankingBadgeTag,
   RankingTitleTag,
 } from "@/components/ranking-cosmetics";
-import { fetchRankings, formatAccuracy, type RankingRow } from "@/lib/rankings-api";
+import {
+  fetchRankings,
+  formatAccuracy,
+  formatAccuracySample,
+  type RankingRow,
+} from "@/lib/rankings-api";
 
 type RankingsPageState = {
   loading: boolean;
@@ -57,6 +62,7 @@ function rankTextClass(rank: number) {
 
 function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
   const text = rankTextClass(row.rank);
+  const sample = formatAccuracySample(row);
 
   return (
     <tr className={rankRowClass(row.rank, isMe)}>
@@ -85,6 +91,11 @@ function TableRow({ row, isMe }: { row: RankingRow; isMe: boolean }) {
       </td>
       <td className={cn("py-3.5 text-right text-sm font-medium tabular-nums", text)}>
         {formatAccuracy(row.accuracy)}
+        {/* **분모를 함께 적는다** — 12경기 67%와 3경기 67%가 같아 보이면 안 된다
+            (DESIGN.md §14). 서버가 아직 안 주면 백분율만 남는다. */}
+        {sample && (
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground">{sample}</span>
+        )}
       </td>
     </tr>
   );
