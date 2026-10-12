@@ -402,10 +402,12 @@ def birthday_board_to_schema(dto: BirthdayBoardResponse) -> BirthdayBoardSchema:
 def origins_to_schema(dto: OriginsResponse) -> OriginsSchema:
     return OriginsSchema(
         countries=[
-            OriginCountSchema(name=c.name, count=c.count) for c in dto.countries
+            OriginCountSchema(name=c.name, count=c.count, members=list(c.members))
+            for c in dto.countries
         ],
         us_states=[
-            OriginCountSchema(name=c.name, count=c.count) for c in dto.us_states
+            OriginCountSchema(name=c.name, count=c.count, members=list(c.members))
+            for c in dto.us_states
         ],
         us_state_unknown=dto.us_state_unknown,
         located=dto.located,
