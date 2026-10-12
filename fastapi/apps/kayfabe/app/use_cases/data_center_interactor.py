@@ -138,11 +138,22 @@ class DataCenterInteractor(DataCenterUseCase):
         rows: list[WrestlerRowResponse] = []
         needle = (query.q or "").strip().casefold()
         wanted_brand = (query.brand or "").strip().casefold()
+        # **필터와 무관하게 전체에서 센다** — 칩에 적히는 수가 검색어에 따라
+        # 흔들리면 "소개와 다른 선수가 몇 명인가"라는 사실이 흐려진다.
+        differs_total = sum(
+            1
+            for row in wrestlers
+            if stats.hometown_differs(row.birth_place, row.billed_from)
+        )
+        only_differs = (query.hometown or "").strip().casefold() == "differs"
         for row in wrestlers:
             if needle and needle not in row.name.casefold():
                 if not (row.real_name and needle in row.real_name.casefold()):
                     continue
             if wanted_brand and (row.brand or "").strip().casefold() != wanted_brand:
+                continue
+            differs = stats.hometown_differs(row.birth_place, row.billed_from)
+            if only_differs and not differs:
                 continue
             record = records.get(stats.normalize(row.name), stats.RecordCount())
             rows.append(
@@ -151,6 +162,9 @@ class DataCenterInteractor(DataCenterUseCase):
                     brand=row.brand,
                     real_name=row.real_name,
                     birth_date=row.birth_date,
+                    birth_place=row.birth_place,
+                    billed_from=row.billed_from,
+                    hometown_differs=differs,
                     finisher=row.finisher,
                     stable_team=row.stable_team,
                     matches=record.total,
@@ -166,7 +180,12 @@ class DataCenterInteractor(DataCenterUseCase):
         page_items, total, page, size = _paginate(rows, query.page, query.size)
         logger.info("[DataCenterInteractor] list_wrestlers <- total=%d", total)
         return WrestlerPageResponse(
-            items=page_items, total=total, page=page, size=size, brands=brands
+            items=page_items,
+            total=total,
+            page=page,
+            size=size,
+            brands=brands,
+            hometown_differs_total=differs_total,
         )
 
     async def list_matches(self, query: MatchPageQuery) -> MatchPageResponse:

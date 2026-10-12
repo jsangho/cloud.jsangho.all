@@ -105,6 +105,10 @@ async def get_birthdays(
 async def list_wrestlers(
     q: str | None = None,
     brand: str | None = None,
+    hometown: str | None = Query(
+        default=None,
+        description='"differs"면 소개 연고지가 실제 출생지와 다른 선수만',
+    ),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=24, ge=1, le=100),
     use_case: DataCenterUseCase = Depends(get_data_center),
@@ -116,7 +120,7 @@ async def list_wrestlers(
         brand or "-",
         page,
     )
-    query = WrestlerPageQuery(q=q, brand=brand, page=page, size=size)
+    query = WrestlerPageQuery(q=q, brand=brand, hometown=hometown, page=page, size=size)
     return wrestler_page_to_schema(await use_case.list_wrestlers(query))
 
 
@@ -239,6 +243,9 @@ def wrestler_row_to_schema(dto: WrestlerRowResponse) -> WrestlerRowSchema:
         brand=dto.brand,
         real_name=dto.real_name,
         birth_date=dto.birth_date,
+        birth_place=dto.birth_place,
+        billed_from=dto.billed_from,
+        hometown_differs=dto.hometown_differs,
         finisher=dto.finisher,
         stable_team=dto.stable_team,
         matches=dto.matches,
@@ -256,6 +263,7 @@ def wrestler_page_to_schema(dto: WrestlerPageResponse) -> WrestlerPageSchema:
         page=dto.page,
         size=dto.size,
         brands=list(dto.brands),
+        hometown_differs_total=dto.hometown_differs_total,
     )
 
 
