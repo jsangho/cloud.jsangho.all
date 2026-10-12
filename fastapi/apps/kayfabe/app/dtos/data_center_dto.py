@@ -245,3 +245,20 @@ class BirthdayBoardResponse:
     entries: list[BirthdayResponse] = field(default_factory=list)
     dated: int = 0
     total: int = 0
+
+
+@dataclass(frozen=True)
+class OriginCountResponse:
+    name: str
+    count: int
+
+
+@dataclass(frozen=True)
+class OriginsResponse:
+    """출신 분포. 나라와 미국 주를 **따로** 센다 (미국이 66%라 한 축에 못 섞는다)."""
+
+    countries: list[OriginCountResponse] = field(default_factory=list)
+    us_states: list[OriginCountResponse] = field(default_factory=list)
+    us_state_unknown: int = 0
+    located: int = 0
+    total: int = 0

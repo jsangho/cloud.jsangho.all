@@ -34,6 +34,8 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     HolderStatSchema,
     MatchPageSchema,
     MatchRowSchema,
+    OriginCountSchema,
+    OriginsSchema,
     RatedWrestlerSchema,
     WrestlerPageSchema,
     WrestlerRowSchema,
@@ -54,6 +56,7 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchPageQuery,
     MatchPageResponse,
     MatchRowResponse,
+    OriginsResponse,
     RatedWrestlerResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
@@ -394,3 +397,28 @@ def birthday_board_to_schema(dto: BirthdayBoardResponse) -> BirthdayBoardSchema:
         dated=dto.dated,
         total=dto.total,
     )
+
+
+def origins_to_schema(dto: OriginsResponse) -> OriginsSchema:
+    return OriginsSchema(
+        countries=[
+            OriginCountSchema(name=c.name, count=c.count) for c in dto.countries
+        ],
+        us_states=[
+            OriginCountSchema(name=c.name, count=c.count) for c in dto.us_states
+        ],
+        us_state_unknown=dto.us_state_unknown,
+        located=dto.located,
+        total=dto.total,
+    )
+
+
+@data_center_router.get(
+    "/origins",
+    response_model=OriginsSchema,
+    response_model_by_alias=True,
+)
+async def get_origins(use_case: DataCenterUseCase = Depends(get_data_center)):
+    """출신 나라·미국 주 분포 — 지도 둘이 쓴다."""
+    logger.info("[DataCenterRouter] get_origins")
+    return origins_to_schema(await use_case.get_origins())
