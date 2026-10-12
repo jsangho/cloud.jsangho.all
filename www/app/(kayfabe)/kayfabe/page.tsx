@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { GeminiChatPanel } from "@/components/gemini-chat-panel";
+import { BirthdayCard } from "@/components/data-center/birthday-card";
 import { AiPredictionCard } from "@/components/home/ai-prediction-card";
 import { KayfabeIntro } from "@/components/home/kayfabe-intro";
 import { KpiStrip } from "@/components/home/kpi-strip";
@@ -81,7 +82,12 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <AiPredictionCard className="w-full" />
+              {/* 오른쪽 기둥은 AI 예측이 주인공이고 생일은 그 아래 곁다리다.
+                  홈에서는 셋만 — 히어로가 길어지면 영상·CTA가 접힌다. */}
+              <div className="flex w-full flex-col gap-4">
+                <AiPredictionCard className="w-full" />
+                <BirthdayCard limit={3} className="rounded-2xl p-5 sm:p-6" />
+              </div>
             </div>
           </div>
         </section>

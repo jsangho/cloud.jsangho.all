@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   fetchBirthdays,
   formatDaysAway,
@@ -12,22 +13,26 @@ import {
 /**
  * 다가오는 선수 생일.
  *
- * **"오늘의 생일"이 아니라 "다가오는 생일"이다.** 로스터 165명의 생일을 실측하면
- * 1년 중 **239일이 0명**이다(2026-10-12). 오늘만 보여 주면 셋 중 둘은 빈 칸이고,
+ * **"오늘의 생일"이 아니라 "다가오는 생일"이다.** 선수 165명만 셌을 때 1년 중
+ * **239일이 0명**이었다(2026-10-12 실측). 오늘만 보여 주면 셋 중 둘은 빈 칸이고,
  * 그 자리는 DESIGN.md §14가 "없는 걸 채우지도, 빈 상자를 세우지도 말라"고 한 자리다.
  * 개수로 끊으면 날짜가 멀어질 뿐 목록이 비지 않는다.
  *
  * **오늘은 서버가 KST로 센다** — 클라이언트 시계를 믿으면 사람마다 다른 날이 된다.
  *
- * 나이는 `wrestlers.birth_date` 하나에서 나온다. 위키처럼 개정본으로 되짚을 계보가
- * 없으므로 화면이 **"현역 로스터 N/M명 기준"**을 함께 적는다.
+ * 나이는 `wrestlers`·`wwe_staff`의 `birth_date` 하나에서 나온다. 위키처럼 개정본으로
+ * 되짚을 계보가 없으므로 화면이 **"선수·관계자 N/M명 기준"**을 함께 적는다.
+ *
+ * 두 곳에 선다 — 데이터 센터 1면(기본 5건)과 홈 히어로의 AI 예측 **아래**(3건,
+ * 2026-10-12 사용자 요청). 홈에서 수를 줄인 이유는 오른쪽 기둥이 길어지면 왼쪽의
+ * 영상·CTA와 높이가 어긋나기 때문이다.
  */
 type BirthdayState =
   | { status: "loading" }
   | { status: "ready"; board: BirthdayBoard }
   | { status: "error" };
 
-export function BirthdayCard({ limit = 5 }: { limit?: number }) {
+export function BirthdayCard({ limit = 5, className }: { limit?: number; className?: string }) {
   const [state, setState] = useState<BirthdayState>({ status: "loading" });
 
   useEffect(() => {
@@ -44,7 +49,10 @@ export function BirthdayCard({ limit = 5 }: { limit?: number }) {
 
   if (state.status === "loading") {
     return (
-      <div className="h-40 animate-pulse rounded-xl border border-border bg-card" aria-hidden />
+      <div
+        className={cn("h-40 animate-pulse rounded-xl border border-border bg-card", className)}
+        aria-hidden
+      />
     );
   }
 
@@ -54,7 +62,10 @@ export function BirthdayCard({ limit = 5 }: { limit?: number }) {
   const { today, entries, dated, total } = state.board;
 
   return (
-    <section aria-labelledby="birthdays" className="rounded-xl border border-border bg-card p-5">
+    <section
+      aria-labelledby="birthdays"
+      className={cn("rounded-xl border border-border bg-card p-5", className)}
+    >
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="birthdays" className="font-sport text-lg text-foreground">
           다가오는 생일
