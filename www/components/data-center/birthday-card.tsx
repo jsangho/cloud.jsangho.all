@@ -27,6 +27,18 @@ import {
  * 2026-10-12 사용자 요청). 홈에서 수를 줄인 이유는 오른쪽 기둥이 길어지면 왼쪽의
  * 영상·CTA와 높이가 어긋나기 때문이다.
  */
+/**
+ * 오늘 생일인 사람들의 이름 한 줄.
+ *
+ * 같은 날이 겹치는 날이 실제로 있다 — 선수만 세도 2명인 날이 34일, 3명 이상이
+ * 이틀이다(2026-10-12 실측). 셋 이상이면 이름을 다 늘어놓는 대신 접는다.
+ */
+function formatTodayNames(entries: { name: string }[]): string {
+  const names = entries.map((entry) => entry.name);
+  if (names.length <= 2) return names.join(" · ");
+  return `${names[0]} 외 ${names.length - 1}명`;
+}
+
 type BirthdayState =
   | { status: "loading" }
   | { status: "ready"; board: BirthdayBoard }
@@ -60,6 +72,8 @@ export function BirthdayCard({ limit = 5, className }: { limit?: number; classNa
   if (state.status === "error" || state.board.entries.length === 0) return null;
 
   const { today, entries, dated, total } = state.board;
+  // D-0은 정렬상 언제나 맨 앞이라 잘릴 일이 없다 (`days_away` 오름차순).
+  const todayBirthdays = entries.filter((entry) => entry.daysAway === 0);
 
   return (
     <section
@@ -77,10 +91,19 @@ export function BirthdayCard({ limit = 5, className }: { limit?: number; classNa
           선수 전체 보기 →
         </Link>
       </div>
-      <p className="mb-4 text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         선수·관계자 {dated}/{total}명 기준 · {today}
       </p>
-      <ul className="flex flex-col divide-y divide-border">
+      {/* **있는 날에만 나타나는 줄이다.** 1년의 과반이 빈 날이라 상시 자리를
+          비워 두면 빈 상자가 된다 (DESIGN.md §14). 색은 목록의 「오늘」 배지와
+          같은 골드 틴트다 — 같은 신호를 두 색으로 말하지 않는다. */}
+      {todayBirthdays.length > 0 && (
+        <p className="mt-3 rounded-md bg-brand-500/10 px-3 py-2 text-sm text-brand-700 dark:text-brand-200">
+          오늘은 <strong className="font-semibold">{formatTodayNames(todayBirthdays)}</strong>의
+          생일입니다
+        </p>
+      )}
+      <ul className="mt-4 flex flex-col divide-y divide-border">
         {entries.map((entry) => {
           const isToday = entry.daysAway === 0;
           return (
