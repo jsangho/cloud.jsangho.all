@@ -12,8 +12,8 @@
 | 파일 | 역할 |
 |------|------|
 | `k8s/00-namespace.yaml` | 네임스페이스 `jsangho` |
-| `k8s/10-storage.yaml` | PVC 3개 (pgadmin·n8n·hf-cache) |
-| `k8s/2*.yaml` | 클러스터 안 도구 — pgadmin · n8n |
+| `k8s/10-storage.yaml` | PVC 2개 (pgadmin·hf-cache) |
+| `k8s/2*.yaml` | 클러스터 안 도구 — pgadmin |
 | `k8s/3*.yaml` | 앱 — backend · auth |
 | `scripts/k3s-install.sh` | k3s 설치 + kubeconfig 병합 (최초 1회) |
 | `scripts/k3s-up.sh` | 이미지 빌드 → 반입 → 시크릿 갱신 → apply |
@@ -90,7 +90,7 @@ kubectl -n jsangho exec deploy/backend -- uv pip install <package>
 | `docker compose exec backend sh` | `kubectl -n jsangho exec -it deploy/backend -- sh` |
 | `docker compose up -d` | `scripts/k3s-up.sh --no-build` |
 | `docker compose restart backend` | `kubectl -n jsangho rollout restart deploy/backend` |
-| `docker compose down` | `kubectl delete ns jsangho` (**PVC까지 지운다** — n8n·pgadmin·HF 캐시. DB는 밖이라 무사하다) |
+| `docker compose down` | `kubectl delete ns jsangho` (**PVC까지 지운다** — pgadmin·HF 캐시. DB는 밖이라 무사하다) |
 | `docker compose stop` | `kubectl -n jsangho scale deploy --all --replicas=0` |
 
 데이터를 남기고 내리려면 `down`이 아니라 `scale --replicas=0`을 쓴다.
@@ -112,7 +112,6 @@ kubectl -n jsangho exec deploy/backend -- sh -c 'cd /app/fastapi && alembic upgr
 | 서비스 | 주소 | 비고 |
 |---|---|---|
 | backend | `localhost:8000` | |
-| n8n | `localhost:5678` | |
 | pgadmin | `localhost:5050` | |
 | auth | 노출 안 함 | ClusterIP. `kubectl -n jsangho port-forward svc/auth 9000:9000` 로 본다 |
 | PostgreSQL(Supabase) | 클러스터 밖 인터넷 | 파드가 `.env`의 URL로 직접 붙는다. 로컬 포트가 없다 (§4-2) |
@@ -228,7 +227,7 @@ kubectl -n jsangho exec deploy/backend -- \
 ## 5. 환경 변수
 
 `fastapi/.env` **한 파일 그대로다.** `k3s-up.sh`가 그 파일로 Secret `app-env`를 만들고,
-compose의 `env_file`과 같은 워크로드들(backend·auth·pgadmin·n8n)에 `envFrom`으로 주입한다.
+compose의 `env_file`과 같은 워크로드들(backend·auth·pgadmin)에 `envFrom`으로 주입한다.
 
 **`.env`의 DB 접속 문자열은 Supabase 엔드포인트를 가리키거나, 비어 있어야 한다** (§4-2).
 `k3s-up.sh`가 적용 전에 검사하고 제거된 로컬 컨테이너 이름이면 멈춘다.
@@ -241,9 +240,10 @@ PostgreSQL을 띄우지 않으므로 `.env`에서 비밀번호를 바꿔도 Supa
 `OLLAMA_HOST`의 `host.docker.internal`은 k8s에 없는 이름이라 backend 파드의 `hostAliases`로
 노드 IP에 매핑한다. `k3s-up.sh`가 실행 시점에 IP를 읽어 채운다.
 
-**감수한 트레이드오프는 compose 때와 같다**: Secret 하나를 통으로 주입하므로 n8n 파드에도
-`JWT_PRIVATE_KEY`·`GEMINI_API_KEY` 같은 앱 비밀값이 들어간다. 특히 n8n 워크플로는 이 값들을
-`$env`로 읽을 수 있다. 분리하자는 제안을 다시 꺼내기 전에 사용자에게 확인한다.
+**감수한 트레이드오프는 compose 때와 같다**: Secret 하나를 통으로 주입하므로 pgadmin 파드에도
+`JWT_PRIVATE_KEY`·`GEMINI_API_KEY` 같은 앱 비밀값이 들어간다. 분리하자는 제안을 다시 꺼내기
+전에 사용자에게 확인한다. (노출 폭이 가장 컸던 n8n — 워크플로가 이 값들을 `$env`로 읽을 수
+있었다 — 은 2026-10-12에 스택에서 내렸다.)
 
 ---
 

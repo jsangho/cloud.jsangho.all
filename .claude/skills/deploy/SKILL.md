@@ -28,15 +28,15 @@ allowed-tools:
 
 ## 시작 전 필수 확인
 
-**서버 `fastapi/.env` 에 인프라 키 5개가 있어야 한다.** compose 는 명령 대상이
-`backend`·`auth` 뿐이어도 파일 전체를 먼저 검증한다. pgvector·neo4j·pgadmin·n8n 이
+**서버 `fastapi/.env` 에 인프라 키 4개가 있어야 한다.** compose 는 명령 대상이
+`backend`·`auth` 뿐이어도 파일 전체를 먼저 검증한다. pgvector·neo4j·pgadmin 이
 모두 `./fastapi/.env` 를 `env_file` 로 읽으므로, 키가 없으면 빈 값으로 기동해 인증이 깨진다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES_PASSWORD|NEO4J_AUTH|PGADMIN_DEFAULT_EMAIL|PGADMIN_DEFAULT_PASSWORD|N8N_ENCRYPTION_KEY)=" .env'
+ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES_PASSWORD|NEO4J_AUTH|PGADMIN_DEFAULT_EMAIL|PGADMIN_DEFAULT_PASSWORD)=" .env'
 ```
 
-`5` 가 나와야 한다. 그보다 적으면 배포를 멈추고 사용자에게 알린다 — `.env` 는 git 제외라
+`4` 가 나와야 한다. (예전에는 `N8N_ENCRYPTION_KEY` 까지 다섯이었다 — n8n 을 내리면서 뺐다.) 그보다 적으면 배포를 멈추고 사용자에게 알린다 — `.env` 는 git 제외라
 로컬에서 채워 줄 수 없다. `POSTGRES_PASSWORD` 는 `DATABASE_URL` 의 비밀번호와,
 `NEO4J_AUTH` 는 `neo4j/<NEO4J_PASSWORD>` 와 값이 같아야 한다.
 
@@ -247,4 +247,7 @@ DB 마이그레이션을 포함한 배포라면 코드 롤백만으로 복구되
 
 - **프론트(`www`)는 Vercel에 배포된다 — 이 스킬의 범위가 아니다.** `jsangho.cloud`·`www.jsangho.cloud` 응답 헤더가 `server: Vercel`이다. EC2의 `www` 디렉터리는 어떤 컨테이너도 쓰지 않는다. 프론트 배포 요청을 받으면 이 절차가 아니라 Vercel 쪽을 확인한다.
 
-- `n8n` 컨테이너는 서버에서 계속 실행 중이다 (2026-07-27 기동).
+- **`n8n`은 2026-10-12에 서버에서 내렸다.** compose 서비스와 터널 ingress를 함께 지웠으므로
+  `n8n.jsangho.cloud`는 이제 catch-all 404다. 데이터(`./data/n8n`)와 DNS 레코드는 남겨 뒀다.
+  같은 날 로컬 k3s에서도 뺐고(`k8s/24-n8n.yaml` 삭제) 이미지도 지웠으므로, 되살리려면
+  compose 블록·터널 ingress·매니페스트를 git 이력에서 복원하고 이미지를 다시 받아야 한다.
