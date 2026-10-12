@@ -124,9 +124,12 @@ export function BirthdayCard({ limit = 5, className }: { limit?: number; classNa
                   </span>
                 )}
               </span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                만 {entry.age}세
-              </span>
+              {/* 태어난 해를 모르면 이 칸을 **비운다** — 추정 나이를 적지 않는다. */}
+              {entry.age !== null && (
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  만 {entry.age}세
+                </span>
+              )}
               <span
                 className={
                   isToday
