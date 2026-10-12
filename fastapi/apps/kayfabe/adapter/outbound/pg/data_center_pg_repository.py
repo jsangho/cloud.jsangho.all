@@ -21,8 +21,8 @@ from kayfabe.adapter.outbound.orm.title_history_orm import TitleAcquisitionModel
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
 from kayfabe.app.services.data_center_stats import (
-    BirthdayPerson,
     MatchRow,
+    StaffRow,
     TitleRow,
     WrestlerRow,
 )
@@ -67,22 +67,25 @@ class DataCenterPgRepository(DataCenterRepository):
         logger.info("[DataCenterPgRepository] list_wrestlers <- count=%d", len(rows))
         return rows
 
-    async def list_staff(self) -> list[BirthdayPerson]:
+    async def list_staff(self) -> list[StaffRow]:
         result = await self.db.execute(
             select(
                 StaffOrm.name,
                 StaffOrm.group_label,
                 StaffOrm.role,
+                StaffOrm.korean_ring_name,
+                StaffOrm.wrestling_experience,
                 StaffOrm.birth_date,
             ).order_by(StaffOrm.name)
         )
         rows = [
-            BirthdayPerson(
+            StaffRow(
                 name=row.name,
-                birth_date=row.birth_date,
-                group=row.group_label,
-                kind="staff",
+                group_label=row.group_label,
                 role=row.role,
+                korean_ring_name=row.korean_ring_name,
+                wrestling_experience=row.wrestling_experience,
+                birth_date=row.birth_date,
             )
             for row in result.all()
         ]

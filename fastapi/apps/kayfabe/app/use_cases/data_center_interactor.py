@@ -31,6 +31,8 @@ from kayfabe.app.dtos.data_center_dto import (
     OriginCountResponse,
     OriginsResponse,
     RatedWrestlerResponse,
+    StaffDirectoryResponse,
+    StaffMemberResponse,
     TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
@@ -334,7 +336,20 @@ class DataCenterInteractor(DataCenterUseCase):
         staff = await self._repo.list_staff()
         # **선수와 비선수를 한 줄에 세운다.** 보는 사람에게 생일은 하나의 달력이고,
         # 둘을 갈라 놓으면 같은 날 두 칸이 생긴다. 어느 쪽인지는 `kind`가 말한다.
-        people = [*stats.to_birthday_people(wrestlers), *staff]
+        people = [
+            *stats.to_birthday_people(wrestlers),
+            # 관계자 행은 생일 입력 모양으로 접는다 — 역할이 소속 칸을 대신한다.
+            *(
+                stats.BirthdayPerson(
+                    name=row.name,
+                    birth_date=row.birth_date,
+                    group=row.group_label,
+                    kind="staff",
+                    role=row.role,
+                )
+                for row in staff
+            ),
+        ]
         today = (datetime.now(UTC) + timedelta(hours=9)).date()
         # 한 번만 센다. 전체를 받아 두면 분모(`dated`)가 그 길이라 두 번 돌 일이 없다.
         ranked = stats.upcoming_birthdays(people, today=today, limit=len(people))
@@ -413,4 +428,28 @@ class DataCenterInteractor(DataCenterUseCase):
             ],
             known=dist.known,
             total=dist.total,
+        )
+
+    async def get_staff(self) -> StaffDirectoryResponse:
+        logger.info("[DataCenterInteractor] get_staff -> Repository")
+        directory = stats.staff_directory(await self._repo.list_staff())
+        logger.info(
+            "[DataCenterInteractor] get_staff <- %d명 · 전직 선수 %d",
+            directory.total,
+            directory.former_wrestlers,
+        )
+        return StaffDirectoryResponse(
+            members=[
+                StaffMemberResponse(
+                    name=row.name,
+                    korean_name=row.korean_ring_name,
+                    group=row.group_label,
+                    role=row.role,
+                    former_wrestler=stats.is_former_wrestler(row.wrestling_experience),
+                )
+                for row in directory.rows
+            ],
+            groups=list(directory.groups),
+            former_wrestlers=directory.former_wrestlers,
+            total=directory.total,
         )

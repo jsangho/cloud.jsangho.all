@@ -276,3 +276,24 @@ class TrainersResponse:
     institutions: list[str] = field(default_factory=list)
     known: int = 0
     total: int = 0
+
+
+@dataclass(frozen=True)
+class StaffMemberResponse:
+    name: str
+    korean_name: str | None
+    group: str | None
+    role: str | None
+    #: 링에 섰던 사람인가. `wrestling_experience`에 `wrestler`가 들어 있으면 참.
+    former_wrestler: bool
+
+
+@dataclass(frozen=True)
+class StaffDirectoryResponse:
+    """관계자 명부. `former_wrestlers`가 이 화면의 머리 숫자다."""
+
+    members: list[StaffMemberResponse] = field(default_factory=list)
+    #: (구역, 인원) — CSV가 적은 조직도 순서 그대로다.
+    groups: list[tuple[str, int]] = field(default_factory=list)
+    former_wrestlers: int = 0
+    total: int = 0
