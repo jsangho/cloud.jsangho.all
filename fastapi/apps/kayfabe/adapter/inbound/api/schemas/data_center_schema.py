@@ -216,6 +216,8 @@ class BirthdayBoardSchema(_Camel):
 class OriginCountSchema(_Camel):
     name: str
     count: int
+    members: list[str] = Field(default_factory=list)
+    """그 지역 출신 선수 이름 — 화면이 지역을 누르면 보여 준다."""
 
 
 class OriginsSchema(_Camel):

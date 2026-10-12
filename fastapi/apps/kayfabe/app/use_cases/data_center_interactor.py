@@ -379,8 +379,14 @@ class DataCenterInteractor(DataCenterUseCase):
             dist.total,
         )
         return OriginsResponse(
-            countries=[OriginCountResponse(name=n, count=c) for n, c in dist.countries],
-            us_states=[OriginCountResponse(name=n, count=c) for n, c in dist.us_states],
+            countries=[
+                OriginCountResponse(name=g.name, count=g.count, members=list(g.members))
+                for g in dist.countries
+            ],
+            us_states=[
+                OriginCountResponse(name=g.name, count=g.count, members=list(g.members))
+                for g in dist.us_states
+            ],
             us_state_unknown=dist.us_state_unknown,
             located=dist.located,
             total=dist.total,

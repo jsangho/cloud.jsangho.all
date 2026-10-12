@@ -251,6 +251,8 @@ class BirthdayBoardResponse:
 class OriginCountResponse:
     name: str
     count: int
+    #: 그 지역 출신 선수 이름. 화면이 누르면 펼쳐 보여 준다.
+    members: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

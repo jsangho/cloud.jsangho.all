@@ -100,6 +100,37 @@ def equirectangular(lon: float, lat: float) -> tuple[float, float]:
     return lon, -lat
 
 
+def split_antimeridian(
+    ring: list[tuple[float, float]],
+) -> list[list[tuple[float, float]]]:
+    """날짜변경선을 넘는 고리를 조각으로 자른다.
+
+    **자르지 않으면 지도를 가로지르는 줄무늬가 생긴다.** 등장방형에서 경도
+    +179와 -179는 화면의 양 끝인데, 폴리곤은 그 둘을 직선으로 잇는다 — 러시아
+    (추코트카)와 피지가 실제로 그래서 **지도 전체 폭을 덮는 띠 세 개**가 그려져
+    있었다(2026-10-12 실측).
+
+    조각은 경계(±180)에 점을 하나 끼워 닫는다. 그래야 잘린 자리가 화면 가장자리에
+    딱 붙고, 안쪽으로 비스듬한 빈 삼각형이 생기지 않는다.
+    """
+    pieces: list[list[tuple[float, float]]] = [[]]
+    for point in ring:
+        current = pieces[-1]
+        if current:
+            prev_lon, prev_lat = current[-1]
+            lon, lat = point
+            if abs(lon - prev_lon) > 180:
+                # 두 점 사이 어디서 선을 넘는가 — 위도는 선형 보간으로 잡는다.
+                east = 180.0 if prev_lon > 0 else -180.0
+                gap = (360 - abs(lon - prev_lon)) or 1.0
+                ratio = (abs(east - prev_lon)) / gap
+                crossing_lat = prev_lat + (lat - prev_lat) * min(max(ratio, 0.0), 1.0)
+                current.append((east, crossing_lat))
+                pieces.append([(-east, crossing_lat)])
+        pieces[-1].append(point)
+    return [piece for piece in pieces if len(piece) >= 3]
+
+
 def fit(
     shapes: dict[str, list[list[tuple[float, float]]]],
     *,
@@ -246,7 +277,9 @@ def build_world(topo: dict) -> list[dict]:
         if not rings:
             continue
         shapes[name] = [
-            [equirectangular(lon, max(lat, -60)) for lon, lat in ring] for ring in rings
+            [equirectangular(lon, max(lat, -60)) for lon, lat in piece]
+            for ring in rings
+            for piece in split_antimeridian(ring)
         ]
     placed = fit(shapes, box=(0, 0, 1000, 500))
     return [
