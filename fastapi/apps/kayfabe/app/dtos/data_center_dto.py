@@ -265,3 +265,14 @@ class OriginsResponse:
     us_state_unknown: int = 0
     located: int = 0
     total: int = 0
+
+
+@dataclass(frozen=True)
+class TrainersResponse:
+    """사승 목록. 한 선수가 여러 트레이너를 가지므로 **합이 선수 수보다 크다.**"""
+
+    groups: list[OriginCountResponse] = field(default_factory=list)
+    #: 기관(학교·센터)으로 판정된 이름 수 — 화면이 사람과 갈라 적는다.
+    institutions: list[str] = field(default_factory=list)
+    known: int = 0
+    total: int = 0

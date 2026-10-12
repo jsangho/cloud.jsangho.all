@@ -13,6 +13,7 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchPageQuery,
     MatchPageResponse,
     OriginsResponse,
+    TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
 )
@@ -42,6 +43,11 @@ class DataCenterUseCase(ABC):
 
     @abstractmethod
     async def get_analytics(self) -> AnalyticsResponse: ...
+
+    @abstractmethod
+    async def get_trainers(self) -> TrainersResponse:
+        """누가 누구를 길렀나. 제자 수 내림차순."""
+        ...
 
     @abstractmethod
     async def get_origins(self) -> OriginsResponse:

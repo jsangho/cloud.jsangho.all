@@ -67,6 +67,8 @@ class WrestlerRow:
     birth_place: str | None = None
     #: 방송이 부르는 연고지. `|`로 여럿일 수 있다 (`Atlanta, Georgia | Suplex City`).
     billed_from: str | None = None
+    #: 길러 준 사람·학교. `|`로 여럿일 수 있다 (평균 2.3개).
+    trainer: str | None = None
     finisher: str | None = None
     stable_team: str | None = None
 
@@ -816,3 +818,102 @@ def origin_distribution(rows: Iterable[WrestlerRow]) -> OriginDistribution:
         located=located,
         total=total,
     )
+
+
+#: 트레이너 칸에 섞여 있는 **기관** 표기. 사람과 같은 줄에 세우되 화면이 갈라
+#: 보여 줄 수 있게 표시만 해 둔다 — 실측 245개 중 소수지만 1위가 여기 있다
+#: (`WWE Performance Center` 73명). 판정은 낱말로 한다: 이름에 아래가 들어가면
+#: 기관이다. **사람 이름을 기관으로 잘못 잡는 쪽보다 그 반대가 안전하므로** 좁게 둔다.
+_INSTITUTION_WORDS = (
+    "center",
+    "centre",
+    "school",
+    "academy",
+    "dojo",
+    "institute",
+    "university",
+    "wrestling inc",
+)
+
+
+def is_training_institution(name: str) -> bool:
+    """사람이 아니라 학교·시설인가. 애매하면 **사람으로 본다**."""
+    lowered = name.casefold()
+    return any(word in lowered for word in _INSTITUTION_WORDS)
+
+
+@dataclass(frozen=True)
+class TrainerDistribution:
+    """누가 누구를 길렀나.
+
+    **그래프로 그리지 않는다.** 실측 245개 표기 중 203개(83%)가 제자 한 명뿐이고
+    1위 `WWE Performance Center`가 73명을 쥔다 — 허브 하나에 잎이 매달린 모양이라
+    노드-엣지로 그리면 덩어리 하나와 먼지밖에 안 보인다. 순위 목록이 정확하다.
+    """
+
+    #: (트레이너, 제자 수, 제자들) 내림차순.
+    groups: list[OriginGroup]
+    #: 트레이너를 아는 선수 수 / 전체.
+    known: int
+    total: int
+
+
+#: 괄호 안에 **사람이 따로 적힌** 표기를 가른다 —
+#: `WWE Performance Center (Sara Amato)` 는 센터 한 건이 아니라 **센터 + 사람**이다.
+#: 이 규칙이 없으면 같은 센터가 괄호 내용마다 다른 트레이너로 갈라진다(실측 3갈래).
+_PAREN = re.compile(r"^(?P<outer>[^(]+?)\s*\((?P<inner>[^)]+)\)$")
+
+#: **같은 사람의 다른 이름.** 링네임과 본명이 섞여 들어와 한 사람이 둘로 갈린다.
+#: 벨트 별칭표(`belt_lineage`)와 같은 자리이고, 같은 이유로 **확실한 것만** 적는다.
+_TRAINER_ALIASES = {
+    # Sara Del Rey 의 본명이 Sara Amato 다. 실측 5건 + 4건이 같은 사람이었다.
+    "Sara Amato": "Sara Del Rey",
+}
+
+
+def _trainer_names(raw: str | None) -> list[str]:
+    """`trainer` 칸 한 줄 → 트레이너 이름들. `|`로 가르고 괄호를 푼다."""
+    out: list[str] = []
+    for part in (raw or "").split("|"):
+        name = part.strip()
+        if not name:
+            continue
+        matched = _PAREN.match(name)
+        if matched:
+            # `A (B & C)` → A · B · C
+            out.append(matched.group("outer").strip())
+            out.extend(
+                piece.strip()
+                for piece in re.split(r"&|,", matched.group("inner"))
+                if piece.strip()
+            )
+        else:
+            out.append(name)
+    return [_TRAINER_ALIASES.get(n, n) for n in out]
+
+
+def trainer_distribution(rows: Iterable[WrestlerRow]) -> TrainerDistribution:
+    """`trainer` 칸을 갈라 트레이너별로 제자를 모은다.
+
+    한 선수가 여러 트레이너를 갖는다(평균 2.3명·최대 9명). 그래서 제자 수의 합은
+    선수 수보다 크다 — 화면이 "몇 명을 길렀나"로 읽히게 두고 비율을 만들지 않는다.
+    """
+    by_trainer: defaultdict[str, list[str]] = defaultdict(list)
+    known = 0
+    total = 0
+    for row in rows:
+        total += 1
+        parts = _trainer_names(row.trainer)
+        if not parts:
+            continue
+        known += 1
+        for part in dict.fromkeys(parts):  # 같은 줄에 두 번 나오면 한 번만 센다
+            by_trainer[part].append(row.name)
+    groups = sorted(
+        (
+            OriginGroup(name=name, count=len(members), members=sorted(members))
+            for name, members in by_trainer.items()
+        ),
+        key=lambda g: (-g.count, g.name),
+    )
+    return TrainerDistribution(groups=groups, known=known, total=total)
