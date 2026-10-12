@@ -37,6 +37,7 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     OriginCountSchema,
     OriginsSchema,
     RatedWrestlerSchema,
+    TrainersSchema,
     WrestlerPageSchema,
     WrestlerRowSchema,
 )
@@ -58,6 +59,7 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchRowResponse,
     OriginsResponse,
     RatedWrestlerResponse,
+    TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
     WrestlerRowResponse,
@@ -424,3 +426,26 @@ async def get_origins(use_case: DataCenterUseCase = Depends(get_data_center)):
     """출신 나라·미국 주 분포 — 지도 둘이 쓴다."""
     logger.info("[DataCenterRouter] get_origins")
     return origins_to_schema(await use_case.get_origins())
+
+
+def trainers_to_schema(dto: TrainersResponse) -> TrainersSchema:
+    return TrainersSchema(
+        groups=[
+            OriginCountSchema(name=g.name, count=g.count, members=list(g.members))
+            for g in dto.groups
+        ],
+        institutions=list(dto.institutions),
+        known=dto.known,
+        total=dto.total,
+    )
+
+
+@data_center_router.get(
+    "/trainers",
+    response_model=TrainersSchema,
+    response_model_by_alias=True,
+)
+async def get_trainers(use_case: DataCenterUseCase = Depends(get_data_center)):
+    """누가 누구를 길렀나 — 제자 수 내림차순."""
+    logger.info("[DataCenterRouter] get_trainers")
+    return trainers_to_schema(await use_case.get_trainers())

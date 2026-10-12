@@ -229,3 +229,13 @@ class OriginsSchema(_Camel):
     us_state_unknown: int = Field(alias="usStateUnknown")
     located: int
     total: int
+
+
+class TrainersSchema(_Camel):
+    """사승 목록. `known`/`total`이 분모다."""
+
+    groups: list[OriginCountSchema]
+    institutions: list[str]
+    """학교·센터로 판정된 이름 — 사람과 갈라 적기 위한 표시다."""
+    known: int
+    total: int

@@ -290,3 +290,15 @@ export type Origins = {
 export function fetchOrigins(): Promise<Origins | null> {
   return getJson<Origins>("/origins");
 }
+
+export type Trainers = {
+  groups: OriginCount[];
+  /** 학교·센터로 판정된 이름 — 사람과 갈라 적기 위한 표시다. */
+  institutions: string[];
+  known: number;
+  total: number;
+};
+
+export function fetchTrainers(): Promise<Trainers | null> {
+  return getJson<Trainers>("/trainers");
+}

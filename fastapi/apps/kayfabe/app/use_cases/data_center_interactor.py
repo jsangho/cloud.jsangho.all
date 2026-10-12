@@ -31,6 +31,7 @@ from kayfabe.app.dtos.data_center_dto import (
     OriginCountResponse,
     OriginsResponse,
     RatedWrestlerResponse,
+    TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
     WrestlerRowResponse,
@@ -389,5 +390,27 @@ class DataCenterInteractor(DataCenterUseCase):
             ],
             us_state_unknown=dist.us_state_unknown,
             located=dist.located,
+            total=dist.total,
+        )
+
+    async def get_trainers(self) -> TrainersResponse:
+        logger.info("[DataCenterInteractor] get_trainers -> Repository")
+        wrestlers = await self._repo.list_wrestlers()
+        dist = stats.trainer_distribution(wrestlers)
+        logger.info(
+            "[DataCenterInteractor] get_trainers <- 트레이너 %d · 아는 선수 %d/%d",
+            len(dist.groups),
+            dist.known,
+            dist.total,
+        )
+        return TrainersResponse(
+            groups=[
+                OriginCountResponse(name=g.name, count=g.count, members=list(g.members))
+                for g in dist.groups
+            ],
+            institutions=[
+                g.name for g in dist.groups if stats.is_training_institution(g.name)
+            ],
+            known=dist.known,
             total=dist.total,
         )

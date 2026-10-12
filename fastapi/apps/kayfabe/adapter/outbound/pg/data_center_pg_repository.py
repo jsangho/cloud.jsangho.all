@@ -45,6 +45,7 @@ class DataCenterPgRepository(DataCenterRepository):
                 WrestlerOrm.birth_date,
                 WrestlerOrm.birth_place,
                 WrestlerOrm.billed_from,
+                WrestlerOrm.trainer,
                 WrestlerOrm.finisher,
                 WrestlerOrm.stable_team,
             ).order_by(WrestlerOrm.name)
@@ -57,6 +58,7 @@ class DataCenterPgRepository(DataCenterRepository):
                 birth_date=row.birth_date,
                 birth_place=row.birth_place,
                 billed_from=row.billed_from,
+                trainer=row.trainer,
                 finisher=row.finisher,
                 stable_team=row.stable_team,
             )
