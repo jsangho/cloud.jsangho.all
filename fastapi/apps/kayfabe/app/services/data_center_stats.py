@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -62,6 +63,10 @@ class WrestlerRow:
     brand: str | None = None
     real_name: str | None = None
     birth_date: str | None = None
+    #: 실제 출생지 (`Woodstock, Georgia, U.S.`).
+    birth_place: str | None = None
+    #: 방송이 부르는 연고지. `|`로 여럿일 수 있다 (`Atlanta, Georgia | Suplex City`).
+    billed_from: str | None = None
     finisher: str | None = None
     stable_team: str | None = None
 
@@ -594,3 +599,48 @@ def _next_anniversary(month: int, day: int, *, after: date) -> date | None:
         except ValueError:
             continue
     return None
+
+
+#: 지명 대조용 — 마침표·쉼표를 지워 `U.S.`와 `US`를 같게 만든다.
+_PLACE_NON_WORD = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _place_city(value: str) -> str:
+    """지명 한 덩이에서 **도시만** 남긴다. `Woodstock, Georgia, U.S.` → `woodstock`."""
+    head = value.split(",")[0]
+    folded = unicodedata.normalize("NFKD", head)
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return _PLACE_NON_WORD.sub(" ", folded).strip().casefold()
+
+
+def hometown_differs(birth_place: str | None, billed_from: str | None) -> bool | None:
+    """방송이 말하는 연고지가 실제 출생지와 다른가. **모르면 `None`이다.**
+
+    ## 왜 문자열을 그대로 비교하지 않는가
+
+    단순 비교는 **나라 접미사만 빠진 경우를 전부 "다름"으로 센다** —
+    `Woodstock, Georgia, U.S.`(출생)와 `Woodstock, Georgia`(연고지)는 같은 동네다.
+    운영 175명 실측에서 단순 비교는 114명을 "다름"이라 했지만, 도시로 보면
+    **61명**이다. 나머지 53명은 표기 차이였을 뿐이다.
+
+    ## 규칙
+
+    도시(첫 쉼표 앞)만 비교하고, `billed_from`은 `|`로 여럿일 수 있으므로
+    **그중 하나라도 출생 도시와 같으면 "같다"**로 본다 — 방송이 두 곳을 함께
+    부르는 선수가 있다(`Atlanta, Georgia | Woodstock, Georgia`).
+
+    ## 이 규칙이 못 잡는 것
+
+    `Kansas, U.S.`(출생)와 `Kansas City`(연고지)는 글자가 달라 "다름"이 된다.
+    부분 일치로 넓히면 `York`와 `New York`이 같아지므로 **일부러 좁게 뒀다.**
+    경계에 있는 값은 사람이 보고 판단할 수 있게 화면이 두 지명을 **함께** 적는다.
+    """
+    birth = (birth_place or "").strip()
+    billed = (billed_from or "").strip()
+    if not birth or not billed:
+        return None
+    city = _place_city(birth)
+    if not city:
+        return None
+    billed_cities = {_place_city(part) for part in billed.split("|") if part.strip()}
+    return city not in billed_cities

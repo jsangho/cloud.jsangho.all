@@ -24,6 +24,8 @@ class WrestlerPageQuery:
 
     q: str | None = None
     brand: str | None = None
+    #: `"differs"`면 소개 연고지가 실제 출생지와 다른 선수만. 그 외 값은 무시한다.
+    hometown: str | None = None
     page: int = 1
     size: int = 24
 
@@ -75,6 +77,12 @@ class WrestlerRowResponse:
     brand: str | None
     real_name: str | None
     birth_date: str | None
+    #: 실제 출생지.
+    birth_place: str | None
+    #: 방송이 부르는 연고지. `|`로 여럿일 수 있다.
+    billed_from: str | None
+    #: 둘이 다른가. **`None`은 한쪽이 없어 비교를 못 했다는 뜻**이고 "같다"가 아니다.
+    hometown_differs: bool | None
     finisher: str | None
     stable_team: str | None
     matches: int
@@ -91,6 +99,9 @@ class WrestlerPageResponse:
     page: int
     size: int
     brands: list[str]
+    #: 소개 연고지가 실제와 **다른** 선수 수 (필터와 무관하게 전체 기준).
+    #: 화면이 필터 칩에 이 수를 적는다.
+    hometown_differs_total: int = 0
 
 
 @dataclass(frozen=True)

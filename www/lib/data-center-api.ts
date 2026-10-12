@@ -46,6 +46,12 @@ export type DataCenterWrestler = {
   brand: string | null;
   realName: string | null;
   birthDate: string | null;
+  /** 실제 출생지. */
+  birthPlace: string | null;
+  /** 방송이 부르는 연고지. `|`로 여럿일 수 있다. */
+  billedFrom: string | null;
+  /** 둘이 다른가. **`null`은 비교 불가**이고 "같다"가 아니다. */
+  hometownDiffers: boolean | null;
   finisher: string | null;
   stableTeam: string | null;
   matches: number;
@@ -63,6 +69,8 @@ export type WrestlerPage = {
   size: number;
   /** DB에 실제로 있는 브랜드만 온다 — 목록을 화면에 박지 않는다. */
   brands: string[];
+  /** 소개 연고지가 실제와 다른 선수 수 — **검색·브랜드와 무관한 전체 수**다. */
+  hometownDiffersTotal: number;
 };
 
 export type EventOption = { slug: string; label: string };
@@ -195,12 +203,15 @@ export function fetchDataCenterOverview(): Promise<DataCenterOverview | null> {
 export function fetchWrestlerPage(options?: {
   q?: string;
   brand?: string;
+  /** `"differs"`면 소개 연고지가 실제와 다른 선수만. */
+  hometown?: string;
   page?: number;
   size?: number;
 }): Promise<WrestlerPage | null> {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
   if (options?.brand?.trim()) params.set("brand", options.brand.trim());
+  if (options?.hometown?.trim()) params.set("hometown", options.hometown.trim());
   if (options?.page) params.set("page", String(options.page));
   if (options?.size) params.set("size", String(options.size));
   const query = params.toString();

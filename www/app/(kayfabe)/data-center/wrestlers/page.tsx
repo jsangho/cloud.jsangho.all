@@ -29,6 +29,8 @@ type ListState = {
 export default function DataCenterWrestlersPage() {
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("");
+  /** `"differs"`면 소개 연고지가 실제 출생지와 다른 선수만 본다. */
+  const [hometown, setHometown] = useState("");
   const [page, setPage] = useState(1);
   const [state, setState] = useState<ListState>({
     page: null,
@@ -45,6 +47,7 @@ export default function DataCenterWrestlersPage() {
         const result = await fetchWrestlerPage({
           q: query,
           brand,
+          hometown,
           page,
           size: PAGE_SIZE,
         });
@@ -56,14 +59,15 @@ export default function DataCenterWrestlersPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, brand, page]);
+  }, [query, brand, hometown, page]);
 
   const brands = state.page?.brands ?? [];
+  const differsTotal = state.page?.hometownDiffersTotal ?? 0;
 
   return (
     <DataCenterShell
       title="선수"
-      description="DB에 등록된 선수와 그 전적입니다. 승·패는 실제 경기 카드에서 세고, 판정이 끝나지 않았으면 승률을 비웁니다."
+      description="DB에 등록된 선수와 그 전적입니다. 승·패는 실제 경기 카드에서 세고, 판정이 끝나지 않았으면 승률을 비웁니다. 방송이 부르는 연고지가 실제 출생지와 다른 선수는 두 지명을 함께 적습니다."
     >
       <div className="mb-5 flex flex-col gap-3">
         <label className="relative block">
@@ -114,6 +118,23 @@ export default function DataCenterWrestlersPage() {
             </ul>
           </div>
         )}
+
+        {/* **케이페이브 칩.** 방송이 부르는 연고지와 실제 출생지가 다른 선수다 —
+            이 서비스 이름이 가리키는 바로 그 간극이라 브랜드 옆에 따로 세운다.
+            수는 검색·브랜드와 무관한 전체 기준이라 칩을 눌러도 바뀌지 않는다. */}
+        {differsTotal > 0 && (
+          <div>
+            <FilterChip
+              active={hometown === "differs"}
+              onClick={() => {
+                setHometown(hometown === "differs" ? "" : "differs");
+                setPage(1);
+              }}
+            >
+              소개 ≠ 실제 출신 {differsTotal}명
+            </FilterChip>
+          </div>
+        )}
       </div>
 
       {state.loading ? (
@@ -161,6 +182,18 @@ export default function DataCenterWrestlersPage() {
                         {row.wins}승 {row.losses}패
                       </span>
                       <span className="text-xs text-muted-foreground">· {row.matches}경기</span>
+                    </p>
+                  )}
+
+                  {/* **두 지명을 함께 적는다.** 판정 규칙이 도시만 보므로
+                      경계에 있는 값(`Kansas` ↔ `Kansas City`)은 사람이 보고
+                      판단할 수 있어야 한다. 같을 때는 한 줄만 적는다. */}
+                  {row.birthPlace && (
+                    <p className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                      <span className="truncate">출신 {row.birthPlace}</span>
+                      {row.hometownDiffers && row.billedFrom && (
+                        <span className="truncate text-brand-link">소개 {row.billedFrom}</span>
+                      )}
                     </p>
                   )}
 

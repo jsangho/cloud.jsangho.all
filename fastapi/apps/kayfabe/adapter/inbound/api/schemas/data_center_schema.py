@@ -49,6 +49,10 @@ class WrestlerRowSchema(_Camel):
     brand: str | None = None
     real_name: str | None = Field(default=None, alias="realName")
     birth_date: str | None = Field(default=None, alias="birthDate")
+    birth_place: str | None = Field(default=None, alias="birthPlace")
+    billed_from: str | None = Field(default=None, alias="billedFrom")
+    hometown_differs: bool | None = Field(default=None, alias="hometownDiffers")
+    """방송 연고지가 실제 출생지와 다른가. **`None`은 비교 불가**이고 "같다"가 아니다."""
     finisher: str | None = None
     stable_team: str | None = Field(default=None, alias="stableTeam")
     matches: int
@@ -67,6 +71,8 @@ class WrestlerPageSchema(_Camel):
     size: int
     brands: list[str]
     """필터에 세울 브랜드 — **DB에 실제로 있는 값만** 온다 (하드코딩하지 않는다)."""
+    hometown_differs_total: int = Field(default=0, alias="hometownDiffersTotal")
+    """소개 연고지가 실제와 다른 선수 수. **검색·브랜드 필터와 무관한 전체 수**다."""
 
 
 class EventOptionSchema(_Camel):
