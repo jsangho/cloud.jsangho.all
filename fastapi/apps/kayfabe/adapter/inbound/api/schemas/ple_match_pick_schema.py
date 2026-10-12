@@ -62,6 +62,8 @@ class RankingRowSchema(BaseModel):
     nickname: str
     score: int
     accuracy: float = Field(..., ge=0.0, le=1.0, description="적중률 0~1")
+    correct: int = Field(..., ge=0, description="적중 수 — 적중률의 분자")
+    graded: int = Field(..., ge=0, description="채점된 경기 수 — 적중률의 분모")
     title: CosmeticItemSchema | None = None
     nickname_color: CosmeticItemSchema | None = Field(
         default=None, alias="nicknameColor"

@@ -22,6 +22,8 @@ def _row_to_schema(row: RankingRowResponse) -> RankingRowSchema:
         nickname=row.nickname,
         score=row.score,
         accuracy=row.accuracy,
+        correct=row.correct,
+        graded=row.graded,
         title=_cosmetic_to_schema(row.cosmetics.title),
         nickname_color=_cosmetic_to_schema(row.cosmetics.nickname_color),
         badge=_cosmetic_to_schema(row.cosmetics.badge),

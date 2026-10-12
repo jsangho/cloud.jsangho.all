@@ -36,6 +36,10 @@ class RankingRowResponse:
     nickname: str
     score: int
     accuracy: float
+    #: 적중률의 분자·분모. 백분율만으로는 표본 크기를 알 수 없어 함께 내보낸다
+    #: (DESIGN.md §14 — "분모 없는 백분율은 과장이다").
+    correct: int
+    graded: int
     cosmetics: EquippedCosmetics = field(default_factory=EquippedCosmetics)
 
 
