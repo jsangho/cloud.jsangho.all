@@ -16,11 +16,12 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # pgvector 의존은 2026-10-12에 뺐다. DB는 Supabase(클러스터 밖)이므로 백엔드가
+    # 이 컨테이너를 쓰지 않는데, `up -d backend` 가 매번 같이 띄우고 있었다.
+    # 서비스 정의는 되돌릴 수 있게 아래에 남겨 뒀다.
     depends_on:
       redis:
         condition: service_started
-      pgvector:
-        condition: service_healthy
       neo4j:
         condition: service_healthy
     restart: unless-stopped
@@ -69,11 +70,10 @@ services:
       default: {}
       auth_net:
         ipv4_address: 172.28.0.2
+    # 백엔드와 같은 이유로 pgvector 의존을 뺐다 (2026-10-12).
     depends_on:
       redis:
         condition: service_started
-      pgvector:
-        condition: service_healthy
     restart: unless-stopped
 
   # ①-3 Cloudflare Tunnel (EC2용, api.jsangho.cloud / auth.jsangho.cloud 라우팅)
