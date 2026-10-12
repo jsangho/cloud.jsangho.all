@@ -268,3 +268,19 @@ export function formatMonthDay(monthDay: string): string {
 export function formatDaysAway(daysAway: number): string {
   return daysAway === 0 ? "오늘" : `D-${daysAway}`;
 }
+
+export type OriginCount = { name: string; count: number };
+
+export type Origins = {
+  countries: OriginCount[];
+  usStates: OriginCount[];
+  /** 미국 사람인데 주를 모르는 수. */
+  usStateUnknown: number;
+  /** 출신을 아는 사람 / 전체 — **화면이 이 분모를 적는다.** */
+  located: number;
+  total: number;
+};
+
+export function fetchOrigins(): Promise<Origins | null> {
+  return getJson<Origins>("/origins");
+}

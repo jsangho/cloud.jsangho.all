@@ -211,3 +211,18 @@ class BirthdayBoardSchema(_Camel):
     entries: list[BirthdaySchema]
     dated: int
     total: int
+
+
+class OriginCountSchema(_Camel):
+    name: str
+    count: int
+
+
+class OriginsSchema(_Camel):
+    """출신 분포. `located`/`total`이 분모다 — 목록이 명부 전부인지 알려 준다."""
+
+    countries: list[OriginCountSchema]
+    us_states: list[OriginCountSchema] = Field(alias="usStates")
+    us_state_unknown: int = Field(alias="usStateUnknown")
+    located: int
+    total: int

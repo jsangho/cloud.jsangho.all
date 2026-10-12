@@ -24,6 +24,7 @@ export const DATA_CENTER_TABS = [
   { href: "/data-center/matches", label: "경기" },
   { href: "/data-center/ple", label: "대회" },
   { href: "/data-center/championships", label: "벨트" },
+  { href: "/data-center/origins", label: "출신" },
   { href: "/data-center/analytics", label: "차트" },
 ] as const;
 

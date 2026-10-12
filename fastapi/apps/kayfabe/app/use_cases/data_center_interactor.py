@@ -28,6 +28,8 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchPageQuery,
     MatchPageResponse,
     MatchRowResponse,
+    OriginCountResponse,
+    OriginsResponse,
     RatedWrestlerResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
@@ -363,4 +365,23 @@ class DataCenterInteractor(DataCenterUseCase):
             ],
             dated=dated,
             total=len(people),
+        )
+
+    async def get_origins(self) -> OriginsResponse:
+        logger.info("[DataCenterInteractor] get_origins -> Repository")
+        wrestlers = await self._repo.list_wrestlers()
+        dist = stats.origin_distribution(wrestlers)
+        logger.info(
+            "[DataCenterInteractor] get_origins <- 나라 %d · 주 %d · 출신 %d/%d",
+            len(dist.countries),
+            len(dist.us_states),
+            dist.located,
+            dist.total,
+        )
+        return OriginsResponse(
+            countries=[OriginCountResponse(name=n, count=c) for n, c in dist.countries],
+            us_states=[OriginCountResponse(name=n, count=c) for n, c in dist.us_states],
+            us_state_unknown=dist.us_state_unknown,
+            located=dist.located,
+            total=dist.total,
         )

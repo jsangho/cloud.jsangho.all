@@ -12,6 +12,7 @@ from kayfabe.app.dtos.data_center_dto import (
     DataCenterOverviewResponse,
     MatchPageQuery,
     MatchPageResponse,
+    OriginsResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
 )
@@ -41,6 +42,11 @@ class DataCenterUseCase(ABC):
 
     @abstractmethod
     async def get_analytics(self) -> AnalyticsResponse: ...
+
+    @abstractmethod
+    async def get_origins(self) -> OriginsResponse:
+        """출신 나라·미국 주 분포. 지도 둘이 이 한 응답을 나눠 쓴다."""
+        ...
 
     @abstractmethod
     async def get_birthdays(self, *, limit: int = 5) -> BirthdayBoardResponse:

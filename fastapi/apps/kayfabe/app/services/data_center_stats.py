@@ -656,3 +656,137 @@ def hometown_differs(birth_place: str | None, billed_from: str | None) -> bool |
         if city in segments:
             return False
     return True
+
+
+#: 미국 주 50개 + DC. **닫힌 목록이라 코드에 둔다** — 브랜드처럼 DB가 정하는 값이
+#: 아니라 바깥 세계의 상수다. `birth_place`가 `Phoenix, Arizona`처럼 나라를 빼고
+#: 끝나는 행이 있어서, 마지막 칸이 주면 그 사람은 미국 사람이다.
+_US_STATES = frozenset(
+    {
+        "Alabama",
+        "Alaska",
+        "Arizona",
+        "Arkansas",
+        "California",
+        "Colorado",
+        "Connecticut",
+        "Delaware",
+        "District of Columbia",
+        "Florida",
+        "Georgia",
+        "Hawaii",
+        "Idaho",
+        "Illinois",
+        "Indiana",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Louisiana",
+        "Maine",
+        "Maryland",
+        "Massachusetts",
+        "Michigan",
+        "Minnesota",
+        "Mississippi",
+        "Missouri",
+        "Montana",
+        "Nebraska",
+        "Nevada",
+        "New Hampshire",
+        "New Jersey",
+        "New Mexico",
+        "New York",
+        "North Carolina",
+        "North Dakota",
+        "Ohio",
+        "Oklahoma",
+        "Oregon",
+        "Pennsylvania",
+        "Rhode Island",
+        "South Carolina",
+        "South Dakota",
+        "Tennessee",
+        "Texas",
+        "Utah",
+        "Vermont",
+        "Virginia",
+        "Washington",
+        "West Virginia",
+        "Wisconsin",
+        "Wyoming",
+    }
+)
+
+#: 데이터가 미국을 적는 여러 방식. 표준 이름은 `United States`로 모은다.
+_US_NAMES = frozenset(
+    {"u.s.", "us", "usa", "united states", "united states of america"}
+)
+
+UNITED_STATES = "United States"
+
+
+@dataclass(frozen=True)
+class OriginDistribution:
+    """출신 분포. **나라와 미국 주를 따로 센다.**
+
+    둘을 한 축에 섞으면 미국이 62%라 다른 나라가 안 보이고, 미국만 보면 바깥
+    67명이 사라진다. 화면이 지도 둘을 나란히 세우는 이유와 같다.
+    """
+
+    #: (나라, 인원) 내림차순.
+    countries: list[tuple[str, int]]
+    #: (주, 인원) 내림차순. 미국 사람만.
+    us_states: list[tuple[str, int]]
+    #: 미국 사람인데 주를 모르는 수 (`Florida, U.S.`처럼 주가 적힌 경우는 센다).
+    us_state_unknown: int
+    #: 출신지를 아는 사람 수 / 전체.
+    located: int
+    total: int
+
+
+def _origin_of(birth_place: str | None) -> tuple[str, str | None] | None:
+    """`birth_place` → `(나라, 주)`. 못 읽으면 `None`.
+
+    마지막 칸이 나라다. 다만 **마지막 칸이 미국 주면 나라가 생략된 것**이고
+    (`Phoenix, Arizona`), 그 경우 그 칸이 곧 주다. 실측 6명이 이 모양이라
+    그냥 두면 Arizona·California가 "나라"로 집계된다.
+    """
+    parts = [p.strip() for p in (birth_place or "").split(",") if p.strip()]
+    if not parts:
+        return None
+    last = parts[-1]
+    if last.casefold() in _US_NAMES:
+        state = parts[-2] if len(parts) >= 2 and parts[-2] in _US_STATES else None
+        return UNITED_STATES, state
+    if last in _US_STATES:
+        return UNITED_STATES, last
+    return last, None
+
+
+def origin_distribution(rows: Iterable[WrestlerRow]) -> OriginDistribution:
+    """출신 나라·미국 주 분포. **없는 값을 추정하지 않는다** — 모르면 안 센다."""
+    countries: Counter[str] = Counter()
+    states: Counter[str] = Counter()
+    unknown_state = 0
+    total = 0
+    located = 0
+    for row in rows:
+        total += 1
+        origin = _origin_of(row.birth_place)
+        if origin is None:
+            continue
+        located += 1
+        country, state = origin
+        countries[country] += 1
+        if country == UNITED_STATES:
+            if state:
+                states[state] += 1
+            else:
+                unknown_state += 1
+    return OriginDistribution(
+        countries=sorted(countries.items(), key=lambda kv: (-kv[1], kv[0])),
+        us_states=sorted(states.items(), key=lambda kv: (-kv[1], kv[0])),
+        us_state_unknown=unknown_state,
+        located=located,
+        total=total,
+    )
