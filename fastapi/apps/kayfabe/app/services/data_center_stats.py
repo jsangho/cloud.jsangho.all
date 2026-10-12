@@ -13,9 +13,11 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import date
 
 from kayfabe.app.services.title_match_classifier import is_championship_match
 
@@ -471,3 +473,124 @@ def top_win_rates(
             )
         )
     return sorted(rated, key=lambda r: (-r.win_rate, -r.wins, r.name))[:limit]
+
+
+#: 생일 칸이 이 형식일 때만 읽는다. `wrestlers.birth_date`는 `String(50)`이라
+#: 무엇이든 들어갈 수 있고, 실제로 로스터 CSV에는 `1974-??-??`처럼 월·일을 모르는
+#: 행이 있다. **모르는 날짜를 1월 1일로 접지 않는다** — 그 순간 생일이 아닌 사람이
+#: 생일인 것처럼 뜬다.
+_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
+
+
+@dataclass(frozen=True)
+class BirthdayPerson:
+    """생일을 셀 사람 하나. **표가 아니라 이 모양을 받는다.**
+
+    선수(`wrestlers`)와 비선수(`wwe_staff`)는 칼럼이 다른 표인데 생일 계산에
+    필요한 것은 이름·날짜·소속뿐이다. 두 표를 각각 받는 함수를 두면 규칙이
+    둘로 갈라지므로, 인터랙터가 여기로 접어서 넘긴다.
+    """
+
+    name: str
+    birth_date: str | None
+    #: 화면에 적을 소속. 선수는 브랜드, 비선수는 CSV 구역(`Executives` 등)이다.
+    group: str | None = None
+    #: `"wrestler"` | `"staff"`.
+    kind: str = "wrestler"
+    #: 비선수만 있다 — `Commentator` · `Ring Announcer` 등.
+    role: str | None = None
+
+
+@dataclass(frozen=True)
+class Birthday:
+    """다가오는 생일 한 건.
+
+    `age`는 **그 생일에 맞이할 나이**다(오늘이 생일이면 오늘 기준). 출처가
+    `birth_date` 칼럼 하나뿐이라 위키처럼 개정본으로 되짚을 계보가 없다 —
+    화면이 "N/M명 기준"이라고 함께 적어야 하는 이유다.
+    """
+
+    name: str
+    group: str | None
+    kind: str
+    role: str | None
+    #: `MM-DD`. 연도를 빼는 이유는 이 값이 "다가오는 날짜"라서다.
+    month_day: str
+    birth_date: str
+    age: int
+    #: 오늘부터 며칠 뒤인가. 오늘이면 0이다.
+    days_away: int
+
+
+def to_birthday_people(
+    rows: Iterable[WrestlerRow],
+) -> list[BirthdayPerson]:
+    """선수 행 → 생일 입력. 브랜드가 소속 칸이 된다."""
+    return [
+        BirthdayPerson(
+            name=row.name,
+            birth_date=row.birth_date,
+            group=(row.brand or "").strip() or None,
+            kind="wrestler",
+        )
+        for row in rows
+    ]
+
+
+def upcoming_birthdays(
+    rows: Iterable[BirthdayPerson],
+    *,
+    today: date,
+    limit: int = 5,
+) -> list[Birthday]:
+    """오늘부터 가까운 순으로 생일 `limit`건.
+
+    **창(窓)이 아니라 개수로 자른다.** 로스터 165명의 생일을 실측하면 1년 중
+    **239일이 0명**이다(2026-10-12 기준). "앞으로 30일" 같은 창으로 끊으면 화면이
+    자주 통째로 비는데, 개수로 끊으면 날짜가 멀어질 뿐 빈 칸이 되지 않는다.
+
+    **연말을 넘어 감는다** — 12월 말에 1월 생일이 다음 차례로 와야 한다.
+
+    `2월 29일`은 평년에 `days_away`가 한 해 뒤로 밀릴 뿐 사라지지 않는다. 그 날을
+    3월 1일로 당기지 않는 이유는 위와 같다 — 아닌 날을 생일로 만들지 않는다.
+    """
+    found: list[Birthday] = []
+    for row in rows:
+        matched = _ISO_DATE.match((row.birth_date or "").strip())
+        if matched is None:
+            continue
+        year, month, day = (int(g) for g in matched.groups())
+        try:
+            this_year = date(today.year, month, day)
+        except ValueError:
+            # 2월 29일이고 올해가 평년이다. 다음 윤년까지 밀어 둔다.
+            this_year = None
+        if this_year is not None and this_year >= today:
+            next_birthday = this_year
+        else:
+            next_birthday = _next_anniversary(month, day, after=today)
+            if next_birthday is None:
+                continue
+        found.append(
+            Birthday(
+                name=row.name,
+                group=row.group,
+                kind=row.kind,
+                role=row.role,
+                month_day=f"{month:02d}-{day:02d}",
+                birth_date=matched.group(0),
+                age=next_birthday.year - year,
+                days_away=(next_birthday - today).days,
+            )
+        )
+    return sorted(found, key=lambda b: (b.days_away, b.name))[:limit]
+
+
+def _next_anniversary(month: int, day: int, *, after: date) -> date | None:
+    """`after` 다음에 오는 `month-day`. 윤년이라 몇 해 건너뛸 수 있다."""
+    for offset in range(1, 9):
+        try:
+            return date(after.year + offset, month, day)
+        except ValueError:
+            continue
+    return None

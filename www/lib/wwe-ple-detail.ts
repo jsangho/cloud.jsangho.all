@@ -392,11 +392,12 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
   },
 
   /**
-   * 2026 Crown Jewel — 11.7 리야드 (위키 `Crown Jewel (2026)` rev 1372805732).
+   * 2026 Crown Jewel — 11.7 리야드 (위키 `Crown Jewel (2026)` rev 1379743852).
    *
-   * **대진이 아직 발표되지 않았다.** 그래서 `highlights`에 경기를 적지 않고
-   * 확인된 개최 정보만 둔다. 없는 카드를 그럴싸하게 채우면 화면이 거짓을 말한다
-   * (DESIGN.md §7 "숫자를 지어내지 않는다"와 같은 이유다).
+   * **발표된 경기는 둘이고 2026-10-12에 참가자 이름까지 확정됐다.** 둘 다 Raw
+   * 챔피언 대 SmackDown 챔피언 형식이다. 그전에는 위키조차 벨트 주인을 몰라
+   * 자리 이름만 있었고, 이 칸도 "대진 미발표"로 두었다 — 없는 카드를 그럴싸하게
+   * 채우지 않는다는 규칙은 그대로다(DESIGN.md §7).
    */
   "crown-jewel": {
     slug: "crown-jewel",
@@ -414,10 +415,16 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     },
     highlights: [
       { title: "11월 7일", detail: "사우디 리야드 · Riyadh Season Stadium (KAFD)" },
-      { title: "Raw · SmackDown", detail: "메인 로스터 두 브랜드 합동" },
-      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+      {
+        title: "챔피언 대 챔피언",
+        detail: "Roman Reigns vs Sami Zayn — 2026 크라운 주얼 챔피언십",
+      },
+      {
+        title: "여자부 챔피언 대 챔피언",
+        detail: "Liv Morgan vs Chelsea Green — 2026 여자 크라운 주얼 챔피언십",
+      },
     ],
-    predictionFocus: ["대진 발표 후 공개"],
+    predictionFocus: ["크라운 주얼 챔피언", "여자 크라운 주얼 챔피언", "브랜드 우위"],
   },
 
   /**

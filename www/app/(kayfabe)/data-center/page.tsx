@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BirthdayCard } from "@/components/data-center/birthday-card";
 import {
   DataCenterShell,
   DataUnavailable,
@@ -238,6 +239,9 @@ export default function DataCenterPage() {
               </ul>
             )}
           </section>
+
+          {/* 곁다리 축이라 벨트·경기 아래에 둔다 — 이 화면의 주인공은 기록이다. */}
+          <BirthdayCard />
 
           <section aria-labelledby="top-wrestlers">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
