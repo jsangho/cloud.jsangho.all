@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
     BeltDetailResponse,
+    BirthdayBoardResponse,
     ChampionshipStatsResponse,
     DataCenterOverviewResponse,
     MatchPageQuery,
@@ -40,3 +41,8 @@ class DataCenterUseCase(ABC):
 
     @abstractmethod
     async def get_analytics(self) -> AnalyticsResponse: ...
+
+    @abstractmethod
+    async def get_birthdays(self, *, limit: int = 5) -> BirthdayBoardResponse:
+        """다가오는 생일. **창이 아니라 개수로 자른다** — 빈 날이 1년의 65%다."""
+        ...

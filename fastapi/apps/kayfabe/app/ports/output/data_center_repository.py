@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from kayfabe.app.services.data_center_stats import MatchRow, TitleRow, WrestlerRow
+from kayfabe.app.services.data_center_stats import (
+    BirthdayPerson,
+    MatchRow,
+    TitleRow,
+    WrestlerRow,
+)
 
 
 class DataCenterRepository(ABC):
@@ -21,6 +26,15 @@ class DataCenterRepository(ABC):
     @abstractmethod
     async def list_wrestlers(self) -> list[WrestlerRow]:
         """`wrestlers` 전체. **데이터 센터의 선수 원본은 이 표다** (§1)."""
+        ...
+
+    @abstractmethod
+    async def list_staff(self) -> list[BirthdayPerson]:
+        """`wwe_staff` 전체를 **생일 입력 모양으로** 읽는다.
+
+        이 표에서 데이터 센터가 쓰는 것이 생일뿐이라 전용 행 타입을 만들지 않는다.
+        다른 화면이 역할·국적을 쓰기 시작하면 그때 `StaffRow`로 넓힌다.
+        """
         ...
 
     @abstractmethod

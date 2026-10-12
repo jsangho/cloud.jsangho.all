@@ -201,3 +201,36 @@ class AnalyticsResponse:
     non_title_matches: int
     top_win_rates: list[RatedWrestlerResponse]
     min_matches_for_rate: int
+
+
+@dataclass(frozen=True)
+class BirthdayResponse:
+    """다가오는 생일 한 건. `age`는 **그 생일에 맞이할** 나이다."""
+
+    name: str
+    #: 선수는 브랜드, 비선수는 CSV 구역(`Executives` 등).
+    group: str | None
+    #: `"wrestler"` | `"staff"`.
+    kind: str
+    #: 비선수만 있다 — `Commentator` 등.
+    role: str | None
+    #: `MM-DD`
+    month_day: str
+    birth_date: str
+    age: int
+    days_away: int
+
+
+@dataclass(frozen=True)
+class BirthdayBoardResponse:
+    """생일 보드.
+
+    `dated`/`total`을 함께 내보내는 이유는 **이 목록이 명부 전부가 아니기**
+    때문이다 — 화면이 "207/245명 기준"이라고 적을 수 있어야 한다 (§14 분모 규칙).
+    분모에는 선수와 비선수가 함께 들어간다.
+    """
+
+    today: str
+    entries: list[BirthdayResponse] = field(default_factory=list)
+    dated: int = 0
+    total: int = 0

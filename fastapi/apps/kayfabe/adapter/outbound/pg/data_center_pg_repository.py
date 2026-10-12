@@ -16,10 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from kayfabe.adapter.outbound.orm.championship_orm import ChampionshipTitleModel
 from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
+from kayfabe.adapter.outbound.orm.staff_orm import StaffOrm
 from kayfabe.adapter.outbound.orm.title_history_orm import TitleAcquisitionModel
 from kayfabe.adapter.outbound.orm.wrestler_orm import WrestlerOrm
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
-from kayfabe.app.services.data_center_stats import MatchRow, TitleRow, WrestlerRow
+from kayfabe.app.services.data_center_stats import (
+    BirthdayPerson,
+    MatchRow,
+    TitleRow,
+    WrestlerRow,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -53,6 +59,28 @@ class DataCenterPgRepository(DataCenterRepository):
             for row in result.all()
         ]
         logger.info("[DataCenterPgRepository] list_wrestlers <- count=%d", len(rows))
+        return rows
+
+    async def list_staff(self) -> list[BirthdayPerson]:
+        result = await self.db.execute(
+            select(
+                StaffOrm.name,
+                StaffOrm.group_label,
+                StaffOrm.role,
+                StaffOrm.birth_date,
+            ).order_by(StaffOrm.name)
+        )
+        rows = [
+            BirthdayPerson(
+                name=row.name,
+                birth_date=row.birth_date,
+                group=row.group_label,
+                kind="staff",
+                role=row.role,
+            )
+            for row in result.all()
+        ]
+        logger.info("[DataCenterPgRepository] list_staff <- count=%d", len(rows))
         return rows
 
     async def list_matches(self) -> list[MatchRow]:

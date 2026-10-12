@@ -22,6 +22,8 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     BeltHolderSchema,
     BeltReignSchema,
     BeltStatSchema,
+    BirthdayBoardSchema,
+    BirthdaySchema,
     BrandCountSchema,
     ChampionshipStatsSchema,
     DataCenterCountsSchema,
@@ -40,6 +42,7 @@ from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
     BeltDetailResponse,
     BeltStatResponse,
+    BirthdayBoardResponse,
     BrandCountResponse,
     ChampionshipStatsResponse,
     DataCenterCountsResponse,
@@ -73,6 +76,25 @@ async def get_overview(use_case: DataCenterUseCase = Depends(get_data_center)):
     """선수·경기·대회·챔피언십 카운트와 최근 경기."""
     logger.info("[DataCenterRouter] get_overview")
     return overview_to_schema(await use_case.get_overview())
+
+
+@data_center_router.get(
+    "/birthdays",
+    response_model=BirthdayBoardSchema,
+    response_model_by_alias=True,
+)
+async def get_birthdays(
+    limit: int = Query(default=5, ge=1, le=20),
+    use_case: DataCenterUseCase = Depends(get_data_center),
+):
+    """다가오는 선수 생일.
+
+    **창이 아니라 개수로 자른다** — 로스터 165명으로는 1년 중 239일이 0명이라
+    "앞으로 30일" 같은 창은 화면을 자주 통째로 비운다. 날짜가 멀어질지언정
+    목록은 비지 않는다.
+    """
+    logger.info("[DataCenterRouter] get_birthdays | limit=%d", limit)
+    return birthday_board_to_schema(await use_case.get_birthdays(limit=limit))
 
 
 @data_center_router.get(
@@ -342,4 +364,25 @@ def analytics_to_schema(dto: AnalyticsResponse) -> AnalyticsSchema:
         non_title_matches=dto.non_title_matches,
         top_win_rates=[rated_wrestler_to_schema(r) for r in dto.top_win_rates],
         min_matches_for_rate=dto.min_matches_for_rate,
+    )
+
+
+def birthday_board_to_schema(dto: BirthdayBoardResponse) -> BirthdayBoardSchema:
+    return BirthdayBoardSchema(
+        today=dto.today,
+        entries=[
+            BirthdaySchema(
+                name=e.name,
+                group=e.group,
+                kind=e.kind,
+                role=e.role,
+                month_day=e.month_day,
+                birth_date=e.birth_date,
+                age=e.age,
+                days_away=e.days_away,
+            )
+            for e in dto.entries
+        ],
+        dated=dto.dated,
+        total=dto.total,
     )

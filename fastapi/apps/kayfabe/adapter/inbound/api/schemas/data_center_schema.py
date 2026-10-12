@@ -181,3 +181,27 @@ class AnalyticsSchema(_Camel):
     top_win_rates: list[RatedWrestlerSchema] = Field(alias="topWinRates")
     min_matches_for_rate: int = Field(alias="minMatchesForRate")
     """승률 순위에 오르는 최소 경기 수. **화면이 이 숫자를 함께 적어야** 순위가 읽힌다."""
+
+
+class BirthdaySchema(_Camel):
+    name: str
+    group: str | None = None
+    kind: str
+    role: str | None = None
+    month_day: str = Field(alias="monthDay")
+    birth_date: str = Field(alias="birthDate")
+    age: int
+    days_away: int = Field(alias="daysAway")
+
+
+class BirthdayBoardSchema(_Camel):
+    """`dated`/`total`은 분모다 — 화면이 "N/M명 기준"이라고 적게 한다.
+
+    분모에는 선수(`wrestlers`)와 비선수(`wwe_staff`)가 함께 들어간다. 생년월일을
+    모르는 사람이 양쪽에 다 있어서, 이 두 수가 없으면 목록이 명부 전부인 것처럼 읽힌다.
+    """
+
+    today: str
+    entries: list[BirthdaySchema]
+    dated: int
+    total: int

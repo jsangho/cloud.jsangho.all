@@ -149,6 +149,31 @@ export type DataCenterAnalytics = {
   minMatchesForRate: number;
 };
 
+/** 다가오는 생일 한 건. `age`는 **그 생일에 맞이할** 나이다. */
+export type Birthday = {
+  name: string;
+  /** 선수는 브랜드, 비선수는 CSV 구역(`Executives` 등). */
+  group: string | null;
+  kind: "wrestler" | "staff";
+  /** 비선수만 있다 — `Commentator` 등. */
+  role: string | null;
+  /** `MM-DD` */
+  monthDay: string;
+  birthDate: string;
+  age: number;
+  /** 오늘이면 0. */
+  daysAway: number;
+};
+
+export type BirthdayBoard = {
+  /** 서버가 KST로 센 오늘. 클라이언트 시계를 믿지 않는다. */
+  today: string;
+  entries: Birthday[];
+  /** 생일을 아는 사람 수 / 명부 전체 — 선수와 비선수가 함께 들어간다. */
+  dated: number;
+  total: number;
+};
+
 async function getJson<T>(path: string): Promise<T | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
@@ -216,4 +241,19 @@ export function fetchDataCenterAnalytics(): Promise<DataCenterAnalytics | null> 
 export function formatWinRate(rate: number | null): string {
   if (rate === null) return "—";
   return `${Math.round(rate * 100)}%`;
+}
+
+export function fetchBirthdays(limit = 5): Promise<BirthdayBoard | null> {
+  return getJson<BirthdayBoard>(`/birthdays?limit=${limit}`);
+}
+
+/** `MM-DD` → `10.15`. 연도를 안 붙이는 이유는 이 값이 "다가오는 날짜"라서다. */
+export function formatMonthDay(monthDay: string): string {
+  const [month, day] = monthDay.split("-");
+  return `${Number(month)}.${Number(day)}`;
+}
+
+/** D-0은 「오늘」, 나머지는 `D-3`. 숫자만 쓰면 오늘이 D-0으로 묻힌다. */
+export function formatDaysAway(daysAway: number): string {
+  return daysAway === 0 ? "오늘" : `D-${daysAway}`;
 }

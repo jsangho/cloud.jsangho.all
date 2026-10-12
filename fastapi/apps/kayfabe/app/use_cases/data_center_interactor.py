@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
 
 from kayfabe.app.dtos.data_center_dto import (
     AnalyticsResponse,
@@ -14,6 +15,8 @@ from kayfabe.app.dtos.data_center_dto import (
     BeltHolderResponse,
     BeltReignResponse,
     BeltStatResponse,
+    BirthdayBoardResponse,
+    BirthdayResponse,
     BrandCountResponse,
     ChampionshipStatsResponse,
     DataCenterCountsResponse,
@@ -294,4 +297,51 @@ class DataCenterInteractor(DataCenterUseCase):
                 for r in stats.top_win_rates(records)
             ],
             min_matches_for_rate=stats.MIN_MATCHES_FOR_RATE,
+        )
+
+    async def get_birthdays(self, *, limit: int = 5) -> BirthdayBoardResponse:
+        """다가오는 생일.
+
+        **오늘은 KST로 센다.** 보는 사람이 한국에 있고, UTC로 자르면 한국 시각
+        0시부터 9시 사이에 생일인 사람이 하루 늦게 뜬다. 대회 `status`가 UTC를
+        쓰는 것과 다른 선택인데, 그쪽은 **경기가 열린 현지 시각**이 기준이라
+        하루를 양보하는 편이 안전하고 이쪽은 **보는 사람의 오늘**이 기준이다.
+        """
+        logger.info("[DataCenterInteractor] get_birthdays -> Repository")
+        wrestlers = await self._repo.list_wrestlers()
+        staff = await self._repo.list_staff()
+        # **선수와 비선수를 한 줄에 세운다.** 보는 사람에게 생일은 하나의 달력이고,
+        # 둘을 갈라 놓으면 같은 날 두 칸이 생긴다. 어느 쪽인지는 `kind`가 말한다.
+        people = [*stats.to_birthday_people(wrestlers), *staff]
+        today = (datetime.now(UTC) + timedelta(hours=9)).date()
+        # 한 번만 센다. 전체를 받아 두면 분모(`dated`)가 그 길이라 두 번 돌 일이 없다.
+        ranked = stats.upcoming_birthdays(people, today=today, limit=len(people))
+        found = ranked[:limit]
+        dated = len(ranked)
+        logger.info(
+            "[DataCenterInteractor] get_birthdays <- %d건 (생일 아는 사람 %d/%d · "
+            "선수 %d + 비선수 %d)",
+            len(found),
+            dated,
+            len(people),
+            len(wrestlers),
+            len(staff),
+        )
+        return BirthdayBoardResponse(
+            today=today.isoformat(),
+            entries=[
+                BirthdayResponse(
+                    name=b.name,
+                    group=b.group,
+                    kind=b.kind,
+                    role=b.role,
+                    month_day=b.month_day,
+                    birth_date=b.birth_date,
+                    age=b.age,
+                    days_away=b.days_away,
+                )
+                for b in found
+            ],
+            dated=dated,
+            total=len(people),
         )
