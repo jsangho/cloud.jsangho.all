@@ -642,5 +642,17 @@ def hometown_differs(birth_place: str | None, billed_from: str | None) -> bool |
     city = _place_city(birth)
     if not city:
         return None
-    billed_cities = {_place_city(part) for part in billed.split("|") if part.strip()}
-    return city not in billed_cities
+    parts = [part for part in billed.split("|") if part.strip()]
+    if city in {_place_city(part) for part in parts}:
+        return False
+    # **출생지에 도시가 없고 주만 적힌 행이 있다** (`Florida, U.S.`). 그때는
+    # 연고지의 어느 칸이든 그 주와 같으면 같은 곳으로 본다 — Roman Reigns의
+    # `Florida, U.S.` ↔ `Pensacola, Florida`를 간극으로 세면 거짓이다. 실측
+    # 4건이 이 모양이고 그중 둘이 그랬다(나머지 둘은 주 자체가 다르다).
+    if birth.count(",") <= 1:
+        segments = {
+            _place_city(segment) for part in parts for segment in part.split(",")
+        }
+        if city in segments:
+            return False
+    return True
