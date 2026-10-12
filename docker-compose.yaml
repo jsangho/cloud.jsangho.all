@@ -99,25 +99,9 @@ services:
       - backend
       - auth
 
-  # ② n8n 워크플로우 자동화
-  n8n:
-    image: n8nio/n8n
-    ports:
-      - "5678:5678"
-    # N8N_ENCRYPTION_KEY 는 env_file 로 주입 (아래 neo4j 주석과 같은 이유).
-    # 주의: n8n 워크플로는 이 파일의 앱 비밀값도 $env 로 읽을 수 있다.
-    env_file:
-      - ./fastapi/.env
-    environment:
-      N8N_DIAGNOSTICS_ENABLED: "false"
-      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
-      N8N_HOST: n8n.jsangho.cloud
-      N8N_PORT: 5678
-      N8N_PROTOCOL: https
-      WEBHOOK_URL: https://n8n.jsangho.cloud
-    volumes:
-      - ./data/n8n:/home/node/.n8n
-    restart: unless-stopped
+  # ② n8n 은 2026-10-12에 내렸다 — 소유자 계정조차 만든 적이 없어 워크플로가 0개였고,
+  #    384MB를 상시 점유했다. 데이터(./data/n8n, 5.5MB)와 DNS 레코드는 남아 있으므로
+  #    되살리려면 이 블록과 cloudflared/config.yml 의 ingress 한 줄을 복원하면 된다.
 
   # ③ Neo4j (Graph DB)
   neo4j:
