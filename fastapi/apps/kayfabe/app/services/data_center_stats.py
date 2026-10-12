@@ -917,3 +917,66 @@ def trainer_distribution(rows: Iterable[WrestlerRow]) -> TrainerDistribution:
         key=lambda g: (-g.count, g.name),
     )
     return TrainerDistribution(groups=groups, known=known, total=total)
+
+
+@dataclass(frozen=True)
+class StaffRow:
+    """`wwe_staff` 한 행. 생일 말고 다른 화면이 쓰기 시작해서 넓혔다."""
+
+    name: str
+    group_label: str | None = None
+    role: str | None = None
+    korean_ring_name: str | None = None
+    #: `No` · `Wrestler` · `Wrestler | Trainer` 등 자유 텍스트. 빈 값이 13건이다.
+    wrestling_experience: str | None = None
+    birth_date: str | None = None
+
+
+def is_former_wrestler(experience: str | None) -> bool:
+    """링에 섰던 사람인가.
+
+    `wrestling_experience`는 자유 텍스트라 `Wrestler | Trainer`처럼 역할이 붙는다.
+    **낱말 `wrestler`가 들어 있는지로만** 본다 — `ECW Promoter | Commentator`
+    (폴 헤이먼)처럼 레슬링 업계지만 선수는 아닌 경우를 끌어들이지 않기 위해서다.
+    """
+    return "wrestler" in (experience or "").casefold()
+
+
+@dataclass(frozen=True)
+class StaffDirectory:
+    """관계자 명부. **구역은 브랜드가 아니다** — `Executives`·`Raw Referee`가 섞여 있다."""
+
+    rows: list[StaffRow]
+    #: 구역별 인원 (목록 순서대로). 화면이 필터 칩을 이 값으로 만든다.
+    groups: list[tuple[str, int]]
+    former_wrestlers: int
+    total: int
+
+
+def staff_directory(rows: Iterable[StaffRow]) -> StaffDirectory:
+    """관계자 명부. 정렬은 **구역 등장 순서 → 이름**이다.
+
+    구역을 인원순으로 재정렬하지 않는 이유는 CSV가 적어 둔 순서가 조직도이기
+    때문이다 — 경영진이 먼저고 브랜드별 인원이 뒤따른다.
+    """
+    listed = list(rows)
+    order: dict[str, int] = {}
+    counts: Counter[str] = Counter()
+    for row in listed:
+        key = (row.group_label or "").strip() or "미지정"
+        order.setdefault(key, len(order))
+        counts[key] += 1
+    return StaffDirectory(
+        rows=sorted(
+            listed,
+            key=lambda r: (
+                order.get((r.group_label or "").strip() or "미지정", 999),
+                r.name,
+            ),
+        ),
+        groups=sorted(counts.items(), key=lambda kv: order[kv[0]]),
+        former_wrestlers=sum(
+            1 for r in listed if is_former_wrestler(r.wrestling_experience)
+        ),
+        total=len(listed),
+    )

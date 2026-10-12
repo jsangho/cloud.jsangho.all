@@ -26,6 +26,7 @@ export const DATA_CENTER_TABS = [
   { href: "/data-center/championships", label: "벨트" },
   { href: "/data-center/origins", label: "출신" },
   { href: "/data-center/trainers", label: "트레이너" },
+  { href: "/data-center/staff", label: "관계자" },
   { href: "/data-center/analytics", label: "차트" },
 ] as const;
 

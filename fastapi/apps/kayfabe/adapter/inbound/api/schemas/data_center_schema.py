@@ -239,3 +239,25 @@ class TrainersSchema(_Camel):
     """학교·센터로 판정된 이름 — 사람과 갈라 적기 위한 표시다."""
     known: int
     total: int
+
+
+class StaffMemberSchema(_Camel):
+    name: str
+    korean_name: str | None = Field(default=None, alias="koreanName")
+    group: str | None = None
+    role: str | None = None
+    former_wrestler: bool = Field(alias="formerWrestler")
+
+
+class StaffGroupSchema(_Camel):
+    name: str
+    count: int
+
+
+class StaffDirectorySchema(_Camel):
+    """관계자 명부. `formerWrestlers`가 머리 숫자다."""
+
+    members: list[StaffMemberSchema]
+    groups: list[StaffGroupSchema]
+    former_wrestlers: int = Field(alias="formerWrestlers")
+    total: int

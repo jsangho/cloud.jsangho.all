@@ -37,6 +37,9 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     OriginCountSchema,
     OriginsSchema,
     RatedWrestlerSchema,
+    StaffDirectorySchema,
+    StaffGroupSchema,
+    StaffMemberSchema,
     TrainersSchema,
     WrestlerPageSchema,
     WrestlerRowSchema,
@@ -59,6 +62,7 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchRowResponse,
     OriginsResponse,
     RatedWrestlerResponse,
+    StaffDirectoryResponse,
     TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
@@ -449,3 +453,32 @@ async def get_trainers(use_case: DataCenterUseCase = Depends(get_data_center)):
     """누가 누구를 길렀나 — 제자 수 내림차순."""
     logger.info("[DataCenterRouter] get_trainers")
     return trainers_to_schema(await use_case.get_trainers())
+
+
+def staff_directory_to_schema(dto: StaffDirectoryResponse) -> StaffDirectorySchema:
+    return StaffDirectorySchema(
+        members=[
+            StaffMemberSchema(
+                name=m.name,
+                korean_name=m.korean_name,
+                group=m.group,
+                role=m.role,
+                former_wrestler=m.former_wrestler,
+            )
+            for m in dto.members
+        ],
+        groups=[StaffGroupSchema(name=n, count=c) for n, c in dto.groups],
+        former_wrestlers=dto.former_wrestlers,
+        total=dto.total,
+    )
+
+
+@data_center_router.get(
+    "/staff",
+    response_model=StaffDirectorySchema,
+    response_model_by_alias=True,
+)
+async def get_staff(use_case: DataCenterUseCase = Depends(get_data_center)):
+    """관계자 명부 — 경영진·해설·심판·프로듀서."""
+    logger.info("[DataCenterRouter] get_staff")
+    return staff_directory_to_schema(await use_case.get_staff())

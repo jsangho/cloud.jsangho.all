@@ -302,3 +302,25 @@ export type Trainers = {
 export function fetchTrainers(): Promise<Trainers | null> {
   return getJson<Trainers>("/trainers");
 }
+
+export type StaffMember = {
+  name: string;
+  /** 한글 링네임 — 관계자 표는 이 칸이 100% 차 있다. */
+  koreanName: string | null;
+  group: string | null;
+  role: string | null;
+  /** 링에 섰던 사람인가. */
+  formerWrestler: boolean;
+};
+
+export type StaffDirectory = {
+  members: StaffMember[];
+  /** (구역, 인원) — CSV가 적은 조직도 순서 그대로다. */
+  groups: { name: string; count: number }[];
+  formerWrestlers: number;
+  total: number;
+};
+
+export function fetchStaff(): Promise<StaffDirectory | null> {
+  return getJson<StaffDirectory>("/staff");
+}

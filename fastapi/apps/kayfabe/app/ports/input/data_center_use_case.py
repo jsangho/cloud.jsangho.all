@@ -13,6 +13,7 @@ from kayfabe.app.dtos.data_center_dto import (
     MatchPageQuery,
     MatchPageResponse,
     OriginsResponse,
+    StaffDirectoryResponse,
     TrainersResponse,
     WrestlerPageQuery,
     WrestlerPageResponse,
@@ -43,6 +44,11 @@ class DataCenterUseCase(ABC):
 
     @abstractmethod
     async def get_analytics(self) -> AnalyticsResponse: ...
+
+    @abstractmethod
+    async def get_staff(self) -> StaffDirectoryResponse:
+        """관계자 명부 — 구역 순서, 전직 선수 표시."""
+        ...
 
     @abstractmethod
     async def get_trainers(self) -> TrainersResponse:
