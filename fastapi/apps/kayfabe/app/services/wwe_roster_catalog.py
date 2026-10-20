@@ -161,7 +161,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "real_name": "Jacob Samuel Fatu",
         "height_cm": 185.0,
         "weight_kg": 127.0,
-        "birth_date": None,
+        "birth_date": "1992-04-18",
     },
     {
         "name": "JD McDonagh",
@@ -686,14 +686,14 @@ WWE_ROSTER: list[RosterEntry] = [
         "real_name": "Jade Cargill",
         "height_cm": 178.0,
         "weight_kg": 73.0,
-        "birth_date": None,
+        "birth_date": "1992-06-03",
     },
     {
         "name": "Jordynne Grace",
         "real_name": "Patricia Forrest Parker",
         "height_cm": 160.0,
         "weight_kg": 71.0,
-        "birth_date": None,
+        "birth_date": "1996-03-05",
     },
     {
         "name": "Kiana James",
@@ -788,10 +788,10 @@ WWE_ROSTER: list[RosterEntry] = [
     },
     {
         "name": "Brad Baylor",
-        "real_name": None,
-        "height_cm": None,
-        "weight_kg": None,
-        "birth_date": None,
+        "real_name": "Greg Coghlan",
+        "height_cm": 191.0,
+        "weight_kg": 89.0,
+        "birth_date": "2004-11-08",
     },
     {
         "name": "Bronco Nima",
@@ -851,10 +851,10 @@ WWE_ROSTER: list[RosterEntry] = [
     },
     {
         "name": "EK Prosper",
-        "real_name": None,
-        "height_cm": None,
-        "weight_kg": None,
-        "birth_date": None,
+        "real_name": "Eli Knight",
+        "height_cm": 185.0,
+        "weight_kg": 92.0,
+        "birth_date": "2001-08-15",
     },
     {
         "name": "Elio LeFleur",
@@ -872,10 +872,10 @@ WWE_ROSTER: list[RosterEntry] = [
     },
     {
         "name": "Jackson Drake",
-        "real_name": None,
+        "real_name": "Jackson Drake",
         "height_cm": 183.0,
         "weight_kg": 78.0,
-        "birth_date": None,
+        "birth_date": "2003-08-30",
     },
     {
         "name": "Josh Briggs",
@@ -963,10 +963,10 @@ WWE_ROSTER: list[RosterEntry] = [
     },
     {
         "name": "Ricky Smokes",
-        "real_name": None,
-        "height_cm": None,
-        "weight_kg": None,
-        "birth_date": None,
+        "real_name": "Ricky Archer",
+        "height_cm": 188.0,
+        "weight_kg": 88.0,
+        "birth_date": "2000-04-28",
     },
     {
         "name": "Romeo Moreno",
@@ -1015,7 +1015,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "real_name": "Case Hatch",
         "height_cm": 182.0,
         "weight_kg": 104.0,
-        "birth_date": None,
+        "birth_date": "1997-09-06",
     },
     {
         "name": "Tavion Heights",
@@ -1035,7 +1035,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "name": "Tristan Angels",
         "real_name": "Nathaniel Cranton",
         "height_cm": 190.0,
-        "weight_kg": None,
+        "weight_kg": 70.0,
         "birth_date": "2003-06-09",
     },
     {
@@ -1098,7 +1098,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "name": "Kendal Grey",
         "real_name": "Peyton Prussin",
         "height_cm": 163.0,
-        "weight_kg": None,
+        "weight_kg": 49.0,
         "birth_date": "2001-06-15",
     },
     {
@@ -1106,7 +1106,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "real_name": "Breanna Covington",
         "height_cm": None,
         "weight_kg": None,
-        "birth_date": None,
+        "birth_date": "1998-10-05",
     },
     {
         "name": "Lizzy Rain",
@@ -1139,14 +1139,14 @@ WWE_ROSTER: list[RosterEntry] = [
     {
         "name": "Reina Volcán",
         "real_name": "Nicole Ripoll Martinez",
-        "height_cm": None,
-        "weight_kg": None,
+        "height_cm": 167.0,
+        "weight_kg": 84.0,
         "birth_date": "1997-01-28",
     },
     {
         "name": "Skylar Raye",
         "real_name": "Danielle Raye Sekelsky",
-        "height_cm": None,
+        "height_cm": 160.0,
         "weight_kg": None,
         "birth_date": "2001-06-30",
     },
@@ -1168,7 +1168,7 @@ WWE_ROSTER: list[RosterEntry] = [
         "name": "Wren Sinclair",
         "real_name": "Madison Dombkowski",
         "height_cm": 168.0,
-        "weight_kg": None,
+        "weight_kg": 56.0,
         "birth_date": "1995-05-25",
     },
     {

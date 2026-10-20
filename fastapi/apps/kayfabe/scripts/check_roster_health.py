@@ -106,6 +106,11 @@ def _looks_glued(name: str) -> bool:
     return False
 
 
+#: `????` 처럼 물음표만 있는 칸. **빈 값이 아니라 "공개되지 않았다"는 뜻이다** —
+#: Penta·Rey Fénix 는 위키에 `birth_name` 필드 자체가 없다(루차 마스크 전통).
+#: 이 꼴을 값으로 세면 카탈로그의 `None` 쪽이 영구히 지적된다.
+_PLACEHOLDER = re.compile(r"^[?\s]+$")
+
 #: 생년월일이 이 범위를 벗어나면 오타로 본다.
 _OLDEST_YEAR = 1930
 
@@ -191,7 +196,14 @@ def _catalog_value_mismatch(catalog: dict[str, dict]) -> list[str]:
             ):
                 csv_value = (row.get(column) or "").strip()
                 entry_value = entry.get(key)
-                if not csv_value or entry_value is None:
+                if not csv_value or _PLACEHOLDER.match(csv_value):
+                    continue
+                if entry_value is None:
+                    # CSV 에 값이 있는데 카탈로그가 비었다 — 기록 페이지가 있는
+                    # 데이터를 빈칸으로 내놓는다. 조용히 지나가던 자리다.
+                    out.append(
+                        f"{name} {column}: CSV {csv_value!r} / 카탈로그 비어 있음"
+                    )
                     continue
                 if key.endswith(("_cm", "_kg")):
                     number = _first_number(csv_value)
