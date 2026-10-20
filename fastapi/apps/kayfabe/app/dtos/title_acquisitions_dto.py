@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal
 
 from kayfabe.adapter.inbound.api.schemas.title_acquisitions_schema import (
@@ -72,6 +73,10 @@ class TitleAcquisitionResponse:
     won_at: str
     won_at_slug: str | None
     match_key: str | None
+    #: `won_at` 을 가른 결과. `None` 은 "못 읽었다" 이고 정상이다
+    #: (`domain/services/title_event_date`).
+    event_label: str | None = None
+    won_on: date | None = None
 
     def to_schema(self):
         return TitleAcquisitionSchema(
@@ -79,6 +84,8 @@ class TitleAcquisitionResponse:
             won_at=self.won_at,
             won_at_slug=self.won_at_slug,
             match_key=self.match_key,
+            event_label=self.event_label,
+            won_on=self.won_on.isoformat() if self.won_on else None,
         )
 
 

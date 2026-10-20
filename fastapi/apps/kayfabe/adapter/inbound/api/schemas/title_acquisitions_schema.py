@@ -42,6 +42,11 @@ class TitleAcquisitionSchema(BaseModel):
     won_at: str = Field(alias="wonAt")
     won_at_slug: str | None = Field(default=None, alias="wonAtSlug")
     match_key: str | None = Field(default=None, alias="matchKey")
+    #: `won_at` 에서 가른 값들. **`won_at` 은 그대로 둔다** — 화면이 이미 그것을
+    #: 쓰고 있고, 파서가 못 읽은 행에서는 원문이 유일한 정보다.
+    event_label: str | None = Field(default=None, alias="eventLabel")
+    #: ISO 날짜(`2009-04-05`). 못 읽으면 `None` — 지어내지 않는다.
+    won_on: str | None = Field(default=None, alias="wonOn")
 
     model_config = ConfigDict(populate_by_name=True)
 
