@@ -37,3 +37,54 @@ export async function simulateMatch(a: string, b: string): Promise<SimResult | n
     clearTimeout(timer);
   }
 }
+
+/** 커리어 런 하나. **브라우저가 들고 다닌다** — 서버는 저장하지 않는다. */
+export type CareerState = {
+  name: string;
+  style: string;
+  week: number;
+  brand: string;
+  popularity: number;
+  wins: number;
+  losses: number;
+  reigns: string[];
+  held: string | null;
+  outWeeks: number;
+  outcome: string | null;
+};
+
+export type CareerStep = {
+  state: CareerState;
+  week: number;
+  kind: string;
+  won: boolean | null;
+  opponent: string | null;
+  belt: string | null;
+  promotedTo: string | null;
+  injuredWeeks: number;
+  popularityDelta: number;
+  nextBelt: string | null;
+  defending: boolean;
+};
+
+export async function careerStep(
+  state: CareerState | { name: string; style: string },
+  choice: "경기" | "도전",
+): Promise<CareerStep | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const res = await fetch(`${apiBaseUrl}/api/sandbox/career/step`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state, choice }),
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CareerStep;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
