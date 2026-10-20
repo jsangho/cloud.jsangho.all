@@ -1,9 +1,15 @@
 """결과가 기록됐는데 `finished_at`이 빈 대회 행을 경기 시각으로 메꾼다.
 
-**`close_past_events.py`와 `sync_event`가 만나면 이 구멍이 생긴다.** `sync_event`는
-`status != finished`일 때만 `mark_event_finished`를 부른다. 그런데 날짜가 지난 대회는
-`close_past_events.py`가 먼저 `finished`로 넘겨 놓으므로, 그 뒤에 결과를 넣으면
-**경기 행에는 `finished_at`이 박히는데 대회 행에는 안 박힌다.**
+**구멍이 생기는 길이 둘이다.**
+
+1. `close_past_events.py` × `sync_event` — `sync_event`는 `status != finished`일 때만
+   `mark_event_finished`를 부른다. 날짜가 지난 대회는 `close_past_events.py`가 먼저
+   `finished`로 넘겨 놓으므로, 그 뒤에 결과를 넣으면 **경기 행에는 `finished_at`이
+   박히는데 대회 행에는 안 박힌다.**
+2. **결과 확정 에이전트** — `verify_match_results.py` → `set_match_result`는
+   `status`와 무관하게 **대회 행을 아예 건드리지 않는다**(경기 행만 쓴다).
+   그래서 에이전트를 돌릴 때마다 이 구멍이 새로 생긴다. **에이전트를 `--apply`로
+   돌렸으면 이 스크립트를 이어서 돌린다.**
 
 그래서 두 문서가 주장하는 불변식이 깨져 있었다 — `close_past_events.py` 모듈 주석과
 `ple_events_repository.py`의 `set_event_status` 주석이 `finished` + `finished_at IS NULL`을
@@ -28,9 +34,10 @@
 
 - **`status`를 바꾸지 않는다.** 대상이 이미 `finished`인 행뿐이다. 넘기는 일은
   `close_past_events.py`가 한다.
-- **결과가 없는 대회를 건드리지 않는다.** `winner_pick`이 하나도 없으면 그 행의
-  `finished_at IS NULL`은 결함이 아니라 **불변식이 제대로 동작하는 것**이다
-  (`vengeance-day`·`great-american-bash`·`heatwave`가 그 자리다).
+- **결과가 없는 대회를 건드리지 않는다.** `winner_pick`이 하나도 없으면 재구성할
+  재료가 없으므로 보류다. (2026-09-28에는 `vengeance-day`·`great-american-bash`·
+  `heatwave`가 그 자리였는데, 2026-10-07 결과 확정 에이전트가 18경기를 채워서
+  지금은 셋 다 대상이고 2026-10-20에 메꿨다. **"결과 없음"은 영구 상태가 아니다.**)
 - **결과가 일부만 있는 대회도 건드리지 않는다.** 아직 다 안 들어온 것과 다 들어온 것을
   같은 시각으로 봉인하면 나중에 구분할 수 없다. 보류로 남기고 수만 알린다.
 - **경기 행을 바꾸지 않는다.** `mark_event_finished`는 `winner_pick`이 있는데 아직

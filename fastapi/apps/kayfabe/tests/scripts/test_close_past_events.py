@@ -5,6 +5,8 @@
 1. 날짜가 지난 `upcoming` 행이 `finished`가 된다.
 2. 그러면서 **`finished_at`이 `NULL`로 남고 경기·예측이 하나도 바뀌지 않는다** —
    `mark_event_finished`(다른 경로)가 건드리는 것들이 그대로인지 본다.
+   그 `NULL`은 "결과 미기록"을 뜻하지 않는다(그 칸은 지표가 아니다 —
+   `backfill_event_finished_at.py` 독스트링 참조).
 3. 날짜를 모르는 행(`bad-blood`·`king-queen-of-the-ring`)은 **보류**다.
 
 `today`를 주입받으므로 시간이 흘러도 이 테스트는 같은 것을 본다.
@@ -356,8 +358,14 @@ class TestApplyChanges:
         assert rows[_DONE] == PleEventStatus.FINISHED
 
     def test_finished_at_stays_null(self, script: ModuleType) -> None:
-        """**이 파일의 핵심.** `finished` + `finished_at IS NULL`이
-        "끝났지만 결과 미기록"을 말한다. 시각을 지어내면 그 뜻이 사라진다."""
+        """**이 파일의 핵심.** 그 칸의 뜻은 "결과가 기록된 시각"이고, 날짜가
+        지났다는 사실만으로는 그 시각을 알 수 없다. 지어내면 거짓이 박힌다.
+
+        **역은 성립하지 않는다.** 한때 이 독스트링이 `finished` +
+        `finished_at IS NULL`을 "끝났지만 결과 미기록"이라고 적었는데 틀렸다 —
+        결과 확정 에이전트가 경기 행만 쓰므로 결과가 100% 들어찬 대회도 그 모양이
+        된다(2026-10-20 실측 4건). 결과 유무는 `winner_pick`으로 센다.
+        여기서 보는 것은 **이 스크립트가 시각을 지어내지 않는다**는 것뿐이다."""
 
         async def body(session: AsyncSession) -> datetime | None:
             changes = await script.collect_changes(session, today=_TODAY)

@@ -29,7 +29,10 @@
   지났는데 `upcoming`인 대회를 넘기는 것은 `close_past_events.py`의 일이므로,
   **그것을 먼저 돌린다** — 안 돌리면 이 스크립트에 대상이 안 잡힌다.
 - **`finished_at`을 직접 쓰지 않는다.** `set_match_result`가 경기 행에 박고, 대회 행의
-  `finished_at`은 `mark_event_finished`의 몫이다.
+  `finished_at`은 `mark_event_finished`의 몫이다. 그런데 **이 경로는 그것을 부르지
+  않으므로 대회 행이 `NULL`로 남는다** — 결과가 100% 들어찬 대회가 그 모양이 된다.
+  그래서 `--apply`로 돌린 뒤에는 `backfill_event_finished_at.py`를 이어서 돌린다
+  (멱등이고 값이 있는 행은 덮어쓰지 않는다).
 - **없는 경기를 만들지 않는다.** `UPDATE`라 구조적으로 불가능하다.
 - **예측을 건드리지 않는다.** `ple_agent_predictions`·`ple_predictions`를 읽지도 쓰지도
   않는다. 채점은 `winner_pick`이 채워지면 기존 집계가 알아서 한다
