@@ -116,7 +116,7 @@ WWE_ROSTER: list[RosterEntry] = [
     },
     {
         "name": "Dragon Lee",
-        "real_name": "??? Muñoz González",
+        "real_name": "Emmanuel Muñoz González",
         "height_cm": 171.0,
         "weight_kg": 75.0,
         "birth_date": "1995-05-15",
