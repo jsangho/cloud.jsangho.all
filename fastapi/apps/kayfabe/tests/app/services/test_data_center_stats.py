@@ -171,7 +171,12 @@ class TestBeltStats:
         assert by_name["Randy Orton"].belts == 2
 
     def test_nothing_pretends_to_know_reign_length(self) -> None:
-        """**최장 재위는 없다** — `won_at`이 자유 텍스트라 기간을 못 낸다 (§9)."""
+        """**최장 재위는 없다** (§9).
+
+        이유는 더 이상 "자유 텍스트"가 아니다 — 2026-10-20부터 날짜가 읽힌다
+        (388/388). 막혀 있는 것은 **끝난 날짜**이고, 다음 획득을 끝으로 보는 것도
+        계보가 희소해서 안 된다(`BeltStat` 독스트링에 실측이 있다).
+        """
         assert not hasattr(stats.BeltStat, "longest_reign_days")
 
 
@@ -230,3 +235,80 @@ class TestEventStats:
         )
         stat = stats.event_stats(facts)[0]
         assert (stat.matches, stat.finished, stat.title_matches) == (2, 1, 1)
+
+
+class TestFirstBeltAges:
+    """첫 벨트를 든 나이 (2026-10-20).
+
+    **추론이 없다** — 생일과 첫 획득일 둘 다 기록된 값일 때만 센다. 둘 중 하나가
+    없으면 그 사람은 빠지고, 분모(`title_holders`)가 그 사실을 드러낸다.
+    """
+
+    def _rows(self):
+        wrestlers = [
+            stats.WrestlerRow(name="Paige", birth_date="1992-08-17"),
+            stats.WrestlerRow(name="Tama Tonga", birth_date="1982-11-15"),
+            # 연도를 모른다 — 나이를 못 센다
+            stats.WrestlerRow(name="Old Timer", birth_date="????-07-16"),
+            # 타이틀이 없다 — 이 축에 안 나온다
+            stats.WrestlerRow(name="No Belt", birth_date="2000-01-01"),
+        ]
+        titles = [
+            stats.TitleRow(
+                competitor_name="Paige",
+                belt_name="NXT Women's Championship",
+                won_at="NXT — June 20, 2013",
+            ),
+            # 더 늦은 획득 — 첫 획득이 아니므로 무시돼야 한다
+            stats.TitleRow(
+                competitor_name="Paige",
+                belt_name="Divas Championship",
+                won_at="Raw — April 7, 2014",
+            ),
+            stats.TitleRow(
+                competitor_name="Tama Tonga",
+                belt_name="WWE Tag Team Championship",
+                won_at="SmackDown — August 14, 2026",
+            ),
+            stats.TitleRow(
+                competitor_name="Old Timer",
+                belt_name="WWE Championship",
+                won_at="Raw — March 1, 2010",
+            ),
+            # 날짜를 못 읽는 행 — 건너뛴다
+            stats.TitleRow(
+                competitor_name="Paige",
+                belt_name="Unknown Belt",
+                won_at="어딘가",
+            ),
+        ]
+        return wrestlers, titles
+
+    def test_uses_the_earliest_acquisition(self) -> None:
+        board = stats.first_belt_ages(*self._rows())
+        paige = next(e for e in board.entries if e.name == "Paige")
+        assert paige.won_on == "2013-06-20"
+        assert paige.age == 20
+        assert paige.belt_name == "NXT Women's Championship"
+
+    def test_sorted_youngest_first(self) -> None:
+        board = stats.first_belt_ages(*self._rows())
+        assert [e.age for e in board.entries] == sorted(e.age for e in board.entries)
+
+    def test_partial_birth_date_is_skipped(self) -> None:
+        """`????-07-16`은 날짜로는 쓰이지만 **나이로는 못 쓴다**."""
+        board = stats.first_belt_ages(*self._rows())
+        assert all(e.name != "Old Timer" for e in board.entries)
+
+    def test_denominator_counts_all_title_holders(self) -> None:
+        """분모는 **타이틀 보유자 전원**이다 — 생일을 몰라 빠진 사람도 센다."""
+        board = stats.first_belt_ages(*self._rows())
+        assert board.sample == 2
+        assert board.title_holders == 3
+
+    def test_no_titles_means_empty_board(self) -> None:
+        wrestlers, _ = self._rows()
+        board = stats.first_belt_ages(wrestlers, [])
+        assert board.entries == ()
+        assert board.sample == 0
+        assert board.title_holders == 0

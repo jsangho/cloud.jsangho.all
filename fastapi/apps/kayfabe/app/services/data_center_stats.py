@@ -236,9 +236,19 @@ def titles_by_wrestler(rows: Iterable[TitleRow]) -> dict[str, int]:
 class BeltStat:
     """벨트별 획득 집계 (§9).
 
-    **재위 기간은 세지 않는다.** `won_at`이 `"Payback — June 16, 2013"` 같은 자유
-    텍스트이고 끝난 날짜가 없어서, 최장 재위는 지금 데이터로 만들 수 없다 — 날짜를
-    추정해 넣으면 그건 가짜 통계다(2026-08-20 사용자 결정). 획득 **횟수**만 센다.
+    **재위 기간은 세지 않는다**(2026-08-20 사용자 결정). 획득 **횟수**만 센다.
+    이유가 둘이고, 2026-10-20에 **하나는 사라졌으니 섞지 말 것**:
+
+    1. ~~`won_at`이 자유 텍스트라 날짜를 못 읽는다~~ → **풀렸다.**
+       `domain/services/title_event_date`가 `"Payback — June 16, 2013"`을 갈라
+       388/388(100%)을 읽는다.
+    2. **끝난 날짜가 없다.** 재위는 시작과 끝이 있어야 하는데 이 표에는 **획득만**
+       있다. 이쪽은 그대로 막혀 있다.
+
+    **"다음 획득을 끝으로 보면 된다"는 안 된다.** 이 표는 완전한 계보가 아니라
+    선수별 하이라이트 목록이다 — WWE Championship이 23년간 **45건**뿐이라 획득
+    사이 간격(735일·896일)은 재위가 아니라 **기록 공백**이다. 그걸 재위로 적으면
+    가짜 통계가 된다.
     """
 
     belt_name: str
@@ -979,4 +989,76 @@ def staff_directory(rows: Iterable[StaffRow]) -> StaffDirectory:
             1 for r in listed if is_former_wrestler(r.wrestling_experience)
         ),
         total=len(listed),
+    )
+
+
+#: `????-07-16` 꼴을 걸러낸다. 연도를 모르면 나이를 못 센다.
+_FULL_BIRTH_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+@dataclass(frozen=True)
+class FirstBeltAge:
+    """어떤 선수가 **첫 벨트를 몇 살에** 들었나."""
+
+    name: str
+    age: int
+    won_on: str
+    belt_name: str
+
+
+#: 이 축의 분모. 화면이 함께 적지 않으면 "66명 중 최연소"가 "전체 최연소"로 읽힌다.
+@dataclass(frozen=True)
+class FirstBeltAgeBoard:
+    entries: tuple[FirstBeltAge, ...]
+    #: 계산된 사람 수.
+    sample: int
+    #: 타이틀 이력이 있는 사람 수(분모).
+    title_holders: int
+
+
+def first_belt_ages(
+    wrestlers: Sequence[WrestlerRow], titles: Sequence[TitleRow]
+) -> FirstBeltAgeBoard:
+    """첫 타이틀 획득 당시 나이. **추론이 없다** — 양쪽 다 기록된 값이다.
+
+    생일(`wrestlers.birth_date`)과 첫 획득일(`title_acquisitions.won_at` 파싱) 둘 다
+    있어야 센다. 2026-10-20 실측으로 **66명**이고 타이틀 보유자는 81명이다 — 나머지
+    15명은 현 로스터에 없어서 생일을 모른다(레전드·방출자).
+
+    **생일이 `????-07-16` 꼴이면 건너뛴다.** 연도를 모르면 나이를 못 센다 —
+    생일 보드가 그 꼴을 날짜로만 쓰는 것과 같은 자리다.
+    """
+    from kayfabe.domain.services.title_event_date import parse_won_at
+
+    first: dict[str, tuple[date, str]] = {}
+    for row in titles:
+        on = parse_won_at(row.won_at).won_on
+        if on is None:
+            continue
+        current = first.get(row.competitor_name)
+        if current is None or on < current[0]:
+            first[row.competitor_name] = (on, row.belt_name)
+
+    births: dict[str, date] = {}
+    for w in wrestlers:
+        raw = (w.birth_date or "").strip()
+        if not _FULL_BIRTH_DATE.match(raw):
+            continue
+        try:
+            births[w.name] = date.fromisoformat(raw)
+        except ValueError:
+            continue
+
+    entries = []
+    for name, (on, belt) in first.items():
+        born = births.get(name)
+        if born is None:
+            continue
+        age = on.year - born.year - ((on.month, on.day) < (born.month, born.day))
+        entries.append(
+            FirstBeltAge(name=name, age=age, won_on=on.isoformat(), belt_name=belt)
+        )
+    entries.sort(key=lambda e: (e.age, e.won_on, e.name))
+    return FirstBeltAgeBoard(
+        entries=tuple(entries), sample=len(entries), title_holders=len(first)
     )

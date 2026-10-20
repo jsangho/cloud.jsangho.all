@@ -145,6 +145,14 @@ export type RatedWrestler = {
   winRate: number;
 };
 
+/** 첫 벨트를 든 나이. **추론이 없다** — 생일과 획득일 둘 다 기록된 값이다. */
+export type FirstBeltAge = {
+  name: string;
+  age: number;
+  wonOn: string;
+  beltName: string;
+};
+
 export type DataCenterAnalytics = {
   events: EventStat[];
   brands: BrandCount[];
@@ -155,6 +163,11 @@ export type DataCenterAnalytics = {
   topWinRates: RatedWrestler[];
   /** 승률 순위에 오르는 최소 경기 수. **화면이 이 숫자를 함께 적는다.** */
   minMatchesForRate: number;
+  firstBeltAges?: FirstBeltAge[];
+  /** 첫 벨트 연령이 계산된 사람 수. */
+  firstBeltAgeSample?: number;
+  /** 분모 — 타이틀 보유자 전원. 생일을 모르는 레전드가 있어 sample보다 크다. */
+  firstBeltTitleHolders?: number;
 };
 
 /** 다가오는 생일 한 건. `age`는 **그 생일에 맞이할** 나이다. */
