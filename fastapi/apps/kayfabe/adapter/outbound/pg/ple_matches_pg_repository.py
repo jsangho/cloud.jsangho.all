@@ -68,6 +68,7 @@ class PleMatchesPgRepository(PleMatchesRepository):
             MatchSnapshotQuery(
                 event_slug=event.slug,
                 event_label=event.label,
+                event_date=event.start_date or event.end_date,
                 match_key=match.match_key,
                 title=match.title,
                 format=match.format,

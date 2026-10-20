@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal
 
 from kayfabe.adapter.inbound.api.schemas.ple_matches_schema import (
@@ -25,6 +26,10 @@ class CompetitorMatchRecordResponse:
     opponents: list[str]
     participants: list[str]
     was_champion: bool
+    #: 대회 날짜. **`derive_match_record_from_orm` 은 건드리지 않았다** — 그 함수는
+    #: 데이터 센터와 공유하고 날짜를 쓸 자리가 없어서, 이 칸만 스냅샷에서 직접 받는다.
+    #: 기본값이 있으므로 **필드 맨 뒤여야 한다**(dataclass 규칙).
+    event_date: date | None = None
 
     def to_schema(self):
         return CompetitorMatchRecordSchema(
@@ -38,6 +43,7 @@ class CompetitorMatchRecordResponse:
             opponents=list(self.opponents),
             participants=list(self.participants),
             was_champion=self.was_champion,
+            event_date=self.event_date.isoformat() if self.event_date else None,
         )
 
 

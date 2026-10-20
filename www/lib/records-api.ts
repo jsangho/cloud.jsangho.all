@@ -22,6 +22,8 @@ export type CompetitorMatchRecord = {
   opponents?: string[];
   participants?: string[];
   wasChampion?: boolean;
+  /** 대회 날짜(ISO). 날짜를 모르는 대회가 있어 null이 정상이다. */
+  eventDate?: string | null;
 };
 
 export type CompetitorProfile = {

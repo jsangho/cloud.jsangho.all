@@ -87,6 +87,7 @@ class PleMatchesInteractor(PleMatchesUseCase):
                     opponents=list(rec.opponents),
                     participants=list(rec.participants),
                     was_champion=rec.was_champion,
+                    event_date=snap.event_date,
                 )
             )
 
