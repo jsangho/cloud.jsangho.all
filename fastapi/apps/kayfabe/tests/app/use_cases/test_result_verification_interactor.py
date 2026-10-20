@@ -12,6 +12,8 @@
 5. 증거는 **자른 뒤의 문자열**이다 — 보여 주지 않은 구절을 인용하면 떨어진다
 6. 호출 사이 간격을 벌린다 (무료 등급 한도)
 7. 대상이 없으면 모델을 부르지 않는다 (비용)
+8. **쓴 대회의 `finished_at`을 봉인한다** — 부분 기록이면 봉인하지 않고, 드라이런·
+   보류에서는 읽지도 않는다 (2026-10-20)
 
 실행:
 
@@ -22,10 +24,12 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 import pytest
 
 from kayfabe.app.dtos.result_verification_dto import VerifyResultsCommand
+from kayfabe.app.ports.output.event_seal_repository import EventSealRepository
 from kayfabe.app.ports.output.match_result_writer import MatchResultWriter
 from kayfabe.app.ports.output.pending_result_repository import PendingResultRepository
 from kayfabe.app.use_cases.result_verification_interactor import (
@@ -41,6 +45,7 @@ from kayfabe.domain.entities.result_verification import (
     MatchUnderReview,
     ReviewOption,
 )
+from kayfabe.domain.services.event_seal import EventSealState
 from ontology.app.dtos.gemini_tool_dto import (
     ToolCall,
     ToolStep,
@@ -67,6 +72,7 @@ _MATCH = MatchUnderReview(
 )
 
 _ARTICLE = "SummerSlam (2026)"
+_SEALED_AT = datetime(2026, 10, 7, 8, 29, 29, tzinfo=UTC)
 _SECTION_TEXT = "Reigns defeated Rhodes by pinfall after a spear."
 
 
@@ -154,6 +160,32 @@ class FakeArticles(WikiArticlePort):
         )
 
 
+class FakeSeal(EventSealRepository):
+    """봉인 포트 페이크. **읽은 적이 있는지도 센다** — 드라이런에서 읽지 않는 것이
+    계약이므로 "쓰지 않았다"만으로는 부족하다."""
+
+    def __init__(self, *, matches: int = 1, results: int = 1, current=None) -> None:
+        self.reads: list[str] = []
+        self.sealed: list[tuple[str, object]] = []
+        self._matches = matches
+        self._results = results
+        self._current = current
+
+    async def read_seal_state(self, *, event_slug: str):
+        self.reads.append(event_slug)
+        return EventSealState(
+            slug=event_slug,
+            match_count=self._matches,
+            result_count=self._results,
+            latest_match_finished_at=_SEALED_AT,
+            event_finished_at=self._current,
+        )
+
+    async def seal_event_finished_at(self, *, event_slug: str, finished_at) -> bool:
+        self.sealed.append((event_slug, finished_at))
+        return True
+
+
 def _interactor(
     tools: FakeTools,
     *,
@@ -161,10 +193,12 @@ def _interactor(
     matches: tuple[MatchUnderReview, ...] = (_MATCH,),
     articles: FakeArticles | None = None,
     sleeps: list[float] | None = None,
+    seal: FakeSeal | None = None,
 ) -> ResultVerificationInteractor:
     return ResultVerificationInteractor(
         pending=FakePending(matches),
         writer=writer or FakeWriter(),
+        seal=seal,
         tools=tools,
         titles=FakeTitles(
             {_ARTICLE: WikiTitle(requested=_ARTICLE, canonical=_ARTICLE)}
@@ -638,3 +672,80 @@ class TestTargetSelection:
 
         assert [m.match_key for m in pending] == ["ss26-whc", "ss26-us"]
         assert tools.commands == []
+
+
+class TestEventSeal:
+    """쓴 대회의 `finished_at` 봉인 (2026-10-20).
+
+    `set_match_result`가 경기 행만 쓰므로 대회 칸이 `NULL`로 남던 구멍을 막는다.
+    판정은 `domain/services/event_seal`이 하고(그쪽 테스트가 규칙을 붙든다),
+    여기서는 **인터랙터가 언제 그것을 부르는지**를 고정한다.
+    """
+
+    @pytest.mark.asyncio
+    async def test_apply_seals_the_event(self) -> None:
+        seal = FakeSeal(matches=1, results=1)
+        interactor = _interactor(FakeTools(_happy_steps()), seal=seal)
+
+        await interactor.verify(VerifyResultsCommand(apply=True))
+
+        assert seal.sealed == [("summerslam", _SEALED_AT)]
+
+    @pytest.mark.asyncio
+    async def test_dry_run_does_not_even_read(self) -> None:
+        """드라이런은 **읽지도 않는다.** 쓰지 않았다는 것만으로는 부족하다 —
+        대회 행을 들여다볼 이유 자체가 없다."""
+        seal = FakeSeal()
+        interactor = _interactor(FakeTools(_happy_steps()), seal=seal)
+
+        await interactor.verify(VerifyResultsCommand(apply=False))
+
+        assert seal.reads == []
+        assert seal.sealed == []
+
+    @pytest.mark.asyncio
+    async def test_partial_results_hold(self) -> None:
+        """경기가 남아 있으면 봉인하지 않는다. 다 들어온 것과 섞이면 안 된다."""
+        seal = FakeSeal(matches=5, results=3)
+        interactor = _interactor(FakeTools(_happy_steps()), seal=seal)
+
+        await interactor.verify(VerifyResultsCommand(apply=True))
+
+        assert seal.reads == ["summerslam"]
+        assert seal.sealed == []
+
+    @pytest.mark.asyncio
+    async def test_existing_value_is_not_overwritten(self) -> None:
+        seal = FakeSeal(current=datetime(2026, 8, 4, tzinfo=UTC))
+        interactor = _interactor(FakeTools(_happy_steps()), seal=seal)
+
+        await interactor.verify(VerifyResultsCommand(apply=True))
+
+        assert seal.sealed == []
+
+    @pytest.mark.asyncio
+    async def test_hold_does_not_seal(self) -> None:
+        """보류로 끝난 경기는 **쓴 것이 없다.** 그 대회를 봉인하면 결과가 없는
+        대회에 시각이 박힌다."""
+        seal = FakeSeal()
+        # 인용이 본문에 없으므로 관문에서 떨어진다 → `written`이 거짓이다.
+        interactor = _interactor(
+            FakeTools(_happy_steps(quote="Rhodes defeated Reigns")), seal=seal
+        )
+
+        run = await interactor.verify(VerifyResultsCommand(apply=True))
+
+        assert run.written == 0
+        assert seal.reads == []
+        assert seal.sealed == []
+
+    @pytest.mark.asyncio
+    async def test_no_seal_port_still_writes_results(self) -> None:
+        """포트를 주입하지 않아도 결과 쓰기는 그대로다 — 봉인은 부수 작업이다."""
+        writer = FakeWriter()
+        interactor = _interactor(FakeTools(_happy_steps()), writer=writer, seal=None)
+
+        run = await interactor.verify(VerifyResultsCommand(apply=True))
+
+        assert run.written == 1
+        assert len(writer.calls) == 1

@@ -54,6 +54,7 @@ from kayfabe.app.dtos.result_verification_dto import (
 from kayfabe.app.ports.input.result_verification_use_case import (
     ResultVerificationUseCase,
 )
+from kayfabe.app.ports.output.event_seal_repository import EventSealRepository
 from kayfabe.app.ports.output.match_result_writer import MatchResultWriter
 from kayfabe.app.ports.output.pending_result_repository import PendingResultRepository
 from kayfabe.app.services.wiki_event_titles import article_title_for
@@ -68,6 +69,7 @@ from kayfabe.domain.entities.result_verification import (
     ResultClaim,
     Verdict,
 )
+from kayfabe.domain.services.event_seal import seal_decision
 from kayfabe.domain.services.result_adjudication import adjudicate
 from ontology.app.dtos.gemini_tool_dto import (
     ToolCall,
@@ -210,6 +212,7 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         titles: WikiTitlePort,
         articles: WikiArticlePort,
         *,
+        seal: EventSealRepository | None = None,
         wiki: WikiResultLookup | None = None,
         model: str | None = None,
         sleep: Callable[[float], Awaitable[None]] | None = None,
@@ -220,6 +223,10 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
         self._tools = tools
         self._titles = titles
         self._articles = articles
+        #: 대회 행 봉인. **`None`이면 봉인 단계를 건너뛴다** — 기존 테스트가 이
+        #: 인자를 모르고도 돌아야 하고, 봉인은 결과 쓰기의 부수 작업이라 없다고
+        #: 해서 판정·쓰기가 달라지지 않는다. 운영 배선은 프로바이더가 넣는다.
+        self._seal = seal
         #: 결정론 엔진. `None`이면 예전처럼 모델만 쓴다.
         self._wiki = wiki
         self._model = model
@@ -273,9 +280,47 @@ class ResultVerificationInteractor(ResultVerificationUseCase):
                 )
             )
 
+        if command.apply:
+            await self._seal_touched_events(results)
+
         return VerificationRun(
             matches=tuple(results), applied=command.apply, found=len(found)
         )
+
+    async def _seal_touched_events(self, results: Sequence[MatchVerification]) -> None:
+        """이번 실행에서 **실제로 쓴** 대회의 `finished_at`을 봉인한다.
+
+        `set_match_result`는 경기 행만 쓰므로 대회 행이 `NULL`로 남고, 그러면
+        "결과가 기록된 시각"이 결과가 다 들어찬 대회에서도 비어 있게 된다.
+        그 구멍을 사람이 백필로 메꿔 왔는데(2026-10-20에 넷), 기억해야 도는 두 번째
+        걸음이라 또 생긴다. 여기서 닫는다.
+
+        **보류·드라이런은 건드리지 않는다.** `written`이 참인 대회만 보고, 판정은
+        `seal_decision`이 한다 — 부분 기록이면 봉인하지 않는 규칙도 그쪽에 있다.
+
+        봉인 실패는 실행을 깨뜨리지 않는다. 결과 쓰기는 이미 끝났고, 이 칸은
+        `backfill_event_finished_at.py`가 멱등으로 다시 메꿀 수 있다.
+        """
+        if self._seal is None:
+            return
+        touched = {r.event_slug for r in results if r.written}
+        for event_slug in sorted(touched):
+            state = await self._seal.read_seal_state(event_slug=event_slug)
+            if state is None:
+                continue
+            at = seal_decision(state)
+            if at is None:
+                logger.info(
+                    "[kayfabe.result_agent] 봉인 보류 | event=%s | 경기 %d/%d | 기존=%s",
+                    event_slug,
+                    state.result_count,
+                    state.match_count,
+                    state.event_finished_at,
+                )
+                continue
+            await self._seal.seal_event_finished_at(
+                event_slug=event_slug, finished_at=at
+            )
 
     async def _verify_one(
         self,
