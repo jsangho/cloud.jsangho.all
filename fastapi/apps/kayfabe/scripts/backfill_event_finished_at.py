@@ -11,11 +11,13 @@
    그래서 에이전트를 돌릴 때마다 이 구멍이 새로 생긴다. **에이전트를 `--apply`로
    돌렸으면 이 스크립트를 이어서 돌린다.**
 
-그래서 두 문서가 주장하는 불변식이 깨져 있었다 — `close_past_events.py` 모듈 주석과
-`ple_events_repository.py`의 `set_event_status` 주석이 `finished` + `finished_at IS NULL`을
-**"끝났지만 결과 미기록"** 이라고 말하지만, 2026-09-28 운영 실측에서 세 대회가
-결과를 온전히 갖고도 그 모양이었다: `clash-in-italy`(5/5) · `night-of-champions`(6/6) ·
-`worlds-collide`(7/7).
+그래서 한때 네 문서가 주장했던 불변식이 깨져 있었다 — `finished` +
+`finished_at IS NULL`을 **"끝났지만 결과 미기록"** 이라고 읽는 것이다. 2026-09-28
+실측에서 세 대회가 결과를 온전히 갖고도 그 모양이었고(`clash-in-italy` 5/5 ·
+`night-of-champions` 6/6 · `worlds-collide` 7/7), 2026-10-20에 또 넷이 그랬다.
+**그 주장은 2026-10-20에 네 곳에서 지웠다** (`close_past_events.py` ·
+`ple_events_repository.set_event_status` · `pending_result_repository` ·
+`test_close_past_events`). 결과 유무는 `ple_matches.winner_pick`으로 센다.
 
 ## 값을 지어내지 않는다 — `max(경기 finished_at)`을 쓴다
 

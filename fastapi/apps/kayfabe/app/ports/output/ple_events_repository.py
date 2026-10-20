@@ -108,8 +108,10 @@ class PleEventsRepository(ABC):
         - `ple_matches`·`ple_predictions`·`ple_agent_predictions`·`ple_agent_reports`
           를 읽지도 쓰지도 않는다.
         - `label`·`month`·`year`·`start_date`·`end_date`·**`finished_at`**은
-          건드리지 않는다. `finished` + `finished_at IS NULL`이 "끝났지만 결과
-          미기록"을 정확히 말한다.
+          건드리지 않는다. 그 칸의 뜻은 "결과가 기록된 시각"이고, 날짜가 지났다는
+          사실만으로는 알 수 없는 값이라 지어낼 수 없다. **그 `NULL`을 "결과
+          미기록"으로 읽지는 말 것** — 결과 유무는 `ple_matches.winner_pick`이
+          말한다(`backfill_event_finished_at.py` 독스트링에 왜인지 적혀 있다).
 
         커밋하지 않는다 — 트랜잭션 경계는 부르는 쪽이 정한다(`flush`까지만 한다).
         """

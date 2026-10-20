@@ -1,9 +1,14 @@
 """**결과가 아직 없는 경기**를 찾는 출력 포트.
 
-`finished` + `winner_pick IS NULL`이 그 상태다. `close_past_events.py`가
-"`finished` + `finished_at IS NULL`이 끝났지만 결과 미기록을 정확히 말한다"고 정해 둔
-자리의 경기 단위 판본이다 — 대회가 아니라 경기를 세는 이유는 **한 대회에서 일부만
-기록된 상태가 실제로 있기** 때문이다(메인만 넣고 프리쇼를 빼먹는 식).
+`finished` + `winner_pick IS NULL`이 그 상태다. 대회가 아니라 경기를 세는 이유는
+**한 대회에서 일부만 기록된 상태가 실제로 있기** 때문이다(메인만 넣고 프리쇼를
+빼먹는 식).
+
+**`winner_pick`이 유일한 지표다.** 한때 이 자리에 `close_past_events.py`의
+"`finished` + `finished_at IS NULL`이 끝났지만 결과 미기록을 정확히 말한다"를
+근거로 적었는데 그 주장이 틀렸다(2026-10-20 · 결과가 100% 들어찬 대회 넷이
+`finished_at IS NULL`이었다). `winner_name`도 지표가 아니다 — 팀 이름 칸이라
+임시 팀이면 `NULL`이 정상이다.
 
 **읽기 전용이다.** 쓰기는 `MatchResultWriter` 하나뿐이고, 둘을 나눈 이유는 이 포트를
 쥔 쪽이 쓰기에 닿지 못하게 하는 것이다.
