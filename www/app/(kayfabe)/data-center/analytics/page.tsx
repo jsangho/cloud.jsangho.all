@@ -194,6 +194,57 @@ export default function DataCenterAnalyticsPage() {
           </div>
         </section>
 
+        {(analytics.firstBeltAges?.length ?? 0) > 0 ? (
+          <section aria-labelledby="first-belt-age">
+            <h2 id="first-belt-age" className="mb-1 font-sport text-lg text-foreground">
+              첫 벨트 연령
+            </h2>
+            {/*
+              **분모를 함께 적는다.** 생일과 첫 획득일이 둘 다 있어야 세기 때문에,
+              이 표는 타이틀 보유자 전원이 아니다 — 현 로스터에 없는 레전드는 생일을
+              모른다. 숫자를 안 적으면 "66명 중 최연소"가 "전체 최연소"로 읽힌다.
+            */}
+            <p className="mb-3 text-xs text-muted-foreground">
+              타이틀 보유자 {analytics.firstBeltTitleHolders ?? 0}명 중{" "}
+              <strong className="text-foreground">{analytics.firstBeltAgeSample ?? 0}명</strong>만
+              셉니다 — 생일과 첫 획득일이 둘 다 있어야 나이가 나옵니다. 추정하지 않습니다.
+            </p>
+            <div className="max-h-96 overflow-auto rounded-xl border border-border">
+              <table className="w-full min-w-[30rem] border-collapse text-sm">
+                <thead className="sticky top-0">
+                  <tr className="bg-card-2 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-2 text-right font-medium">나이</th>
+                    <th className="px-4 py-2 font-medium">선수</th>
+                    <th className="px-4 py-2 font-medium">첫 벨트</th>
+                    <th className="px-4 py-2 text-right font-medium">날짜</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.firstBeltAges?.map((row) => (
+                    <tr key={row.name} className="border-t border-border bg-card">
+                      <td className="px-4 py-2 text-right font-semibold tabular-nums text-foreground">
+                        {row.age}
+                      </td>
+                      <td className="px-4 py-2">
+                        <Link
+                          href={`/records/${encodeURIComponent(row.name)}`}
+                          className="text-foreground underline-offset-4 hover:underline"
+                        >
+                          {row.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">{row.beltName}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                        {row.wonOn}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">
           연도별 추이는 만들지 않았습니다 — 지금 DB의 대회가 전부{" "}
           {analytics.events[0]?.year ?? 2026}

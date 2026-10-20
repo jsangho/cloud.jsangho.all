@@ -114,7 +114,9 @@ class HolderStatSchema(_Camel):
 
 
 class ChampionshipStatsSchema(_Camel):
-    """**최장 재위는 없다.** `won_at`이 자유 텍스트라 기간을 못 낸다 (§9).
+    """**최장 재위는 없다** (§9). 날짜는 2026-10-20부터 읽히지만(파싱 388/388)
+    재위에는 **끝난 날짜**가 필요하고 이 표에는 획득만 있다. 다음 획득을 끝으로
+    보는 것도 안 된다 — 계보가 희소해서 그 간격은 기록 공백이다(`BeltStat` 참조).
 
     `belts`는 **현 챔피언 보드에 있는 벨트만** 담는다 (2026-10-07 사용자 결정).
     폐지·개명 전 이름은 `belt_lineage`를 따라 후신으로 합치거나 `excluded_belts`로
@@ -177,6 +179,15 @@ class RatedWrestlerSchema(_Camel):
     win_rate: float = Field(alias="winRate")
 
 
+class FirstBeltAgeSchema(_Camel):
+    """첫 벨트를 든 나이. **추론이 없다** — 생일과 획득일 둘 다 기록된 값이다."""
+
+    name: str
+    age: int
+    won_on: str = Field(alias="wonOn")
+    belt_name: str = Field(alias="beltName")
+
+
 class AnalyticsSchema(_Camel):
     events: list[EventStatSchema]
     brands: list[BrandCountSchema]
@@ -187,6 +198,14 @@ class AnalyticsSchema(_Camel):
     top_win_rates: list[RatedWrestlerSchema] = Field(alias="topWinRates")
     min_matches_for_rate: int = Field(alias="minMatchesForRate")
     """승률 순위에 오르는 최소 경기 수. **화면이 이 숫자를 함께 적어야** 순위가 읽힌다."""
+
+    first_belt_ages: list[FirstBeltAgeSchema] = Field(
+        default_factory=list, alias="firstBeltAges"
+    )
+    first_belt_age_sample: int = Field(default=0, alias="firstBeltAgeSample")
+    first_belt_title_holders: int = Field(default=0, alias="firstBeltTitleHolders")
+    """첫 벨트 연령의 **분모**. 생일과 첫 획득일이 **둘 다** 있어야 세므로
+    `sample < titleHolders`가 정상이다 — 현 로스터에 없는 레전드는 생일을 모른다."""
 
 
 class BirthdaySchema(_Camel):

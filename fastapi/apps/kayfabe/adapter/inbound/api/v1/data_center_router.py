@@ -31,6 +31,7 @@ from kayfabe.adapter.inbound.api.schemas.data_center_schema import (
     EventOptionSchema,
     EventStatSchema,
     ExcludedBeltSchema,
+    FirstBeltAgeSchema,
     HolderStatSchema,
     MatchPageSchema,
     MatchRowSchema,
@@ -381,6 +382,14 @@ def analytics_to_schema(dto: AnalyticsResponse) -> AnalyticsSchema:
         non_title_matches=dto.non_title_matches,
         top_win_rates=[rated_wrestler_to_schema(r) for r in dto.top_win_rates],
         min_matches_for_rate=dto.min_matches_for_rate,
+        first_belt_ages=[
+            FirstBeltAgeSchema(
+                name=e.name, age=e.age, won_on=e.won_on, belt_name=e.belt_name
+            )
+            for e in dto.first_belt_ages
+        ],
+        first_belt_age_sample=dto.first_belt_age_sample,
+        first_belt_title_holders=dto.first_belt_title_holders,
     )
 
 

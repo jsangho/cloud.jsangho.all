@@ -265,7 +265,12 @@ class TestChampionshipStats:
     async def test_no_reign_length_is_reported(
         self, interactor: DataCenterInteractor
     ) -> None:
-        """§9 — `won_at`이 자유 텍스트라 최장 재위는 만들지 않는다."""
+        """§9 — 최장 재위는 만들지 않는다.
+
+        **"자유 텍스트라서"가 아니다.** 그 이유는 2026-10-20에 풀렸다(파싱
+        388/388). 남은 장벽은 **끝난 날짜가 없다**는 것이고, 다음 획득을 끝으로
+        추정하면 희소한 계보의 기록 공백을 재위로 적게 된다(`BeltStat` 참조).
+        """
         stats = await interactor.get_championship_stats()
         assert not any("longest" in field for field in vars(stats.belts[0]))
 

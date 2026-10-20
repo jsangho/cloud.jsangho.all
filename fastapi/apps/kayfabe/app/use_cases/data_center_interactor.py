@@ -24,6 +24,7 @@ from kayfabe.app.dtos.data_center_dto import (
     EventOptionResponse,
     EventStatResponse,
     ExcludedBeltResponse,
+    FirstBeltAgeResponse,
     HolderStatResponse,
     MatchPageQuery,
     MatchPageResponse,
@@ -287,8 +288,10 @@ class DataCenterInteractor(DataCenterUseCase):
         logger.info("[DataCenterInteractor] get_analytics -> Repository")
         wrestlers = await self._repo.list_wrestlers()
         matches = await self._repo.list_matches()
+        titles = await self._repo.list_title_acquisitions()
         facts = stats.to_facts(matches)
         records = stats.records_by_wrestler(matches)
+        ages = stats.first_belt_ages(wrestlers, titles)
 
         title_matches = sum(1 for f in facts if f.is_title_match)
         logger.info("[DataCenterInteractor] get_analytics <- matches=%d", len(facts))
@@ -321,6 +324,17 @@ class DataCenterInteractor(DataCenterUseCase):
                 for r in stats.top_win_rates(records)
             ],
             min_matches_for_rate=stats.MIN_MATCHES_FOR_RATE,
+            first_belt_ages=[
+                FirstBeltAgeResponse(
+                    name=e.name,
+                    age=e.age,
+                    won_on=e.won_on,
+                    belt_name=e.belt_name,
+                )
+                for e in ages.entries
+            ],
+            first_belt_age_sample=ages.sample,
+            first_belt_title_holders=ages.title_holders,
         )
 
     async def get_birthdays(self, *, limit: int = 5) -> BirthdayBoardResponse:

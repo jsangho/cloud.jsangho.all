@@ -203,6 +203,14 @@ class RatedWrestlerResponse:
 
 
 @dataclass(frozen=True)
+class FirstBeltAgeResponse:
+    name: str
+    age: int
+    won_on: str
+    belt_name: str
+
+
+@dataclass(frozen=True)
 class AnalyticsResponse:
     events: list[EventStatResponse]
     brands: list[BrandCountResponse]
@@ -212,6 +220,11 @@ class AnalyticsResponse:
     non_title_matches: int
     top_win_rates: list[RatedWrestlerResponse]
     min_matches_for_rate: int
+    #: 첫 벨트를 든 나이. 분모를 함께 들고 다닌다 — 화면이 "66명 중" 을 적어야
+    #: "전체 최연소" 로 읽히지 않는다.
+    first_belt_ages: list[FirstBeltAgeResponse]
+    first_belt_age_sample: int
+    first_belt_title_holders: int
 
 
 @dataclass(frozen=True)
