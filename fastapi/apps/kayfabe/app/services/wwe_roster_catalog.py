@@ -1,7 +1,13 @@
 """WWE 활성 로스터 카탈로그 (`_docs/wwe_active_roster_cleaned.csv` 기준, Evolve 브랜드 제외).
 
 기록 페이지 선수 명단과 실제이름·생년월일·키·몸무게 표시용 정적 데이터.
-CSV가 갱신되면 이 파일도 함께 갱신해야 한다 (자동 동기화 없음).
+CSV가 갱신되면 이 파일도 함께 갱신해야 한다 (자동 동기화 없음) —
+어긋났는지는 `scripts/check_roster_health.py` 항목 7이 센다.
+
+**방출 선수를 무조건 지우지 않는다.** 이 명단이 기록 페이지의 선수 선택 목록
+(`/competitors`)이라서, 지우면 그 선수의 과거 경기를 찾을 길이 없어진다.
+`ple_matches`에 경기가 남아 있는 사람은 `RETAINED_FOR_RECORDS`에 적고 남긴다.
+경기가 0건이면 지운다 — 빈 프로필을 목록에 내놓을 이유가 없다.
 """
 
 from __future__ import annotations
@@ -11,6 +17,15 @@ from typing import TypedDict
 from kayfabe.app.services.competitor_roster import normalize_name
 
 ROSTER_SOURCE = "wwe_active_roster_cleaned.csv (Evolve 브랜드 제외)"
+
+#: 활성 로스터에서 빠졌지만 **과거 경기가 남아 있어** 일부러 둔 선수.
+#: 항목 7(CSV↔카탈로그 드리프트)이 이들을 지적하지 않는다.
+RETAINED_FOR_RECORDS: frozenset[str] = frozenset(
+    {
+        "Brock Lesnar",  # ple_matches 3건 (2026-08-03 방출)
+        "Cruz Montana",  # ple_matches 1건
+    }
+)
 
 
 class RosterEntry(TypedDict):
@@ -471,11 +486,11 @@ WWE_ROSTER: list[RosterEntry] = [
         "birth_date": "1987-08-20",
     },
     {
-        "name": "Ilja Dragunov",
-        "real_name": "Ilja Rukober",
-        "height_cm": 178.0,
-        "weight_kg": 95.0,
-        "birth_date": "1993-10-10",
+        "name": "Kyoki",
+        "real_name": "Hiromu Takahashi",
+        "height_cm": 171.0,
+        "weight_kg": 88.0,
+        "birth_date": "1989-12-04",
     },
     {
         "name": "Johnny Gargano",
@@ -863,13 +878,6 @@ WWE_ROSTER: list[RosterEntry] = [
         "birth_date": None,
     },
     {
-        "name": "Jasper Troy",
-        "real_name": "Antione K Frazier",
-        "height_cm": 196.0,
-        "weight_kg": 150.0,
-        "birth_date": "1998-05-20",
-    },
-    {
         "name": "Josh Briggs",
         "real_name": "Joshua Bruns",
         "height_cm": 203.0,
@@ -889,13 +897,6 @@ WWE_ROSTER: list[RosterEntry] = [
         "height_cm": 190.0,
         "weight_kg": 120.0,
         "birth_date": "1996-11-11",
-    },
-    {
-        "name": "Keanu Carver",
-        "real_name": "Kevin Isaiah Robertson",
-        "height_cm": 187.0,
-        "weight_kg": 131.0,
-        "birth_date": None,
     },
     {
         "name": "Lexis King",
@@ -1045,11 +1046,11 @@ WWE_ROSTER: list[RosterEntry] = [
         "birth_date": "2002-08-06",
     },
     {
-        "name": "Adriana Rizzo",
-        "real_name": "Anna Jade Keefer",
-        "height_cm": 165.0,
-        "weight_kg": 54.0,
-        "birth_date": "1998-12-26",
+        "name": "Zilla Fatu",
+        "real_name": "Isayah Fatu",
+        "height_cm": 191.0,
+        "weight_kg": 121.0,
+        "birth_date": "1999-09-09",
     },
     {
         "name": "Arianna Grace",
@@ -1162,13 +1163,6 @@ WWE_ROSTER: list[RosterEntry] = [
         "height_cm": 165.0,
         "weight_kg": 57.0,
         "birth_date": "2003-09-09",
-    },
-    {
-        "name": "Wendy Choo",
-        "real_name": "Karen Yu",
-        "height_cm": 157.0,
-        "weight_kg": None,
-        "birth_date": "1992-01-18",
     },
     {
         "name": "Wren Sinclair",

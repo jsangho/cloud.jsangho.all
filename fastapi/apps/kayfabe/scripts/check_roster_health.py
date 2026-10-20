@@ -13,7 +13,7 @@
 같은 것을 다음에 다시 찾지 않으려고 묶었다. 예측 쪽의
 `check_knowledge_coverage.py`가 하는 일을 명부 쪽에서 한다.
 
-## 보는 것 여섯
+## 보는 것 일곱
 
 1. **CSV ↔ DB 드리프트** — 로더를 돌리면 **무엇이 지워지고 무엇이 추가되는지**.
    `load_wrestlers_csv.py`는 CSV에 없는 DB 행을 지우므로, 이 목록을 보지 않고
@@ -27,6 +27,10 @@
    (`Booker TWild...`). 사람과 학교가 붙은 꼴이다. `McCool`·`DeMott`처럼
    이름이 원래 품는 대문자는 봐준다.
 6. **빈 칸 비율** — 화면이 분모로 쓰는 값이라 갑자기 떨어지면 알아야 한다.
+7. **CSV ↔ 정적 카탈로그 드리프트** — `wwe_roster_catalog.WWE_ROSTER`는 손으로
+   적는 **세 번째 명부**다(자동 동기화 없음). 어긋나면 기록 페이지에서 선수가
+   목록에 안 뜨거나 방출자가 남는데 **에러는 안 난다**. 2026-10-20에 10명이
+   어긋나 있었다.
 
 **판정하지 않는 것**: 누가 방출됐는지. 그건 바깥 출처가 필요하고 사람이 본다
 (메모리 `roster-release-sync`).
@@ -62,6 +66,10 @@ from sqlalchemy import text  # noqa: E402
 
 from core.matrix.grid_oracle_database_manager import engine  # noqa: E402
 from kayfabe.app.services.data_center_stats import trainer_names  # noqa: E402
+from kayfabe.app.services.wwe_roster_catalog import (  # noqa: E402
+    RETAINED_FOR_RECORDS,
+    WWE_ROSTER,
+)
 
 EXIT_NO_DATABASE = 4
 
@@ -112,8 +120,96 @@ def _csv_names() -> set[str]:
     }
 
 
+def _csv_brands() -> dict[str, str | None]:
+    """CSV 이름 → 브랜드. 브랜드는 `#RAW` 같은 구분행이 정한다."""
+    brands: dict[str, str | None] = {}
+    brand: str | None = None
+    with _CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.reader(f):
+            if not row or not row[0].strip():
+                continue
+            head = row[0].strip()
+            if head.startswith("#"):
+                brand = head[1:].strip()
+            elif head != "name":
+                brands[head] = brand
+    return brands
+
+
 def _norm(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().casefold()
+
+
+def _report_catalog_drift() -> int:
+    """CSV 와 `WWE_ROSTER` 가 어긋난 자리.
+
+    방향마다 기준이 다르다 — 섞으면 거짓 양성이 난다.
+
+    * **카탈로그에만 있음** → CSV **전 구간**과 비교한다. Evolve를 빼고 비교하면
+      Evolve 선수(`Kale Dixon`)가 방출자로 잡힌다. `RETAINED_FOR_RECORDS`는 뺀다.
+    * **CSV에만 있음** → 카탈로그는 Evolve를 다루지 않으므로(`ROSTER_SOURCE`)
+      Evolve 구간을 빼고 비교한다.
+    """
+    brands = _csv_brands()
+    csv_all = set(brands)
+    csv_scope = {n for n, b in brands.items() if b != "Evolve"}
+    catalog = {e["name"].strip(): e for e in WWE_ROSTER}
+
+    only_catalog = sorted(set(catalog) - csv_all - RETAINED_FOR_RECORDS)
+    only_csv = sorted(csv_scope - set(catalog))
+
+    print("\n== 7. CSV ↔ 정적 카탈로그 드리프트 (손으로 맞춰야 한다)")
+    for name in only_catalog:
+        print(f"   [방출?] 카탈로그에만 있음 {name}")
+    for name in only_csv:
+        print(f"   [누락]  카탈로그에 없음   {name}")
+
+    mismatch = _catalog_value_mismatch(catalog)
+    for line in mismatch:
+        print(f"   [불일치] {line}")
+
+    total = len(only_catalog) + len(only_csv) + len(mismatch)
+    if not total:
+        print(f"   없음 — 카탈로그 {len(catalog)}명이 CSV와 맞는다")
+    return total
+
+
+def _catalog_value_mismatch(catalog: dict[str, dict]) -> list[str]:
+    """두 명부에 다 있는 선수의 값이 어긋난 자리."""
+    out: list[str] = []
+    with _CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            name = (row.get("name") or "").strip()
+            entry = catalog.get(name)
+            if not entry or name.startswith("#"):
+                continue
+            for column, key in (
+                ("real_name", "real_name"),
+                ("birth_date", "birth_date"),
+                ("height", "height_cm"),
+                ("weight", "weight_kg"),
+            ):
+                csv_value = (row.get(column) or "").strip()
+                entry_value = entry.get(key)
+                if not csv_value or entry_value is None:
+                    continue
+                if key.endswith(("_cm", "_kg")):
+                    number = _first_number(csv_value)
+                    if number is not None and abs(number - float(entry_value)) > 0.6:
+                        out.append(
+                            f"{name} {column}: CSV {csv_value} ≠ 카탈로그 {entry_value}"
+                        )
+                elif csv_value != str(entry_value):
+                    out.append(
+                        f"{name} {column}: CSV {csv_value!r} ≠ 카탈로그 {entry_value!r}"
+                    )
+    return out
+
+
+def _first_number(value: str) -> float | None:
+    """`168 cm`·`131.5kg`·`178cm(200cm)` 에서 앞의 숫자만 꺼낸다."""
+    match = re.search(r"\d+(?:\.\d+)?", value)
+    return float(match.group()) if match else None
 
 
 async def main() -> int:
@@ -128,7 +224,7 @@ async def main() -> int:
             )
         ).all()
         staff = (
-            await conn.execute(text("SELECT name, birth_date FROM wwe_staff"))
+            await conn.execute(text("SELECT name, birth_date, role FROM wwe_staff"))
         ).all()
 
     findings = 0
@@ -206,7 +302,13 @@ async def main() -> int:
     print("\n== 6. 빈 칸")
     for column, index in (("birth_date", 1), ("trainer", 2), ("brand", 3)):
         empty = sum(1 for r in wrestlers if not (r[index] or "").strip())
-        print(f"   선수 {column:12} 빈 값 {empty}/{len(wrestlers)}")
+        print(f"   선수   {column:12} 빈 값 {empty}/{len(wrestlers)}")
+    for column, index in (("birth_date", 1), ("role", 2)):
+        empty = sum(1 for r in staff if not (r[index] or "").strip())
+        print(f"   관계자 {column:12} 빈 값 {empty}/{len(staff)}")
+
+    # 7. CSV ↔ 정적 카탈로그
+    findings += _report_catalog_drift()
 
     print(f"\n지적 {findings}건 — **쓰지 않았습니다.** 판단은 사람이 합니다.")
     return 0
