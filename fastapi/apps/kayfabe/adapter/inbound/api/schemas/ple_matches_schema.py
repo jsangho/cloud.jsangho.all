@@ -82,6 +82,8 @@ class CompetitorMatchRecordSchema(BaseModel):
     opponents: list[str] = Field(default_factory=list)
     participants: list[str] = Field(default_factory=list)
     was_champion: bool = Field(default=False, alias="wasChampion")
+    #: 대회 날짜(ISO). 날짜를 모르는 대회가 있어 `None` 이 정상이다.
+    event_date: str | None = Field(default=None, alias="eventDate")
 
     model_config = ConfigDict(populate_by_name=True)
 

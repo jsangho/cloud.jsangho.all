@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 
@@ -185,6 +185,9 @@ class PleEventSummaryResponse:
 class MatchSnapshotQuery:
     event_slug: str
     event_label: str
+    #: 대회 날짜(`start_date` 우선, 없으면 `end_date`). 날짜를 모르는 대회가 있어
+    #: `None` 이 정상이다(`bad-blood`·`king-queen-of-the-ring`).
+    event_date: date | None
     match_key: str
     title: str
     format: str

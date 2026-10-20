@@ -9,6 +9,26 @@ import type { CompetitorProfile, CompetitorMatchRecord } from "@/lib/records-api
 import type { TitleAcquisition } from "@/lib/title-history-api";
 import { formatChampionshipDate } from "@/lib/wwe-current-champions";
 
+const RESULT_LABEL: Record<string, string> = {
+  win: "승",
+  loss: "패",
+  "no-contest": "무효",
+  pending: "예정",
+};
+
+/**
+ * 커리어 연대표 한 칸. 타이틀 획득과 PLE 경기를 같은 모양으로 눕혀 한 줄에 섞는다.
+ * `on`이 null이면 "날짜 미상"이고, 그 자체로 정상이다.
+ */
+type CareerEntry = {
+  kind: "title" | "match";
+  on: string | null;
+  label: string;
+  at: string;
+  result?: "win" | "loss" | "no-contest" | "pending";
+  key: string;
+};
+
 type FilterResult = "all" | CompetitorMatchRecord["result"];
 type FilterFormat = "all" | "singles" | "multi";
 
@@ -285,20 +305,52 @@ export function CompetitorRecordView({
   }, [titleHistory]);
 
   /**
-   * 획득 이력을 연도별로 묶는다. **API가 이미 연대순(오래된 것 먼저)으로 준다** —
-   * 여기서 다시 정렬하지 않는다. 날짜를 못 읽은 행은 API가 맨 뒤로 보내 두므로
-   * 마지막 묶음이 `미상`이 된다(`title_event_date` 가 왜인지 적고 있다).
+   * 커리어 연대표 — **타이틀 획득과 PLE 경기를 한 줄로 합친다.**
+   *
+   * 합치는 이유는 타이틀만으로는 대부분이 빈칸이기 때문이다. 현 로스터 169명 중
+   * 타이틀 이력이 있는 건 66명뿐이고, 나머지 103명은 경기 기록만 있다
+   * (2026-10-20 실측).
+   *
+   * 날짜가 없는 항목은 **맨 뒤 `미상` 묶음**으로 보낸다 — 추측해 끼우면 연대표가
+   * 거짓 순서를 말한다. 같은 날에 둘이 겹치면 **타이틀을 먼저** 놓는다(그날의
+   * 사건 중 타이틀 교체가 더 큰 일이다).
    */
-  const titleTimeline = useMemo(() => {
-    const groups: { year: string; items: TitleAcquisition[] }[] = [];
-    for (const h of titleHistory) {
-      const year = h.wonOn ? h.wonOn.slice(0, 4) : "미상";
+  const careerTimeline = useMemo(() => {
+    const entries: CareerEntry[] = [
+      ...titleHistory.map((h) => ({
+        kind: "title" as const,
+        on: h.wonOn ?? null,
+        label: h.beltName,
+        at: h.eventLabel ?? h.wonAt,
+        key: `t:${h.beltName}:${h.wonAt}:${h.matchKey ?? ""}`,
+      })),
+      ...profile.matches.map((m) => ({
+        kind: "match" as const,
+        on: m.eventDate ?? null,
+        label: m.title,
+        at: m.pleLabel,
+        result: m.result,
+        key: `m:${m.slug}:${m.matchKey}`,
+      })),
+    ];
+    entries.sort((a, b) => {
+      if (a.on === b.on) return a.kind === b.kind ? 0 : a.kind === "title" ? -1 : 1;
+      if (!a.on) return 1;
+      if (!b.on) return -1;
+      return a.on < b.on ? -1 : 1;
+    });
+
+    const groups: { year: string; items: CareerEntry[] }[] = [];
+    for (const e of entries) {
+      const year = e.on ? e.on.slice(0, 4) : "미상";
       const last = groups[groups.length - 1];
-      if (last && last.year === year) last.items.push(h);
-      else groups.push({ year, items: [h] });
+      if (last && last.year === year) last.items.push(e);
+      else groups.push({ year, items: [e] });
     }
     return groups;
-  }, [titleHistory]);
+  }, [titleHistory, profile.matches]);
+
+  const titleTimeline = careerTimeline;
 
   const titleSpan = useMemo(() => {
     const years = titleTimeline.filter((g) => g.year !== "미상").map((g) => g.year);
@@ -350,7 +402,8 @@ export function CompetitorRecordView({
               역대 벨트 획득
             </h2>
             <p className="mt-0.5 text-xs font-medium text-stone-400">
-              실제 WWE 챔피언십 획득 {titleHistory.length}회{titleSpan ? ` · ${titleSpan}` : ""}
+              벨트 {titleHistory.length}회 · 경기 {profile.matches.length}건
+              {titleSpan ? ` · ${titleSpan}` : ""}
             </p>
           </div>
         </div>
@@ -411,22 +464,39 @@ export function CompetitorRecordView({
                         </span>
                       </div>
                       <ul className="flex-1 space-y-2 border-l border-brand-800/40 pl-3">
-                        {group.items.map((h, idx) => (
+                        {group.items.map((e) => (
                           <li
-                            key={`${h.beltName}:${h.wonAt}:${h.matchKey ?? idx}`}
-                            className="rounded-lg border border-stone-200/70 dark:border-stone-800/70 bg-stone-100/30 dark:bg-stone-950/30 px-3 py-2"
+                            key={e.key}
+                            className={cn(
+                              "rounded-lg border px-3 py-2",
+                              e.kind === "title"
+                                ? "border-brand-700/50 bg-brand-950/20"
+                                : "border-stone-200/70 dark:border-stone-800/70 bg-stone-100/30 dark:bg-stone-950/30",
+                            )}
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                                {h.beltName}
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold",
+                                    e.kind === "title"
+                                      ? "bg-brand-900/40 text-brand-200"
+                                      : "bg-stone-200/60 text-stone-600 dark:bg-stone-800/60 dark:text-stone-300",
+                                  )}
+                                >
+                                  {e.kind === "title"
+                                    ? "벨트"
+                                    : RESULT_LABEL[e.result ?? "pending"]}
+                                </span>
+                                <span className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">
+                                  {e.label}
+                                </span>
                               </span>
-                              <span className="text-xs font-medium text-stone-400">
-                                {h.eventLabel ?? h.wonAt}
-                              </span>
+                              <span className="text-xs font-medium text-stone-400">{e.at}</span>
                             </div>
-                            {h.wonOn ? (
+                            {e.on ? (
                               <div className="mt-0.5 text-[11px] font-medium text-stone-500">
-                                {h.wonOn}
+                                {e.on}
                               </div>
                             ) : null}
                           </li>
