@@ -37,21 +37,17 @@
 from __future__ import annotations
 
 #: 대회 slug → {경기 id: 그때 픽스처에 적혀 있던 참가자 이름들}.
-#: 값은 2026-09-30에 `www/lib/wwe-ple-matches.ts`에서 확인했다.
-UNCONFIRMED_MATCH_CARDS: dict[str, dict[str, tuple[str, ...]]] = {
-    # Crown Jewel(2026-11-07)은 두 브랜드 챔피언끼리 붙이는 형식이다. 11/7에 그
-    # 벨트를 든 사람이 나가므로 위키도 아직 모른다.
-    "crown-jewel": {
-        "cj26-crown-jewel": (
-            "Raw's World Heavyweight Champion",
-            "SmackDown's Undisputed WWE Champion",
-        ),
-        "cj26-women-crown-jewel": (
-            "Raw's Women's World Champion",
-            "SmackDown's WWE Women's Champion",
-        ),
-    },
-}
+#:
+#: **지금 비어 있다 (2026-10-20).** 하나뿐이던 항목 Crown Jewel 둘
+#: (`cj26-crown-jewel`·`cj26-women-crown-jewel`)은 2026-10-12에 위키가 실명을 채워
+#: 픽스처가 `Roman Reigns` vs `Sami Zayn` · `Liv Morgan` vs `Chelsea Green`으로
+#: 갱신됐다. 그래서 더 이상 미확정이 아니고, 남겨 두면 그 두 경기는 영영 예측이
+#: 생기지 않는다 — 위 독스트링이 경계한 바로 그 조용한 낡음이다.
+#:
+#: **장치는 제대로 돌았다.** `test_unconfirmed_match_cards.py`가 이름 불일치로
+#: 실패해서 이 줄을 지우게 됐다. 비었다고 모듈을 지우지 않는다 — 다음 대회에서
+#: 같은 형식(브랜드 챔피언 대 챔피언, 래더 우승자 대 챔피언)이 또 나온다.
+UNCONFIRMED_MATCH_CARDS: dict[str, dict[str, tuple[str, ...]]] = {}
 
 
 def unconfirmed_match_keys(event_slug: str) -> frozenset[str]:

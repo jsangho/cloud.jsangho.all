@@ -69,9 +69,29 @@ def test_unknown_events_have_no_unconfirmed_matches() -> None:
     assert unconfirmed_match_keys("존재하지-않는-대회") == frozenset()
 
 
-def test_crown_jewel_is_covered() -> None:
-    """지금 이 표가 실제로 막고 있는 대상. 비면 자동 예측이 역할명을 승자로 고른다."""
-    assert unconfirmed_match_keys("crown-jewel") == {
-        "cj26-crown-jewel",
-        "cj26-women-crown-jewel",
-    }
+def test_the_table_is_empty_for_now() -> None:
+    """**표가 비어 있는 것이 지금의 사실이다** (2026-10-20).
+
+    하나뿐이던 항목 Crown Jewel 둘은 2026-10-12에 위키가 실명을 채워 졸업했다.
+    여기 있던 `test_crown_jewel_is_covered`가 그 사실을 박아 두고 있었는데, 그것은
+    **지나가는 사실**이라 픽스처가 갱신된 날 깨졌다. 이 파일의 다른 세 테스트는
+    표에 든 항목이 **무엇이든** 검사하므로, 새 항목이 들어오면 자동으로 지켜진다.
+
+    이 줄이 실패하면 누군가 항목을 더한 것이다 — 그것 자체는 정상이니 숫자를
+    고치지 말고 **왜 더했는지 모듈 주석에 적혔는지** 보고 이 테스트를 지운다.
+    """
+    assert UNCONFIRMED_MATCH_CARDS == {}
+
+
+def test_keys_come_from_the_table(monkeypatch: pytest.MonkeyPatch) -> None:
+    """**장치 자체**를 본다 — 표에 든 대회를 물으면 그 경기 id들이 나온다.
+
+    실제 데이터로 고정하지 않는 이유는 위와 같다. 표는 대회가 끝나면 비므로,
+    살아 있는 값으로 쓴 테스트는 전부 시한부다.
+    """
+    monkeypatch.setitem(
+        UNCONFIRMED_MATCH_CARDS,
+        "some-event",
+        {"se26-a": ("Raw's Champion", "SmackDown's Champion"), "se26-b": ("TBD",)},
+    )
+    assert unconfirmed_match_keys("some-event") == {"se26-a", "se26-b"}
