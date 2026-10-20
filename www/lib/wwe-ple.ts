@@ -111,7 +111,7 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     slug: "halloween-havoc",
     label: "Halloween Havoc",
     dateLabel: "10.31",
-    venue: null,
+    venue: "올랜도 WWE PC",
     highlight: "NXT 핼러윈 특집",
     brand: "nxt",
   },

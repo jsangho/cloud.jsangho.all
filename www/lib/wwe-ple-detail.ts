@@ -377,6 +377,16 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     ],
   },
 
+  /**
+   * 2026 NXT Halloween Havoc — 10.31 올랜도 (위키 `NXT Halloween Havoc (2026)`
+   * rev 1380795205). NXT 기준 7번째·통산 19번째다.
+   *
+   * **2026-10-20에 위키 `Matches` 절이 생겨 두 경기가 들어왔다.** 둘 다 타이틀
+   * 싱글이고 도전자가 정해진 경위까지 위키에 적혀 있다 — Wren Sinclair 는 10-6
+   * 배틀로열 우승으로(정직 중 Lady Shani 로 변장해 나왔고 그 승리로 정직이
+   * 풀렸다), Tony D'Angelo 는 같은 날 1위 도전자 경기 승리로 왔다.
+   * 호스트는 Danhausen 이다(10-13 NXT 에서 발표).
+   */
   "halloween-havoc": {
     slug: "halloween-havoc",
     tagline: "핼러윈 밤의 NXT 특집",
@@ -384,11 +394,17 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
     signatureLabel: "Halloween Havoc",
     theme: NXT_THEME,
     highlights: [
-      { title: "10월 31일", detail: "장소 미발표 (TBA)" },
-      { title: "NXT 단독", detail: "핼러윈 기믹 매치 전통" },
-      { title: "대진 미발표", detail: "카드가 공개되면 채웁니다" },
+      { title: "10월 31일", detail: "올랜도 · WWE Performance Center" },
+      {
+        title: "NXT 왕좌",
+        detail: "Grayson Waller vs Tony D'Angelo — NXT 챔피언십",
+      },
+      {
+        title: "NXT 여자 왕좌",
+        detail: "Kelani Jordan vs Wren Sinclair — NXT 여자 챔피언십",
+      },
     ],
-    predictionFocus: ["대진 발표 후 공개"],
+    predictionFocus: ["NXT 챔피언", "NXT 여자 챔피언"],
   },
 
   /**

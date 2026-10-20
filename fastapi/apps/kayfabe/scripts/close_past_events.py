@@ -11,7 +11,16 @@
 - **`finished_at`을 쓰지 않는다.** 기존 `finished` 대회의 `finished_at`은 전부
   카드 동기화가 돌던 시각, 즉 이 저장소에서 그 칸의 뜻은 "결과가 기록된 시각"이다.
   날짜가 지났다는 사실은 결과가 기록됐다는 뜻이 아니므로 그것을 지어낼 수 없다.
-  **`finished` + `finished_at IS NULL`이 "끝났지만 결과 미기록"을 정확히 말한다.**
+
+  > **`finished_at IS NULL`을 "결과 미기록"으로 읽지 마라.** 한때 그 말이 맞았고
+  > 이 자리에 그렇게 적혀 있었는데 **틀렸다.** 결과를 넣는 경로가 둘인데 한쪽만
+  > 대회 행을 쓴다 — `sync_event`는 쓰고(그것도 `status != finished`일 때만),
+  > **결과 확정 에이전트(`verify_match_results.py` → `set_match_result`)는 경기
+  > 행만 쓴다.** 그래서 결과가 100% 들어찬 대회가 `NULL`로 남는다. 2026-10-20
+  > 실측에서 넷이 그 모양이었고(`money-in-the-bank`·`heatwave`·
+  > `great-american-bash`·`vengeance-day`) `backfill_event_finished_at.py`로
+  > 메꿨다. **결과 유무는 `winner_pick`으로 센다** — `ple_matches.winner_pick`이
+  > 비었는지가 유일한 답이고, `winner_name`은 팀 이름 칸이라 그것도 지표가 아니다.
 - **경기를 건드리지 않는다.** `mark_event_finished`는 `winner_pick`이 있는 경기를
   함께 `FINISHED`로 넘기지만, 결과가 없는 대회에서는 넘길 근거가 없다.
   `set_event_status`는 `ple_matches`를 읽지도 쓰지도 않는다.

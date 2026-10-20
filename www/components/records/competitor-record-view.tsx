@@ -284,6 +284,30 @@ export function CompetitorRecordView({
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [titleHistory]);
 
+  /**
+   * 획득 이력을 연도별로 묶는다. **API가 이미 연대순(오래된 것 먼저)으로 준다** —
+   * 여기서 다시 정렬하지 않는다. 날짜를 못 읽은 행은 API가 맨 뒤로 보내 두므로
+   * 마지막 묶음이 `미상`이 된다(`title_event_date` 가 왜인지 적고 있다).
+   */
+  const titleTimeline = useMemo(() => {
+    const groups: { year: string; items: TitleAcquisition[] }[] = [];
+    for (const h of titleHistory) {
+      const year = h.wonOn ? h.wonOn.slice(0, 4) : "미상";
+      const last = groups[groups.length - 1];
+      if (last && last.year === year) last.items.push(h);
+      else groups.push({ year, items: [h] });
+    }
+    return groups;
+  }, [titleHistory]);
+
+  const titleSpan = useMemo(() => {
+    const years = titleTimeline.filter((g) => g.year !== "미상").map((g) => g.year);
+    if (years.length === 0) return null;
+    const first = years[0];
+    const last = years[years.length - 1];
+    return first === last ? first : `${first}~${last}`;
+  }, [titleTimeline]);
+
   const filtered = useMemo(() => {
     const q = state.q.trim().toLowerCase();
     return profile.matches.filter((m) => {
@@ -326,7 +350,7 @@ export function CompetitorRecordView({
               역대 벨트 획득
             </h2>
             <p className="mt-0.5 text-xs font-medium text-stone-400">
-              실제 WWE 챔피언십 획득 {titleHistory.length}회
+              실제 WWE 챔피언십 획득 {titleHistory.length}회{titleSpan ? ` · ${titleSpan}` : ""}
             </p>
           </div>
         </div>
@@ -363,7 +387,7 @@ export function CompetitorRecordView({
                 className="flex w-full items-center justify-between gap-2 rounded-lg text-left transition-colors hover:bg-stone-950/30"
               >
                 <span className="text-xs font-bold text-stone-400">
-                  획득 이력
+                  커리어 연대표
                   <span className="ml-1.5 font-semibold text-stone-500">
                     ({titleHistory.length})
                   </span>
@@ -377,21 +401,40 @@ export function CompetitorRecordView({
                 />
               </button>
               {state.titleHistoryOpen ? (
-                <ul id="title-acquisition-history" className="mt-2 space-y-2">
-                  {titleHistory.map((h, idx) => (
-                    <li
-                      key={`${h.beltName}:${h.wonAt}:${h.matchKey ?? idx}`}
-                      className="rounded-lg border border-stone-200/70 dark:border-stone-800/70 bg-stone-100/30 dark:bg-stone-950/30 px-3 py-2"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                          {h.beltName}
+                <div id="title-acquisition-history" className="mt-3 space-y-4">
+                  {titleTimeline.map((group) => (
+                    <div key={group.year} className="flex gap-3">
+                      <div className="w-12 shrink-0 pt-0.5 text-right">
+                        <span className="text-xs font-extrabold text-brand-200">{group.year}</span>
+                        <span className="mt-0.5 block text-[11px] font-semibold text-stone-500">
+                          {group.items.length}회
                         </span>
-                        <span className="text-xs font-medium text-stone-400">{h.wonAt}</span>
                       </div>
-                    </li>
+                      <ul className="flex-1 space-y-2 border-l border-brand-800/40 pl-3">
+                        {group.items.map((h, idx) => (
+                          <li
+                            key={`${h.beltName}:${h.wonAt}:${h.matchKey ?? idx}`}
+                            className="rounded-lg border border-stone-200/70 dark:border-stone-800/70 bg-stone-100/30 dark:bg-stone-950/30 px-3 py-2"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">
+                                {h.beltName}
+                              </span>
+                              <span className="text-xs font-medium text-stone-400">
+                                {h.eventLabel ?? h.wonAt}
+                              </span>
+                            </div>
+                            {h.wonOn ? (
+                              <div className="mt-0.5 text-[11px] font-medium text-stone-500">
+                                {h.wonOn}
+                              </div>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : null}
             </div>
           </div>

@@ -18,6 +18,17 @@ HTTP 요청으로 가능해지면 누가 언제 무엇을 썼는지가 흐려지
 `Depends` 판본을 함께 둔다. 스크립트 경로(`get_result_verification_use_case(db)`)는
 그대로다 — 요청 컨텍스트가 없는 곳에서 계속 쓰인다.
 
+## 대회 행 봉인을 함께 넣는다 (2026-10-20)
+
+`set_match_result`는 경기 행만 쓰므로 대회 `finished_at`이 `NULL`로 남았다. 결과가
+100% 들어찬 대회 넷이 그 모양이어서 `backfill_event_finished_at.py`로 메꿨는데,
+그것은 사람이 기억해야 도는 두 번째 걸음이라 에이전트를 돌릴 때마다 또 생긴다.
+그래서 `EventSealRepository`를 함께 주입한다 — **좁은 문 하나가 더 늘었을 뿐**이고
+`upsert_event_from_sync`는 여전히 에이전트 손에 없다.
+
+백필은 지우지 않는다. 역사 행과 `sync_event` 경로가 남고, **드라이런이 그대로
+검산기**다 — 봉인이 제대로 돌면 백필 드라이런이 0건이어야 한다.
+
 ## 모델을 예측 에이전트와 나눈다
 
 무료 등급 한도가 **모델 단위**라, 다른 모델을 쓰면 승부예측 세 에이전트의 몫을
@@ -34,6 +45,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.matrix.grid_oracle_database_manager import get_db
+from kayfabe.adapter.outbound.pg.event_seal_pg_repository import (
+    EventSealPgRepository,
+)
 from kayfabe.adapter.outbound.pg.match_result_pg_writer import MatchResultPgWriter
 from kayfabe.adapter.outbound.pg.pending_result_pg_repository import (
     PendingResultPgRepository,
@@ -79,6 +93,7 @@ def get_result_verification_use_case(
     return ResultVerificationInteractor(
         pending=PendingResultPgRepository(db=db),
         writer=MatchResultPgWriter(events=PleEventsPgRepository(db)),
+        seal=EventSealPgRepository(db),
         tools=get_gemini_tool_use_case(),
         titles=get_wiki_title_port(),
         articles=articles,

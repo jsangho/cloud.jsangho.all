@@ -5,6 +5,10 @@ export type TitleAcquisition = {
   wonAt: string;
   wonAtSlug?: string | null;
   matchKey?: string | null;
+  /** `wonAt`에서 가른 대회명. 못 읽으면 null — 그때는 `wonAt` 원문이 유일한 정보다. */
+  eventLabel?: string | null;
+  /** ISO 날짜(`2009-04-05`). null은 "날짜 미상"이고 정상이다. */
+  wonOn?: string | null;
 };
 
 export type CompetitorTitleHistory = {

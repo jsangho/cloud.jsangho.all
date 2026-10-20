@@ -15,7 +15,12 @@ import kayfabe.adapter.inbound.api  # noqa: F401
 from kayfabe.app.dtos.data_center_dto import MatchPageQuery, WrestlerPageQuery
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
 from kayfabe.app.services.belt_lineage import current_belt_names
-from kayfabe.app.services.data_center_stats import MatchRow, TitleRow, WrestlerRow
+from kayfabe.app.services.data_center_stats import (
+    MatchRow,
+    StaffRow,
+    TitleRow,
+    WrestlerRow,
+)
 from kayfabe.app.use_cases.data_center_interactor import DataCenterInteractor
 
 
@@ -53,17 +58,25 @@ class FakeRepository(DataCenterRepository):
         wrestlers: list[WrestlerRow] | None = None,
         matches: list[MatchRow] | None = None,
         titles: list[TitleRow] | None = None,
+        staff: list[StaffRow] | None = None,
         events: tuple[int, int] = (2, 1),
         belts: int = 18,
     ) -> None:
         self._wrestlers = wrestlers or []
         self._matches = matches or []
         self._titles = titles or []
+        #: `wwe_staff`. **기본이 빈 목록이다** — 이 파일의 테스트는 선수·경기·타이틀
+        #: 축만 보고, 관계자를 쓰는 화면(생일 보드·관계자 명부)은 자기 테스트가 있다.
+        #: 빈 값이 기본인 다른 축들과 같은 규칙이다.
+        self._staff = staff or []
         self._events = events
         self._belts = belts
 
     async def list_wrestlers(self) -> list[WrestlerRow]:
         return list(self._wrestlers)
+
+    async def list_staff(self) -> list[StaffRow]:
+        return list(self._staff)
 
     async def list_matches(self) -> list[MatchRow]:
         return list(self._matches)

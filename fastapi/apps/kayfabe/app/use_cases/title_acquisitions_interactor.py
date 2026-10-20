@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from kayfabe.app.dtos.ple_events_dto import MyselfQuery, MyselfResponse
 from kayfabe.app.dtos.title_acquisitions_dto import (
@@ -15,6 +16,7 @@ from kayfabe.app.ports.output.title_acquisitions_repository import (
     TitleAcquisitionsRepository,
 )
 from kayfabe.app.services.records_scoring import normalize_name
+from kayfabe.domain.services.title_event_date import parse_won_at
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -42,15 +44,7 @@ class TitleAcquisitionsInteractor(TitleAcquisitionsUseCase):
         )
         return CompetitorTitleHistoryResponse(
             name=normalized,
-            acquisitions=[
-                TitleAcquisitionResponse(
-                    belt_name=row.belt_name,
-                    won_at=row.won_at,
-                    won_at_slug=row.won_at_slug,
-                    match_key=row.match_key,
-                )
-                for row in rows
-            ],
+            acquisitions=_as_timeline(rows),
         )
 
     async def get_board(self) -> ChampionshipBoardResponse:
@@ -68,3 +62,28 @@ class TitleAcquisitionsInteractor(TitleAcquisitionsUseCase):
             id=query.id * 10000,
             name=query.name + " 타이틀 레포지토리에 다녀옴",
         )
+
+
+def _as_timeline(rows) -> list[TitleAcquisitionResponse]:
+    """획득 행들을 **연대순(오래된 것 먼저)** 으로 세운다.
+
+    `won_at` 에 날짜가 묻혀 있어 파서를 거쳐야 순서를 안다
+    (`domain/services/title_event_date` 가 왜인지 적고 있다 — `won_at_slug` 는
+    388행 전부 `NULL` 이라 조인으로는 날짜가 안 나온다).
+
+    **날짜를 못 읽은 행은 맨 뒤로 보낸다.** 추측해서 끼워 넣으면 연대표가 거짓
+    순서를 말한다. 화면은 그 행을 "날짜 미상" 으로 적으면 된다.
+    """
+    parsed = [(row, parse_won_at(row.won_at)) for row in rows]
+    parsed.sort(key=lambda pair: (pair[1].won_on is None, pair[1].won_on or date.min))
+    return [
+        TitleAcquisitionResponse(
+            belt_name=row.belt_name,
+            won_at=row.won_at,
+            won_at_slug=row.won_at_slug,
+            match_key=row.match_key,
+            event_label=info.event_label,
+            won_on=info.won_on,
+        )
+        for row, info in parsed
+    ]
