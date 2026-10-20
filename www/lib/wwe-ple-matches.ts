@@ -1057,15 +1057,33 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
   // 2026-09-29 확인). 통산 6번째이고 북미 밖 개최는 처음이다.
   wrestlepalooza: [],
 
-  // `NXT Halloween Havoc (2026)` · 2026-10-31 · **대진 미발표**.
-  // 위키 문서에 `Matches` 절 자체가 없다(Background·References·External links뿐,
-  // 2026-09-29 확인). 빈 배열로 두는 이유는 `getPleMatches`가 `[]`를 돌려주어
-  // 화면이 "대진 미발표"로 뜨기 때문이다 — 추측 카드를 채우지 않는다.
+  // `NXT Halloween Havoc (2026)` · 2026-10-31 올랜도 WWE Performance Center.
+  // **2026-10-20에 위키 `Matches` 절이 생겨 두 경기를 넣었다**(9-29에는 절 자체가
+  // 없었다). 둘 다 타이틀 싱글이고, 위키가 공식 발표만 싣는다고 적어 둔 절이다.
+  // 입력은 `sync_ple_cards_from_wiki.py --event halloween-havoc --apply`.
   //
-  // 대진이 발표되면 `sync_ple_cards_from_wiki.py --event halloween-havoc`가
-  // 채운다. 다만 경기가 0건이라 id 접두사를 읽을 자리가 없으므로, 그 도구는
-  // `ple_match_id_prefixes.py`의 `hh26`을 쓴다.
-  "halloween-havoc": [],
+  // 경기 id 는 그 도구의 초안(`hh26-jordan-sinclair` 꼴)을 쓰지 않고 **벨트 약칭**
+  // 으로 바꿨다 — `hw26-nxt`·`hw26-women`·`sad26-women` 와 같은 관례다. 참가자
+  // 이름을 id 에 넣는 것은 타이틀이 걸리지 않은 경기에만 한다(`mitb26-reed-femi`).
+  //
+  // 호가는 없다. 무료 WWE 배당 API 가 없어 사람이 적어야 한다(메모리
+  // `kayfabe-odds-and-press-sources`).
+  "halloween-havoc": [
+    m2(
+      "hh26-women",
+      "NXT Women's Championship",
+      "sideB",
+      { name: "Kelani Jordan", isChampion: true },
+      { name: "Wren Sinclair" },
+    ),
+    m2(
+      "hh26-nxt",
+      "NXT Championship",
+      "sideA",
+      { name: "Grayson Waller", isChampion: true },
+      { name: "Tony D'Angelo" },
+    ),
+  ],
 };
 
 export function getPleMatches(slug: string): PleMatchCard[] {
