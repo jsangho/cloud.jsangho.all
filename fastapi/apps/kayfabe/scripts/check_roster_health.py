@@ -23,8 +23,9 @@
 3. **미래이거나 터무니없이 오래된 생년월일** — 오타를 잡는다.
 4. **트레이너 표기 갈림** — 대소문자·공백만 다른 이름 묶음. 같은 사람이 둘로
    세어지는 자리다.
-5. **구분자 누락 의심** — 소문자 뒤에 대문자가 바로 붙은 트레이너 이름
-   (`Booker TWild...`). 사람과 학교가 붙은 꼴이다.
+5. **구분자 누락 의심** — 낱말 중간에서 대문자가 새로 시작하는 트레이너 이름
+   (`Booker TWild...`). 사람과 학교가 붙은 꼴이다. `McCool`·`DeMott`처럼
+   이름이 원래 품는 대문자는 봐준다.
 6. **빈 칸 비율** — 화면이 분모로 쓰는 값이라 갑자기 떨어지면 알아야 한다.
 
 **판정하지 않는 것**: 누가 방출됐는지. 그건 바깥 출처가 필요하고 사람이 본다
@@ -69,10 +70,33 @@ _CSV_PATH = (
 )
 _FULL_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _PARTIAL_DATE = re.compile(r"^(\d{4}|\?{4})-(\d{2}|\?{2})-(\d{2}|\?{2})$")
-#: `Booker TWild` 처럼 **소문자 뒤에 대문자**가 붙은 자리. 영문 이름에서 이 모양은
-#: 거의 항상 구분자 누락이다. `McDonagh`·`DiBiase` 같은 꼴을 끌어들이지 않도록
-#: 앞 글자가 `Mc`·`Mac`·`Di`·`De`·`O'`가 아닐 때만 본다.
-_GLUED = re.compile(r"(?<![MD][ac])(?<![Oo]')[a-z][A-Z]")
+#: `Lance StormStu Hart` 처럼 **소문자 뒤에 대문자**가 붙은 자리 — 사람과 학교가
+#: 구분자 없이 붙은 꼴이다.
+_GLUED = re.compile(r"(?<=[a-z])(?=[A-Z])")
+
+#: `Booker TWild Samoan...` 처럼 **대문자 뒤에 대문자**가 오는 자리. 앞이 `Booker T`
+#: 같은 머리글자로 끝나면 경계의 양쪽이 다 대문자여서 위 규칙이 못 본다. 뒤 대문자에
+#: 소문자가 따라올 때만 보기 때문에 `WWE`·`NXT` 같은 약어는 쪼개지 않는다.
+_GLUED_AFTER_INITIAL = re.compile(r"(?<=[A-Z])(?=[A-Z][a-z])")
+
+#: 낱말 안에 대문자를 **정상적으로** 품는 접두사. 이것들을 빼지 않으면
+#: `DeMott`·`McCool`·`LaBron` 같은 이름이 전부 걸린다 — 실측으로 오탐 5건이
+#: 전부 이 꼴이었다. 정규식 lookbehind로는 낱말 첫머리를 못 봐서 따로 센다.
+_NAME_PREFIXES = ("mc", "mac", "de", "du", "da", "di", "la", "le", "van", "von", "o'")
+
+
+def _looks_glued(name: str) -> bool:
+    """구분자가 빠진 것처럼 보이는가. **이름다운 대문자는 봐준다.**"""
+    for word in name.split():
+        for match in _GLUED.finditer(word):
+            prefix = word[: match.start()].casefold()
+            if prefix in _NAME_PREFIXES:
+                continue
+            return True
+        if _GLUED_AFTER_INITIAL.search(word):
+            return True
+    return False
+
 
 #: 생년월일이 이 범위를 벗어나면 오타로 본다.
 _OLDEST_YEAR = 1930
@@ -162,7 +186,7 @@ async def main() -> int:
     for _name, _birth, trainer, _brand in wrestlers:
         for who in trainer_names(trainer):
             by_norm[_norm(who)].add(who)
-            if _GLUED.search(who):
+            if _looks_glued(who):
                 glued.add(who)
     split = {k: v for k, v in by_norm.items() if len(v) > 1}
     print("\n== 4. 같은 트레이너가 여러 표기로 갈림")
