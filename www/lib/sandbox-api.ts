@@ -65,6 +65,8 @@ export type CareerStep = {
   popularityDelta: number;
   nextBelt: string | null;
   defending: boolean;
+  /** 런의 최대 주차. **서버가 정한다** — 화면에 박아 두면 갈라진다(실제로 갈라졌다). */
+  maxWeeks: number;
 };
 
 export async function careerStep(

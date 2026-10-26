@@ -63,6 +63,22 @@ export default function SandboxPage() {
             </Link>
             이 세 축과 누수 검사를 거쳐 만듭니다. 결과는 저장되지 않습니다.
           </p>
+
+          {/* 선수 키우기 둘. **저장 여부가 둘을 가르는 전부라서 라벨에 적는다.** */}
+          <nav className="mt-3 flex flex-wrap gap-2 text-xs">
+            <Link
+              href="/sandbox/career"
+              className="rounded-lg border border-border bg-card px-3 py-2 text-muted-foreground transition-colors hover:bg-card-2"
+            >
+              선수 키우기 <span className="text-foreground">— 저장 없음</span>
+            </Link>
+            <Link
+              href="/sandbox/careers"
+              className="rounded-lg border border-border bg-card px-3 py-2 text-muted-foreground transition-colors hover:bg-card-2"
+            >
+              커리어 <span className="text-foreground">— 서버에 저장 · 로그인</span>
+            </Link>
+          </nav>
         </header>
 
         <section className="mb-6 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
