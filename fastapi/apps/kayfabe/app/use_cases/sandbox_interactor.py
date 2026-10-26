@@ -23,6 +23,7 @@ from kayfabe.app.ports.input.sandbox_use_case import SandboxUseCase
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
 from kayfabe.app.services.competitor_roster import normalize_name
 from kayfabe.domain.services.career_run import (
+    MAX_WEEKS,
     CareerState,
     advance,
     is_defense,
@@ -110,6 +111,7 @@ class SandboxInteractor(SandboxUseCase):
             popularity_delta=report.popularity_delta,
             next_belt=belt,
             defending=is_defense(nxt) and belt is not None,
+            max_weeks=MAX_WEEKS,
         )
 
     async def _pick_opponent(self, state: CareerState) -> str | None:

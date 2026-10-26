@@ -70,3 +70,6 @@ class CareerStepSchema(_Camel):
     popularity_delta: int = Field(default=0, alias="popularityDelta")
     next_belt: str | None = Field(default=None, alias="nextBelt")
     defending: bool = False
+    #: 런의 최대 주차. **화면이 이 값으로 `19 / 52` 를 적는다** — 52를 프론트에
+    #: 박아 두면 서버가 시즌 길이를 바꿔도 화면만 거짓말을 한다(실제로 그랬다).
+    max_weeks: int = Field(alias="maxWeeks")

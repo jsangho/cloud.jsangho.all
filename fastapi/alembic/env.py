@@ -30,6 +30,7 @@ from core.matrix.grid_oracle_database_manager import DATABASE_URL, Base  # noqa:
 from core.matrix.vault_keymaker_secret_manager import get_keymaker  # noqa: E402
 
 import core.entities.user_model  # noqa: E402, F401
+import kayfabe.adapter.outbound.orm.career_sandbox_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.championship_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.agent_prediction_orm  # noqa: E402, F401
 import kayfabe.adapter.outbound.orm.knowledge_chunk_orm  # noqa: E402, F401
