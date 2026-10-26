@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from kayfabe.adapter.inbound.api.v1.ai_lab_router import ai_lab_router
 from kayfabe.adapter.inbound.api.v1.ai_prediction_router import ai_prediction_router
+from kayfabe.adapter.inbound.api.v1.career_sandbox_router import career_sandbox_router
 from kayfabe.adapter.inbound.api.v1.data_center_router import data_center_router
 from kayfabe.adapter.inbound.api.v1.event_status_router import event_status_router
 from kayfabe.adapter.inbound.api.v1.ple_events_router import ple_events_router
@@ -23,6 +24,7 @@ kayfabe_router.include_router(event_status_router)
 kayfabe_router.include_router(result_verification_router)
 kayfabe_router.include_router(data_center_router)
 kayfabe_router.include_router(sandbox_router)
+kayfabe_router.include_router(career_sandbox_router)
 kayfabe_router.include_router(ai_lab_router)
 kayfabe_router.include_router(ai_prediction_router)
 kayfabe_router.include_router(ple_match_pick_router)

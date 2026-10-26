@@ -126,6 +126,7 @@ def _career_to_schema(dto: CareerStepResponse) -> CareerStepSchema:
         won=dto.won,
         opponent=dto.opponent,
         belt=dto.belt,
+        max_weeks=dto.max_weeks,
         promoted_to=dto.promoted_to,
         injured_weeks=dto.injured_weeks,
         popularity_delta=dto.popularity_delta,
