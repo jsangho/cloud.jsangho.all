@@ -49,6 +49,7 @@ from kayfabe.app.dtos.career_sandbox_dto import (
     CareerViewDto,
     ChoiceDto,
     EventDto,
+    GoalDto,
     InjuryDto,
     IntentDto,
     LogDto,
@@ -73,6 +74,7 @@ from kayfabe.domain.services import career_actions as actions
 from kayfabe.domain.services import career_aging as aging
 from kayfabe.domain.services import career_engine as engine
 from kayfabe.domain.services import career_events as events
+from kayfabe.domain.services import career_goals as goals
 from kayfabe.domain.services import career_relations as relations
 from kayfabe.domain.services import career_retirement as retire
 from kayfabe.domain.services import career_season as season_rules
@@ -395,6 +397,18 @@ class CareerSandboxInteractor(CareerSandboxUseCase):
             seasons=tuple(_season_dto(s) for s in world.seasons),
             recent_log=tuple(_log_dto(e) for e in reversed(world.log[-RECENT_LOG:])),
             last_report=_report_dto(report) if report is not None else None,
+            goals=tuple(
+                GoalDto(
+                    code=g.code,
+                    label=g.label,
+                    target=g.target,
+                    current=g.current,
+                    done=g.done,
+                    rewarded=g.rewarded,
+                    reward_popularity=g.reward_popularity,
+                )
+                for g in goals.evaluate(world)
+            ),
         )
 
     def _wrestler_dto(

@@ -28,6 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from kayfabe.domain.services import career_events as events
+from kayfabe.domain.services import career_goals as goals
 from kayfabe.domain.services import career_relations as relations
 from kayfabe.domain.services import career_retirement as retire
 from kayfabe.domain.services import career_season as season_rules
@@ -698,6 +699,9 @@ def _close_week(
     자동 은퇴는 `should_auto_retire` 가 요구하는 두 자물쇠를 통과해야 한다 —
     점수와 의사. 의학적 영구 불가만 예외다.
     """
+    # 목표 보상은 은퇴 판정보다 먼저다 — 보상으로 오른 인기도가 그 주 위험 판정에
+    # 반영되어야 하고, 은퇴가 확정된 뒤에는 `award` 가 보상을 주지 않는다.
+    state = goals.award(state, balance=balance)
     me = state.require(state.player)
     risk = retire.assess(me, balance)
     report = replace(report, risk_band=risk.band)

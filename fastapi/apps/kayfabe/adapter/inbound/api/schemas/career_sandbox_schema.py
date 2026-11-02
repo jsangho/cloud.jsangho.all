@@ -142,6 +142,16 @@ class LogSchema(_Camel):
     title: str | None = None
 
 
+class GoalSchema(_Camel):
+    code: str
+    label: str
+    target: int
+    current: int
+    done: bool
+    rewarded: bool
+    reward_popularity: int = Field(alias="rewardPopularity")
+
+
 class SeasonSummarySchema(_Camel):
     season: int
     wins: int
@@ -221,6 +231,7 @@ class CareerViewSchema(_Camel):
     seasons: list[SeasonSummarySchema] = Field(default_factory=list)
     recent_log: list[LogSchema] = Field(default_factory=list, alias="recentLog")
     last_report: WeekReportSchema | None = Field(default=None, alias="lastReport")
+    goals: list[GoalSchema] = Field(default_factory=list)
 
 
 # ── 요청 ──────────────────────────────────────────────────────────
