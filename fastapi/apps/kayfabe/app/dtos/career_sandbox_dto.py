@@ -154,6 +154,18 @@ class LogDto:
 
 
 @dataclass(frozen=True)
+class GoalDto:
+    code: str
+    label: str
+    target: int
+    current: int
+    done: bool
+    #: `done` 인데 `False` 면 보상이 다음 주차 진행에서 들어간다.
+    rewarded: bool
+    reward_popularity: int
+
+
+@dataclass(frozen=True)
 class SeasonSummaryDto:
     season: int
     wins: int
@@ -243,6 +255,8 @@ class CareerViewDto:
     recent_log: tuple[LogDto, ...] = ()
     #: 마지막 주차 진행의 보고. 새로 만든 커리어면 `None`.
     last_report: WeekReportDto | None = None
+    #: 이번 시즌 목표. 진행률은 세계에서 계산한 값이다(`career_goals`).
+    goals: tuple[GoalDto, ...] = ()
 
 
 @dataclass(frozen=True)

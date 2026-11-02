@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:keys": "tsc lib/career-request-keys.ts lib/career-request-keys.test.ts --module commonjs --target es2022 --moduleResolution node10 --strict --esModuleInterop --outDir .next/test-keys && node --test .next/test-keys/career-request-keys.test.js"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

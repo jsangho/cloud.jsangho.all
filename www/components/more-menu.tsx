@@ -46,7 +46,13 @@ export const MORE_GROUPS: readonly MoreGroup[] = [
   },
   {
     title: "실습",
-    items: [{ label: "레슨", description: "데이터 수집부터 모델까지", href: "/lesson" }],
+    items: [
+      { label: "레슨", description: "데이터 수집부터 모델까지", href: "/lesson" },
+      // `/sandbox`만 넣는다. 그 화면이 허브라 선수 키우기(저장 없음)와 커리어(서버
+      // 저장)로 이미 갈라 준다 — 셋을 다 넣으면 모바일의 `startsWith` 활성 판정이
+      // 하위 경로에서 둘씩 켜진다.
+      { label: "시뮬레이터", description: "경기 붙이기 · 선수 키우기", href: "/sandbox" },
+    ],
   },
 ] as const;
 

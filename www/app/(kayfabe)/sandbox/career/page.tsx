@@ -26,6 +26,7 @@ const SAVE_KEY = "kayfabe:career:v1";
 export default function CareerPage() {
   const [state, setState] = useState<CareerState | null>(null);
   const [nextBelt, setNextBelt] = useState<string | null>(null);
+  const [maxWeeks, setMaxWeeks] = useState<number | null>(null);
   const [defending, setDefending] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [name, setName] = useState("");
@@ -41,9 +42,11 @@ export default function CareerPage() {
         nextBelt: string | null;
         defending: boolean;
         log: string[];
+        maxWeeks?: number;
       };
       setState(saved.state);
       setNextBelt(saved.nextBelt);
+      setMaxWeeks(saved.maxWeeks ?? null);
       setDefending(saved.defending);
       setLog(saved.log ?? []);
     } catch {
@@ -75,6 +78,7 @@ export default function CareerPage() {
     const lines = [describe(next), ...log].slice(0, 60);
     setState(next.state);
     setNextBelt(next.nextBelt);
+    setMaxWeeks(next.maxWeeks);
     setDefending(next.defending);
     setLog(lines);
     window.localStorage.setItem(
@@ -84,6 +88,7 @@ export default function CareerPage() {
         nextBelt: next.nextBelt,
         defending: next.defending,
         log: lines,
+        maxWeeks: next.maxWeeks,
       }),
     );
   }
@@ -92,6 +97,7 @@ export default function CareerPage() {
     window.localStorage.removeItem(SAVE_KEY);
     setState(null);
     setNextBelt(null);
+    setMaxWeeks(null);
     setLog([]);
   }
 
@@ -106,7 +112,7 @@ export default function CareerPage() {
           <h1 className="font-sport text-2xl text-foreground sm:text-3xl">선수 키우기</h1>
           <p className="mt-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             NXT에서 시작해 월드 챔피언을 거쳐 <strong className="text-foreground">은퇴</strong>까지
-            40주. 월챔은 끝이 아니라 중간 목표이고, 점수는{" "}
+            한 시즌(주차 수는 서버가 정합니다). 월챔은 끝이 아니라 중간 목표이고, 점수는{" "}
             <strong className="text-foreground">역대 재위 수</strong>입니다. 인기도가 승률·승격·도전
             자격을 모두 정합니다.{" "}
             <strong className="text-foreground">서버에 저장되지 않습니다</strong> — 런은 이
@@ -162,7 +168,14 @@ export default function CareerPage() {
         ) : (
           <section className="space-y-4">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Stat label="주차" value={`${Math.min(state.week, 40)} / 40`} />
+              <Stat
+                label="주차"
+                value={
+                  maxWeeks == null
+                    ? `${state.week}주차`
+                    : `${Math.min(state.week, maxWeeks)} / ${maxWeeks}`
+                }
+              />
               <Stat label="브랜드" value={state.brand} />
               <Stat label="인기도" value={`${state.popularity}`} />
               <Stat label="전적" value={`${state.wins}승 ${state.losses}패`} />

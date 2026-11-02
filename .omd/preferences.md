@@ -531,3 +531,20 @@ Introduced off-palette color(s) #7c3aed in /home/ho/projects/cloud.jsangho.all/w
 > DESIGN.md §2 「팀 프로젝트 출처」에 `--team-b` 로 문서화했고, §7 의 "네 번째 색을
 > 섞지 않는다"에 이 예외를 적었다. `#7c3aed`(바이올렛)는 **칠하지 않는다** — 녹색약에서
 > 파랑과 ΔE 0.6 으로 붙어 탈락한 후보이고, 탈락 이유를 적은 주석에만 남아 있다.
+
+## 2026-11-02T12:11:45.966Z — introduced-off-palette-color-s-ffe08a-in
+
+```omd-meta
+id: pref_mvz7xne6_5b812787
+timestamp: 2026-11-02T12:11:45.966Z
+scope: color
+signal: ambient
+confidence: inferred
+status: stale
+source_agent: claude-code
+source_context: "/home/jsh/projects/cloud.jsangho.all/www/components/sandbox-career/career-ui.tsx"
+```
+
+Introduced off-palette color(s) #ffe08a in /home/jsh/projects/cloud.jsangho.all/www/components/sandbox-career/career-ui.tsx — not in DESIGN.md
+
+> **무효** (2026-11-02) — 같은 작업 안에서 `var(--brand-200)` 으로 바꿨다. 이 값은 칠하지 않는다.
