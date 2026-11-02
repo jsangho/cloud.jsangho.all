@@ -226,6 +226,29 @@ export type CareerView = {
   recentLog: CareerLogEntry[];
   /** 마지막 주차 진행의 보고. 새로 만든 커리어면 `null`. */
   lastReport: CareerWeekReport | null;
+  /**
+   * 이번 시즌 목표. 진행률은 **서버가 세계에서 센 값**이다.
+   *
+   * **옵셔널인 이유 — 배포 순서.** 이 프로젝트는 프론트(Vercel)가 백엔드(EC2)보다
+   * 먼저 나간다. 목표 시스템 이전 백엔드는 이 칸을 보내지 않으므로, 화면은 없을 때
+   * "아직 목표를 받지 못했다" 로 그려야 한다. 멱등 영수증에 저장된 옛 응답을 다시
+   * 받을 때도 같다.
+   */
+  goals?: CareerGoal[];
+};
+
+/**
+ * 시즌 목표 하나. `done` 인데 `rewarded` 가 `false` 면 보상(인기도)은 다음 주차
+ * 진행에서 들어간다 — 서버가 보상을 주차를 닫을 때 주기 때문이다.
+ */
+export type CareerGoal = {
+  code: string;
+  label: string;
+  target: number;
+  current: number;
+  done: boolean;
+  rewarded: boolean;
+  rewardPopularity: number;
 };
 
 /** 서버가 아는 주간 행동. 없는 코드는 422로 돌아온다. */

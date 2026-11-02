@@ -131,6 +131,7 @@ export function toTitleRows(log: readonly CareerLogEntry[]): TitleLogRow[] {
 /** 대시보드가 「주요 커리어 이벤트」로 뽑는 종류. 행동·휴식 같은 잔줄은 뺀다. */
 export const MILESTONE_KINDS = [
   "debut",
+  "goal",
   "title_won",
   "title_defended",
   "title_vacated",

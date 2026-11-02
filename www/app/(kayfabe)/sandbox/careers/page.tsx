@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/context/auth-context";
-import { WweArenaShell } from "@/components/wwe-arena-shell";
 import { CareerDashboard } from "@/components/sandbox-career/career-dashboard";
 import { CareerLogPanel } from "@/components/sandbox-career/career-log-panel";
 import { CareerMatchesPanel } from "@/components/sandbox-career/career-matches-panel";
@@ -419,6 +418,26 @@ function CareersView() {
   const log =
     state.log.careerId === view?.id ? state.log : { ...emptyLog, careerId: view?.id ?? null };
   const logEntries = log.entries;
+  // 단계 버튼 셋은 대시보드 히어로와 주간 진행 탭이 함께 쓴다 — 한 곳에서 정해야
+  // 두 자리의 요청 범위(`advance` 등)가 갈라지지 않는다.
+  const advance = () => {
+    if (view)
+      void run("advance", "advance", "한 주를 진행했습니다", (requestId) =>
+        advanceCareerWeek(view.id, requestId),
+      );
+  };
+  const settle = () => {
+    if (view)
+      void run("settle", "settle", "시즌을 결산했습니다", (requestId) =>
+        settleCareerSeason(view.id, requestId),
+      );
+  };
+  const nextSeason = () => {
+    if (view)
+      void run("next-season", "next-season", "다음 시즌을 시작했습니다", (requestId) =>
+        startNextCareerSeason(view.id, requestId),
+      );
+  };
   const detailWrestler =
     view && state.detail ? (view.roster.find((w) => w.name === state.detail) ?? null) : null;
 
@@ -438,9 +457,9 @@ function CareersView() {
       ) : null}
 
       {!view ? (
-        <>
+        <div className="mx-auto max-w-3xl">
           <section className="mb-8">
-            <h2 className="font-sport text-lg text-foreground">내 커리어</h2>
+            <h2 className="font-sport text-2xl uppercase tracking-wide text-stone-50">내 커리어</h2>
             {state.careers.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">
                 아직 없습니다. 아래에서 선수를 만들면 시즌 1의 1주차부터 시작합니다.
@@ -453,7 +472,7 @@ function CareersView() {
                       type="button"
                       onClick={() => void open(row.id)}
                       disabled={state.busy != null}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-card-2 disabled:opacity-50"
+                      className="arena-panel flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:border-brand-400/40 disabled:opacity-50"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold text-foreground">
@@ -475,8 +494,8 @@ function CareersView() {
           </section>
 
           <section>
-            <h2 className="font-sport text-lg text-foreground">새 선수</h2>
-            <div className="mt-3 space-y-3">
+            <h2 className="font-sport text-2xl uppercase tracking-wide text-stone-50">새 선수</h2>
+            <div className="arena-panel mt-3 space-y-4 p-5">
               <label className="block">
                 <span className="mb-1 block text-xs font-bold text-muted-foreground">링네임</span>
                 <input
@@ -498,8 +517,8 @@ function CareersView() {
                       onClick={() => setStyle(s)}
                       className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                         style === s
-                          ? "border-brand-500 bg-brand-500/10 text-foreground"
-                          : "border-border bg-card text-muted-foreground hover:bg-card-2"
+                          ? "border-brand-400/70 bg-brand-400/10 text-stone-50"
+                          : "border-white/10 bg-black/30 text-stone-400 hover:bg-white/[0.05]"
                       }`}
                     >
                       <span className="block font-bold">{s}</span>
@@ -536,25 +555,27 @@ function CareersView() {
                   })
                 }
                 disabled={state.busy != null || !name.trim()}
-                className="h-9 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                className="arena-cta h-12 px-8 font-sport text-lg uppercase"
               >
-                {state.busy === "create" ? "만드는 중…" : "데뷔"}
+                {state.busy === "create" ? "만드는 중…" : "▶ 데뷔"}
               </button>
             </div>
           </section>
-        </>
+        </div>
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-sport text-xl text-foreground">{view.player.name}</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => void backToList()}
               disabled={state.busy != null}
-              className="text-xs text-brand-link underline disabled:opacity-50"
+              className="arena-ghost px-3 py-1 text-xs font-semibold disabled:opacity-50"
             >
-              커리어 목록으로
+              ← 커리어 목록
             </button>
+            <span className="text-xs tabular-nums text-stone-400">
+              세이브 #{view.id} · 서버 저장
+            </span>
           </div>
 
           <CareerTabs
@@ -577,6 +598,9 @@ function CareersView() {
                 )
               }
               onGoTo={(next) => writeUrl({ tab: next })}
+              onAdvance={advance}
+              onSettle={settle}
+              onNextSeason={nextSeason}
             />
           ) : null}
 
@@ -595,21 +619,9 @@ function CareersView() {
                   (requestId) => performCareerAction(view.id, action, target, requestId),
                 )
               }
-              onAdvance={() =>
-                void run("advance", "advance", "한 주를 진행했습니다", (requestId) =>
-                  advanceCareerWeek(view.id, requestId),
-                )
-              }
-              onSettle={() =>
-                void run("settle", "settle", "시즌을 결산했습니다", (requestId) =>
-                  settleCareerSeason(view.id, requestId),
-                )
-              }
-              onNextSeason={() =>
-                void run("next-season", "next-season", "다음 시즌을 시작했습니다", (requestId) =>
-                  startNextCareerSeason(view.id, requestId),
-                )
-              }
+              onAdvance={advance}
+              onSettle={settle}
+              onNextSeason={nextSeason}
               onResolve={(eventId, choice) =>
                 void run(
                   `event:${eventId}:${choice}`,
@@ -672,28 +684,41 @@ function isTab(value: string | null): value is CareerTab {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <WweArenaShell>
-      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10">
-        <header className="mb-6">
-          <h1 className="font-sport text-2xl text-foreground sm:text-3xl">커리어</h1>
-          <p className="mt-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-            한 시즌은 서버가 정한 주차만큼이고, 시즌이 끝나면 결산에서 나이가 한 살 오릅니다. 월드
-            챔피언은 끝이 아니라 중간 목표이고, 커리어는{" "}
-            <strong className="text-foreground">은퇴</strong>로 끝납니다. 은퇴해도 기록은 남습니다.{" "}
-            <strong className="text-foreground">세이브는 서버에 저장됩니다</strong> — 저장 없이 돌려
-            보려면{" "}
-            <Link href="/sandbox/career" className="text-brand-link underline">
-              장난감
-            </Link>
-            을 쓰세요. 실제 예측은{" "}
-            <Link href="/ai-lab" className="text-brand-link underline">
-              AI Lab
-            </Link>
-            이 합니다.
-          </p>
+    // **다크 아레나는 이 페이지만이다** (DESIGN.md 예외 · 2026-11-02). `.dark` 가 토큰을
+    // 이 트리 안에서만 다크로 바꾸고, `.career-arena` 가 경기장 조명을 깐다.
+    <main className="dark career-arena relative min-h-screen w-full min-w-0 overflow-x-hidden text-foreground">
+      <div className="relative mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="arena-eyebrow">Kayfabe · Career Mode</p>
+            <h1 className="mt-1 font-sport text-3xl uppercase tracking-wide text-stone-50 sm:text-4xl">
+              Wrestling Career
+            </h1>
+          </div>
+          <details className="group max-w-xl text-xs text-stone-400">
+            <summary className="cursor-pointer list-none text-right font-semibold uppercase tracking-wider text-stone-400 hover:text-stone-200">
+              커리어 모드 안내{" "}
+              <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+            </summary>
+            <p className="mt-2 rounded-xl border border-dashed border-white/12 bg-black/40 px-3 py-2 text-xs leading-relaxed text-stone-400">
+              한 시즌은 서버가 정한 주차만큼이고, 시즌이 끝나면 결산에서 나이가 한 살 오릅니다. 월드
+              챔피언은 끝이 아니라 중간 목표이고, 커리어는{" "}
+              <strong className="text-foreground">은퇴</strong>로 끝납니다. 은퇴해도 기록은
+              남습니다. <strong className="text-foreground">세이브는 서버에 저장됩니다</strong> —
+              저장 없이 돌려 보려면{" "}
+              <Link href="/sandbox/career" className="text-brand-link underline">
+                장난감
+              </Link>
+              을 쓰세요. 실제 예측은{" "}
+              <Link href="/ai-lab" className="text-brand-link underline">
+                AI Lab
+              </Link>
+              이 합니다.
+            </p>
+          </details>
         </header>
         {children}
       </div>
-    </WweArenaShell>
+    </main>
   );
 }

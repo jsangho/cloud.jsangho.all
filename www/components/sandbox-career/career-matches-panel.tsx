@@ -91,14 +91,12 @@ export function CareerMatchesPanel({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <NextCard view={view} />
 
       <section>
         <SectionTitle
-          aside={
-            rows ? <span className="text-xs text-muted-foreground">{rows.length}경기</span> : null
-          }
+          aside={rows ? <span className="text-xs text-stone-400">{rows.length}경기</span> : null}
         >
           경기 기록
         </SectionTitle>
@@ -132,10 +130,7 @@ export function CareerMatchesPanel({
           ) : (
             <ul className="space-y-2">
               {rows.map((row) => (
-                <li
-                  key={row.key}
-                  className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm"
-                >
+                <li key={row.key} className="arena-panel px-3 py-2.5 text-sm">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <WeekTag season={row.season} week={row.week} />
                     {row.won != null ? (
@@ -150,7 +145,7 @@ export function CareerMatchesPanel({
                         {row.won ? "승" : "패"}
                       </span>
                     ) : null}
-                    <span className="min-w-0 font-semibold text-foreground">
+                    <span className="min-w-0 font-semibold text-stone-100">
                       {row.subject}
                       {row.opponent ? ` vs ${row.opponent}` : ""}
                     </span>
@@ -160,25 +155,25 @@ export function CareerMatchesPanel({
                       </span>
                     ) : null}
                     {row.rival ? (
-                      <span className="rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">
+                      <span className="rounded-md border border-white/10 px-1.5 text-[11px] text-stone-400">
                         라이벌
                       </span>
                     ) : null}
                   </div>
                   {/* 경기 유형과 승리 방식은 이 서버 문장 안에 있다. 쪼개지 않는다. */}
-                  <p className="mt-1 text-xs text-muted-foreground">{row.summary}</p>
+                  <p className="mt-1 text-xs text-stone-400">{row.summary}</p>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          「라이벌전」은 서버가 <strong className="text-foreground">격화됐다고 판정한</strong>{" "}
-          관계의 상대와 치른 경기입니다 — 라이벌 표시 자체는 경기마다 붙으므로 그것만으로는 세지
-          않습니다. 또한 서버는 관계의 <strong className="text-foreground">현재</strong> 상태만
-          보내므로, 이 표시는 「그 상대는 지금 라이벌」이라는 뜻입니다. 경기 유형과 승리 방식은
-          서버가 보낸 문장 그대로 적습니다.
+        <p className="mt-3 text-[11px] text-stone-400">
+          「라이벌전」은 서버가 <strong className="text-stone-100">격화됐다고 판정한</strong> 관계의
+          상대와 치른 경기입니다 — 라이벌 표시 자체는 경기마다 붙으므로 그것만으로는 세지 않습니다.
+          또한 서버는 관계의 <strong className="text-stone-100">현재</strong> 상태만 보내므로, 이
+          표시는 「그 상대는 지금 라이벌」이라는 뜻입니다. 경기 유형과 승리 방식은 서버가 보낸 문장
+          그대로 적습니다.
         </p>
       </section>
     </div>
@@ -204,7 +199,7 @@ function NextCard({ view }: { view: CareerView }) {
   const foe = card.opponents.length > 0 ? card.opponents.join(" · ") : card.opponent;
   return (
     <Panel title={`다음 대진 — 시즌 ${view.season} · ${view.week}주차`}>
-      <p className="text-sm font-semibold text-foreground">
+      <p className="text-sm font-semibold text-stone-100">
         {card.kind === "tag" && card.partner
           ? `태그 경기 — ${card.partner} 조`
           : card.title
@@ -212,9 +207,9 @@ function NextCard({ view }: { view: CareerView }) {
             : labelOf(CARD_KIND_LABEL, card.kind)}
       </p>
       {card.kind !== "rest" ? (
-        <p className="mt-0.5 text-sm text-muted-foreground">상대 {foe ?? "미정"}</p>
+        <p className="mt-0.5 text-sm text-stone-400">상대 {foe ?? "미정"}</p>
       ) : null}
-      {card.note ? <p className="mt-1 text-xs text-muted-foreground">{card.note}</p> : null}
+      {card.note ? <p className="mt-1 text-xs text-stone-400">{card.note}</p> : null}
     </Panel>
   );
 }

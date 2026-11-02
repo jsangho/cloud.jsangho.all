@@ -6,7 +6,7 @@ import type { CareerLogEntry, CareerView } from "@/lib/career-api";
 
 import { logKey } from "./career-derive";
 import { LOG_KIND_LABEL, deltaText, labelOf } from "./career-labels";
-import { Empty, FilterChips, Loading, SectionTitle, WeekTag } from "./career-ui";
+import { Empty, FilterChips, Loading, Meter, SectionTitle, WeekTag } from "./career-ui";
 import type { FilterOption } from "./career-ui";
 
 /**
@@ -100,12 +100,10 @@ export function CareerLogPanel({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <section>
         <SectionTitle
-          aside={
-            rows ? <span className="text-xs text-muted-foreground">{rows.length}건</span> : null
-          }
+          aside={rows ? <span className="text-xs text-stone-400">{rows.length}건</span> : null}
         >
           커리어 기록
         </SectionTitle>
@@ -137,10 +135,10 @@ export function CareerLogPanel({
               {rows.map(({ entry, key }) => (
                 <li key={key} className="flex gap-2">
                   <WeekTag season={entry.season} week={entry.week} />
-                  <span className="shrink-0 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 rounded-md border border-white/10 px-1.5 text-[11px] text-stone-400">
                     {labelOf(LOG_KIND_LABEL, entry.kind)}
                   </span>
-                  <span className="min-w-0 text-foreground">
+                  <span className="min-w-0 text-stone-100">
                     {entry.summary || labelOf(LOG_KIND_LABEL, entry.kind)}
                   </span>
                 </li>
@@ -150,7 +148,7 @@ export function CareerLogPanel({
         </div>
 
         {exhausted ? (
-          <p className="mt-3 text-[11px] text-muted-foreground">
+          <p className="mt-3 text-[11px] text-stone-400">
             기록을 끝까지 읽었습니다 — 필터는 전체 기록에서 돕니다.
           </p>
         ) : (
@@ -159,13 +157,13 @@ export function CareerLogPanel({
               type="button"
               onClick={onLoadMore}
               disabled={logLoading}
-              className="mt-3 w-full rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:bg-card-2 disabled:opacity-50"
+              className="mt-3 w-full rounded-lg border border-dashed border-white/10 px-3 py-2 text-xs text-stone-400 hover:bg-white/[0.05] disabled:opacity-50"
             >
               {logLoading ? "불러오는 중…" : "기록 더 보기"}
             </button>
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            <p className="mt-2 text-[11px] text-stone-400">
               아직 끝까지 읽지 않았습니다 — 위 필터는{" "}
-              <strong className="text-foreground">읽어 온 줄</strong> 안에서만 돕니다.
+              <strong className="text-stone-100">읽어 온 줄</strong> 안에서만 돕니다.
             </p>
           </>
         )}
@@ -173,9 +171,7 @@ export function CareerLogPanel({
 
       <section>
         <SectionTitle
-          aside={
-            <span className="text-xs text-muted-foreground">{view.seasons.length}개 시즌</span>
-          }
+          aside={<span className="text-xs text-stone-400">{view.seasons.length}개 시즌</span>}
         >
           시즌 결산
         </SectionTitle>
@@ -187,36 +183,36 @@ export function CareerLogPanel({
           ) : (
             <div className="space-y-2">
               {[...view.seasons].reverse().map((season) => (
-                <div key={season.season} className="rounded-xl border border-border bg-card p-3">
+                <div key={season.season} className="arena-panel p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-sm font-bold text-foreground">시즌 {season.season}</p>
-                    <p className="text-xs tabular-nums text-muted-foreground">
+                    <p className="text-sm font-bold text-stone-100">시즌 {season.season}</p>
+                    <p className="text-xs tabular-nums text-stone-400">
                       {season.age}세 · {season.wins}승 {season.losses}패 · 방어 {season.defenses} ·
                       부상 {season.injuries}
                     </p>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-stone-400">
                     능력치 변화 {deltaText(season.abilityDelta)}
                   </p>
                   {season.titlesWon.length > 0 ? (
-                    <p className="mt-1 text-xs text-foreground">
+                    <p className="mt-1 text-xs text-stone-100">
                       획득: {season.titlesWon.join(" · ")}
                     </p>
                   ) : null}
                   {season.highlights.length > 0 ? (
-                    <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                    <ul className="mt-2 space-y-0.5 text-xs text-stone-400">
                       {season.highlights.map((highlight, index) => (
                         <li key={`${season.season}:${index}`}>· {highlight}</li>
                       ))}
                     </ul>
                   ) : null}
                   {season.retired.length > 0 ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs text-stone-400">
                       이 시즌 은퇴: {season.retired.join(" · ")}
                     </p>
                   ) : null}
                   {season.riskBand ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-stone-400">
                       시즌 종료 당시 은퇴 위험 단계 {season.riskBand}
                     </p>
                   ) : null}
@@ -228,12 +224,51 @@ export function CareerLogPanel({
       </section>
 
       <section>
-        <SectionTitle>시즌 목표</SectionTitle>
+        <SectionTitle
+          aside={
+            <span className="text-xs text-stone-400">
+              시즌 {view.season} · 진행률은 서버가 센 값
+            </span>
+          }
+        >
+          시즌 목표
+        </SectionTitle>
         <div className="mt-3">
-          <Empty>
-            서버에 목표 데이터가 없습니다 — 목표 시스템이 생기면 이 자리에 들어옵니다. 지금 숫자를
-            만들어 적지 않습니다.
-          </Empty>
+          {(view.goals ?? []).length === 0 ? (
+            <Empty>서버가 아직 목표를 보내지 않습니다 — 백엔드 배포 뒤에 나타납니다.</Empty>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-3">
+              {(view.goals ?? []).map((goal) => (
+                <li key={goal.code} className="arena-panel p-4">
+                  <p className="flex items-center justify-between gap-2 text-sm font-semibold text-stone-100">
+                    {goal.label}
+                    <span
+                      className={
+                        goal.done
+                          ? "rounded-sm bg-brand-400 px-1.5 text-[10px] font-bold text-primary-foreground"
+                          : "rounded-sm border border-white/15 px-1.5 text-[10px] font-bold text-stone-400"
+                      }
+                    >
+                      {goal.done ? "달성" : "진행 중"}
+                    </span>
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1">
+                      <Meter value={goal.current} max={goal.target} label={goal.label} />
+                    </div>
+                    <span className="text-xs tabular-nums text-stone-300">
+                      {Math.min(goal.current, goal.target)} / {goal.target}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-stone-500">
+                    {goal.rewarded
+                      ? `보상 받음 · 인기도 +${goal.rewardPopularity}`
+                      : `보상 인기도 +${goal.rewardPopularity} — 달성 다음 주차 진행에서`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>

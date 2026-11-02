@@ -81,6 +81,7 @@ export const LOG_KIND_LABEL: Readonly<Record<string, string>> = {
   action: "행동",
   debut: "데뷔",
   event: "사건",
+  goal: "시즌 목표",
   injury: "부상",
   match: "경기",
   out: "결장",

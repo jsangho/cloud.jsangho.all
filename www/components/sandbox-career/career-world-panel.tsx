@@ -89,11 +89,9 @@ export function CareerWorldPanel({
   const otherRelations = view.relationships.filter((r) => r.kind !== "tag_team");
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <section>
-        <SectionTitle
-          aside={<span className="text-xs text-muted-foreground">{rows.length}명</span>}
-        >
+        <SectionTitle aside={<span className="text-xs text-stone-400">{rows.length}명</span>}>
           선수 명부
         </SectionTitle>
         <div className="mt-3 space-y-2">
@@ -132,7 +130,7 @@ export function CareerWorldPanel({
         )}
 
         {filters.status === "retired" && rows.length > 0 ? (
-          <p className="mt-3 text-[11px] text-muted-foreground">
+          <p className="mt-3 text-[11px] text-stone-400">
             은퇴 선수는 세계관에서 지워지지 않습니다 — 기록과 관계가 남고, 새 대진에만 들어가지
             않습니다. 헌액 규칙(명예의 전당)은 서버에 없으므로 여기 명부를 공식 헌액자로 적지
             않습니다.
@@ -150,12 +148,12 @@ export function CareerWorldPanel({
               {tagTeams.map((team) => (
                 <li
                   key={`${team.a}:${team.b}`}
-                  className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                  className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm"
                 >
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold text-stone-100">
                     {team.a} &amp; {team.b}
                   </span>
-                  <span className="ml-2 text-xs text-muted-foreground">
+                  <span className="ml-2 text-xs text-stone-400">
                     강도 <span className="tabular-nums">{team.heat}</span> · {team.startedWeek}주차
                     결성 · 최근 {team.lastWeek}주차
                   </span>
@@ -169,7 +167,7 @@ export function CareerWorldPanel({
       <section>
         <SectionTitle
           aside={
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-stone-400">
               {otherRelations.length}건 · 격화 {otherRelations.filter((r) => r.feud).length}
             </span>
           }
@@ -186,10 +184,10 @@ export function CareerWorldPanel({
                 .sort((a, b) => Number(b.feud) - Number(a.feud) || b.heat - a.heat)
                 .map((relation) => (
                   <li key={`${relation.a}:${relation.b}:${relation.kind}`}>
-                    <span className="text-foreground">
+                    <span className="text-stone-100">
                       {relation.a} ↔ {relation.b}
                     </span>{" "}
-                    <span className="text-muted-foreground">
+                    <span className="text-stone-400">
                       — {labelOf(RELATION_LABEL, relation.kind)} · 강도{" "}
                       <span className="tabular-nums">{relation.heat}</span>
                       {relation.history.length > 0 ? ` (${relation.history.join(" → ")})` : ""}
@@ -204,7 +202,7 @@ export function CareerWorldPanel({
             </ul>
           )}
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 text-[11px] text-stone-400">
           「격화」는 서버가 경기로 풀어야 할 수준이라고 판정한 관계입니다 — 라이벌 표시는 경기마다
           붙으므로 그것만으로는 세지 않습니다.
         </p>
@@ -227,23 +225,23 @@ function RosterRow({ wrestler, onOpen }: { wrestler: CareerWrestler; onOpen: () 
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex w-full flex-wrap items-baseline gap-x-2 gap-y-1 rounded-xl border px-3 py-2.5 text-left transition-colors hover:bg-card-2",
-        wrestler.isPlayer ? "border-brand-400/60 bg-brand-500/10" : "border-border bg-card",
+        "flex w-full flex-wrap items-baseline gap-x-2 gap-y-1 rounded-xl border px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05]",
+        wrestler.isPlayer ? "border-brand-400/60 bg-brand-500/10" : "border-white/10 bg-black/30",
       )}
     >
-      <span className="text-sm font-semibold text-foreground">{wrestler.name}</span>
+      <span className="text-sm font-semibold text-stone-100">{wrestler.name}</span>
       {wrestler.isPlayer ? (
         <span className="rounded-md border border-brand-400/60 px-1.5 text-[10px] font-bold text-brand-600 dark:text-brand-300">
           내 선수
         </span>
       ) : null}
-      <span className="text-xs text-muted-foreground">
+      <span className="text-xs text-stone-400">
         {wrestler.brand} · {labelOf(ALIGNMENT_LABEL, wrestler.alignment)} · {wrestler.age}세
       </span>
-      <span className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">
+      <span className="ml-auto shrink-0 text-xs tabular-nums text-stone-400">
         인기 {wrestler.popularity} · {wrestler.wins}승 {wrestler.losses}패
       </span>
-      <span className="w-full text-[11px] text-muted-foreground">
+      <span className="w-full text-[11px] text-stone-400">
         {retired && wrestler.retirement
           ? `은퇴 — 시즌 ${wrestler.retirement.season} · ${wrestler.retirement.age}세 · ${labelOf(CAUSE_LABEL, wrestler.retirement.cause)}`
           : `${labelOf(STATUS_LABEL, wrestler.status)}${wrestler.outWeeks > 0 ? ` · 결장 ${wrestler.outWeeks}주` : ""}${wrestler.held.length > 0 ? ` · ${wrestler.held.join(" · ")}` : ""}`}

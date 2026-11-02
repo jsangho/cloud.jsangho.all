@@ -11,6 +11,7 @@ import {
 import { ReportPanel } from "./career-dashboard";
 import { CareerEventCard } from "./career-event-card";
 import { PHASE_LABEL, STAT_LABEL, labelOf } from "./career-labels";
+import { PhaseAction } from "./career-phase-action";
 import { Empty, Panel, SectionTitle } from "./career-ui";
 
 /**
@@ -83,15 +84,15 @@ export function CareerWeekPanel({
   const partners = view.roster.filter((w) => !w.isPlayer && w.status !== "retired");
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="col-span-2 rounded-lg border border-border bg-card px-3 py-2">
-          <div className="text-[11px] font-bold text-muted-foreground">진행</div>
-          <div className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:col-span-2">
+        <div className="col-span-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+          <div className="text-[11px] font-bold text-stone-400">진행</div>
+          <div className="mt-0.5 text-sm font-semibold tabular-nums text-stone-100">
             시즌 {view.season} · {view.week} / {view.seasonWeeks}주
           </div>
           <div
-            className="mt-1.5 h-1 w-full overflow-hidden rounded-sm bg-card-2"
+            className="mt-1.5 h-1 w-full overflow-hidden rounded-sm bg-white/[0.05]"
             role="presentation"
           >
             <div
@@ -100,15 +101,15 @@ export function CareerWeekPanel({
             />
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-card px-3 py-2">
-          <div className="text-[11px] font-bold text-muted-foreground">행동 포인트</div>
-          <div className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+        <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+          <div className="text-[11px] font-bold text-stone-400">행동 포인트</div>
+          <div className="mt-0.5 text-sm font-semibold tabular-nums text-stone-100">
             {view.actionPoints} / {view.maxActionPoints}
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-card px-3 py-2">
-          <div className="text-[11px] font-bold text-muted-foreground">단계</div>
-          <div className="mt-0.5 text-sm font-semibold text-foreground">
+        <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+          <div className="text-[11px] font-bold text-stone-400">단계</div>
+          <div className="mt-0.5 text-sm font-semibold text-stone-100">
             {labelOf(PHASE_LABEL, view.phase)}
           </div>
         </div>
@@ -118,7 +119,7 @@ export function CareerWeekPanel({
         <section>
           <SectionTitle
             aside={
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+              <span className="text-xs font-semibold tabular-nums text-stone-400">
                 남은 포인트 {view.actionPoints} / {view.maxActionPoints}
               </span>
             }
@@ -128,13 +129,11 @@ export function CareerWeekPanel({
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs font-bold text-muted-foreground">
-                훈련할 능력치
-              </span>
+              <span className="mb-1 block text-xs font-bold text-stone-400">훈련할 능력치</span>
               <select
                 value={targets.stat}
                 onChange={(e) => onTargets({ stat: e.target.value as CareerTrainable })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-stone-100"
               >
                 {CAREER_TRAINABLE.map((stat) => (
                   <option key={stat} value={stat}>
@@ -144,13 +143,11 @@ export function CareerWeekPanel({
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-bold text-muted-foreground">
-                관계를 만들 상대
-              </span>
+              <span className="mb-1 block text-xs font-bold text-stone-400">관계를 만들 상대</span>
               <select
                 value={targets.partner}
                 onChange={(e) => onTargets({ partner: e.target.value })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-stone-100"
               >
                 <option value="">선택 안 함</option>
                 {partners.map((w) => (
@@ -182,12 +179,12 @@ export function CareerWeekPanel({
                     )
                   }
                   disabled={busy != null || spent || missing}
-                  className="rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-card-2 disabled:opacity-40"
+                  className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-left transition-colors hover:bg-white/[0.05] disabled:opacity-40"
                 >
-                  <span className="block text-sm font-bold text-foreground">
+                  <span className="block text-sm font-bold text-stone-100">
                     {busy === `action:${action}` ? "적용 중…" : action}
                   </span>
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="block text-[11px] text-stone-400">
                     {/* 왜 못 누르는지 버튼 안에 적는다 — 비활성만 걸어 두면 이유를 알 수 없다. */}
                     {missing
                       ? "상대를 먼저 고르세요"
@@ -222,9 +219,7 @@ export function CareerWeekPanel({
         <section className="space-y-3">
           <SectionTitle
             aside={
-              <span className="text-xs text-muted-foreground">
-                주차 진행 전에 처리할 수 있습니다
-              </span>
+              <span className="text-xs text-stone-400">주차 진행 전에 처리할 수 있습니다</span>
             }
           >
             결정할 일 {view.pending.length}건
@@ -252,69 +247,6 @@ export function CareerWeekPanel({
           <Empty>아직 진행한 주차가 없습니다. 위에서 한 주를 진행해 보세요.</Empty>
         </Panel>
       )}
-    </div>
-  );
-}
-
-/**
- * 단계마다 눌릴 버튼이 하나다. **결산과 다음 시즌 시작은 갈라져 있다** — 서버가
- * 두 호출로 나눠 뒀고(`/settle` · `/next-season`), 합치면 "결산은 봤고 다음 시즌은
- * 아직" 상태를 화면이 표현할 수 없다.
- */
-function PhaseAction({
-  view,
-  busy,
-  onAdvance,
-  onSettle,
-  onNextSeason,
-}: {
-  view: CareerView;
-  busy: string | null;
-  onAdvance: () => void;
-  onSettle: () => void;
-  onNextSeason: () => void;
-}) {
-  if (view.phase === "ended") {
-    return (
-      <p className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-        커리어가 끝났습니다. 기록은 그대로 남습니다 — 「타이틀」과 「커리어 기록」 탭에서 읽을 수
-        있습니다.
-      </p>
-    );
-  }
-
-  const [label, handler, hint] =
-    view.phase === "settlement"
-      ? ([
-          busy === "settle" ? "결산 중…" : `시즌 ${view.season} 결산`,
-          onSettle,
-          "주차를 다 썼습니다. 결산에서 나이가 한 살 오르고 시즌 요약이 쌓입니다.",
-        ] as const)
-      : view.phase === "offseason"
-        ? ([
-            busy === "next-season" ? "시작 중…" : `시즌 ${view.season + 1} 시작`,
-            onNextSeason,
-            "주차만 1로 돌아가고 전적·벨트·관계는 그대로 이어집니다.",
-          ] as const)
-        : ([
-            busy === "advance" ? "진행 중…" : "한 주 진행",
-            onAdvance,
-            view.actionPoints > 0
-              ? `행동 포인트가 ${view.actionPoints}점 남았습니다 — 진행하면 사라집니다.`
-              : "행동을 다 썼습니다.",
-          ] as const);
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={handler}
-        disabled={busy != null}
-        className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        {label}
-      </button>
-      <p className="mt-2 text-[11px] text-muted-foreground">{hint}</p>
     </div>
   );
 }

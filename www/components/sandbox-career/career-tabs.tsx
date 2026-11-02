@@ -35,9 +35,9 @@ export function CareerTabs({
   return (
     <nav
       aria-label="커리어 메뉴"
-      className="-mx-4 mb-5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="-mx-4 mb-6 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="flex w-max gap-1.5 border-b border-border pb-2">
+      <div className="flex w-max min-w-full gap-1 border-b border-white/10">
         {CAREER_TABS.map((tab) => {
           const isActive = tab.id === active;
           // 배지는 사건을 처리할 수 있는 두 탭에만 — 다른 탭에 달면 갈 곳을 잘못 가리킨다.
@@ -49,15 +49,17 @@ export function CareerTabs({
               onClick={() => onSelect(tab.id)}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition-colors",
+                // 게임 메뉴처럼 — 활성 탭은 금색 밑줄과 밝은 글자, 나머지는 물러난다.
+                "relative shrink-0 px-4 pb-3 pt-2 font-sport text-sm uppercase tracking-wider transition-colors",
+                "after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:transition-colors",
                 isActive
-                  ? "border-brand-400/70 bg-brand-500/15 text-brand-600 dark:text-brand-300"
-                  : "border-border bg-card text-muted-foreground hover:bg-card-2",
+                  ? "text-brand-300 after:bg-[linear-gradient(90deg,var(--brand-600),var(--brand-300),var(--brand-600))]"
+                  : "text-stone-400 after:bg-transparent hover:text-stone-100",
               )}
             >
               {tab.label}
               {badge > 0 ? (
-                <span className="ml-1.5 rounded-full bg-live px-1.5 text-[10px] font-bold tabular-nums text-foreground">
+                <span className="ml-1.5 rounded-full bg-live px-1.5 align-middle font-sans text-[10px] font-bold tabular-nums text-stone-50">
                   {badge}
                 </span>
               ) : null}

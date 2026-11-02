@@ -62,11 +62,11 @@ export function CareerTitlesPanel({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <section>
         <SectionTitle
           aside={
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-stone-400">
               공석 {view.titles.filter((t) => t.holder == null).length}
             </span>
           }
@@ -93,8 +93,8 @@ export function CareerTitlesPanel({
             </ul>
           )}
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          방어 횟수는 <strong className="text-foreground">현재 재위</strong> 기준이고, 재위 주차는
+        <p className="mt-3 text-[11px] text-stone-400">
+          방어 횟수는 <strong className="text-stone-100">현재 재위</strong> 기준이고, 재위 주차는
           절대 주차 차이입니다 — 둘 다 서버가 계산한 값을 그대로 적습니다.
         </p>
       </section>
@@ -111,7 +111,7 @@ export function CareerTitlesPanel({
               {titleMatches.slice(0, 10).map((row) => (
                 <li key={row.key} className="flex gap-2">
                   <WeekTag season={row.season} week={row.week} />
-                  <span className="min-w-0 text-foreground">
+                  <span className="min-w-0 text-stone-100">
                     {row.won != null ? (
                       <span
                         className={row.won ? "font-bold text-chart-win" : "font-bold text-live"}
@@ -131,9 +131,7 @@ export function CareerTitlesPanel({
       <section>
         <SectionTitle
           aside={
-            history ? (
-              <span className="text-xs text-muted-foreground">{history.length}건</span>
-            ) : null
+            history ? <span className="text-xs text-stone-400">{history.length}건</span> : null
           }
         >
           타이틀 변경 이력
@@ -148,10 +146,10 @@ export function CareerTitlesPanel({
               {history.map((row) => (
                 <li key={row.key} className="flex gap-2">
                   <WeekTag season={row.season} week={row.week} />
-                  <span className="shrink-0 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 rounded-md border border-white/10 px-1.5 text-[11px] text-stone-400">
                     {labelOf(LOG_KIND_LABEL, row.kind)}
                   </span>
-                  <span className="min-w-0 text-foreground">
+                  <span className="min-w-0 text-stone-100">
                     {row.summary || `${row.title} — ${row.subject}`}
                   </span>
                 </li>
@@ -168,10 +166,10 @@ function TitleRow({ title, player }: { title: CareerTitle; player: string }) {
   const mine = title.holder === player;
   const vacant = title.holder == null;
   return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2.5">
+    <div className="arena-panel px-3 py-2.5">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-sm font-semibold text-foreground">{title.name}</span>
-        <span className="text-xs text-muted-foreground">{title.brand}</span>
+        <span className="text-sm font-semibold text-stone-100">{title.name}</span>
+        <span className="text-xs text-stone-400">{title.brand}</span>
         {mine ? (
           <span className="rounded-md border border-brand-400/60 px-1.5 text-[10px] font-bold text-brand-600 dark:text-brand-300">
             내 선수
@@ -182,16 +180,16 @@ function TitleRow({ title, player }: { title: CareerTitle; player: string }) {
             공석
           </span>
         ) : null}
-        <span className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">
+        <span className="ml-auto shrink-0 text-xs tabular-nums text-stone-400">
           요구 인기도 {title.requiredPopularity}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-xs text-stone-400">
         {vacant ? (
           "보유자 없음 — 조건을 갖춘 선수가 나오면 다시 걸립니다."
         ) : (
           <>
-            <span className="text-foreground">{title.holder}</span> · 방어{" "}
+            <span className="text-stone-100">{title.holder}</span> · 방어{" "}
             <span className="tabular-nums">{title.defenses}</span>회
             {title.reignWeeks != null ? (
               <>
