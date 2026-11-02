@@ -14,8 +14,10 @@ from kayfabe.adapter.outbound.pg.sandbox_career_pg_repository import (
     SandboxCareerPgRepository,
 )
 from kayfabe.app.ports.input.career_sandbox_use_case import CareerSandboxUseCase
+from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
 from kayfabe.app.ports.output.sandbox_career_repository import SandboxCareerRepository
 from kayfabe.app.use_cases.career_sandbox_interactor import CareerSandboxInteractor
+from kayfabe.dependencies.data_center_provider import get_data_center_repository
 
 
 def get_career_repository(
@@ -26,5 +28,7 @@ def get_career_repository(
 
 def get_career_use_case(
     repository: SandboxCareerRepository = Depends(get_career_repository),
+    data_center: DataCenterRepository = Depends(get_data_center_repository),
 ) -> CareerSandboxUseCase:
-    return CareerSandboxInteractor(repository=repository)
+    # 실제 현역 명부는 읽기 전용 포트를 재사용한다(`sandbox_provider` 와 같은 길).
+    return CareerSandboxInteractor(repository=repository, data_center=data_center)

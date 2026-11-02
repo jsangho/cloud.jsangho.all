@@ -44,9 +44,19 @@ class RequestKeyConflictError(Exception):
 class CareerSandboxUseCase(ABC):
     @abstractmethod
     async def create(
-        self, *, user_id: int, name: str, style: str, age: int, seed: int | None = None
+        self,
+        *,
+        user_id: int,
+        name: str,
+        style: str,
+        age: int,
+        seed: int | None = None,
+        division: str = "men",
     ) -> CareerViewDto:
-        """새 커리어. `seed` 를 주면 결과가 재현된다(테스트·공유용)."""
+        """새 커리어. `seed` 를 주면 결과가 재현된다(테스트·공유용).
+
+        `division` 은 `"men"`·`"women"` — 세계에 그 부의 실제 현역만 들어온다.
+        """
         ...
 
     @abstractmethod

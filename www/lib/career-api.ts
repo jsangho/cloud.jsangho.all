@@ -251,6 +251,10 @@ export type CareerGoal = {
   rewardPopularity: number;
 };
 
+/** 커리어의 부. 서버가 세계를 이 부의 실제 현역으로 채운다. */
+export const CAREER_DIVISIONS = ["men", "women"] as const;
+export type CareerDivision = (typeof CAREER_DIVISIONS)[number];
+
 /** 서버가 아는 주간 행동. 없는 코드는 422로 돌아온다. */
 export const CAREER_ACTIONS = ["훈련", "프로모", "휴식", "관계", "협상"] as const;
 export type CareerAction = (typeof CAREER_ACTIONS)[number];
@@ -380,6 +384,8 @@ export async function createCareer(input: {
   age: number;
   /** 주면 같은 세계가 재현된다. 안 주면 서버가 만든다. */
   seed?: number;
+  /** 남자부·여자부 — 세계에 그 부의 실제 현역만 들어온다. */
+  division: CareerDivision;
 }): Promise<CareerView> {
   return mutate("", {
     body: JSON.stringify({
@@ -387,6 +393,7 @@ export async function createCareer(input: {
       style: input.style,
       age: input.age,
       seed: input.seed ?? null,
+      division: input.division,
     }),
   });
 }
