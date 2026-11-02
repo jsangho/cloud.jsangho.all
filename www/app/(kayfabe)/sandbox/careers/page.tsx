@@ -27,7 +27,9 @@ import {
   resolveCareerEvent,
   settleCareerSeason,
   startNextCareerSeason,
+  CAREER_DIVISIONS,
   type CareerAction,
+  type CareerDivision,
   type CareerLogEntry,
   type CareerSummary,
   type CareerTrainable,
@@ -74,6 +76,11 @@ import {
  * 멱등성을 대신하지 않고, 둘이 서로를 대신하지도 않는다.
  */
 const STYLES = ["파워", "테크니션", "하이플라이어"] as const;
+const DIVISION_LABEL: Readonly<Record<CareerDivision, string>> = {
+  men: "남자부",
+  women: "여자부",
+};
+
 const STYLE_NOTE: Readonly<Record<string, string>> = {
   파워: "잘 이긴다 · 부상 보통",
   테크니션: "안전하다 · 상승 느림",
@@ -155,6 +162,7 @@ function CareersView() {
   const [name, setName] = useState("");
   const [style, setStyle] = useState<string>(STYLES[0]);
   const [age, setAge] = useState(24);
+  const [division, setDivision] = useState<CareerDivision>("men");
 
   const isSignedIn = user != null;
   const paramTab = params.get(TAB_PARAM);
@@ -508,6 +516,31 @@ function CareersView() {
               </label>
 
               <div>
+                <span className="mb-1 block text-xs font-bold text-muted-foreground">디비전</span>
+                <div className="grid grid-cols-2 gap-2 sm:max-w-sm">
+                  {CAREER_DIVISIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDivision(d)}
+                      aria-pressed={division === d}
+                      className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                        division === d
+                          ? "border-brand-400/70 bg-brand-400/10 text-stone-50"
+                          : "border-white/10 bg-black/30 text-stone-400 hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      <span className="block font-bold">{DIVISION_LABEL[d]}</span>
+                    </button>
+                  ))}
+                </div>
+                <span className="mt-1 block text-[11px] text-muted-foreground">
+                  세계에는 이 디비전의 실제 WWE 현역이 들어옵니다. 능력치·인기도는 실제 타이틀
+                  이력과 나이로 낸 게임용 추정치이고, 전적은 모두 0승 0패에서 시작합니다.
+                </span>
+              </div>
+
+              <div>
                 <span className="mb-1 block text-xs font-bold text-muted-foreground">스타일</span>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {STYLES.map((s) => (
@@ -549,7 +582,7 @@ function CareersView() {
                 type="button"
                 onClick={() =>
                   void run("create", null, "커리어를 만들었습니다", () =>
-                    createCareer({ name: name.trim(), style, age }),
+                    createCareer({ name: name.trim(), style, age, division }),
                   ).then((created) => {
                     if (created) writeUrl({ career: created.id, tab: "dashboard" });
                   })

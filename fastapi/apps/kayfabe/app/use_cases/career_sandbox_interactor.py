@@ -39,6 +39,7 @@ import logging
 import secrets
 from collections.abc import Callable
 from dataclasses import asdict
+from datetime import date
 from typing import Any
 
 from kayfabe.app.dtos.career_sandbox_dto import (
@@ -65,11 +66,14 @@ from kayfabe.app.ports.input.career_sandbox_use_case import (
     CareerSandboxUseCase,
     RequestKeyConflictError,
 )
+from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
 from kayfabe.app.ports.output.sandbox_career_repository import (
     DuplicateRequestError,
     RequestReceipt,
     SandboxCareerRepository,
 )
+from kayfabe.app.services import career_roster
+from kayfabe.app.services.wwe_roster_catalog import ROSTER_BY_NAME
 from kayfabe.domain.services import career_actions as actions
 from kayfabe.domain.services import career_aging as aging
 from kayfabe.domain.services import career_engine as engine
@@ -100,8 +104,15 @@ class CareerSandboxInteractor(CareerSandboxUseCase):
         *,
         repository: SandboxCareerRepository,
         balance: Balance | None = None,
+        data_center: DataCenterRepository | None = None,
+        today: Callable[[], date] = date.today,
     ) -> None:
         self._repo = repository
+        #: 실제 현역 명부. **없으면 기본(가상) 로스터로 짓는다** — 테스트와, 명부를
+        #: 못 읽는 환경에서 커리어 생성이 막히지 않게 하려는 것이다.
+        self._data_center = data_center
+        #: 나이 계산의 기준일. 테스트가 고정할 수 있게 주입한다.
+        self._today = today
         #: 밸런스를 주입받는 것은 테스트 때문만이 아니다 — 시즌 길이가 설정이라
         #: 서버 설정으로 바꿀 수 있어야 한다(사용자 요구 §1 마지막 줄).
         self._balance = balance or Balance()
@@ -109,12 +120,28 @@ class CareerSandboxInteractor(CareerSandboxUseCase):
     # ── 생성·조회 ─────────────────────────────────────────────
 
     async def create(
-        self, *, user_id: int, name: str, style: str, age: int, seed: int | None = None
+        self,
+        *,
+        user_id: int,
+        name: str,
+        style: str,
+        age: int,
+        seed: int | None = None,
+        division: str = "men",
     ) -> CareerViewDto:
+        if division not in ("men", "women"):
+            raise ValueError(f"없는 부입니다: {division}")
         # 시드를 안 주면 만든다. **저장해 두므로 재접속해도 같은 세계다.**
         chosen = seed if seed is not None else secrets.randbelow(2**31)
+        roster, titles = await self._real_roster(division)
         world = engine.create_world(
-            player=name, style=style, seed=chosen, age=age, balance=self._balance
+            player=name,
+            style=style,
+            seed=chosen,
+            age=age,
+            balance=self._balance,
+            roster=roster,
+            titles=titles,
         )
         career_id = await self._repo.create(
             user_id=user_id, player_name=world.player, seed=chosen, state=world
@@ -333,6 +360,33 @@ class CareerSandboxInteractor(CareerSandboxUseCase):
             payload={},
             change=lambda w: season_rules.start_next_season(w, balance=self._balance),
         )
+
+    async def _real_roster(
+        self, division: str
+    ) -> tuple[tuple[Wrestler, ...] | None, tuple[Title, ...] | None]:
+        """실제 현역으로 세계를 채운다. **읽지 못하면 `(None, None)`** — 기본 세계.
+
+        세계는 한 부(남자부·여자부)만 담는다. 여자부는 벨트도 여자부 이름을 쓴다.
+        """
+        if self._data_center is None:
+            return None, None
+        rows = await self._data_center.list_wrestlers()
+        acquisitions = await self._data_center.list_title_acquisitions()
+        roster = career_roster.build_roster(
+            rows=rows,
+            catalog=ROSTER_BY_NAME,
+            acquisitions=acquisitions,
+            division="women" if division == "women" else "men",
+            today=self._today(),
+        )
+        if roster is None:
+            logger.warning(
+                "[CareerSandbox] 실제 명부로 세계를 못 짓는다(division=%s) — 기본 로스터",
+                division,
+            )
+            return None, None
+        titles = career_roster.women_titles() if division == "women" else None
+        return roster, titles
 
     # ── DTO 변환 ──────────────────────────────────────────────
 

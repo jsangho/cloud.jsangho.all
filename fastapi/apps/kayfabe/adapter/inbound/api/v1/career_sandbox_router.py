@@ -172,6 +172,7 @@ async def create_career(
             style=body.style,
             age=body.age,
             seed=body.seed,
+            division=body.division,
         )
     except (LookupError, ValueError) as e:
         raise _error(e) from e

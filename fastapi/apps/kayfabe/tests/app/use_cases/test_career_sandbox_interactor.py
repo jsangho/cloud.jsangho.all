@@ -27,7 +27,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 from dataclasses import fields
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -39,6 +39,9 @@ from kayfabe.app.ports.output.sandbox_career_repository import (
     DuplicateRequestError,
     RequestReceipt,
 )
+from kayfabe.app.services import career_roster
+from kayfabe.app.services.career_divisions import WOMEN
+from kayfabe.app.services.data_center_stats import WrestlerRow
 from kayfabe.app.use_cases.career_sandbox_interactor import CareerSandboxInteractor
 from kayfabe.domain.services.career_world import Balance, Phase, WorldState
 
@@ -1021,3 +1024,63 @@ async def test_a_pruned_receipt_stops_deduplicating() -> None:
                 await _next_season(interactor, career_id, key=f"req-nxt-{n}")
 
     assert (_OWNER, career_id, key) not in repository.receipts
+
+
+# ── 실제 로스터 배선 (`career_roster`) ─────────────────────────────
+
+_ROSTER_TODAY = date(2026, 11, 2)
+
+
+def _real_rows() -> list[WrestlerRow]:
+    out = []
+    for brand, men, women in (
+        ("RAW", ["Seth Rollins", "CM Punk"], ["Rhea Ripley", "Iyo Sky"]),
+        ("SmackDown", ["Cody Rhodes", "Jacob Fatu"], ["Tiffany Stratton", "Nia Jax"]),
+        ("NXT", ["Oba Femi", "Je'Von Evans"], ["Jaida Parker", "Thea Hail"]),
+    ):
+        out += [WrestlerRow(name=n, brand=brand) for n in men + women]
+    return out
+
+
+class _FakeDataCenter:
+    def __init__(self, rows):
+        self._rows = rows
+
+    async def list_wrestlers(self):
+        return self._rows
+
+    async def list_title_acquisitions(self):
+        return []
+
+
+@pytest.mark.asyncio
+async def test_interactor_builds_world_from_real_roster():
+    interactor = CareerSandboxInteractor(
+        repository=FakeRepository(),
+        data_center=_FakeDataCenter(_real_rows()),
+        today=lambda: _ROSTER_TODAY,
+    )
+    view = await interactor.create(
+        user_id=1, name="Hero", style="파워", age=24, seed=7, division="women"
+    )
+    npcs = {w.name for w in view.roster if not w.is_player}
+    assert npcs and npcs <= WOMEN
+    assert {t.name for t in view.titles} == {
+        t.name for t in career_roster.women_titles()
+    }
+
+
+@pytest.mark.asyncio
+async def test_interactor_falls_back_without_data_center():
+    interactor = CareerSandboxInteractor(repository=FakeRepository())
+    view = await interactor.create(user_id=1, name="Hero", style="파워", age=24, seed=7)
+    assert "Silas Grimm" in {w.name for w in view.roster}
+
+
+@pytest.mark.asyncio
+async def test_interactor_rejects_unknown_division():
+    interactor = CareerSandboxInteractor(repository=FakeRepository())
+    with pytest.raises(ValueError):
+        await interactor.create(
+            user_id=1, name="Hero", style="파워", age=24, seed=7, division="mixed"
+        )

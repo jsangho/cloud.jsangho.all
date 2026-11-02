@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -256,6 +257,8 @@ class CreateCareerRequest(_Camel):
     age: int = Field(default=24, ge=18, le=40)
     #: 주면 결과가 재현된다. 안 주면 서버가 만든다.
     seed: int | None = Field(default=None, ge=0, le=2**31 - 1)
+    #: 남자부·여자부. 세계에 그 부의 실제 현역만 들어온다. 생략하면 남자부.
+    division: Literal["men", "women"] = "men"
 
 
 class ActionRequest(_Camel):
