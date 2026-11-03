@@ -54,14 +54,45 @@ class MatchOutcome:
     team_b: tuple[str, ...] = ()
 
 
-def _power(w: Wrestler) -> float:
-    """선수의 경기력 한 수치. 능력치·인기도·컨디션을 합친다."""
+@dataclass(frozen=True)
+class PowerParts:
+    """경기력의 **가중된** 세 항. 합이 곧 `_power` 다 — 평가 근거를 보이려고 나눴다.
+
+    진단용이다. 승부는 여전히 `total` 하나로 정해지고, 이 값을 따로 들고 다녀도
+    경기 결과에 들어가지 않는다.
+    """
+
+    #: `in_ring` × 0.5
+    skill: float
+    #: `popularity` × 0.25
+    draw: float
+    #: (`condition` × 0.6 + `stamina` × 0.4) × 0.25
+    body: float
+
+    @property
+    def total(self) -> float:
+        # **더하는 순서가 원래 식과 같아야 한다** — `(skill + draw) + body`. 부동소수
+        # 덧셈은 결합법칙이 성립하지 않아서 순서를 바꾸면 끝자리가 달라지고, 경계에
+        # 걸린 뽑기(`roll < p`)가 뒤집힐 수 있다.
+        return self.skill + self.draw + self.body
+
+
+def power_parts(w: Wrestler) -> PowerParts:
+    """선수의 경기력을 세 항으로. 기량 절반, 인기 1/4, 몸 1/4 — 인기도가 혼자 정하지 않는다."""
     skill = w.ability.in_ring / 100.0
     draw = w.popularity / 100.0
     cond = w.condition / 100.0
     stam = w.ability.stamina / 100.0
-    # 기량 절반, 인기 1/4, 몸 1/4. 인기도가 혼자 정하지 않는다.
-    return skill * 0.5 + draw * 0.25 + (cond * 0.6 + stam * 0.4) * 0.25
+    return PowerParts(
+        skill=skill * 0.5,
+        draw=draw * 0.25,
+        body=(cond * 0.6 + stam * 0.4) * 0.25,
+    )
+
+
+def _power(w: Wrestler) -> float:
+    """선수의 경기력 한 수치. `power_parts` 의 합이다."""
+    return power_parts(w).total
 
 
 def win_probability(

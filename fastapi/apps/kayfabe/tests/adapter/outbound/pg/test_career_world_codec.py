@@ -91,6 +91,10 @@ def _maximal_world() -> WorldState:
         ),
         out_weeks=11,
         losing_streak=3,
+        # v2 칸. **기본값이 아닌 값**이어야 왕복이 무언가를 검증한다.
+        win_streak=0,
+        best_win_streak=9,
+        streaks_since=(4, 17),
         consecutive_matches=6,
         trend=(
             AbilitySnapshot(season=8, age=33, ability=Ability(80, 64, 62, 58)),

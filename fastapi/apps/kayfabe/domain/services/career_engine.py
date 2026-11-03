@@ -32,6 +32,7 @@ from kayfabe.domain.services import career_goals as goals
 from kayfabe.domain.services import career_relations as relations
 from kayfabe.domain.services import career_retirement as retire
 from kayfabe.domain.services import career_season as season_rules
+from kayfabe.domain.services import career_tally as tally
 from kayfabe.domain.services.career_actions import reset_points
 from kayfabe.domain.services.career_injury import maybe_injure, tick_recovery
 from kayfabe.domain.services.career_match import (
@@ -388,11 +389,14 @@ def _apply_outcome(
     popularity = max(
         balance.min_popularity, min(balance.max_popularity, me.popularity + delta)
     )
+    streak, best = tally.step(current=me.win_streak, best=me.best_win_streak, won=won)
     me = replace(
         me,
         wins=me.wins + (1 if won else 0),
         losses=me.losses + (0 if won else 1),
         losing_streak=0 if won else me.losing_streak + 1,
+        win_streak=streak,
+        best_win_streak=best,
         popularity=popularity,
         condition=max(10, me.condition - 10),
         consecutive_matches=me.consecutive_matches + 1,
@@ -437,11 +441,16 @@ def _apply_outcome(
     foe_name = outcome.loser if outcome.winner == me.name else outcome.winner
     foe = state.find(foe_name)
     if foe is not None and foe.name != me.name:
+        foe_streak, foe_best = tally.step(
+            current=foe.win_streak, best=foe.best_win_streak, won=not won
+        )
         foe = replace(
             foe,
             wins=foe.wins + (0 if won else 1),
             losses=foe.losses + (1 if won else 0),
             losing_streak=0 if not won else foe.losing_streak + 1,
+            win_streak=foe_streak,
+            best_win_streak=foe_best,
             condition=max(10, foe.condition - 8),
             consecutive_matches=foe.consecutive_matches + 1,
         )

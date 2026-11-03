@@ -274,7 +274,22 @@ class Wrestler:
     injuries: tuple[Injury, ...] = ()
     out_weeks: int = 0
     #: 연속 패배. 성적 부진 판정에 쓴다.
+    #:
+    #: **경기 기록이 아니다** — 악역 전환(`heel_turn`)이 0으로 되돌린다. 그래서
+    #: 연승·연패 기록을 이 칸에서 거꾸로 셈하지 않는다.
     losing_streak: int = 0
+    #: 현재 연승. 경기 결과로만 움직인다(`career_engine._apply_outcome`).
+    win_streak: int = 0
+    #: 최장 연승. 줄지 않는다.
+    best_win_streak: int = 0
+    #: 위 두 칸을 **언제부터 셌는가** — `(시즌, 주차)`. `None` 이면 데뷔부터 빠짐없이
+    #: 센 값이다.
+    #:
+    #: v1 세이브에는 연승 칸이 없었다. 옛 경기를 로그로 다시 셀 수 없는 선수는
+    #: 업그레이드 시점부터 0으로 세기 시작하고 그 시점을 여기 적는다
+    #: (`career_world_codec._upgrade_v1_to_v2`). **추정해서 채우지 않는다** — 이 칸이
+    #: 있으면 화면은 "그 이후 집계" 라고 적어야 한다.
+    streaks_since: tuple[int, int] | None = None
     #: 최근 연속 출전 주차. 경기 부담이 은퇴 위험에 들어간다(§3.2).
     consecutive_matches: int = 0
     trend: tuple[AbilitySnapshot, ...] = ()
@@ -285,6 +300,15 @@ class Wrestler:
     @property
     def retired(self) -> bool:
         return self.status == Status.RETIRED
+
+    @property
+    def match_count(self) -> int:
+        """총 경기 수. **저장하지 않는다** — 경기마다 `wins` 나 `losses` 중 정확히
+        하나가 오르므로(무승부가 없다) 합이 곧 경기 수이고, v1 세이브에서도 정확하다.
+
+        무승부·무효 경기가 생기면 이 등식이 깨진다. 그때 저장 칸으로 바꾼다.
+        """
+        return self.wins + self.losses
 
     @property
     def bookable(self) -> bool:
