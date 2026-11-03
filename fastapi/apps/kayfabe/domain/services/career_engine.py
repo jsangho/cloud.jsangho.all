@@ -29,6 +29,7 @@ from dataclasses import dataclass, replace
 
 from kayfabe.domain.services import career_events as events
 from kayfabe.domain.services import career_goals as goals
+from kayfabe.domain.services import career_match_record as records
 from kayfabe.domain.services import career_relations as relations
 from kayfabe.domain.services import career_retirement as retire
 from kayfabe.domain.services import career_season as season_rules
@@ -644,6 +645,12 @@ def advance_week(state: WorldState, *, balance: Balance | None = None) -> WeekRe
             challenger=challenger,
         )
 
+    # 경기 전 사진 — 시뮬레이션은 끝났고 결과 반영은 아직이다. 뽑기를 하지 않는다.
+    names = tuple(outcome.team_a) + tuple(outcome.team_b)
+    before_state = state
+    match_before = records.snapshot(state, names)
+    heat_before = records.heat_between(state, names)
+
     state, report = _apply_outcome(state, outcome=outcome, card=card, balance=bal)
 
     # ── 3) 부상 판정 ───────────────────────────────────────────
@@ -670,6 +677,30 @@ def advance_week(state: WorldState, *, balance: Balance | None = None) -> WeekRe
             ),
         )
         report = replace(report, injured=injury.kind, injured_weeks=injury.weeks_out)
+
+    # ── 경기 기록 ──────────────────────────────────────────────
+    # 경기 후 사진은 **여기서** 찍는다 — 결과 반영·부상 판정은 끝났고, 승격(브랜드만
+    # 바꾼다)과 주차 마감의 목표 보상(인기도를 올린다)은 아직이다. 목표 보상은 경기
+    # 결과가 아니므로 `after` 에 들어가면 안 된다.
+    state = records.append(
+        state,
+        records.build(
+            season=season,
+            week=week,
+            brand=before_state.require(state.player).brand,
+            reason=card.note,
+            title=card.title,
+            title_changed=report.title_changed,
+            outcome=outcome,
+            before_state=before_state,
+            before=match_before,
+            after=records.snapshot(state, names),
+            heat_before=heat_before,
+            heat_after=records.heat_between(state, names),
+            injury=injury,
+            popularity_delta=report.popularity_delta,
+        ),
+    )
 
     # ── 4) 승격 ────────────────────────────────────────────────
     me = state.require(state.player)

@@ -1,0 +1,2545 @@
+{
+ "source": "ho=79ed37f (Phase 1 P0 이전, v2 코덱) test_career_golden.run_trajectory() 의 최종 세이브",
+ "seed": 11,
+ "final_v2": {
+  "version": 2,
+  "seed": 11,
+  "player": "Golden Ho",
+  "season": 1,
+  "week": 53,
+  "phase": "offseason",
+  "action_points": 2,
+  "roster": [
+   {
+    "name": "Golden Ho",
+    "style": "테크니션",
+    "brand": "Raw",
+    "age": 27,
+    "debut_age": 26,
+    "alignment": "face",
+    "popularity": 92,
+    "ability": {
+     "in_ring": 46,
+     "mic": 40,
+     "stamina": 82,
+     "resilience": 89
+    },
+    "condition": 10,
+    "status": "active",
+    "wins": 12,
+    "losses": 28,
+    "reigns": [
+     "NXT Championship",
+     "Tag Team Championship",
+     "Intercontinental Championship",
+     "Intercontinental Championship",
+     "Intercontinental Championship"
+    ],
+    "held": [],
+    "injuries": [
+     {
+      "kind": "손목",
+      "severity": "serious",
+      "season": 1,
+      "week": 14,
+      "weeks_out": 8,
+      "recovered": true,
+      "recurrence": false,
+      "permanent": false
+     },
+     {
+      "kind": "손목",
+      "severity": "minor",
+      "season": 1,
+      "week": 34,
+      "weeks_out": 3,
+      "recovered": true,
+      "recurrence": true,
+      "permanent": false
+     },
+     {
+      "kind": "어깨",
+      "severity": "minor",
+      "season": 1,
+      "week": 46,
+      "weeks_out": 2,
+      "recovered": true,
+      "recurrence": false,
+      "permanent": false
+     }
+    ],
+    "out_weeks": 0,
+    "losing_streak": 1,
+    "win_streak": 0,
+    "best_win_streak": 2,
+    "streaks_since": null,
+    "consecutive_matches": 4,
+    "trend": [
+     {
+      "season": 1,
+      "age": 26,
+      "ability": {
+       "in_ring": 38,
+       "mic": 35,
+       "stamina": 82,
+       "resilience": 80
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": true
+   },
+   {
+    "name": "Dex Harlow",
+    "style": "파워",
+    "brand": "NXT",
+    "age": 27,
+    "debut_age": 23,
+    "alignment": "heel",
+    "popularity": 52,
+    "ability": {
+     "in_ring": 52,
+     "mic": 42,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 56,
+    "status": "active",
+    "wins": 0,
+    "losses": 3,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 3,
+    "win_streak": 0,
+    "best_win_streak": 0,
+    "streaks_since": null,
+    "consecutive_matches": 3,
+    "trend": [
+     {
+      "season": 1,
+      "age": 26,
+      "ability": {
+       "in_ring": 48,
+       "mic": 40,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Marcus Vane",
+    "style": "테크니션",
+    "brand": "NXT",
+    "age": 30,
+    "debut_age": 26,
+    "alignment": "face",
+    "popularity": 58,
+    "ability": {
+     "in_ring": 58,
+     "mic": 49,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 64,
+    "status": "active",
+    "wins": 1,
+    "losses": 1,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 1,
+    "win_streak": 0,
+    "best_win_streak": 1,
+    "streaks_since": null,
+    "consecutive_matches": 2,
+    "trend": [
+     {
+      "season": 1,
+      "age": 29,
+      "ability": {
+       "in_ring": 55,
+       "mic": 47,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Rio Castellan",
+    "style": "하이플라이어",
+    "brand": "NXT",
+    "age": 25,
+    "debut_age": 21,
+    "alignment": "face",
+    "popularity": 45,
+    "ability": {
+     "in_ring": 46,
+     "mic": 37,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 64,
+    "status": "active",
+    "wins": 1,
+    "losses": 1,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 1,
+    "win_streak": 0,
+    "best_win_streak": 1,
+    "streaks_since": null,
+    "consecutive_matches": 2,
+    "trend": [
+     {
+      "season": 1,
+      "age": 24,
+      "ability": {
+       "in_ring": 42,
+       "mic": 34,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Bastian Kord",
+    "style": "파워",
+    "brand": "Raw",
+    "age": 34,
+    "debut_age": 30,
+    "alignment": "heel",
+    "popularity": 71,
+    "ability": {
+     "in_ring": 70,
+     "mic": 61,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 10,
+    "status": "active",
+    "wins": 9,
+    "losses": 2,
+    "reigns": [
+     "Intercontinental Championship",
+     "Intercontinental Championship"
+    ],
+    "held": [
+     "Intercontinental Championship"
+    ],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 0,
+    "win_streak": 1,
+    "best_win_streak": 8,
+    "streaks_since": null,
+    "consecutive_matches": 11,
+    "trend": [
+     {
+      "season": 1,
+      "age": 33,
+      "ability": {
+       "in_ring": 68,
+       "mic": 60,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Oren Welles",
+    "style": "테크니션",
+    "brand": "Raw",
+    "age": 32,
+    "debut_age": 28,
+    "alignment": "face",
+    "popularity": 66,
+    "ability": {
+     "in_ring": 75,
+     "mic": 66,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 10,
+    "status": "active",
+    "wins": 14,
+    "losses": 2,
+    "reigns": [
+     "NXT Championship",
+     "Intercontinental Championship"
+    ],
+    "held": [
+     "NXT Championship"
+    ],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 1,
+    "win_streak": 0,
+    "best_win_streak": 13,
+    "streaks_since": null,
+    "consecutive_matches": 16,
+    "trend": [
+     {
+      "season": 1,
+      "age": 31,
+      "ability": {
+       "in_ring": 72,
+       "mic": 64,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Kit Sorrow",
+    "style": "하이플라이어",
+    "brand": "Raw",
+    "age": 28,
+    "debut_age": 24,
+    "alignment": "face",
+    "popularity": 63,
+    "ability": {
+     "in_ring": 63,
+     "mic": 53,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 32,
+    "status": "active",
+    "wins": 3,
+    "losses": 3,
+    "reigns": [
+     "Tag Team Championship"
+    ],
+    "held": [
+     "Tag Team Championship"
+    ],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 1,
+    "win_streak": 0,
+    "best_win_streak": 2,
+    "streaks_since": null,
+    "consecutive_matches": 6,
+    "trend": [
+     {
+      "season": 1,
+      "age": 27,
+      "ability": {
+       "in_ring": 59,
+       "mic": 51,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Silas Grimm",
+    "style": "파워",
+    "brand": "SmackDown",
+    "age": 37,
+    "debut_age": 33,
+    "alignment": "heel",
+    "popularity": 78,
+    "ability": {
+     "in_ring": 70,
+     "mic": 63,
+     "stamina": 76,
+     "resilience": 71
+    },
+    "condition": 80,
+    "status": "active",
+    "wins": 0,
+    "losses": 0,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 0,
+    "win_streak": 0,
+    "best_win_streak": 0,
+    "streaks_since": null,
+    "consecutive_matches": 0,
+    "trend": [
+     {
+      "season": 1,
+      "age": 36,
+      "ability": {
+       "in_ring": 70,
+       "mic": 62,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Noor Haddad",
+    "style": "테크니션",
+    "brand": "SmackDown",
+    "age": 31,
+    "debut_age": 27,
+    "alignment": "face",
+    "popularity": 74,
+    "ability": {
+     "in_ring": 78,
+     "mic": 70,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 80,
+    "status": "active",
+    "wins": 0,
+    "losses": 0,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 0,
+    "win_streak": 0,
+    "best_win_streak": 0,
+    "streaks_since": null,
+    "consecutive_matches": 0,
+    "trend": [
+     {
+      "season": 1,
+      "age": 30,
+      "ability": {
+       "in_ring": 76,
+       "mic": 68,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   },
+   {
+    "name": "Jae Pyun",
+    "style": "하이플라이어",
+    "brand": "SmackDown",
+    "age": 26,
+    "debut_age": 22,
+    "alignment": "face",
+    "popularity": 61,
+    "ability": {
+     "in_ring": 60,
+     "mic": 52,
+     "stamina": 78,
+     "resilience": 74
+    },
+    "condition": 80,
+    "status": "active",
+    "wins": 0,
+    "losses": 0,
+    "reigns": [],
+    "held": [],
+    "injuries": [],
+    "out_weeks": 0,
+    "losing_streak": 0,
+    "win_streak": 0,
+    "best_win_streak": 0,
+    "streaks_since": null,
+    "consecutive_matches": 0,
+    "trend": [
+     {
+      "season": 1,
+      "age": 25,
+      "ability": {
+       "in_ring": 57,
+       "mic": 49,
+       "stamina": 78,
+       "resilience": 74
+      }
+     }
+    ],
+    "intent": null,
+    "retirement": null,
+    "is_player": false
+   }
+  ],
+  "relationships": [
+   {
+    "a": "Dex Harlow",
+    "b": "Golden Ho",
+    "kind": "rival",
+    "heat": 24,
+    "started_week": 1,
+    "last_week": 5,
+    "history": []
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Dex Harlow",
+    "kind": "rival",
+    "heat": 12,
+    "started_week": 1,
+    "last_week": 5,
+    "history": []
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Marcus Vane",
+    "kind": "ally",
+    "heat": 22,
+    "started_week": 2,
+    "last_week": 2,
+    "history": [
+     "동맹과 맞붙었다"
+    ]
+   },
+   {
+    "a": "Marcus Vane",
+    "b": "Golden Ho",
+    "kind": "ally",
+    "heat": 16,
+    "started_week": 2,
+    "last_week": 6,
+    "history": [
+     "동맹과 맞붙었다"
+    ]
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Rio Castellan",
+    "kind": "tag_team",
+    "heat": 100,
+    "started_week": 3,
+    "last_week": 48,
+    "history": [
+     "동맹과 맞붙었다",
+     "ally→tag_team"
+    ]
+   },
+   {
+    "a": "Rio Castellan",
+    "b": "Golden Ho",
+    "kind": "tag_team",
+    "heat": 100,
+    "started_week": 3,
+    "last_week": 48,
+    "history": [
+     "ally→tag_team"
+    ]
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Oren Welles",
+    "kind": "rival",
+    "heat": 100,
+    "started_week": 7,
+    "last_week": 52,
+    "history": []
+   },
+   {
+    "a": "Oren Welles",
+    "b": "Golden Ho",
+    "kind": "rival",
+    "heat": 81,
+    "started_week": 7,
+    "last_week": 51,
+    "history": []
+   },
+   {
+    "a": "Kit Sorrow",
+    "b": "Golden Ho",
+    "kind": "rival",
+    "heat": 57,
+    "started_week": 8,
+    "last_week": 44,
+    "history": []
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Kit Sorrow",
+    "kind": "rival",
+    "heat": 60,
+    "started_week": 8,
+    "last_week": 44,
+    "history": []
+   },
+   {
+    "a": "Bastian Kord",
+    "b": "Golden Ho",
+    "kind": "rival",
+    "heat": 68,
+    "started_week": 9,
+    "last_week": 52,
+    "history": []
+   },
+   {
+    "a": "Golden Ho",
+    "b": "Bastian Kord",
+    "kind": "rival",
+    "heat": 94,
+    "started_week": 9,
+    "last_week": 52,
+    "history": []
+   },
+   {
+    "a": "Rio Castellan",
+    "b": "Bastian Kord",
+    "kind": "rival",
+    "heat": 16,
+    "started_week": 14,
+    "last_week": 24,
+    "history": []
+   },
+   {
+    "a": "Bastian Kord",
+    "b": "Rio Castellan",
+    "kind": "rival",
+    "heat": 8,
+    "started_week": 14,
+    "last_week": 24,
+    "history": []
+   },
+   {
+    "a": "Rio Castellan",
+    "b": "Oren Welles",
+    "kind": "rival",
+    "heat": 24,
+    "started_week": 22,
+    "last_week": 45,
+    "history": []
+   },
+   {
+    "a": "Oren Welles",
+    "b": "Rio Castellan",
+    "kind": "rival",
+    "heat": 12,
+    "started_week": 22,
+    "last_week": 45,
+    "history": []
+   },
+   {
+    "a": "Kit Sorrow",
+    "b": "Rio Castellan",
+    "kind": "rival",
+    "heat": 8,
+    "started_week": 33,
+    "last_week": 33,
+    "history": []
+   },
+   {
+    "a": "Rio Castellan",
+    "b": "Kit Sorrow",
+    "kind": "rival",
+    "heat": 4,
+    "started_week": 33,
+    "last_week": 33,
+    "history": []
+   }
+  ],
+  "titles": [
+   {
+    "name": "NXT Championship",
+    "brand": "NXT",
+    "required_popularity": 40,
+    "holder": "Oren Welles",
+    "defenses": 0,
+    "won_week": 7
+   },
+   {
+    "name": "Intercontinental Championship",
+    "brand": "Raw",
+    "required_popularity": 65,
+    "holder": "Bastian Kord",
+    "defenses": 0,
+    "won_week": 52
+   },
+   {
+    "name": "World Heavyweight Championship",
+    "brand": "SmackDown",
+    "required_popularity": 85,
+    "holder": null,
+    "defenses": 0,
+    "won_week": null
+   },
+   {
+    "name": "Tag Team Championship",
+    "brand": "Raw",
+    "required_popularity": 50,
+    "holder": "Kit Sorrow",
+    "defenses": 0,
+    "won_week": 10
+   }
+  ],
+  "pending": [
+   {
+    "id": "s1w52:rival_taunt:Golden Ho",
+    "kind": "rival_taunt",
+    "season": 1,
+    "week": 52,
+    "subject": "Golden Ho",
+    "other": "Oren Welles",
+    "headline": "Oren Welles가 공개적으로 도발했다",
+    "detail": "Oren Welles와의 앙금이 100까지 올랐다",
+    "choices": [
+     {
+      "code": "answer",
+      "label": "맞받아친다",
+      "enabled": true,
+      "note": "앙금과 인기도가 함께 오른다"
+     },
+     {
+      "code": "ignore",
+      "label": "무시한다",
+      "enabled": true,
+      "note": "앙금이 식고 인기도가 조금 깎인다"
+     },
+     {
+      "code": "attack",
+      "label": "기습한다",
+      "enabled": true,
+      "note": "악역 쪽으로 기운다 · 앙금이 크게 오른다"
+     }
+    ]
+   }
+  ],
+  "log": [
+   {
+    "season": 1,
+    "week": 1,
+    "kind": "debut",
+    "subject": "Golden Ho",
+    "summary": "Golden Ho 데뷔 — 테크니션 · 26세 · NXT",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 1,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — in_ring +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 1,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "경기 vs Dex Harlow — 승 (카운트아웃 · 평가 43)",
+    "other": "Dex Harlow",
+    "result": "win",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 2,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 1,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Marcus Vane가 함께하자고 제안했다 → 받아들인다",
+    "other": "Marcus Vane",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 2,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "경기 vs Marcus Vane — 패 (서브미션 · 평가 44)",
+    "other": "Marcus Vane",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 3,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 2,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Rio Castellan가 함께하자고 제안했다 → 받아들인다",
+    "other": "Rio Castellan",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 3,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "경기 vs Dex Harlow — 승 (핀폴 · 평가 48)",
+    "other": "Dex Harlow",
+    "result": "win",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 4,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 62",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 4,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "경기 vs Rio Castellan — 패 (반칙승 · 평가 56)",
+    "other": "Rio Castellan",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 5,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — 자격 미달 (인기도 33)",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 5,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "경기 vs Dex Harlow — 승 (반칙승 · 평가 56)",
+    "other": "Dex Harlow",
+    "result": "win",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — mic +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Marcus Vane — 승 (카운트아웃 · 평가 52)",
+    "other": "Marcus Vane",
+    "result": "win",
+    "title": "NXT Championship"
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "title_won",
+    "subject": "Golden Ho",
+    "summary": "NXT Championship 획득 — Golden Ho",
+    "other": null,
+    "result": null,
+    "title": "NXT Championship"
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "promoted",
+    "subject": "Golden Ho",
+    "summary": "메인 로스터 승격 — Raw",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "goal",
+    "subject": "Golden Ho",
+    "summary": "시즌 목표 달성 — 인기도 50 이상 · 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 6,
+    "kind": "goal",
+    "subject": "Golden Ho",
+    "summary": "시즌 목표 달성 — 챔피언 타이틀 획득 · 인기도 +5",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 7,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 7,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Oren Welles — 패 (카운트아웃 · 평가 57)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": "NXT Championship"
+   },
+   {
+    "season": 1,
+    "week": 7,
+    "kind": "title_won",
+    "subject": "Oren Welles",
+    "summary": "NXT Championship 획득 — Oren Welles",
+    "other": null,
+    "result": null,
+    "title": "NXT Championship"
+   },
+   {
+    "season": 1,
+    "week": 8,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 8,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Kit Sorrow — 승 (반칙승 · 평가 58)",
+    "other": "Kit Sorrow",
+    "result": "win",
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 8,
+    "kind": "title_won",
+    "subject": "Golden Ho",
+    "summary": "Tag Team Championship 획득 — Golden Ho",
+    "other": null,
+    "result": null,
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 9,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 8,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Rio Castellan와 태그팀을 짠다 → 팀을 짠다",
+    "other": "Rio Castellan",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 9,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Bastian Kord — 승 (레프리 스톱 · 평가 60)",
+    "other": "Bastian Kord",
+    "result": "win",
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 9,
+    "kind": "title_defended",
+    "subject": "Golden Ho",
+    "summary": "Tag Team Championship 방어 성공",
+    "other": null,
+    "result": null,
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 10,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 10,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Kit Sorrow — 패 (카운트아웃 · 평가 64)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 10,
+    "kind": "title_won",
+    "subject": "Kit Sorrow",
+    "summary": "Tag Team Championship 획득 — Kit Sorrow",
+    "other": null,
+    "result": null,
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 11,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — stamina +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 11,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Oren Welles — 패 (서브미션 · 평가 60)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 12,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 12,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Kit Sorrow — 승 (카운트아웃 · 평가 48)",
+    "other": "Kit Sorrow",
+    "result": "win",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 12,
+    "kind": "title_won",
+    "subject": "Golden Ho",
+    "summary": "Intercontinental Championship 획득 — Golden Ho",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 13,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 13,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Bastian Kord — 패 (카운트아웃 · 평가 53)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 13,
+    "kind": "title_won",
+    "subject": "Bastian Kord",
+    "summary": "Intercontinental Championship 획득 — Bastian Kord",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 14,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 14,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (반칙승 · 평가 63)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 14,
+    "kind": "injury",
+    "subject": "Golden Ho",
+    "summary": "손목 serious 부상 — 8주 결장",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 15,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 14,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "손목 부상 — 8주 결장 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 15,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 7주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 16,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — resilience +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 16,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 6주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 17,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 17,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 5주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 18,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 18,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 4주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 19,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 19,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 2주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 20,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 20,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 1주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 21,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — in_ring +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 21,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "부상에서 복귀했다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 22,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 22,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (핀폴 · 평가 63)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 23,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 23,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (카운트아웃 · 평가 54)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 24,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 23,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "GM 이 Intercontinental Championship 도전을 제안했다 → 받아들인다",
+    "other": "Bastian Kord",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 24,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 패 (레프리 스톱 · 평가 67)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 25,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 25,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Bastian Kord — 패 (카운트아웃 · 평가 61)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 26,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — mic +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 25,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "6연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 26,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Kit Sorrow — 패 (반칙승 · 평가 50)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 27,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 26,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "7연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 27,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (핀폴 · 평가 44)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 28,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 27,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "8연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 28,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (레프리 스톱 · 평가 60)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 29,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 28,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "9연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 28,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "GM 이 Tag Team Championship 도전을 제안했다 → 받아들인다",
+    "other": "Kit Sorrow",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 29,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 패 (카운트아웃 · 평가 55)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 30,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — 자격 미달 (인기도 48)",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 29,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "10연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 29,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 30,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Kit Sorrow — 패 (반칙승 · 평가 47)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": "Tag Team Championship"
+   },
+   {
+    "season": 1,
+    "week": 31,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — stamina +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 30,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "11연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 30,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 31,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (핀폴 · 평가 42)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 32,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 31,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "12연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 31,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 32,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Oren Welles — 패 (핀폴 · 평가 48)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 33,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 32,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "13연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 32,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 33,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 승 (카운트아웃 · 평가 46)",
+    "other": "Kit Sorrow",
+    "result": "win",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 34,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 33,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "GM 이 Tag Team Championship 도전을 제안했다 → 받아들인다",
+    "other": "Kit Sorrow",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 33,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 34,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Oren Welles — 패 (카운트아웃 · 평가 44)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 34,
+    "kind": "injury",
+    "subject": "Golden Ho",
+    "summary": "손목 minor 부상 — 3주 결장 (재발)",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 35,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Tag Team Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 35,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 2주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 36,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — resilience +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 36,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 1주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 37,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 37,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "부상에서 복귀했다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 38,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 37,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 38,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (서브미션 · 평가 56)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 39,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 38,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 39,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 패 (레프리 스톱 · 평가 59)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 40,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 39,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 40,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Bastian Kord — 패 (카운트아웃 · 평가 59)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 41,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — in_ring +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 40,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 41,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Bastian Kord — 패 (핀폴 · 평가 49)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 42,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 41,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 42,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Oren Welles — 패 (카운트아웃 · 평가 55)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 43,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 42,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "6연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 42,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 43,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Oren Welles — 패 (레프리 스톱 · 평가 44)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 44,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 28",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 43,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "7연패 — 커리어 방향을 고민한다 → 현역을 유지한다",
+    "other": null,
+    "result": "stay",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 43,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 44,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 승 (반칙승 · 평가 62)",
+    "other": "Kit Sorrow",
+    "result": "win",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 45,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 44,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "GM 이 Intercontinental Championship 도전을 제안했다 → 받아들인다",
+    "other": "Bastian Kord",
+    "result": "accept",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 44,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 45,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "태그 vs Kit Sorrow — 패 (핀폴 · 평가 43)",
+    "other": "Kit Sorrow",
+    "result": "loss",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 46,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — mic +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 45,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 46,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Bastian Kord — 승 (반칙승 · 평가 52)",
+    "other": "Bastian Kord",
+    "result": "win",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 46,
+    "kind": "title_won",
+    "subject": "Golden Ho",
+    "summary": "Intercontinental Championship 획득 — Golden Ho",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 46,
+    "kind": "injury",
+    "subject": "Golden Ho",
+    "summary": "어깨 minor 부상 — 2주 결장",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 46,
+    "kind": "goal",
+    "subject": "Golden Ho",
+    "summary": "시즌 목표 달성 — 시즌 10승 · 인기도 +0",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 47,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 47,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "결장 — 1주 남음",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 48,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "관계 — Rio Castellan와 가까워졌다",
+    "other": "Rio Castellan",
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 48,
+    "kind": "out",
+    "subject": "Golden Ho",
+    "summary": "부상에서 복귀했다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 49,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "휴식 — 컨디션 38",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 48,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 49,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Oren Welles — 승 (서브미션 · 평가 54)",
+    "other": "Oren Welles",
+    "result": "win",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 49,
+    "kind": "title_defended",
+    "subject": "Golden Ho",
+    "summary": "Intercontinental Championship 방어 성공",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 50,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "협상 — Intercontinental Championship 도전권을 얻었다",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 49,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 50,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Oren Welles — 패 (반칙승 · 평가 51)",
+    "other": "Oren Welles",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 50,
+    "kind": "title_won",
+    "subject": "Oren Welles",
+    "summary": "Intercontinental Championship 획득 — Oren Welles",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 51,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "훈련 — stamina +1",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 50,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 51,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "타이틀전 vs Oren Welles — 승 (핀폴 · 평가 52)",
+    "other": "Oren Welles",
+    "result": "win",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 51,
+    "kind": "title_won",
+    "subject": "Golden Ho",
+    "summary": "Intercontinental Championship 획득 — Golden Ho",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 52,
+    "kind": "action",
+    "subject": "Golden Ho",
+    "summary": "프로모 — 인기도 +3",
+    "other": null,
+    "result": null,
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 51,
+    "kind": "event",
+    "subject": "Golden Ho",
+    "summary": "Oren Welles가 공개적으로 도발했다 → 맞받아친다",
+    "other": "Oren Welles",
+    "result": "answer",
+    "title": null
+   },
+   {
+    "season": 1,
+    "week": 52,
+    "kind": "match",
+    "subject": "Golden Ho",
+    "summary": "방어전 vs Bastian Kord — 패 (핀폴 · 평가 52)",
+    "other": "Bastian Kord",
+    "result": "loss",
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 52,
+    "kind": "title_won",
+    "subject": "Bastian Kord",
+    "summary": "Intercontinental Championship 획득 — Bastian Kord",
+    "other": null,
+    "result": null,
+    "title": "Intercontinental Championship"
+   },
+   {
+    "season": 1,
+    "week": 52,
+    "kind": "season_end",
+    "subject": "Golden Ho",
+    "summary": "시즌 1 결산 — 12승 28패",
+    "other": null,
+    "result": null,
+    "title": null
+   }
+  ],
+  "seasons": [
+   {
+    "season": 1,
+    "wins": 12,
+    "losses": 28,
+    "age": 26,
+    "ability": {
+     "in_ring": 43,
+     "mic": 38,
+     "stamina": 82,
+     "resilience": 89
+    },
+    "ability_delta": {
+     "in_ring": 5,
+     "mic": 3,
+     "stamina": 0,
+     "resilience": 9
+    },
+    "titles_won": [
+     "NXT Championship",
+     "Tag Team Championship",
+     "Intercontinental Championship",
+     "Intercontinental Championship",
+     "Intercontinental Championship"
+    ],
+    "defenses": 2,
+    "injuries": 3,
+    "retired": [],
+    "highlights": [
+     "NXT Championship 획득 — Golden Ho",
+     "메인 로스터 승격 — Raw",
+     "NXT Championship 획득 — Oren Welles",
+     "Tag Team Championship 획득 — Golden Ho",
+     "Tag Team Championship 획득 — Kit Sorrow",
+     "Intercontinental Championship 획득 — Golden Ho",
+     "Intercontinental Championship 획득 — Bastian Kord",
+     "Intercontinental Championship 획득 — Golden Ho"
+    ],
+    "risk_band": "안정"
+   }
+  ],
+  "applied": [
+   "action:s1w10:0",
+   "action:s1w11:0",
+   "action:s1w12:0",
+   "action:s1w13:0",
+   "action:s1w14:0",
+   "action:s1w15:0",
+   "action:s1w16:0",
+   "action:s1w17:0",
+   "action:s1w18:0",
+   "action:s1w19:0",
+   "action:s1w1:0",
+   "action:s1w20:0",
+   "action:s1w21:0",
+   "action:s1w22:0",
+   "action:s1w23:0",
+   "action:s1w24:0",
+   "action:s1w25:0",
+   "action:s1w26:0",
+   "action:s1w27:0",
+   "action:s1w28:0",
+   "action:s1w29:0",
+   "action:s1w2:0",
+   "action:s1w30:0",
+   "action:s1w31:0",
+   "action:s1w32:0",
+   "action:s1w33:0",
+   "action:s1w34:0",
+   "action:s1w35:0",
+   "action:s1w36:0",
+   "action:s1w37:0",
+   "action:s1w38:0",
+   "action:s1w39:0",
+   "action:s1w3:0",
+   "action:s1w40:0",
+   "action:s1w41:0",
+   "action:s1w42:0",
+   "action:s1w43:0",
+   "action:s1w44:0",
+   "action:s1w45:0",
+   "action:s1w46:0",
+   "action:s1w47:0",
+   "action:s1w48:0",
+   "action:s1w49:0",
+   "action:s1w4:0",
+   "action:s1w50:0",
+   "action:s1w51:0",
+   "action:s1w52:0",
+   "action:s1w5:0",
+   "action:s1w6:0",
+   "action:s1w7:0",
+   "action:s1w8:0",
+   "action:s1w9:0",
+   "goal:s1:popularity",
+   "goal:s1:season_wins",
+   "goal:s1:title",
+   "s1w14:severe_injury:Golden Ho",
+   "s1w1:ally_offer:Golden Ho",
+   "s1w23:title_offer:Golden Ho",
+   "s1w25:poor_form:Golden Ho",
+   "s1w26:poor_form:Golden Ho",
+   "s1w27:poor_form:Golden Ho",
+   "s1w28:poor_form:Golden Ho",
+   "s1w28:title_offer:Golden Ho",
+   "s1w29:poor_form:Golden Ho",
+   "s1w29:rival_taunt:Golden Ho",
+   "s1w2:ally_offer:Golden Ho",
+   "s1w30:poor_form:Golden Ho",
+   "s1w30:rival_taunt:Golden Ho",
+   "s1w31:poor_form:Golden Ho",
+   "s1w31:rival_taunt:Golden Ho",
+   "s1w32:poor_form:Golden Ho",
+   "s1w32:rival_taunt:Golden Ho",
+   "s1w33:rival_taunt:Golden Ho",
+   "s1w33:title_offer:Golden Ho",
+   "s1w37:rival_taunt:Golden Ho",
+   "s1w38:rival_taunt:Golden Ho",
+   "s1w39:rival_taunt:Golden Ho",
+   "s1w40:rival_taunt:Golden Ho",
+   "s1w41:rival_taunt:Golden Ho",
+   "s1w42:poor_form:Golden Ho",
+   "s1w42:rival_taunt:Golden Ho",
+   "s1w43:poor_form:Golden Ho",
+   "s1w43:rival_taunt:Golden Ho",
+   "s1w44:rival_taunt:Golden Ho",
+   "s1w44:title_offer:Golden Ho",
+   "s1w45:rival_taunt:Golden Ho",
+   "s1w48:rival_taunt:Golden Ho",
+   "s1w49:rival_taunt:Golden Ho",
+   "s1w50:rival_taunt:Golden Ho",
+   "s1w51:rival_taunt:Golden Ho",
+   "s1w8:tag_team_offer:Golden Ho",
+   "settle:s1",
+   "shot:s1w11",
+   "shot:s1w16",
+   "shot:s1w21",
+   "shot:s1w25",
+   "shot:s1w26",
+   "shot:s1w30",
+   "shot:s1w35",
+   "shot:s1w36",
+   "shot:s1w41",
+   "shot:s1w46",
+   "shot:s1w51",
+   "week:s1w1",
+   "week:s1w10",
+   "week:s1w11",
+   "week:s1w12",
+   "week:s1w13",
+   "week:s1w14",
+   "week:s1w15",
+   "week:s1w16",
+   "week:s1w17",
+   "week:s1w18",
+   "week:s1w19",
+   "week:s1w2",
+   "week:s1w20",
+   "week:s1w21",
+   "week:s1w22",
+   "week:s1w23",
+   "week:s1w24",
+   "week:s1w25",
+   "week:s1w26",
+   "week:s1w27",
+   "week:s1w28",
+   "week:s1w29",
+   "week:s1w3",
+   "week:s1w30",
+   "week:s1w31",
+   "week:s1w32",
+   "week:s1w33",
+   "week:s1w34",
+   "week:s1w35",
+   "week:s1w36",
+   "week:s1w37",
+   "week:s1w38",
+   "week:s1w39",
+   "week:s1w4",
+   "week:s1w40",
+   "week:s1w41",
+   "week:s1w42",
+   "week:s1w43",
+   "week:s1w44",
+   "week:s1w45",
+   "week:s1w46",
+   "week:s1w47",
+   "week:s1w48",
+   "week:s1w49",
+   "week:s1w5",
+   "week:s1w50",
+   "week:s1w51",
+   "week:s1w52",
+   "week:s1w6",
+   "week:s1w7",
+   "week:s1w8",
+   "week:s1w9"
+  ]
+ }
+}

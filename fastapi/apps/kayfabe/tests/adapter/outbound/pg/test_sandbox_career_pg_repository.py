@@ -709,7 +709,7 @@ async def test_first_save_writes_v2_and_keeps_every_v1_field() -> None:
 
         stored, _ = await _raw(h, career_id)
 
-        assert stored["version"] == SCHEMA_VERSION == 2
+        assert stored["version"] == SCHEMA_VERSION == 3
         assert golden.strip_v2(stored) == golden.strip_v2(raw)
         hero = next(w for w in stored["roster"] if w["is_player"])
         assert {"win_streak", "best_win_streak", "streaks_since"} <= set(hero)
@@ -771,7 +771,7 @@ async def test_a_use_case_write_on_a_v1_row_persists_v2() -> None:
             reloaded = await repo.load(user_id=h.user_id, career_id=career_id)
 
         assert outcome.view is not None and outcome.view.season == raw["season"] + 1
-        assert stored["version"] == 2
+        assert stored["version"] == SCHEMA_VERSION
         assert reloaded == expected
 
 
@@ -818,3 +818,96 @@ async def test_v2_row_missing_a_new_field_is_refused(key: str) -> None:
         async with h.repo() as repo:
             with pytest.raises(CorruptSaveError):
                 await repo.load(user_id=h.user_id, career_id=career_id)
+
+
+# ── 8. 세이브 v3(경기 기록)가 진짜 JSONB 위에서도 지켜지는가 ─────────
+#
+# v3 는 세이브에 **처음으로 부동소수**(승률 · 경기력 세 항)를 넣는다. JSONB 는 숫자를
+# numeric 으로 들고 있다가 돌려주므로, 끝자리까지 같은 float 로 돌아오는지가 여기서
+# 처음 검증된다.
+
+_V2_FIXTURE = Path(__file__).resolve().parents[3] / "fixtures" / "career_golden_v2.json"
+
+
+def _v2_raw() -> dict[str, Any]:
+    return json.loads(_V2_FIXTURE.read_text(encoding="utf-8"))["final_v2"]
+
+
+@pytest.mark.asyncio
+async def test_v3_records_survive_jsonb_bit_for_bit() -> None:
+    """골든 궤적의 기록 40건(태그 18건 포함)을 저장하고 다시 읽으면 같은 세계다."""
+    golden = _golden()
+    _, world = golden.run_trajectory()
+    assert len(world.matches) == 40
+    async with _harness() as h:
+        career_id = await _career(h)
+        async with h.repo() as repo:
+            await repo.save(user_id=h.user_id, career_id=career_id, state=world)
+        stored, text_1 = await _raw(h, career_id)
+        async with h.repo() as repo:
+            again = await repo.load(user_id=h.user_id, career_id=career_id)
+            assert again is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=again)
+        _, text_2 = await _raw(h, career_id)
+
+        assert stored["version"] == SCHEMA_VERSION == 3
+        assert again == world
+        assert text_2 == text_1
+        assert [m.probability for m in again.matches] == [
+            m.probability for m in world.matches
+        ]
+        assert [p.power for m in again.matches for p in m.participants] == [
+            p.power for m in world.matches for p in m.participants
+        ]
+
+
+@pytest.mark.asyncio
+async def test_v2_row_reads_as_v3_and_first_save_keeps_v2_fields() -> None:
+    """v2 행 — 조회는 DB 를 안 바꾸고, 첫 저장이 v3 를 쓰며 v2 칸은 전부 그대로다."""
+    async with _harness() as h:
+        career_id = await _career(h)
+        raw = _v2_raw()
+        await _put_raw(h, career_id, raw)
+        _, text_before = await _raw(h, career_id)
+
+        async with h.repo() as repo:
+            world = await repo.load(user_id=h.user_id, career_id=career_id)
+        after_read, text_after_read = await _raw(h, career_id)
+        assert world is not None
+        assert after_read["version"] == 2 and text_after_read == text_before
+
+        async with h.repo() as repo:
+            locked = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            assert locked is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=locked)
+        stored, _ = await _raw(h, career_id)
+
+        assert stored["version"] == 3
+        assert stored["matches"] == []
+        assert stored["match_records_since"] == [raw["season"], raw["week"]]
+        assert {
+            k: v
+            for k, v in stored.items()
+            if k not in ("version", "matches", "match_records_since")
+        } == {k: v for k, v in raw.items() if k != "version"}
+
+
+@pytest.mark.asyncio
+async def test_advancing_through_the_use_case_records_matches_in_jsonb() -> None:
+    """유스케이스로 주차를 넘기면 기록이 **같은 커밋**에 들어간다(원자성)."""
+    async with _harness() as h:
+        career_id = await _career(h)
+        async with h.repo() as repo:
+            use_case = CareerSandboxInteractor(repository=repo, balance=_BALANCE)
+            for i in range(_BALANCE.season_weeks):
+                await use_case.advance(
+                    user_id=h.user_id, career_id=career_id, request_id=f"p0-adv-{i:04d}"
+                )
+        stored, _ = await _raw(h, career_id)
+        async with h.repo() as repo:
+            world = await repo.load(user_id=h.user_id, career_id=career_id)
+        assert world is not None
+
+        played = [e for e in world.log if e.kind == "match"]
+        assert len(stored["matches"]) == len(played) == len(world.matches) >= 1
+        assert stored["match_records_since"] is None

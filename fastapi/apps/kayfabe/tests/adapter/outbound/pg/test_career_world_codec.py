@@ -34,8 +34,11 @@ from kayfabe.domain.services.career_world import (
     AbilitySnapshot,
     Alignment,
     Choice,
+    HeatChange,
     Injury,
     LogEntry,
+    MatchRecord,
+    ParticipantRecord,
     PendingEvent,
     Phase,
     RelationKind,
@@ -204,6 +207,106 @@ def _maximal_world() -> WorldState:
                 risk_band="주의",
             ),
         ),
+        matches=(
+            # 핀폴 태그전 — 득점자·핀당한 선수·부상·**새로 생긴** 관계(before=None)까지.
+            MatchRecord(
+                id="s9w30:p",
+                season=9,
+                week=30,
+                brand="Raw",
+                kind="tag",
+                reason="태그팀",
+                title=None,
+                title_changed=False,
+                teams=((hero.name, "Partner"), (npc.name, "Foe Two")),
+                winner_side=1,
+                probability=0.4123,
+                finish="핀폴",
+                rating=63,
+                finisher=npc.name,
+                scorer=npc.name,
+                pinned=hero.name,
+                participants=(
+                    ParticipantRecord(
+                        name=hero.name,
+                        side=0,
+                        power=(0.405, 0.22, 0.1525),
+                        before=(90, 71, 72, 40, 0, 2),
+                        after=(82, 46, 72, 41, 0, 3),
+                    ),
+                    ParticipantRecord(
+                        name="Partner",
+                        side=0,
+                        power=(0.3, 0.1, 0.2),
+                        before=(50, 80, 10, 10, 1, 0),
+                        after=(50, 80, 10, 10, 1, 0),
+                    ),
+                    ParticipantRecord(
+                        name=npc.name,
+                        side=1,
+                        power=(0.2, 0.05, 0.1925),
+                        before=(20, 80, 5, 5, 0, 1),
+                        after=(20, 72, 6, 5, 1, 0),
+                    ),
+                    ParticipantRecord(
+                        name="Foe Two",
+                        side=1,
+                        power=(0.25, 0.1, 0.18),
+                        before=(30, 75, 3, 3, 0, 0),
+                        after=(30, 75, 3, 3, 0, 0),
+                    ),
+                ),
+                heat=(
+                    HeatChange(a=hero.name, b=npc.name, before=-50, after=-64),
+                    HeatChange(a=npc.name, b=hero.name, before=None, after=7),
+                ),
+                injury=Injury(
+                    kind="무릎",
+                    severity=Severity.CAREER_THREATENING,
+                    season=9,
+                    week=30,
+                    weeks_out=24,
+                    recurrence=True,
+                ),
+                popularity_delta=-8,
+            ),
+            # 핀폴이 아닌 싱글 타이틀전 — 득점자·핀당한 선수가 **없다**(None 왕복).
+            MatchRecord(
+                id="s9w31:p",
+                season=9,
+                week=31,
+                brand="Raw",
+                kind="title",
+                reason="방어전",
+                title="World Heavyweight Championship",
+                title_changed=False,
+                teams=((hero.name,), (npc.name,)),
+                winner_side=0,
+                probability=0.7,
+                finish="서브미션",
+                rating=88,
+                finisher=hero.name,
+                scorer=None,
+                pinned=None,
+                participants=(
+                    ParticipantRecord(
+                        name=hero.name,
+                        side=0,
+                        power=(0.405, 0.22, 0.15),
+                        before=(81, 61, 72, 41, 0, 3),
+                        after=(88, 51, 73, 41, 1, 0),
+                    ),
+                    ParticipantRecord(
+                        name=npc.name,
+                        side=1,
+                        power=(0.2, 0.05, 0.19),
+                        before=(20, 72, 6, 5, 1, 0),
+                        after=(20, 64, 6, 6, 0, 1),
+                    ),
+                ),
+            ),
+        ),
+        match_records_since=(3, 12),
         applied=frozenset({"week:s9w31", "settle:s8", "action:s9w31:0"}),
     )
 
@@ -277,3 +380,9 @@ def test_dump_covers_every_dataclass_field() -> None:
     _assert_covers(Choice, raw["pending"][0]["choices"][0])
     _assert_covers(LogEntry, raw["log"][0])
     _assert_covers(SeasonSummary, raw["seasons"][0])
+
+    match = raw["matches"][0]
+    _assert_covers(MatchRecord, match)
+    _assert_covers(ParticipantRecord, match["participants"][0])
+    _assert_covers(HeatChange, match["heat"][0])
+    _assert_covers(Injury, match["injury"])

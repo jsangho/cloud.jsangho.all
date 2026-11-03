@@ -18,10 +18,12 @@ import pytest
 from kayfabe.adapter.outbound.pg.career_world_codec import (
     SCHEMA_VERSION,
     _upgrade_v1_to_v2,
+    _upgrade_v2_to_v3,
     dump,
     load,
 )
 from kayfabe.app.ports.output.sandbox_career_repository import CorruptSaveError
+from kayfabe.domain.services import career_match_record as records
 from kayfabe.domain.services import career_tally as tally
 
 _GOLDEN_PATH = (
@@ -61,7 +63,7 @@ def test_fixture_is_really_v1() -> None:
 
     assert raw["version"] == 1
     assert "win_streak" not in raw["roster"][0]
-    assert SCHEMA_VERSION == 2
+    assert SCHEMA_VERSION == 3
 
 
 def test_upgrade_keeps_every_v1_field() -> None:
@@ -72,7 +74,7 @@ def test_upgrade_keeps_every_v1_field() -> None:
 
     rewritten = _json(dump(load(raw)))
 
-    assert rewritten["version"] == 2
+    assert rewritten["version"] == SCHEMA_VERSION
     assert golden.strip_v2(rewritten) == golden.strip_v2(raw)
 
 
@@ -191,9 +193,9 @@ def test_replay_matches_log_order() -> None:
 # ── 거부 정책 ────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("version", [0, 3, 99, "1", "2", True, None, [1], {"v": 1}])
+@pytest.mark.parametrize("version", [0, 4, 99, "1", "2", True, None, [1], {"v": 1}])
 def test_unknown_or_malformed_version_is_refused(version: object) -> None:
-    """아는 판본(1·2)이 아니면 **손상 세이브**다 — 해시할 수 없는 값도 500 이 아니다."""
+    """아는 판본(1·2·3)이 아니면 **손상 세이브**다 — 해시할 수 없는 값도 500 이 아니다."""
     raw = _v1()
     raw["version"] = version
 
@@ -215,6 +217,177 @@ def test_v2_without_new_field_is_refused(key: str) -> None:
     """v2 에서 새 칸이 빠졌으면 깨진 세이브다 — 0 · `None`(=정확한 값)으로 메우지 않는다."""
     raw = _json(dump(load(_v1())))
     del raw["roster"][0][key]
+
+    with pytest.raises(CorruptSaveError):
+        load(raw)
+
+
+# ── v2 → v3 (Phase 1 P0 · 경기 기록) ─────────────────────────────
+#
+# v2 픽스처도 손으로 만든 것이 아니다 — `fixtures/career_golden_v2.json` 은 v2 코드
+# (ho=79ed37f)가 골든 궤적을 돌고 **실제로 쓴** 세이브다. v1 에서 올라온 세이브와
+# 달리 NPC 연승이 부분 집계가 아니라서 다른 경우를 덮는다.
+
+_V2_PATH = Path(__file__).resolve().parents[3] / "fixtures" / "career_golden_v2.json"
+
+
+def _v2() -> dict[str, Any]:
+    return json.loads(_V2_PATH.read_text(encoding="utf-8"))["final_v2"]
+
+
+def _without(raw: dict[str, Any], *keys: str) -> dict[str, Any]:
+    return {k: v for k, v in raw.items() if k not in keys}
+
+
+def test_v2_fixture_is_really_v2() -> None:
+    raw = _v2()
+    assert raw["version"] == 2
+    assert "win_streak" in raw["roster"][0]
+    assert "matches" not in raw and "match_records_since" not in raw
+
+
+def test_v2_to_v3_keeps_every_v2_field() -> None:
+    """**v2 칸 전부**(v1 칸 + 연승 칸)가 그대로다. v3 칸 둘만 생긴다."""
+    raw = _v2()
+
+    rewritten = _json(dump(load(raw)))
+
+    assert rewritten["version"] == 3
+    assert _without(rewritten, "version", "matches", "match_records_since") == _without(
+        raw, "version"
+    )
+
+
+def test_v2_to_v3_marks_records_start_and_backfills_nothing() -> None:
+    """지난 경기를 기록으로 만들지 않는다. 기록 시작은 세이브의 현재 주차다."""
+    raw = _v2()
+    upgraded = _upgrade_v2_to_v3(raw)
+    world = load(raw)
+
+    assert upgraded["matches"] == []
+    assert upgraded["match_records_since"] == [raw["season"], raw["week"]]
+    assert world.matches == ()
+    assert world.match_records_since == (raw["season"], raw["week"])
+    played = [e for e in raw["log"] if e["kind"] == "match"]
+    assert played
+    assert all(
+        records.missing_reason(world, season=e["season"], week=e["week"])
+        == records.BEFORE_RECORDS
+        for e in played
+    )
+
+
+def test_v2_upgrade_does_not_mutate_input() -> None:
+    raw = _v2()
+    before = copy.deepcopy(raw)
+
+    load(raw)
+    _upgrade_v2_to_v3(raw)
+
+    assert raw == before
+
+
+def test_v1_goes_through_v2_then_v3() -> None:
+    """v1 → v2 → v3 연쇄. 연승 칸(v2)과 기록 칸(v3)이 **둘 다** 생기고 v1 칸은 그대로다."""
+    golden = _golden()
+    raw = _v1()
+
+    via_chain = _upgrade_v2_to_v3(_upgrade_v1_to_v2(raw))
+    world = load(raw)
+    rewritten = _json(dump(world))
+
+    assert via_chain["version"] == 3
+    assert rewritten == _json(dump(load(via_chain)))
+    assert golden.strip_v2(rewritten) == golden.strip_v2(raw)
+    assert world.match_records_since == (raw["season"], raw["week"])
+    assert world.hero.streaks_since is None  # v1 → v2 의 정확 집계가 살아 있다
+
+
+def test_v3_round_trip_with_real_records_is_stable() -> None:
+    """골든 궤적의 실제 기록 40건 — 저장 → 읽기 → 저장이 같은 세계 · 같은 바이트다."""
+    _, world = _golden().run_trajectory()
+    assert len(world.matches) == 40
+
+    first = _json(dump(world))
+    again = load(first)
+
+    assert again == world
+    assert json.dumps(_json(dump(again)), ensure_ascii=False) == json.dumps(
+        first, ensure_ascii=False
+    )
+
+
+def test_v3_empty_matches_round_trip() -> None:
+    world = load(_v2())
+    raw = _json(dump(world))
+    assert raw["matches"] == []
+    assert load(raw) == world
+
+
+@pytest.mark.parametrize("key", ["matches", "match_records_since"])
+def test_v3_without_new_world_field_is_refused(key: str) -> None:
+    """v3 에서 새 칸이 빠지면 손상이다 — `[]` · `null`(= 데뷔부터 기록)로 메우지 않는다."""
+    raw = _json(dump(load(_v2())))
+    del raw[key]
+
+    with pytest.raises(CorruptSaveError):
+        load(raw)
+
+
+@pytest.mark.parametrize(
+    "since", [[1], [1, 2, 3], ["1", 2], [0, 5], [1.5, 2], "s1w2", 7]
+)
+def test_v3_malformed_records_since_is_refused(since: object) -> None:
+    raw = _json(dump(load(_v2())))
+    raw["match_records_since"] = since
+
+    with pytest.raises(CorruptSaveError):
+        load(raw)
+
+
+def _real_record_raw() -> dict[str, Any]:
+    _, world = _golden().run_trajectory()
+    raw = _json(dump(world))
+    return raw
+
+
+@pytest.mark.parametrize(
+    "breakage",
+    [
+        "before_too_short",
+        "after_too_long",
+        "power_two_terms",
+        "winner_side_two",
+        "winner_side_bool",
+        "duplicate_name",
+        "team_mismatch",
+        "one_team",
+        "missing_finisher",
+    ],
+)
+def test_v3_malformed_record_is_refused(breakage: str) -> None:
+    """기록 모양이 어긋나면 손상이다 — 배열 칸 하나가 밀리면 숫자의 뜻이 바뀐다."""
+    raw = _real_record_raw()
+    m = raw["matches"][0]
+    p = m["participants"]
+    if breakage == "before_too_short":
+        p[0]["before"] = p[0]["before"][:-1]
+    elif breakage == "after_too_long":
+        p[0]["after"] = p[0]["after"] + [0]
+    elif breakage == "power_two_terms":
+        p[0]["power"] = p[0]["power"][:2]
+    elif breakage == "winner_side_two":
+        m["winner_side"] = 2
+    elif breakage == "winner_side_bool":
+        m["winner_side"] = True
+    elif breakage == "duplicate_name":
+        p[1]["name"] = p[0]["name"]
+    elif breakage == "team_mismatch":
+        m["teams"][1] = ["Someone Else"]
+    elif breakage == "one_team":
+        m["teams"] = m["teams"][:1]
+    elif breakage == "missing_finisher":
+        del m["finisher"]
 
     with pytest.raises(CorruptSaveError):
         load(raw)

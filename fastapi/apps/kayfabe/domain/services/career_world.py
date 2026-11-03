@@ -423,6 +423,112 @@ class LogEntry:
     title: str | None = None
 
 
+#: 경기 기록의 전후 상태 배열이 담는 칸과 **그 순서**. 저장 형식이다 — 순서를
+#: 바꾸거나 칸을 끼워 넣으면 옛 기록의 숫자가 다른 뜻으로 읽힌다. 바꿀 때는 판본을
+#: 올리고 업그레이드를 쓴다. 칸을 늘리려면 **끝에만** 붙이고 역시 판본을 올린다.
+#:
+#:     0 popularity  1 condition  2 wins  3 losses  4 win_streak  5 losing_streak
+STATE_FIELDS: tuple[str, ...] = (
+    "popularity",
+    "condition",
+    "wins",
+    "losses",
+    "win_streak",
+    "losing_streak",
+)
+
+
+@dataclass(frozen=True)
+class ParticipantRecord:
+    """경기 참가자 한 명의 기록. **이름이 열쇠가 아니라 목록의 한 줄이다.**
+
+    이 도메인에는 선수 ID 가 없고 이름이 사실상의 키다(관계·벨트·`find` 모두).
+    이름을 dict 키로 쓰면 동명이인이 한 칸을 덮어쓰므로 목록으로 둔다 — 그래도
+    이름이 같은 두 선수를 **구별해 주지는 못한다.** 코덱이 한 기록 안의 이름이
+    서로 다른지 검사한다(2026-11-03 실측: 운영 세계 셋 모두 동명이인 0명).
+    """
+
+    name: str
+    #: `MatchRecord.teams` 의 몇 번째 팀인가. 0 은 항상 플레이어 쪽이다.
+    side: int
+    #: 경기력의 가중 세 항 — `career_match.PowerParts` 의 (skill, draw, body).
+    #: 시뮬레이션이 **실제로 쓴** 값이다(결과 반영 전 상태로 계산).
+    power: tuple[float, float, float]
+    #: `STATE_FIELDS` 순서의 값. 결과 반영 **직전**.
+    before: tuple[int, ...]
+    #: `STATE_FIELDS` 순서의 값. 결과 반영과 부상 판정 **직후**, 주차 마감(목표
+    #: 보상) **전**.
+    after: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class HeatChange:
+    """경기가 움직인 관계 하나. 방향이 있다(`Relationship` 과 같이 `a → b`)."""
+
+    a: str
+    b: str
+    #: 경기 전 heat. 관계가 없었으면 `None` — 이 경기로 관계가 **생긴** 것이다.
+    before: int | None
+    after: int
+
+
+@dataclass(frozen=True)
+class MatchRecord:
+    """경기 하나의 **불변 기록.** 엔진이 경기 직후 한 번 만들고 아무도 고치지 않는다.
+
+    값은 전부 **이미 계산된 것을 옮긴 것**이다 — `MatchOutcome` · `Card` ·
+    `WeekReport` · 결과 반영 전후의 로스터. 기록을 만들면서 뽑기를 하거나 다시
+    계산하지 않는다(골든이 지킨다).
+
+    ## 승자를 가리키는 칸 넷
+
+        winner_side  이긴 **팀**. 승패의 정본이다
+        finisher     시뮬레이션이 승리를 **귀속시킨 개인**(`MatchOutcome.winner`).
+                     싱글은 이긴 선수, 태그는 이긴 팀의 득점자 — 엔진 규칙이다
+        scorer       핀폴일 때만. 핀을 딴 선수
+        pinned       핀폴일 때만. 핀을 당한 선수
+
+    서브미션·반칙승·카운트아웃·레프리 스톱에는 "핀을 딴 선수" 가 없다. 그래서
+    `scorer`·`pinned` 는 그 경기들에서 `None` 이고 **추정해서 채우지 않는다.**
+
+    ## 태그전 기록의 알려진 한계
+
+    `after` 는 엔진이 **실제로 적용한** 값이다. 태그전 전적 결함
+    (`test_career_tag_record`)이 고쳐지기 전에는 파트너가 핀을 딴 경기에서 파트너
+    `after` 에 패배가 하나 붙어 있고 핀을 당한 상대는 전적이 그대로다. 기록은
+    그것을 보정하지 않는다 — `winner_side` 가 올바른 팀 결과를 따로 들고 있다.
+    """
+
+    id: str
+    season: int
+    week: int
+    #: 경기 시점의 플레이어 브랜드. **쇼가 아니다** — 쇼 개념은 아직 없다.
+    brand: str
+    #: `MatchOutcome.kind` — single · title · tag.
+    kind: str
+    #: 대진 사유 — `Card.note`(일반 경기 · 라이벌전 · 도전 · 방어전 · 태그팀).
+    reason: str
+    title: str | None
+    title_changed: bool
+    #: `(플레이어 팀, 상대 팀)`. 싱글은 한 명씩.
+    teams: tuple[tuple[str, ...], tuple[str, ...]]
+    winner_side: int
+    #: 플레이어 팀(`teams[0]`)의 경기 전 승리 확률 — `WeekReport.probability` 와 같다.
+    probability: float
+    finish: str
+    rating: int
+    finisher: str | None
+    scorer: str | None
+    pinned: str | None
+    participants: tuple[ParticipantRecord, ...]
+    heat: tuple[HeatChange, ...] = ()
+    #: 이 경기로 플레이어가 입은 부상. NPC 는 경기로 다치지 않는다(엔진 규칙).
+    injury: Injury | None = None
+    #: 엔진이 계산한 인기도 변화 — `WeekReport.popularity_delta` 와 같다. 상한·하한에
+    #: 걸리면 실제 변화(`after - before`)가 이보다 작다.
+    popularity_delta: int = 0
+
+
 @dataclass(frozen=True)
 class SeasonSummary:
     """시즌 결산 한 장. **결산은 한 번만 생긴다**(멱등 키)."""
@@ -484,6 +590,16 @@ class WorldState:
     pending: tuple[PendingEvent, ...] = ()
     log: tuple[LogEntry, ...] = ()
     seasons: tuple[SeasonSummary, ...] = ()
+    #: 플레이어 경기 기록. 오래된 것부터 잘린다(`career_match_record.MAX_MATCH_RECORDS`).
+    matches: tuple[MatchRecord, ...] = ()
+    #: **기록이 언제부터 있는가** — `(시즌, 주차)`. `None` 이면 데뷔부터 빠짐없이
+    #: 기록했다(새 커리어). 값이 있으면 그 주차 **이전** 경기는 기록 도입 전이라
+    #: 기록이 없다 — 세이브 v2 → v3 업그레이드가 그 시점의 주차를 적는다.
+    #:
+    #: 기록이 없는 경기의 사유는 `career_match_record.missing_reason` 이 가른다:
+    #: 이 값 이전이면 "도입 전", 남은 가장 오래된 기록보다 이전이면 "보존 상한으로
+    #: 잘림".
+    match_records_since: tuple[int, int] | None = None
     #: 이미 적용한 연산의 키. **중복 적용을 막는 유일한 장치.**
     applied: frozenset[str] = frozenset()
 
