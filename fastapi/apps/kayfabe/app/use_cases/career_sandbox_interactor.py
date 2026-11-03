@@ -54,6 +54,12 @@ from kayfabe.app.dtos.career_sandbox_dto import (
     InjuryDto,
     IntentDto,
     LogDto,
+    MatchDetailDto,
+    MatchHeatDto,
+    MatchParticipantDto,
+    MatchPowerDto,
+    MatchStateDto,
+    MatchSummaryDto,
     RelationshipDto,
     RetirementDto,
     RiskDto,
@@ -64,6 +70,7 @@ from kayfabe.app.dtos.career_sandbox_dto import (
 )
 from kayfabe.app.ports.input.career_sandbox_use_case import (
     CareerSandboxUseCase,
+    MatchNotFoundError,
     RequestKeyConflictError,
 )
 from kayfabe.app.ports.output.data_center_repository import DataCenterRepository
@@ -79,13 +86,17 @@ from kayfabe.domain.services import career_aging as aging
 from kayfabe.domain.services import career_engine as engine
 from kayfabe.domain.services import career_events as events
 from kayfabe.domain.services import career_goals as goals
+from kayfabe.domain.services import career_match_record as records
 from kayfabe.domain.services import career_relations as relations
 from kayfabe.domain.services import career_retirement as retire
 from kayfabe.domain.services import career_season as season_rules
 from kayfabe.domain.services.career_engine import WeekReport
 from kayfabe.domain.services.career_world import (
+    STATE_FIELDS,
     Ability,
     Balance,
+    Injury,
+    MatchRecord,
     Title,
     WorldState,
     Wrestler,
@@ -193,6 +204,40 @@ class CareerSandboxInteractor(CareerSandboxUseCase):
         # 최근 것부터.
         entries.reverse()
         return [_log_dto(e) for e in entries[offset : offset + limit]]
+
+    # ── 경기 기록 (읽기 전용) ─────────────────────────────────
+    #
+    # **`load` 만 부른다** — 잠그지 않고 저장하지 않는다. 옛 판본 세이브는 메모리에서만
+    # v3 로 올라가고 DB 는 그대로다. 도메인의 쓰기 함수(`advance_week` 등)를 부르지
+    # 않으므로 난수·주차·인기도가 움직일 길이 없다.
+
+    async def matches(
+        self,
+        *,
+        user_id: int,
+        career_id: int,
+        season: int | None,
+        limit: int,
+        offset: int,
+    ) -> list[MatchSummaryDto]:
+        world = await self._repo.load(user_id=user_id, career_id=career_id)
+        if world is None:
+            raise LookupError("커리어를 찾을 수 없습니다")
+        picked = [m for m in world.matches if season is None or m.season == season]
+        # `append` 가 시간순으로만 붙인다 — 뒤집으면 최신부터다.
+        picked.reverse()
+        return [_match_summary_dto(m) for m in picked[offset : offset + limit]]
+
+    async def match(
+        self, *, user_id: int, career_id: int, match_id: str
+    ) -> MatchDetailDto:
+        world = await self._repo.load(user_id=user_id, career_id=career_id)
+        if world is None:
+            raise LookupError("커리어를 찾을 수 없습니다")
+        for m in world.matches:
+            if m.id == match_id:
+                return _match_detail_dto(m)
+        raise MatchNotFoundError(match_id, _missing_reason(world, match_id))
 
     # ── 쓰기 ──────────────────────────────────────────────────
 
@@ -587,6 +632,97 @@ def _log_dto(e) -> LogDto:
         other=e.other,
         result=e.result,
         title=e.title,
+    )
+
+
+def _missing_reason(world: WorldState, match_id: str) -> str | None:
+    """기록이 없는 경기의 사유. **경기가 있었다는 증거가 없으면 `None`.**
+
+    `records.missing_reason` 은 "경기가 있었던 주차에만 묻는다" 고 적어 뒀다 — 쉰
+    주차를 물으면 `trimmed`·`before_records` 를 그럴듯하게 돌려준다. 그래서 증거를
+    로그의 `match` 줄에서 찾는다. id 를 파싱하지 않고 로그 줄에서 id 를 **다시
+    만들어** 대조한다(형식은 `records.match_id` 한 곳이 정한다).
+
+    로그도 잘린다(`MAX_LOG`). 그 주차 줄이 없으면 경기가 있었는지 모르므로 사유를
+    지어내지 않는다.
+    """
+    for e in world.log:
+        if e.kind == "match" and records.match_id(season=e.season, week=e.week) == (
+            match_id
+        ):
+            return records.missing_reason(world, season=e.season, week=e.week)
+    return None
+
+
+def _injury_dto(i: Injury) -> InjuryDto:
+    return InjuryDto(
+        kind=i.kind,
+        severity=str(i.severity),
+        season=i.season,
+        week=i.week,
+        weeks_out=i.weeks_out,
+        recovered=i.recovered,
+        recurrence=i.recurrence,
+        permanent=i.permanent,
+    )
+
+
+def _match_state_dto(values: tuple[int, ...]) -> MatchStateDto:
+    named = dict(zip(STATE_FIELDS, values, strict=True))
+    return MatchStateDto(**named)
+
+
+def _match_summary_dto(m: MatchRecord) -> MatchSummaryDto:
+    return MatchSummaryDto(
+        id=m.id,
+        season=m.season,
+        week=m.week,
+        brand=m.brand,
+        kind=m.kind,
+        reason=m.reason,
+        teams=m.teams,
+        winner_side=m.winner_side,
+        title=m.title,
+        title_changed=m.title_changed,
+        finish=m.finish,
+        rating=m.rating,
+    )
+
+
+def _match_detail_dto(m: MatchRecord) -> MatchDetailDto:
+    return MatchDetailDto(
+        id=m.id,
+        season=m.season,
+        week=m.week,
+        brand=m.brand,
+        kind=m.kind,
+        reason=m.reason,
+        title=m.title,
+        title_changed=m.title_changed,
+        teams=m.teams,
+        winner_side=m.winner_side,
+        probability=m.probability,
+        finish=m.finish,
+        rating=m.rating,
+        finisher=m.finisher,
+        scorer=m.scorer,
+        pinned=m.pinned,
+        # 목록 그대로 — 이름으로 dict 를 만들면 동명이인이 한 칸을 덮어쓴다.
+        participants=tuple(
+            MatchParticipantDto(
+                name=p.name,
+                side=p.side,
+                power=MatchPowerDto(skill=p.power[0], draw=p.power[1], body=p.power[2]),
+                before=_match_state_dto(p.before),
+                after=_match_state_dto(p.after),
+            )
+            for p in m.participants
+        ),
+        heat=tuple(
+            MatchHeatDto(a=h.a, b=h.b, before=h.before, after=h.after) for h in m.heat
+        ),
+        injury=None if m.injury is None else _injury_dto(m.injury),
+        popularity_delta=m.popularity_delta,
     )
 
 

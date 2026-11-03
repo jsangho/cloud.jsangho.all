@@ -56,7 +56,8 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from fastapi.responses import JSONResponse
 
 from core.security.dependencies import get_current_user
 from core.security.token_verifier import TokenPayload
@@ -69,10 +70,14 @@ from kayfabe.adapter.inbound.api.schemas.career_sandbox_schema import (
     CareerViewSchema,
     CreateCareerRequest,
     LogSchema,
+    MatchDetailSchema,
+    MatchNotFoundSchema,
+    MatchSummarySchema,
     ResolveRequest,
 )
 from kayfabe.app.ports.input.career_sandbox_use_case import (
     CareerSandboxUseCase,
+    MatchNotFoundError,
     RequestKeyConflictError,
 )
 from kayfabe.app.ports.output.sandbox_career_repository import CorruptSaveError
@@ -372,5 +377,89 @@ async def read_log(
             limit=limit,
             offset=offset,
         )
+    except (LookupError, ValueError) as e:
+        raise _error(e) from e
+
+
+# ── 경기 기록 (읽기 전용) ─────────────────────────────────────────
+#
+# **GET 이고 요청 키가 없다** — 세이브를 쓰지 않는다. 유스케이스가 잠그지 않는
+# `load` 만 부른다.
+#
+#     404 detail="커리어를 찾을 수 없습니다"          없는 커리어 **또는 남의 커리어**
+#     404 detail="…" + missingReason                  내 커리어인데 그 경기 기록이 없다
+#
+# 둘을 가르는 것은 정보 누출이 아니다 — 경기 쪽 404 는 소유권을 통과한 뒤에만 나온다.
+# `detail` 은 다른 404 와 같은 **문자열**이다(프론트 `parseApiError` 가 그대로 읽는다).
+
+#: 사유별 문구. `None`(판정 불가)과 `unexplained` 는 같은 문구다 — 사용자에게는
+#: 같은 사실이고, 구별은 `missingReason` 칸이 한다.
+_MATCH_MISSING_TEXT = {
+    "before_records": "기록 도입 전 경기라 상세 기록이 없습니다",
+    "trimmed": "보존 기간이 지나 지워진 경기 기록입니다",
+}
+_MATCH_MISSING_DEFAULT = "경기 기록을 찾을 수 없습니다"
+
+
+@career_sandbox_router.get(
+    "/{career_id}/matches",
+    response_model=list[MatchSummarySchema],
+    response_model_by_alias=True,
+)
+async def list_matches(
+    career_id: int,
+    season: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerSandboxUseCase = Depends(get_career_use_case),
+):
+    """저장된 경기 기록. 최신 경기부터, 페이지로 끊어서. 기록이 없으면 빈 목록."""
+    try:
+        return await use_case.matches(
+            user_id=_user_id(claims),
+            career_id=career_id,
+            season=season,
+            limit=limit,
+            offset=offset,
+        )
+    except (LookupError, ValueError) as e:
+        raise _error(e) from e
+
+
+@career_sandbox_router.get(
+    "/{career_id}/matches/{match_id}",
+    response_model=MatchDetailSchema,
+    response_model_by_alias=True,
+    responses={404: {"model": MatchNotFoundSchema}},
+)
+async def get_match(
+    career_id: int,
+    match_id: str = Path(max_length=32),
+    claims: TokenPayload = Depends(get_current_user),
+    use_case: CareerSandboxUseCase = Depends(get_career_use_case),
+):
+    """경기 기록 한 장. 참가자는 저장 순서 그대로다.
+
+    **`MatchNotFoundError` 를 `LookupError` 절보다 먼저 잡는다** — 하위 타입이라
+    뒤에 두면 사유 없는 일반 404 로 떨어진다.
+    """
+    try:
+        return await use_case.match(
+            user_id=_user_id(claims), career_id=career_id, match_id=match_id
+        )
+    except MatchNotFoundError as e:
+        if e.reason == "unexplained":
+            # 로그는 경기가 있었다고 하는데 기록이 없다 — 세이브가 자기모순이다.
+            logger.warning(
+                "[CareerRouter] 설명할 수 없는 경기 기록 누락 career=%d match=%s",
+                career_id,
+                e.match_id,
+            )
+        body = MatchNotFoundSchema(
+            detail=_MATCH_MISSING_TEXT.get(e.reason or "", _MATCH_MISSING_DEFAULT),
+            missing_reason=e.reason,
+        )
+        return JSONResponse(status_code=404, content=body.model_dump(by_alias=True))
     except (LookupError, ValueError) as e:
         raise _error(e) from e
