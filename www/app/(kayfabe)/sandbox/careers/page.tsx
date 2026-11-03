@@ -221,7 +221,12 @@ function CareersView() {
   // 새로고침 복구: URL에 커리어가 적혀 있으면 그 세이브를 읽어 온다.
   useEffect(() => {
     if (!isSignedIn || state.loading) return;
-    if (wantedCareer == null || state.view?.id === wantedCareer) return;
+    // URL 에서 커리어가 빠졌다(목록으로 나갔다) — 다음에 같은 id 가 오면 다시 복구한다.
+    if (wantedCareer == null) {
+      restored.current = null;
+      return;
+    }
+    if (state.view?.id === wantedCareer) return;
     if (restored.current === wantedCareer) return;
     restored.current = wantedCareer;
     let cancelled = false;
@@ -375,7 +380,11 @@ function CareersView() {
 
   const backToList = useCallback(async () => {
     const careers = await fetchCareers();
-    restored.current = null;
+    // **지금 URL 의 커리어를 "이미 복구함" 으로 둔다.** `view` 를 비운 렌더가 URL 갱신
+    // (`router.replace` — 비동기)보다 먼저 오므로, 그 사이 복구 효과가 낡은 `career`
+    // 를 보고 방금 나온 커리어를 다시 읽어 들였다(2026-11-03 브라우저 실측 — 목록이
+    // 안 열리고 대시보드로 돌아갔다). URL 이 따라오면 복구 효과가 이 값을 비운다.
+    restored.current = wantedCareer;
     pending.current = null;
     setState((s) => ({
       ...s,
@@ -386,7 +395,7 @@ function CareersView() {
       notice: null,
     }));
     writeUrl({ career: null, tab: "dashboard" });
-  }, [writeUrl]);
+  }, [wantedCareer, writeUrl]);
 
   if (!isReady || state.loading) {
     return (
