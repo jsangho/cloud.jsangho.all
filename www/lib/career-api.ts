@@ -5,6 +5,22 @@ import {
   requestTimeoutMs,
   sandboxCareersBaseUrl,
 } from "@/lib/api";
+import {
+  readMissingBody,
+  type CareerMatchDetail,
+  type CareerMatchLookup,
+  type CareerMatchSummary,
+} from "@/lib/career-match";
+
+export type {
+  CareerMatchDetail,
+  CareerMatchHeat,
+  CareerMatchLookup,
+  CareerMatchMissingReason,
+  CareerMatchParticipant,
+  CareerMatchState,
+  CareerMatchSummary,
+} from "@/lib/career-match";
 
 /**
  * 저장되는 커리어 — **세이브가 서버에 있고 소유자가 있다.**
@@ -455,4 +471,85 @@ export async function fetchCareerLog(
   query.set("offset", String(options.offset ?? 0));
   const rows = await read<CareerLogEntry[]>(`/${careerId}/log?${query.toString()}`);
   return Array.isArray(rows) ? rows : [];
+}
+
+// ── 경기 기록 (읽기 전용 · P1) ─────────────────────────────────────
+//
+// **`read` 를 쓰지 않는다.** `read` 는 실패를 `null` 로 뭉개는데, 경기 화면은
+// 「기록 없음」(빈 목록) · 「불러오지 못함」 · 「그 경기 기록은 지워졌다」를 다르게
+// 그려야 한다. 그래서 결과를 판별 유니온으로 돌려준다. 쓰기가 아니므로
+// `Idempotency-Key` 를 싣지 않는다.
+
+/** 읽기 하나. 시간 제한과 호출자의 취소를 함께 건다. */
+async function readRaw(
+  path: string,
+  signal?: AbortSignal,
+): Promise<{ res: Response; body: unknown } | { failure: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  const forward = () => controller.abort();
+  signal?.addEventListener("abort", forward);
+  try {
+    const res = await fetch(`${sandboxCareersBaseUrl}${path}`, {
+      credentials: "include",
+      signal: controller.signal,
+    });
+    const body: unknown = await res.json().catch(() => null);
+    return { res, body };
+  } catch (error) {
+    if (isAbortError(error)) return { failure: getRequestTimeoutMessage() };
+    return { failure: "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", forward);
+  }
+}
+
+function errorText(body: unknown, status: number): string {
+  return parseApiError(
+    body && typeof body === "object" ? (body as { detail?: string }) : null,
+    status,
+  );
+}
+
+/** 저장된 경기 기록 목록. 최신 경기부터. 기록이 없으면 `rows: []` 이고 실패가 아니다. */
+export async function fetchCareerMatches(
+  careerId: number,
+  options: { season?: number | null; limit: number; offset: number },
+  signal?: AbortSignal,
+): Promise<{ ok: true; rows: CareerMatchSummary[] } | { ok: false; message: string }> {
+  const query = new URLSearchParams();
+  if (options.season != null) query.set("season", String(options.season));
+  query.set("limit", String(options.limit));
+  query.set("offset", String(options.offset));
+  const got = await readRaw(`/${careerId}/matches?${query.toString()}`, signal);
+  if ("failure" in got) return { ok: false, message: got.failure };
+  if (!got.res.ok) return { ok: false, message: errorText(got.body, got.res.status) };
+  if (!Array.isArray(got.body)) return { ok: false, message: "응답 형식이 올바르지 않습니다." };
+  return { ok: true, rows: got.body as CareerMatchSummary[] };
+}
+
+/**
+ * 경기 기록 한 장. **404 가 둘이다** — `missingReason` 칸이 있으면 「내 커리어인데
+ * 그 기록이 없다」(`missing`), 없으면 「없는 커리어 · 남의 커리어」(`error`). `detail`
+ * 은 두 경우 다 문자열이라 `parseApiError` 가 그대로 읽는다.
+ */
+export async function fetchCareerMatch(
+  careerId: number,
+  matchId: string,
+  signal?: AbortSignal,
+): Promise<CareerMatchLookup> {
+  const got = await readRaw(`/${careerId}/matches/${encodeURIComponent(matchId)}`, signal);
+  if ("failure" in got) return { status: "error", message: got.failure };
+  if (got.res.ok) {
+    if (!got.body || typeof got.body !== "object" || !("participants" in got.body)) {
+      return { status: "error", message: "응답 형식이 올바르지 않습니다." };
+    }
+    return { status: "ok", match: got.body as CareerMatchDetail };
+  }
+  if (got.res.status === 404) {
+    const missing = readMissingBody(got.body);
+    if (missing.missing) return { status: "missing", reason: missing.reason };
+  }
+  return { status: "error", message: errorText(got.body, got.res.status) };
 }

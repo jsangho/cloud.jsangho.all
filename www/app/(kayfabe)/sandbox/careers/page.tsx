@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { CareerDashboard } from "@/components/sandbox-career/career-dashboard";
 import { CareerLogPanel } from "@/components/sandbox-career/career-log-panel";
+import { CareerMatchDetailDialog } from "@/components/sandbox-career/career-match-detail";
 import { CareerMatchesPanel } from "@/components/sandbox-career/career-matches-panel";
 import { CareerTabs, type CareerTab } from "@/components/sandbox-career/career-tabs";
 import { CareerTitlesPanel } from "@/components/sandbox-career/career-titles-panel";
@@ -21,6 +22,7 @@ import {
   createCareer,
   fetchCareer,
   fetchCareerLog,
+  fetchCareerMatches,
   fetchCareers,
   newCareerRequestId,
   performCareerAction,
@@ -42,6 +44,7 @@ import {
   eventScope,
   type PendingRequestKey,
 } from "@/lib/career-request-keys";
+import { recordForWeek } from "@/lib/career-match";
 
 /**
  * 커리어 — **저장되는 쪽이다.**
@@ -93,6 +96,12 @@ const LOG_PAGE = 200;
 /** 탭 ↔ URL 값. 새로고침해도 같은 탭으로 돌아온다. */
 const TAB_PARAM = "tab";
 const CAREER_PARAM = "career";
+/**
+ * 열어 둔 경기 상세(`?tab=matches&match=s1w52:p`). **경기 탭에서만 뜻이 있다** —
+ * 다른 탭으로 가면 지운다. 다이얼로그가 열려 있는지는 이 값 하나가 정한다(React
+ * 상태에 따로 두지 않는다 — 두 곳에 있으면 서로를 고치다 무한 갱신이 난다).
+ */
+const MATCH_PARAM = "match";
 
 type Notice = { kind: "ok" | "error"; message: string };
 
@@ -169,21 +178,67 @@ function CareersView() {
   const tab: CareerTab = isTab(paramTab) ? paramTab : "dashboard";
   const paramCareer = Number(params.get(CAREER_PARAM));
   const wantedCareer = Number.isInteger(paramCareer) && paramCareer > 0 ? paramCareer : null;
+  const openMatchId = tab === "matches" ? params.get(MATCH_PARAM) : null;
 
-  /** URL 한 줄에 커리어와 탭을 적는다 — 새로고침 복구가 이 두 값으로 끝난다. */
+  /**
+   * URL 한 줄에 커리어와 탭(과 경기)을 적는다 — 새로고침 복구가 이 값들로 끝난다.
+   *
+   * **탭·커리어 이동은 `replace`** 다(기존 정책 그대로). **경기 열기만 `push`** 다 —
+   * 뒤로 가기가 다이얼로그를 닫아야 하기 때문이다. 경기 값은 탭을 옮기거나
+   * 커리어를 바꾸면 지운다.
+   */
   const writeUrl = useCallback(
-    (next: { career?: number | null; tab?: CareerTab }) => {
+    (
+      next: { career?: number | null; tab?: CareerTab; match?: string | null },
+      mode: "replace" | "push" = "replace",
+    ) => {
       const search = new URLSearchParams(params.toString());
       if (next.career !== undefined) {
         if (next.career == null) search.delete(CAREER_PARAM);
         else search.set(CAREER_PARAM, String(next.career));
+        search.delete(MATCH_PARAM);
       }
-      if (next.tab !== undefined) search.set(TAB_PARAM, next.tab);
+      if (next.tab !== undefined) {
+        search.set(TAB_PARAM, next.tab);
+        // 탭 이동은 경기를 들고 가지 않는다 — 경기 탭으로 가더라도. 다른 탭 URL 에
+        // 남은 `match` 가 경기 탭에 들어서는 순간 다이얼로그로 되살아났다(브라우저
+        // 실측). 경기를 열 때는 `match` 를 함께 넘긴다(`openMatch`).
+        if (next.match === undefined) search.delete(MATCH_PARAM);
+      }
+      if (next.match !== undefined) {
+        if (next.match == null) search.delete(MATCH_PARAM);
+        else search.set(MATCH_PARAM, next.match);
+      }
       const query = search.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      const url = query ? `${pathname}?${query}` : pathname;
+      if (mode === "push") router.push(url, { scroll: false });
+      else router.replace(url, { scroll: false });
     },
     [params, pathname, router],
   );
+
+  /**
+   * 이 화면이 `push` 로 연 경기. 닫을 때 **그 기록 항목이 지금 항목이면** 뒤로 가서
+   * 닫는다 — 그래야 닫은 뒤 뒤로 가기가 같은 다이얼로그를 다시 열지 않는다. 딥링크로
+   * 들어왔거나 앞으로 가기로 다시 열린 경우엔 `replace` 로 값만 지운다.
+   */
+  const pushedMatch = useRef<string | null>(null);
+  const openMatch = useCallback(
+    (matchId: string) => {
+      pushedMatch.current = matchId;
+      writeUrl({ tab: "matches", match: matchId }, "push");
+    },
+    [writeUrl],
+  );
+  const closeMatch = useCallback(() => {
+    if (pushedMatch.current != null && pushedMatch.current === openMatchId) {
+      pushedMatch.current = null;
+      router.back();
+      return;
+    }
+    pushedMatch.current = null;
+    writeUrl({ match: null });
+  }, [openMatchId, router, writeUrl]);
 
   /** 복구를 한 번만 시도한다 — 실패한 id로 매 렌더마다 다시 부르지 않는다. */
   const restored = useRef<number | null>(null);
@@ -200,6 +255,13 @@ function CareersView() {
    * ref는 **미해결 시도 하나**만 든다 — 이유는 그 모듈 주석에 있다.
    */
   const pending = useRef<PendingRequestKey>(null);
+
+  /**
+   * 지난 주 보고에 붙일 경기 기록 id. **서버가 준 id 만 쓴다** — 시즌·주차로 id 를
+   * 지어내면 기록이 없는 경기(도입 전·잘림)에 죽은 링크가 생긴다. 최신 기록 하나를
+   * 읽어 보고의 시즌·주차와 같을 때만 링크를 단다.
+   */
+  const [reportMatch, setReportMatch] = useState<{ key: string; id: string | null } | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
@@ -283,6 +345,36 @@ function CareersView() {
     const wantsAll = FULL_LOG_TABS.includes(tab) || state.detail != null;
     if (wantsAll && !exhausted) void loadLogPage(view.id, entries.length);
   }, [state.view, state.busy, state.log, state.detail, tab, loadLogPage]);
+
+  // 지난 주 보고 → 경기 기록 id. 경기가 없던 주(휴식·결장)는 묻지 않는다.
+  const reportCareer = state.view?.id ?? null;
+  const lastReport = state.view?.lastReport ?? null;
+  const reportSeason = lastReport?.opponent != null ? lastReport.season : null;
+  const reportWeek = lastReport?.opponent != null ? lastReport.week : null;
+  const reportKey =
+    reportCareer != null && reportSeason != null && reportWeek != null
+      ? `${reportCareer}:${reportSeason}:${reportWeek}`
+      : null;
+  useEffect(() => {
+    if (reportKey == null || reportCareer == null || reportSeason == null || reportWeek == null)
+      return;
+    const controller = new AbortController();
+    void fetchCareerMatches(
+      reportCareer,
+      { season: reportSeason, limit: 1, offset: 0 },
+      controller.signal,
+    ).then((result) => {
+      if (controller.signal.aborted) return;
+      // 실패하면 링크를 달지 않는다 — 보고 자체는 그대로 보인다.
+      setReportMatch({
+        key: reportKey,
+        id: result.ok ? recordForWeek(result.rows, reportSeason, reportWeek) : null,
+      });
+    });
+    return () => controller.abort();
+  }, [reportKey, reportCareer, reportSeason, reportWeek]);
+  const reportMatchId =
+    reportMatch != null && reportMatch.key === reportKey ? reportMatch.id : null;
 
   /**
    * 쓰기 하나. **실패하면 화면 상태를 바꾸지 않는다** — 사유만 적는다.
@@ -640,6 +732,8 @@ function CareersView() {
                 )
               }
               onGoTo={(next) => writeUrl({ tab: next })}
+              reportMatchId={reportMatchId}
+              onOpenMatch={openMatch}
               onAdvance={advance}
               onSettle={settle}
               onNextSeason={nextSeason}
@@ -650,6 +744,8 @@ function CareersView() {
             <CareerWeekPanel
               view={view}
               busy={state.busy}
+              reportMatchId={reportMatchId}
+              onOpenMatch={openMatch}
               targets={state.targets}
               onTargets={(next) => setState((s) => ({ ...s, targets: { ...s.targets, ...next } }))}
               onAct={(action: CareerAction, target) =>
@@ -683,7 +779,12 @@ function CareersView() {
           ) : null}
 
           {tab === "matches" ? (
-            <CareerMatchesPanel view={view} log={logEntries} logLoading={log.loading} />
+            <CareerMatchesPanel
+              view={view}
+              log={logEntries}
+              logLoading={log.loading}
+              onOpenMatch={openMatch}
+            />
           ) : null}
 
           {tab === "titles" ? (
@@ -707,6 +808,8 @@ function CareersView() {
             log={logEntries}
             onClose={() => setState((s) => ({ ...s, detail: null }))}
           />
+
+          <CareerMatchDetailDialog careerId={view.id} matchId={openMatchId} onClose={closeMatch} />
         </>
       )}
     </Shell>

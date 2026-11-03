@@ -2,6 +2,13 @@
 
 import type { ReactNode } from "react";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -299,5 +306,37 @@ export function WeekTag({ season, week }: { season: number; week: number }) {
     <span className="shrink-0 font-mono text-[11px] tabular-nums text-stone-500">
       S{season}·W{String(week).padStart(2, "0")}
     </span>
+  );
+}
+
+/**
+ * 아레나 다이얼로그 껍데기 — 선수 상세 · 경기 상세가 같이 쓴다.
+ *
+ * 다이얼로그는 포털로 `body` 에 붙어 `.career-arena` 트리 밖으로 나간다. 그래서
+ * `dark career-arena-scope` 를 **여기서** 다시 건다(DESIGN.md 예외 §2) — 두 곳에
+ * 복사해 두면 한쪽만 낡는다.
+ */
+export function ArenaDialog({
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
+      <DialogContent className="dark career-arena-scope max-h-[85vh] overflow-y-auto border-white/10 bg-[linear-gradient(180deg,rgba(22,25,31,0.98),rgba(8,9,11,0.98))] text-stone-100 sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-sport text-xl">{title}</DialogTitle>
+          {/* 설명이 없어도 칸을 둔다 — Radix 가 `aria-describedby` 대상을 찾는다. */}
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
   );
 }

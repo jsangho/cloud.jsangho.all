@@ -56,6 +56,8 @@ export function CareerDashboard({
   log,
   onResolve,
   onGoTo,
+  reportMatchId,
+  onOpenMatch,
   onAdvance,
   onSettle,
   onNextSeason,
@@ -66,6 +68,9 @@ export function CareerDashboard({
   log: readonly CareerLogEntry[] | null;
   onResolve: (eventId: string, choice: string) => void;
   onGoTo: (tab: CareerTab) => void;
+  /** 지난 주 경기의 기록 id. 기록이 없거나 아직 모르면 `null` — 링크를 달지 않는다. */
+  reportMatchId: string | null;
+  onOpenMatch: (matchId: string) => void;
   onAdvance: () => void;
   onSettle: () => void;
   onNextSeason: () => void;
@@ -193,7 +198,9 @@ export function CareerDashboard({
       ) : null}
 
       <RetirementPanel me={me} />
-      {view.lastReport ? <ReportPanel report={view.lastReport} /> : null}
+      {view.lastReport ? (
+        <ReportPanel report={view.lastReport} matchId={reportMatchId} onOpenMatch={onOpenMatch} />
+      ) : null}
     </div>
   );
 }
@@ -900,11 +907,31 @@ function LastWeekLine({ report }: { report: CareerWeekReport }) {
   );
 }
 
-/** 지난 주에 일어난 일. **문장은 화면이 만든다** — 서버는 사실만 보낸다. */
-export function ReportPanel({ report }: { report: CareerWeekReport }) {
+/**
+ * 지난 주에 일어난 일. **문장은 화면이 만든다** — 서버는 사실만 보낸다.
+ *
+ * `matchId` 는 서버 기록 목록에서 찾은 id 다(페이지가 찾는다). 없으면 링크를 달지
+ * 않는다 — 시즌·주차로 id 를 지어내지 않는다.
+ */
+export function ReportPanel({
+  report,
+  matchId,
+  onOpenMatch,
+}: {
+  report: CareerWeekReport;
+  matchId: string | null;
+  onOpenMatch: (matchId: string) => void;
+}) {
   const parts = reportParts(report);
   return (
-    <Panel title={`지난 주 — S${report.season} W${report.week} · ${report.kind}`}>
+    <Panel
+      title={`지난 주 — S${report.season} W${report.week} · ${report.kind}`}
+      action={
+        matchId != null ? (
+          <PanelLink onClick={() => onOpenMatch(matchId)}>경기 상세</PanelLink>
+        ) : undefined
+      }
+    >
       <p className="text-sm text-stone-100">
         {parts.length > 0 ? parts.join(" · ") : "특별한 일이 없었습니다."}
       </p>

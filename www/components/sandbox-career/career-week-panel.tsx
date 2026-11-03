@@ -59,6 +59,8 @@ export type WeekTargets = { stat: CareerTrainable; partner: string };
 export function CareerWeekPanel({
   view,
   busy,
+  reportMatchId,
+  onOpenMatch,
   targets,
   onTargets,
   onAct,
@@ -69,6 +71,9 @@ export function CareerWeekPanel({
 }: {
   view: CareerView;
   busy: string | null;
+  /** 지난 주 경기의 기록 id. 기록이 없거나 아직 모르면 `null` — 링크를 달지 않는다. */
+  reportMatchId: string | null;
+  onOpenMatch: (matchId: string) => void;
   targets: WeekTargets;
   onTargets: (next: Partial<WeekTargets>) => void;
   onAct: (action: CareerAction, target?: string) => void;
@@ -239,7 +244,11 @@ export function CareerWeekPanel({
         <section>
           <SectionTitle>지난 주 결과</SectionTitle>
           <div className="mt-3">
-            <ReportPanel report={view.lastReport} />
+            <ReportPanel
+              report={view.lastReport}
+              matchId={reportMatchId}
+              onOpenMatch={onOpenMatch}
+            />
           </div>
         </section>
       ) : (
