@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
     "test:keys": "tsc lib/career-request-keys.ts lib/career-request-keys.test.ts --module commonjs --target es2022 --moduleResolution node10 --strict --esModuleInterop --outDir .next/test-keys && node --test .next/test-keys/career-request-keys.test.js",
-    "test:match": "tsc lib/career-match.ts lib/career-match.test.ts --module commonjs --target es2022 --moduleResolution node10 --strict --esModuleInterop --outDir .next/test-match && node --test .next/test-match/career-match.test.js"
+    "test:match": "tsc lib/career-match.ts lib/career-match.test.ts --module commonjs --target es2022 --moduleResolution node10 --strict --esModuleInterop --outDir .next/test-match && node --test .next/test-match/career-match.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",
@@ -73,6 +74,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",
+    "@playwright/test": "1.55.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "^19",
