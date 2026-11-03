@@ -39,15 +39,19 @@ KAYFABE_TEST_DATABASE_URL='postgresql+psycopg://user:pw@127.0.0.1:5432/kayfabe_t
 from __future__ import annotations
 
 import asyncio
+import copy
+import importlib.util
 import json
 import os
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
 
 import pytest
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -56,17 +60,25 @@ from kayfabe.adapter.outbound.orm.career_sandbox_orm import (
     SandboxCareerModel,
     SandboxCareerRequestModel,
 )
+from kayfabe.adapter.outbound.pg.career_world_codec import (
+    SCHEMA_VERSION,
+)
+from kayfabe.adapter.outbound.pg.career_world_codec import (
+    load as decode,
+)
 from kayfabe.adapter.outbound.pg.sandbox_career_pg_repository import (
     SandboxCareerPgRepository,
 )
 from kayfabe.app.ports.input.career_sandbox_use_case import RequestKeyConflictError
 from kayfabe.app.ports.output.sandbox_career_repository import (
     RECEIPT_KEEP,
+    CorruptSaveError,
     DuplicateRequestError,
     RequestReceipt,
 )
 from kayfabe.app.use_cases.career_sandbox_interactor import CareerSandboxInteractor
 from kayfabe.domain.services import career_engine as engine
+from kayfabe.domain.services import career_season as season_rules
 from kayfabe.domain.services.career_world import Balance, WorldState
 
 #: 이 파일만의 DSN. 비어 있으면 전부 skip 이다.
@@ -574,3 +586,235 @@ async def test_deleting_the_user_takes_careers_and_receipts() -> None:
 
         assert careers == []
         assert receipts == []
+
+
+# ── 7. 세이브 판본 v1 → v2 가 진짜 JSONB 위에서도 지켜지는가 ───────
+#
+# 코덱 단위 테스트(`test_career_world_codec_upgrade`)는 파이썬 dict 를 본다. 여기서는
+# **JSONB 를 한 번 거친 값**을 본다 — JSONB 는 키 순서를 버리고 튜플을 배열로
+# 돌려주며(2026-10-22 실측), 읽기 경로가 실수로 쓰기를 하면 DB 에만 흔적이 남는다.
+#
+# v1 행은 **배포 전 운영 행의 모양**을 흉내 낸다 — `create` 로 행을 만든 뒤
+# `world` 칸을 변경 전 코드가 실제로 쓴 v1 세이브(골든 픽스처 `final_v1`)로 덮는다.
+
+_GOLDEN_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "domain"
+    / "services"
+    / "test_career_golden.py"
+)
+
+#: 골든 v1 세이브는 52주 시즌으로 만들었다. 인터랙터도 같은 밸런스여야 한다.
+_V1_BALANCE = Balance()
+
+
+def _golden():
+    spec = importlib.util.spec_from_file_location("_career_golden_pg", _GOLDEN_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _v1_raw() -> dict[str, Any]:
+    return _golden().load_fixture()["final_v1"]
+
+
+async def _put_raw(h: Harness, career_id: int, raw: dict[str, Any]) -> None:
+    """`world` 칸을 날것으로 덮는다. **코덱을 거치지 않는다** — 옛 판본 행을 만든다."""
+    async with h.session() as session:
+        await session.execute(
+            update(SandboxCareerModel)
+            .where(SandboxCareerModel.id == career_id)
+            .values(world=raw)
+        )
+        await session.commit()
+
+
+async def _raw(h: Harness, career_id: int) -> tuple[dict[str, Any], str]:
+    """DB 에 실제로 있는 값. dict 와 `world::text`(JSONB 정규형) 둘 다."""
+    async with h.session() as session:
+        row = (
+            await session.execute(
+                select(SandboxCareerModel.world, text("world::text")).where(
+                    SandboxCareerModel.id == career_id
+                )
+            )
+        ).one()
+    return row[0], row[1]
+
+
+async def _v1_career(h: Harness) -> tuple[int, dict[str, Any]]:
+    career_id = await _career(h)
+    raw = _v1_raw()
+    await _put_raw(h, career_id, raw)
+    return career_id, raw
+
+
+@pytest.mark.asyncio
+async def test_v1_row_is_stored_and_read_back_as_v1() -> None:
+    """출발점 확인 — JSONB 에 넣은 v1 이 값 그대로 남는다(키 순서는 JSONB 가 버린다)."""
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+
+        stored, _ = await _raw(h, career_id)
+
+        assert stored == raw
+        assert stored["version"] == 1
+
+
+@pytest.mark.asyncio
+async def test_reading_a_v1_row_upgrades_in_memory_only() -> None:
+    """**조회는 DB 를 바꾸지 않는다.** 저장소 `load` · `load_for_update`(커밋 없이 닫음) ·
+    목록 · 유스케이스 `view` · `log` 를 다 지나도 행은 v1 바이트 그대로다."""
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+        _, text_before = await _raw(h, career_id)
+
+        async with h.repo() as repo:
+            world = await repo.load(user_id=h.user_id, career_id=career_id)
+            locked = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            await repo.list_for_user(h.user_id)
+        async with h.repo() as repo:
+            use_case = CareerSandboxInteractor(repository=repo, balance=_V1_BALANCE)
+            view = await use_case.view(user_id=h.user_id, career_id=career_id)
+            await use_case.log(
+                user_id=h.user_id, career_id=career_id, season=None, limit=50, offset=0
+            )
+
+        stored, text_after = await _raw(h, career_id)
+
+        assert world is not None and locked == world
+        assert view is not None
+        # 메모리에서는 v2 칸이 있다.
+        assert world.hero.streaks_since is None
+        assert world.hero.best_win_streak > 0
+        # DB 는 v1 그대로다.
+        assert stored["version"] == 1
+        assert stored == raw
+        assert text_after == text_before
+
+
+@pytest.mark.asyncio
+async def test_first_save_writes_v2_and_keeps_every_v1_field() -> None:
+    """같은 세계를 **그대로** 저장하면 DB 에 v2 가 쓰이고, v1 칸은 하나도 안 바뀐다."""
+    golden = _golden()
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+
+        async with h.repo() as repo:
+            world = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            assert world is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=world)
+
+        stored, _ = await _raw(h, career_id)
+
+        assert stored["version"] == SCHEMA_VERSION == 2
+        assert golden.strip_v2(stored) == golden.strip_v2(raw)
+        hero = next(w for w in stored["roster"] if w["is_player"])
+        assert {"win_streak", "best_win_streak", "streaks_since"} <= set(hero)
+        # 부분 집계 표시는 JSON 배열로 들어간다(튜플은 JSONB 에 없다).
+        npc_partial = [w for w in stored["roster"] if w["streaks_since"] is not None]
+        assert npc_partial
+        assert all(isinstance(w["streaks_since"], list) for w in npc_partial)
+
+
+@pytest.mark.asyncio
+async def test_v2_reload_restores_the_same_world_and_resave_is_stable() -> None:
+    """저장 → 조회 → 재저장. **같은 `WorldState`, 같은 JSONB** 다."""
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+        expected = decode(copy.deepcopy(raw))
+
+        async with h.repo() as repo:
+            first = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            assert first is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=first)
+        dict_1, text_1 = await _raw(h, career_id)
+
+        async with h.repo() as repo:
+            second = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            assert second is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=second)
+        dict_2, text_2 = await _raw(h, career_id)
+
+        assert first == expected
+        assert second == expected
+        assert dict_2 == dict_1
+        assert text_2 == text_1
+        assert json.dumps(dict_2, sort_keys=True, ensure_ascii=False) == json.dumps(
+            dict_1, sort_keys=True, ensure_ascii=False
+        )
+
+
+@pytest.mark.asyncio
+async def test_a_use_case_write_on_a_v1_row_persists_v2() -> None:
+    """실제 쓰기 경로(`_mutate`: 잠금 → 영수증 → 도메인 → 저장)를 지나면 v2 로 남는다.
+
+    결과 세계는 **메모리에서 같은 연산을 한 것과 같다** — 업그레이드가 쓰기 경로에서
+    다른 값을 만들지 않는다.
+    """
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+        expected = season_rules.start_next_season(
+            decode(copy.deepcopy(raw)), balance=_V1_BALANCE
+        )
+
+        async with h.repo() as repo:
+            outcome = await CareerSandboxInteractor(
+                repository=repo, balance=_V1_BALANCE
+            ).next_season(
+                user_id=h.user_id, career_id=career_id, request_id="phase05-next-1"
+            )
+        stored, _ = await _raw(h, career_id)
+        async with h.repo() as repo:
+            reloaded = await repo.load(user_id=h.user_id, career_id=career_id)
+
+        assert outcome.view is not None and outcome.view.season == raw["season"] + 1
+        assert stored["version"] == 2
+        assert reloaded == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("version", [99, 0, "2", None])
+async def test_corrupt_version_row_is_refused_and_left_untouched(version) -> None:
+    """모르는 판본은 읽기·쓰기 모두 `CorruptSaveError`. **실패한 쓰기는 행을 안 바꾼다.**"""
+    async with _harness() as h:
+        career_id, raw = await _v1_career(h)
+        broken = {**raw, "version": version}
+        await _put_raw(h, career_id, broken)
+        _, text_before = await _raw(h, career_id)
+
+        async with h.repo() as repo:
+            with pytest.raises(CorruptSaveError):
+                await repo.load(user_id=h.user_id, career_id=career_id)
+        async with h.repo() as repo:
+            with pytest.raises(CorruptSaveError):
+                await CareerSandboxInteractor(
+                    repository=repo, balance=_V1_BALANCE
+                ).next_season(
+                    user_id=h.user_id, career_id=career_id, request_id="phase05-bad-1"
+                )
+
+        stored, text_after = await _raw(h, career_id)
+        assert stored == broken
+        assert text_after == text_before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("key", ["win_streak", "best_win_streak", "streaks_since"])
+async def test_v2_row_missing_a_new_field_is_refused(key: str) -> None:
+    """v2 행에서 새 칸이 빠지면 손상이다 — 기본값으로 메워 읽지 않는다."""
+    async with _harness() as h:
+        career_id, _ = await _v1_career(h)
+        async with h.repo() as repo:
+            world = await repo.load_for_update(user_id=h.user_id, career_id=career_id)
+            assert world is not None
+            await repo.save(user_id=h.user_id, career_id=career_id, state=world)
+        stored, _ = await _raw(h, career_id)
+        del stored["roster"][0][key]
+        await _put_raw(h, career_id, stored)
+
+        async with h.repo() as repo:
+            with pytest.raises(CorruptSaveError):
+                await repo.load(user_id=h.user_id, career_id=career_id)
