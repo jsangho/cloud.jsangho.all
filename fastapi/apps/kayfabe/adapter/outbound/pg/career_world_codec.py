@@ -27,7 +27,8 @@ DB 는 건드리지 않는다 — 다음 정상 저장(`dump`)이 새 판본으�
 
 업그레이드 함수는 **옛 칸을 하나도 바꾸지 않고 새 칸만 더한다.** 새 칸의 값을 옛
 기록으로 정확히 셀 수 없으면 추정하지 않고 "여기부터 셌다" 를 적는다
-(`_upgrade_v1_to_v2`).
+(`_upgrade_v1_to_v2` · `_upgrade_v2_to_v3`). 판본은 한 단계씩 오른다 — v1 세이브는
+v1 → v2 → v3 를 차례로 지난다.
 
 ## `mappers/` 가 아니라 `pg/` 에 있는 이유
 
@@ -45,11 +46,15 @@ from typing import Any
 from kayfabe.app.ports.output.sandbox_career_repository import CorruptSaveError
 from kayfabe.domain.services import career_tally as tally
 from kayfabe.domain.services.career_world import (
+    STATE_FIELDS,
     Ability,
     AbilitySnapshot,
     Choice,
+    HeatChange,
     Injury,
     LogEntry,
+    MatchRecord,
+    ParticipantRecord,
     PendingEvent,
     Relationship,
     Retirement,
@@ -64,7 +69,8 @@ from kayfabe.domain.services.career_world import (
 #: 메우면 틀리는 경우** 올린다 — 그 경우 업그레이드 함수가 옛 기록에서 값을 정한다.
 #:
 #: 1 → 2 (Phase 0): 선수에 `win_streak` · `best_win_streak` · `streaks_since`.
-SCHEMA_VERSION = 2
+#: 2 → 3 (Phase 1 P0): 세계에 `matches`(경기 기록) · `match_records_since`.
+SCHEMA_VERSION = 3
 
 
 def _ability(d: dict[str, Any]) -> Ability:
@@ -85,6 +91,141 @@ def _ability_out(a: Ability) -> dict[str, Any]:
     }
 
 
+def _injury_out(i: Injury) -> dict[str, Any]:
+    """부상 한 건. 선수 이력과 경기 기록이 **같은 모양**을 쓴다."""
+    return {
+        "kind": i.kind,
+        "severity": str(i.severity),
+        "season": i.season,
+        "week": i.week,
+        "weeks_out": i.weeks_out,
+        "recovered": i.recovered,
+        "recurrence": i.recurrence,
+        "permanent": i.permanent,
+    }
+
+
+def _injury_in(i: dict[str, Any]) -> Injury:
+    return Injury(
+        kind=i["kind"],
+        severity=i["severity"],
+        season=i["season"],
+        week=i["week"],
+        weeks_out=i["weeks_out"],
+        recovered=i.get("recovered", False),
+        recurrence=i.get("recurrence", False),
+        permanent=i.get("permanent", False),
+    )
+
+
+def _match_out(m: MatchRecord) -> dict[str, Any]:
+    """경기 기록 한 장. 전후 상태는 `STATE_FIELDS` 순서의 **배열**이다(크기 때문)."""
+    return {
+        "id": m.id,
+        "season": m.season,
+        "week": m.week,
+        "brand": m.brand,
+        "kind": m.kind,
+        "reason": m.reason,
+        "title": m.title,
+        "title_changed": m.title_changed,
+        "teams": [list(team) for team in m.teams],
+        "winner_side": m.winner_side,
+        "probability": m.probability,
+        "finish": m.finish,
+        "rating": m.rating,
+        "finisher": m.finisher,
+        "scorer": m.scorer,
+        "pinned": m.pinned,
+        "participants": [
+            {
+                "name": p.name,
+                "side": p.side,
+                "power": list(p.power),
+                "before": list(p.before),
+                "after": list(p.after),
+            }
+            for p in m.participants
+        ],
+        "heat": [
+            {"a": h.a, "b": h.b, "before": h.before, "after": h.after} for h in m.heat
+        ],
+        "injury": None if m.injury is None else _injury_out(m.injury),
+        "popularity_delta": m.popularity_delta,
+    }
+
+
+def _match_in(d: dict[str, Any]) -> MatchRecord:
+    """경기 기록을 되살린다. **모양이 어긋나면 손상이다** — 배열 길이가 하나 틀리면
+    인기도가 컨디션 자리에 읽히는데, 그것은 조용히 틀린 숫자가 된다."""
+    teams = tuple(tuple(team) for team in d["teams"])
+    participants = tuple(
+        ParticipantRecord(
+            name=p["name"],
+            side=p["side"],
+            power=tuple(p["power"]),
+            before=tuple(p["before"]),
+            after=tuple(p["after"]),
+        )
+        for p in d["participants"]
+    )
+    expected = [(name, side) for side, team in enumerate(teams) for name in team]
+    names = [p.name for p in participants]
+    width = len(STATE_FIELDS)
+    if not (
+        len(teams) == 2
+        and all(teams)
+        and type(d["winner_side"]) is int
+        and d["winner_side"] in (0, 1)
+        and [(p.name, p.side) for p in participants] == expected
+        and len(set(names)) == len(names)
+        and all(
+            len(p.before) == width and len(p.after) == width and len(p.power) == 3
+            for p in participants
+        )
+    ):
+        raise CorruptSaveError("세이브를 되살릴 수 없습니다")
+    injury = d["injury"]
+    return MatchRecord(
+        id=d["id"],
+        season=d["season"],
+        week=d["week"],
+        brand=d["brand"],
+        kind=d["kind"],
+        reason=d["reason"],
+        title=d["title"],
+        title_changed=d["title_changed"],
+        teams=(teams[0], teams[1]),
+        winner_side=d["winner_side"],
+        probability=d["probability"],
+        finish=d["finish"],
+        rating=d["rating"],
+        finisher=d["finisher"],
+        scorer=d["scorer"],
+        pinned=d["pinned"],
+        participants=participants,
+        heat=tuple(
+            HeatChange(a=h["a"], b=h["b"], before=h["before"], after=h["after"])
+            for h in d["heat"]
+        ),
+        injury=None if injury is None else _injury_in(injury),
+        popularity_delta=d["popularity_delta"],
+    )
+
+
+def _since_in(value: Any) -> tuple[int, int] | None:
+    """`match_records_since` — `null` 이거나 `[시즌, 주차]` 정수 둘. 그 밖은 손상."""
+    if value is None:
+        return None
+    if (
+        isinstance(value, list)
+        and len(value) == 2
+        and all(type(v) is int and v >= 1 for v in value)
+    ):
+        return (value[0], value[1])
+    raise CorruptSaveError("세이브를 되살릴 수 없습니다")
+
+
 def _wrestler_out(w: Wrestler) -> dict[str, Any]:
     return {
         "name": w.name,
@@ -101,19 +242,7 @@ def _wrestler_out(w: Wrestler) -> dict[str, Any]:
         "losses": w.losses,
         "reigns": list(w.reigns),
         "held": list(w.held),
-        "injuries": [
-            {
-                "kind": i.kind,
-                "severity": str(i.severity),
-                "season": i.season,
-                "week": i.week,
-                "weeks_out": i.weeks_out,
-                "recovered": i.recovered,
-                "recurrence": i.recurrence,
-                "permanent": i.permanent,
-            }
-            for i in w.injuries
-        ],
+        "injuries": [_injury_out(i) for i in w.injuries],
         "out_weeks": w.out_weeks,
         "losing_streak": w.losing_streak,
         "win_streak": w.win_streak,
@@ -173,19 +302,7 @@ def _wrestler_in(d: dict[str, Any]) -> Wrestler:
         losses=d["losses"],
         reigns=tuple(d.get("reigns", ())),
         held=tuple(d.get("held", ())),
-        injuries=tuple(
-            Injury(
-                kind=i["kind"],
-                severity=i["severity"],
-                season=i["season"],
-                week=i["week"],
-                weeks_out=i["weeks_out"],
-                recovered=i.get("recovered", False),
-                recurrence=i.get("recurrence", False),
-                permanent=i.get("permanent", False),
-            )
-            for i in d.get("injuries", ())
-        ),
+        injuries=tuple(_injury_in(i) for i in d.get("injuries", ())),
         out_weeks=d.get("out_weeks", 0),
         losing_streak=d.get("losing_streak", 0),
         # **기본값으로 읽지 않는다.** 빠진 칸을 0 · `None` 으로 메우면 "데뷔부터 센
@@ -324,6 +441,12 @@ def dump(state: WorldState) -> dict[str, Any]:
             }
             for s in state.seasons
         ],
+        "matches": [_match_out(m) for m in state.matches],
+        "match_records_since": (
+            None
+            if state.match_records_since is None
+            else list(state.match_records_since)
+        ),
         "applied": sorted(state.applied),
     }
 
@@ -415,8 +538,26 @@ def _upgrade_v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "version": 2, "roster": roster}
 
 
+def _upgrade_v2_to_v3(raw: dict[str, Any]) -> dict[str, Any]:
+    """v2 → v3. **옛 칸은 그대로 두고 경기 기록 칸 둘만 더한다.** 입력은 바꾸지 않는다.
+
+    지난 경기를 기록으로 **백필하지 않는다** — 그 주의 인기도·컨디션·승률이 세이브에
+    남아 있지 않아서, 만들면 추정이 된다. 대신 `match_records_since` 에 세이브의 현재
+    `(시즌, 주차)`(= 다음에 치를 주차)를 적는다. 그 이전 경기는 "기록 도입 전" 이다.
+
+    새 커리어는 이 칸이 `null` 이다 — 데뷔부터 기록한다. 업그레이드한 커리어와 새
+    커리어가 그 한 칸으로 갈린다.
+    """
+    return {
+        **raw,
+        "version": 3,
+        "matches": [],
+        "match_records_since": [raw["season"], raw["week"]],
+    }
+
+
 #: 아는 옛 판본 → 한 단계 올리는 함수. `load` 가 현재 판본에 닿을 때까지 잇는다.
-_UPGRADES = {1: _upgrade_v1_to_v2}
+_UPGRADES = {1: _upgrade_v1_to_v2, 2: _upgrade_v2_to_v3}
 
 
 def _world(raw: dict[str, Any]) -> WorldState:
@@ -506,5 +647,10 @@ def _world(raw: dict[str, Any]) -> WorldState:
             )
             for s in raw.get("seasons", ())
         ),
+        # **v3 칸은 기본값으로 읽지 않는다.** 빈 `matches` 와 `null` 은 "데뷔부터 기록했고
+        # 경기가 없었다" 는 **정확한 사실**로 읽히므로, 빠진 칸을 그것으로 메우면 안 된다.
+        # v2 이하는 업그레이드가 채워 오므로 여기 닿을 때는 항상 있다.
+        matches=tuple(_match_in(m) for m in raw["matches"]),
+        match_records_since=_since_in(raw["match_records_since"]),
         applied=frozenset(raw.get("applied", ())),
     )

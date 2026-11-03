@@ -143,6 +143,99 @@ class LogSchema(_Camel):
     title: str | None = None
 
 
+class MatchStateSchema(_Camel):
+    popularity: int
+    condition: int
+    wins: int
+    losses: int
+    win_streak: int = Field(alias="winStreak")
+    losing_streak: int = Field(alias="losingStreak")
+
+
+class MatchPowerSchema(_Camel):
+    skill: float
+    draw: float
+    body: float
+
+
+class MatchParticipantSchema(_Camel):
+    name: str
+    side: int
+    power: MatchPowerSchema
+    before: MatchStateSchema
+    after: MatchStateSchema
+
+
+class MatchHeatSchema(_Camel):
+    a: str
+    b: str
+    before: int | None
+    after: int
+
+
+class MatchSummarySchema(_Camel):
+    """경기 목록 한 줄. 상세(`MatchDetailSchema`)의 부분집합이다."""
+
+    id: str
+    season: int
+    week: int
+    brand: str
+    kind: str
+    reason: str
+    #: `[플레이어 팀, 상대 팀]`.
+    teams: list[list[str]]
+    winner_side: int = Field(alias="winnerSide")
+    title: str | None = None
+    title_changed: bool = Field(alias="titleChanged")
+    finish: str
+    rating: int
+    has_detail: bool = Field(alias="hasDetail")
+
+
+class MatchDetailSchema(_Camel):
+    """경기 기록 한 장. **저장된 값 그대로** — 다시 계산하지 않는다.
+
+    `scorer`·`pinned` 는 핀폴이 아니면 `null` 이다. 태그전 참가자의 `after` 는
+    엔진이 실제로 적용한 전적이라 알려진 결함(파트너에 패배가 붙는 경우)을 그대로
+    보인다 — 팀 결과의 정본은 `winnerSide` 다.
+    """
+
+    id: str
+    season: int
+    week: int
+    brand: str
+    kind: str
+    reason: str
+    title: str | None = None
+    title_changed: bool = Field(alias="titleChanged")
+    teams: list[list[str]]
+    winner_side: int = Field(alias="winnerSide")
+    probability: float
+    finish: str
+    rating: int
+    finisher: str | None = None
+    scorer: str | None = None
+    pinned: str | None = None
+    participants: list[MatchParticipantSchema]
+    heat: list[MatchHeatSchema] = Field(default_factory=list)
+    injury: InjurySchema | None = None
+    popularity_delta: int = Field(alias="popularityDelta")
+
+
+class MatchNotFoundSchema(_Camel):
+    """경기 기록이 없을 때의 404 본문. `detail` 은 다른 404 와 같은 문자열 칸이다.
+
+    `missingReason` — `before_records`(기록 도입 전) · `trimmed`(보존 상한으로
+    잘림) · `unexplained`(있어야 하는데 없다) · `null`(경기가 있었는지조차 판정할
+    수 없다: 쉰 주차·없는 id·로그도 잘림).
+    """
+
+    detail: str
+    missing_reason: Literal["before_records", "trimmed", "unexplained"] | None = Field(
+        alias="missingReason"
+    )
+
+
 class GoalSchema(_Camel):
     code: str
     label: str

@@ -16,10 +16,12 @@
 **기대값을 갱신하지 않는다.** 이 테스트가 깨지면 바뀐 것은 기준값이 아니라 게임
 결과다. 규칙을 일부러 바꾼 경우에만, 무엇이 왜 바뀌는지 적고 다시 뽑는다.
 
-## v2 에서 더해진 칸은 비교에서 뺀다
+## 뒤 판본에서 더해진 칸은 비교에서 뺀다
 
-`V2_WRESTLER_KEYS` 는 v1 세이브에 없던 칸이다. 비교는 **v1 이 알던 칸 전부**가
-같은지를 본다 — 새 칸이 생겼다고 옛 칸이 하나라도 움직이면 실패한다.
+`V2_WRESTLER_KEYS`(v2 · 선수 칸)와 `V3_WORLD_KEYS`(v3 · 세계 칸)는 v1 세이브에 없던
+칸이다. 비교는 **v1 이 알던 칸 전부**가 같은지를 본다 — 새 칸이 생겼다고 옛 칸이
+하나라도 움직이면 실패한다. 새 칸 자체의 정확성은 그 칸의 테스트가 본다
+(경기 기록은 `test_career_match_record`).
 """
 
 from __future__ import annotations
@@ -47,6 +49,8 @@ ALLY = "Rio Castellan"
 
 #: v1 세이브에 없던 선수 칸. 골든 비교에서만 뺀다.
 V2_WRESTLER_KEYS = ("win_streak", "best_win_streak", "streaks_since")
+#: v2 세이브에 없던 세계 칸(v3 · 경기 기록).
+V3_WORLD_KEYS = ("matches", "match_records_since")
 
 #: 주마다 하나씩 돌아가며 쓰는 행동. 행동 다섯 종류를 전부 지나가게 한다.
 _ACTION_CYCLE = ("훈련", "프로모", "관계", "휴식", "협상")
@@ -105,8 +109,11 @@ def run_trajectory() -> tuple[list[dict[str, Any]], WorldState]:
 
 
 def strip_v2(raw: dict[str, Any]) -> dict[str, Any]:
-    """v2 세이브에서 v1 이 알던 칸만 남긴다. 판본 칸도 뺀다."""
-    out = {k: v for k, v in raw.items() if k != "version"}
+    """뒤 판본 세이브에서 **v1 이 알던 칸만** 남긴다. 판본 칸도 뺀다.
+
+    이름은 v2 때 지었고 그대로 둔다(테스트 여러 곳이 부른다). v3 칸도 함께 뺀다.
+    """
+    out = {k: v for k, v in raw.items() if k != "version" and k not in V3_WORLD_KEYS}
     out["roster"] = [
         {k: v for k, v in w.items() if k not in V2_WRESTLER_KEYS} for w in raw["roster"]
     ]

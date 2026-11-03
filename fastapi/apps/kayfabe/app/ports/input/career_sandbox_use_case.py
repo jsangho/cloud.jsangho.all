@@ -26,6 +26,8 @@ from kayfabe.app.dtos.career_sandbox_dto import (
     CareerSummaryDto,
     CareerViewDto,
     LogDto,
+    MatchDetailDto,
+    MatchSummaryDto,
 )
 
 
@@ -39,6 +41,23 @@ class RequestKeyConflictError(Exception):
     끝이지만, 통과는 사용자가 하지 않은 행동이 적용되거나 하지 않은 행동의 응답을
     받는 것이다.
     """
+
+
+class MatchNotFoundError(LookupError):
+    """그 커리어에 그 id 의 경기 기록이 없다. **커리어는 있고 내 것이다.**
+
+    `reason` 이 왜 없는지를 든다 — `career_match_record` 의 `before_records` ·
+    `trimmed` · `unexplained`, 또는 **판정할 수 없으면 `None`**. 로그에 그 주차의
+    경기 줄이 없으면(쉰 주차·없는 id·로그도 잘렸다) 경기가 있었는지조차 모르므로
+    사유를 지어내지 않는다.
+
+    `LookupError` 의 하위다 — 전용 절을 놓쳐도 404 로 떨어진다.
+    """
+
+    def __init__(self, match_id: str, reason: str | None) -> None:
+        super().__init__(f"경기 기록이 없습니다: {match_id}")
+        self.match_id = match_id
+        self.reason = reason
 
 
 class CareerSandboxUseCase(ABC):
@@ -129,4 +148,25 @@ class CareerSandboxUseCase(ABC):
         offset: int,
     ) -> list[LogDto]:
         """커리어 기록. 긴 목록이므로 페이지로 끊는다."""
+        ...
+
+    @abstractmethod
+    async def matches(
+        self,
+        *,
+        user_id: int,
+        career_id: int,
+        season: int | None,
+        limit: int,
+        offset: int,
+    ) -> list[MatchSummaryDto]:
+        """저장된 경기 기록 목록. 최신 경기부터. **읽기만 한다** — 저장하지 않는다."""
+        ...
+
+    @abstractmethod
+    async def match(
+        self, *, user_id: int, career_id: int, match_id: str
+    ) -> MatchDetailDto:
+        """경기 기록 한 장. 커리어가 없거나 남의 것이면 `LookupError`, 커리어는
+        있는데 기록이 없으면 `MatchNotFoundError`."""
         ...

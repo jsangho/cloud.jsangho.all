@@ -153,6 +153,101 @@ class LogDto:
     title: str | None = None
 
 
+# ── 경기 기록 (읽기 전용) ─────────────────────────────────────────
+#
+# 저장된 `MatchRecord` 를 **옮겨 적을 뿐이다.** 승패·평점·확률을 다시 계산하지
+# 않고, 태그전 전적 결함(`test_career_tag_record`)도 보정하지 않는다 — `after` 는
+# 엔진이 실제로 적용한 값이고 팀 결과의 정본은 `winner_side` 다.
+
+
+@dataclass(frozen=True)
+class MatchStateDto:
+    """참가자 상태 한 장. 저장 형식은 `STATE_FIELDS` 순서의 정수 배열이고, 칸
+    이름을 붙여 내보낸다 — 화면이 배열 위치를 외우지 않게."""
+
+    popularity: int
+    condition: int
+    wins: int
+    losses: int
+    win_streak: int
+    losing_streak: int
+
+
+@dataclass(frozen=True)
+class MatchPowerDto:
+    """시뮬레이션이 실제로 쓴 경기력 세 항(`career_match.PowerParts`)."""
+
+    skill: float
+    draw: float
+    body: float
+
+
+@dataclass(frozen=True)
+class MatchParticipantDto:
+    name: str
+    #: `teams` 의 몇 번째 팀인가. 0 은 항상 플레이어 쪽이다.
+    side: int
+    power: MatchPowerDto
+    before: MatchStateDto
+    after: MatchStateDto
+
+
+@dataclass(frozen=True)
+class MatchHeatDto:
+    a: str
+    b: str
+    #: 경기 전 관계가 없었으면 `None` — 이 경기로 관계가 생겼다.
+    before: int | None
+    after: int
+
+
+@dataclass(frozen=True)
+class MatchSummaryDto:
+    """경기 목록 한 줄."""
+
+    id: str
+    season: int
+    week: int
+    brand: str
+    kind: str
+    reason: str
+    teams: tuple[tuple[str, ...], tuple[str, ...]]
+    winner_side: int
+    title: str | None
+    title_changed: bool
+    finish: str
+    rating: int
+    #: 상세 조회가 되는가. 목록은 **저장된 기록에서만** 만들므로 지금은 늘 참이다
+    #: — 화면이 목록과 상세를 같은 칸으로 판단하게 하려고 둔다.
+    has_detail: bool = True
+
+
+@dataclass(frozen=True)
+class MatchDetailDto:
+    id: str
+    season: int
+    week: int
+    brand: str
+    kind: str
+    reason: str
+    title: str | None
+    title_changed: bool
+    teams: tuple[tuple[str, ...], tuple[str, ...]]
+    winner_side: int
+    probability: float
+    finish: str
+    rating: int
+    finisher: str | None
+    #: 핀폴이 아니면 `None` — 추정해서 채우지 않는다.
+    scorer: str | None
+    pinned: str | None
+    #: **저장 순서 그대로** — 팀 0 의 선수들, 팀 1 의 선수들.
+    participants: tuple[MatchParticipantDto, ...]
+    heat: tuple[MatchHeatDto, ...]
+    injury: InjuryDto | None
+    popularity_delta: int
+
+
 @dataclass(frozen=True)
 class GoalDto:
     code: str
