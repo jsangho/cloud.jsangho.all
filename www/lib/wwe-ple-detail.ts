@@ -430,7 +430,7 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       glow: "shadow-[0_0_70px_-20px_rgba(251,191,36,0.32)]",
     },
     highlights: [
-      { title: "11월 7일", detail: "사우디 리야드 · Riyadh Season Stadium (KAFD)" },
+      { title: "11월 7일", detail: "사우디 리야드 · 10월 28일 실내 경기장으로 이전" },
       {
         title: "챔피언 대 챔피언",
         detail: "Roman Reigns vs Sami Zayn — 2026 크라운 주얼 챔피언십",
@@ -438,6 +438,14 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       {
         title: "여자부 챔피언 대 챔피언",
         detail: "Liv Morgan vs Chelsea Green — 2026 여자 크라운 주얼 챔피언십",
+      },
+      {
+        title: "Last Man Standing",
+        detail: "Cody Rhodes vs Randy Orton",
+      },
+      {
+        title: "태그 타이틀전",
+        detail: "The Vision vs Penta & Je'Von Evans — 세계 태그 팀 챔피언십",
       },
     ],
     predictionFocus: ["크라운 주얼 챔피언", "여자 크라운 주얼 챔피언", "브랜드 우위"],
