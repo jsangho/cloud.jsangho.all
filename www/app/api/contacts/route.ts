@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/juso/contacts`, {
     cache: "no-store",
+    headers: guard.authHeaders,
   });
   if (!res.ok) return NextResponse.json([]);
 

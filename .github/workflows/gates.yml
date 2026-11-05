@@ -120,6 +120,10 @@ jobs:
       - run: node node_modules/prettier/bin/prettier.cjs --check .
         working-directory: www
 
+      # 프록시가 관리자 토큰을 백엔드로 전달하는지 고정한다.
+      - run: pnpm test:manager-auth
+        working-directory: www
+
   flutter:
     name: Flutter (analyze · format)
     runs-on: ubuntu-latest

@@ -1,7 +1,9 @@
 import type { NextRequest } from "next/server";
 import { fetchProfileWithToken } from "@/lib/auth-api";
 
-type AdminGuardResult = { ok: true } | { ok: false; status: number; detail: string };
+type AdminGuardResult =
+  | { ok: true; authHeaders: { Authorization: string } }
+  | { ok: false; status: number; detail: string };
 
 /** 액세스 토큰이 담기는 쿠키 이름 — 서버(`core.security.cookie`)와 같아야 한다. */
 const ACCESS_COOKIE = "access_token";
@@ -15,6 +17,10 @@ const ACCESS_COOKIE = "access_token";
  *
  * 역할 판정은 서버(`/auth/me`)에 맡긴다. JWT를 프론트에서 직접 뜯어 role을 믿으면
  * 서명 검증 없이 권한을 판단하는 셈이 된다.
+ *
+ * 통과하면 `authHeaders`를 돌려준다. **백엔드 `/api/manager/*`도 스스로 관리자 JWT를
+ * 검사하므로 호출마다 실어 보내야 한다.** 역할 값이 아니라 사용자의 토큰 자체를
+ * 넘기므로 판정은 백엔드가 서명을 검증해 다시 한다.
  */
 export async function requireAdmin(req: NextRequest): Promise<AdminGuardResult> {
   const authorization = req.headers.get("authorization");
@@ -39,5 +45,5 @@ export async function requireAdmin(req: NextRequest): Promise<AdminGuardResult> 
     return { ok: false, status: 403, detail: "관리자만 접근할 수 있습니다." };
   }
 
-  return { ok: true };
+  return { ok: true, authHeaders: { Authorization: `Bearer ${token}` } };
 }

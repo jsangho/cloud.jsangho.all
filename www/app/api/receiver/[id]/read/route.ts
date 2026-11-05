@@ -10,6 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/receiver/${id}/read`, {
     method: "PATCH",
+    headers: guard.authHeaders,
   });
   const data = await res.json().catch(() => null);
   return NextResponse.json(data, { status: res.status });

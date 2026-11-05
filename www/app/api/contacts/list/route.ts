@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/juso/contacts`, {
     cache: "no-store",
+    headers: guard.authHeaders,
   });
   if (!res.ok) return NextResponse.json([], { status: res.status });
   const data = await res.json();
@@ -23,6 +24,7 @@ export async function DELETE(req: NextRequest) {
 
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/juso/contacts`, {
     method: "DELETE",
+    headers: guard.authHeaders,
   });
   const data = await res.json().catch(() => null);
   return NextResponse.json(data, { status: res.status });

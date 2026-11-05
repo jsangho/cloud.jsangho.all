@@ -115,7 +115,7 @@ dependencies/     ← FastAPI Depends 팩토리
 | `kayfabe` | WWE 예측 · 랭킹 · 기록 · 챔피언 보드 · AI Lab(Provenance) · 상점 | spoke | `/api` + `/ple_events` `/data-center` `/ai-lab` `/ple-matches` `/ple-match-picks` `/title-acquisitions` `/wwe-chat` `/shop` | 운영 |
 | `auth` | 인증 · 프로필 · 카카오 OAuth · 모바일 (RS256 · JWKS) | spoke (**격리**) | `main.py`: `/api` · `auth_main.py`: `/auth` | 운영 |
 | `admin` | 페르소나 AI 에이전트(실리콘밸리) · PDF 로더 | spoke | `/api/human_resource/*`, `/api/pdf` | 개발 중 |
-| `heyman` | n8n 연동 매니저 — 메일·디스코드·텔레그램·주소(juso) · 스팸 필터 워처 · 받은편지함 | spoke | `/api/manager/*` | 개발 중 |
+| `heyman` | n8n 연동 매니저 — 메일·디스코드·텔레그램·주소(juso) · 스팸 필터 워처 · 받은편지함 | spoke | `/api/manager/*` (**전 경로 관리자 전용**) | 개발 중 |
 | `lion_king` | 사진 보관 (촬영 → S3) | spoke | `/api/photos` | 개발 중 (**구조 템플릿**) |
 
 - **`auth`는 아무도 import할 수 없다** — 허브(`ontology`)조차 금지다(`.importlinter` 계약

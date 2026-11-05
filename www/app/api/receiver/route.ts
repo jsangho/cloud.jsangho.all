@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/receiver/list`, {
     cache: "no-store",
+    headers: guard.authHeaders,
   });
   if (!res.ok) return NextResponse.json([], { status: res.status });
   return NextResponse.json(await res.json());

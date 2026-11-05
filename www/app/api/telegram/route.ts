@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/telegram/send`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...guard.authHeaders, "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, message }),
   });
   const data = await res.json().catch(() => null);
