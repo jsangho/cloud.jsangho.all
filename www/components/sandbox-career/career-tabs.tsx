@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils";
  *
  * `Tabs`(Radix)를 쓰지 않는다. 이 탭은 패널을 숨겨 두고 바꿔 끼우는 장치가 아니라
  * **탭마다 다른 데이터를 받는 화면**이고(기록 탭만 전체 로그를 읽는다), Radix
- * `Tabs` 는 비활성 패널도 트리에 두므로 여섯 패널이 전부 마운트된다. 저장소에서
- * 실제로 쓰이는 패턴도 pill 링크 줄(`chat-subnav.tsx`)이다.
+ * `Tabs` 는 비활성 패널도 트리에 두므로 여섯 패널이 전부 마운트된다.
  */
 export const CAREER_TABS = [
   { id: "dashboard", label: "대시보드" },
