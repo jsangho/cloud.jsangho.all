@@ -22,10 +22,6 @@ import heyman.adapter.outbound.orm.discord_orm  # noqa: E402, F401
 import heyman.adapter.outbound.orm.email_orm  # noqa: E402, F401
 import heyman.adapter.outbound.orm.juso_orm  # noqa: E402, F401
 import heyman.adapter.outbound.orm.telegram_orm  # noqa: E402, F401
-import soccer.adapter.outbound.orm.player_orm  # noqa: E402, F401
-import soccer.adapter.outbound.orm.schedule_orm  # noqa: E402, F401
-import soccer.adapter.outbound.orm.stadium_orm  # noqa: E402, F401
-import soccer.adapter.outbound.orm.team_orm  # noqa: E402, F401
 from core.matrix.grid_oracle_database_manager import DATABASE_URL, Base  # noqa: E402
 from core.matrix.vault_keymaker_secret_manager import get_keymaker  # noqa: E402
 

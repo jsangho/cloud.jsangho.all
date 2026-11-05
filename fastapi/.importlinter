@@ -4,7 +4,6 @@ root_packages =
     kayfabe
     admin
     heyman
-    soccer
     lion_king
     auth
 
@@ -28,14 +27,12 @@ source_modules =
     kayfabe
     admin
     heyman
-    soccer
     lion_king
     auth
 forbidden_modules =
     kayfabe
     admin
     heyman
-    soccer
     lion_king
     auth
 exclude_type_checking_imports = True
@@ -51,7 +48,7 @@ exclude_type_checking_imports = True
 name = Spokes may import the hub (ontology); the hub must not import spokes
 type = layers
 layers =
-    kayfabe | admin | heyman | soccer | lion_king
+    kayfabe | admin | heyman | lion_king
     ontology
 
 
@@ -67,7 +64,6 @@ containers =
     kayfabe
     admin
     heyman
-    soccer
     lion_king
     auth
 layers =
@@ -89,7 +85,6 @@ source_modules =
     kayfabe
     admin
     heyman
-    soccer
     lion_king
 forbidden_modules =
     auth

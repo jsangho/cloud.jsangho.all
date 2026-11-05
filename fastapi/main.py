@@ -35,7 +35,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin.adapter.inbound.api import (
     human_resource_router,
-    langchain_router,
     pdf_loader_router,
 )
 from auth.adapter.inbound.api import auth_router
@@ -54,11 +53,8 @@ from core.matrix.vault_keymaker_secret_manager import get_keymaker
 from heyman.adapter.inbound.api import manager_router
 from kayfabe.adapter.inbound.api import kayfabe_router
 from lion_king.adapter.inbound.api.v1.photo_router import photo_router
-from lion_king.adapter.inbound.api.v1.receipt_router import receipt_router
 from ontology.adapter.inbound.api import ontology_router
-from ontology.adapter.inbound.api.v1.vision_router import vision_router
 from ontology.dependencies.spam_classifier_provider import get_spam_classifier_use_case
-from soccer.adapter.inbound.api import soccer_router
 
 keymaker = get_keymaker()
 logger = logging.getLogger("uvicorn.error")
@@ -139,13 +135,9 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(kayfabe_router, prefix="/api")
 app.include_router(human_resource_router, prefix="/api")
 app.include_router(pdf_loader_router, prefix="/api")
-app.include_router(langchain_router, prefix="/api")
 app.include_router(manager_router, prefix="/api")
 app.include_router(ontology_router, prefix="/api")
-app.include_router(vision_router, prefix="/api")
 app.include_router(photo_router, prefix="/api")
-app.include_router(receipt_router, prefix="/api")
-app.include_router(soccer_router, prefix="/api")
 
 
 @app.middleware("http")

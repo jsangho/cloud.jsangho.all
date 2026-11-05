@@ -19,7 +19,6 @@ export const titleAcquisitionsBaseUrl = `${apiBaseUrl}/api/title-acquisitions`;
 export const shopBaseUrl = `${apiBaseUrl}/api/shop`;
 /** 저장되는 커리어. 저장하지 않는 장난감(`/api/sandbox/career/step`)과 다른 경로다. */
 export const sandboxCareersBaseUrl = `${apiBaseUrl}/api/sandbox/careers`;
-export const receiptsBaseUrl = `${apiBaseUrl}/api/receipts`;
 
 /**
  * Gemini 채팅 엔드포인트.

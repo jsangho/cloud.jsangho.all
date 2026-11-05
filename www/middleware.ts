@@ -46,7 +46,6 @@ const PROJECT_PATHS = [
   "/ai-lab",
   "/chat",
   "/admin",
-  "/lesson",
   "/my-info",
   "/login",
 ];
