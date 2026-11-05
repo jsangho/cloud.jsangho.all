@@ -180,7 +180,7 @@ export const WWE_PLE_MONTHLY_ORDER: readonly PleEvent[] = [
     label: "Crown Jewel",
     dateLabel: "11.7",
     venue: "사우디 리야드",
-    highlight: "리야드 시즌 스타디움",
+    highlight: "리야드 실내 경기장",
   },
   {
     // 11.28 — 위키 인포박스로 확인했다(`Survivor Series: WarGames (2026)`

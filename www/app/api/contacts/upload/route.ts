@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
 
   const res = await fetch(`${process.env.INTERNAL_API_BASE_URL}/api/manager/juso/fileupload`, {
     method: "POST",
+    headers: guard.authHeaders,
     body: upstream,
   });
   const data = await res.json().catch(() => null);

@@ -1017,7 +1017,11 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
     ]),
   ],
 
-  // `Crown Jewel (2026)` rev 1379743852 · 2026-11-07 리야드 · 발표된 경기 **둘**
+  // `Crown Jewel (2026)` · 2026-11-07 리야드 · 발표된 경기 **넷** (2026-11-06 갱신)
+  //
+  // 위키 `matchN`·WWE.com·CBS·Netflix가 같은 네 경기를 싣는다. Gunther vs Finn Balor는
+  // 포스터로 나온 추측이고 공식 발표가 없어 넣지 않았다. 호가는 BetOnline과 MyBookie
+  // 원문에서 옮겼다(아메리칸 → 소수 둘째 자리).
   //
   // **네 자리가 사람 이름으로 찼다** (2026-10-12 갱신). 크라운 주얼은 두 브랜드의
   // 챔피언끼리 붙이는 형식이라 벨트 주인이 정해져야 참가자가 정해지는데, MITB
@@ -1036,19 +1040,106 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
   // 셋만 보므로 **이름만 바뀐 경우는 "그대로"로 보고된다**(2026-10-12 실측).
   // 이름 갱신은 사람이 위키를 읽고 한다.
   "crown-jewel": [
-    m2(
+    mq(
       "cj26-crown-jewel",
       "WWE Crown Jewel Championship",
       "sideB",
       { name: "Roman Reigns" },
       { name: "Sami Zayn" },
+      // 대회 이틀 전에 Zayn 쪽으로 움직였다(+200 → +155). 라인 흐름이 정보라 옛 관측도 남긴다.
+      [
+        {
+          book: "BetOnline",
+          decimals: [1.33, 3.0],
+          observedAt: "2026-10-28",
+          sourceUrl:
+            "https://www.wweleaks.org/2026/11/wwe-crown-jewel-2026-betting-5-november-am.html",
+        },
+        {
+          book: "MyBookie",
+          decimals: [1.33, 3.0],
+          observedAt: "2026-11-03",
+          sourceUrl:
+            "https://www.fightful.com/wrestling/wwe-crown-jewel-odds-courtesy-of-my-bookie/",
+        },
+        {
+          book: "BetOnline",
+          decimals: [1.45, 2.55],
+          observedAt: "2026-11-05",
+          sourceUrl:
+            "https://www.wweleaks.org/2026/11/wwe-crown-jewel-2026-betting-5-november-am.html",
+        },
+      ],
     ),
-    m2(
+    mq(
       "cj26-women-crown-jewel",
       "WWE Women's Crown Jewel Championship",
       "sideA",
       { name: "Liv Morgan" },
       { name: "Chelsea Green" },
+      [
+        {
+          book: "MyBookie",
+          decimals: [2.5, 1.5],
+          observedAt: "2026-11-03",
+          sourceUrl:
+            "https://www.fightful.com/wrestling/wwe-crown-jewel-odds-courtesy-of-my-bookie/",
+        },
+        {
+          book: "BetOnline",
+          decimals: [2.6, 1.48],
+          observedAt: "2026-11-05",
+          sourceUrl:
+            "https://www.wweleaks.org/2026/11/wwe-crown-jewel-2026-betting-5-november-am.html",
+        },
+      ],
+    ),
+    mq(
+      "cj26-cody-orton",
+      "Last Man Standing Match",
+      "sideB",
+      { name: "Cody Rhodes" },
+      { name: "Randy Orton" },
+      [
+        {
+          book: "MyBookie",
+          decimals: [1.4, 2.7],
+          observedAt: "2026-11-03",
+          sourceUrl:
+            "https://www.fightful.com/wrestling/wwe-crown-jewel-odds-courtesy-of-my-bookie/",
+        },
+        {
+          book: "BetOnline",
+          decimals: [1.25, 3.5],
+          observedAt: "2026-11-05",
+          sourceUrl:
+            "https://www.wweleaks.org/2026/11/wwe-crown-jewel-2026-betting-5-november-am.html",
+        },
+      ],
+    ),
+    mq(
+      "cj26-tag",
+      "World Tag Team Championship",
+      "sideA",
+      { name: "The Vision — Bron Breakker & Austin Theory", isChampion: true },
+      { name: "Penta & Je'Von Evans" },
+      // 시장이 하루 만에 뒤집혔다(BetOnline 챔피언 -140 → +200). 그대로 옮긴다.
+      [
+        {
+          book: "MyBookie",
+          decimals: [2.0, 1.71],
+          observedAt: "2026-11-03",
+          sourceUrl:
+            "https://www.fightful.com/wrestling/wwe-crown-jewel-odds-courtesy-of-my-bookie/",
+        },
+        {
+          book: "BetOnline",
+          decimals: [3.15, 1.31],
+          observedAt: "2026-11-05",
+          sourceUrl:
+            "https://www.wweleaks.org/2026/11/wwe-crown-jewel-2026-betting-5-november-am.html",
+        },
+      ],
     ),
   ],
 
