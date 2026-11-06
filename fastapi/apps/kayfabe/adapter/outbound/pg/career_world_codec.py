@@ -118,6 +118,73 @@ def _injury_in(i: dict[str, Any]) -> Injury:
     )
 
 
+#: 경기 기록 칸의 타입. **`type()` 으로 정확히 본다** — `bool` 은 `int` 의 하위라
+#: `isinstance` 로 보면 `true` 가 주차로 통과한다.
+_TEXT = (str,)
+_OPTIONAL_TEXT = (str, type(None))
+_INT = (int,)
+_NUMBER = (int, float)
+_BOOL = (bool,)
+_MATCH_TYPES: dict[str, tuple[type, ...]] = {
+    "id": _TEXT,
+    "season": _INT,
+    "week": _INT,
+    "brand": _TEXT,
+    "kind": _TEXT,
+    "reason": _TEXT,
+    "title": _OPTIONAL_TEXT,
+    "title_changed": _BOOL,
+    "winner_side": _INT,
+    "probability": _NUMBER,
+    "finish": _TEXT,
+    "rating": _INT,
+    "finisher": _OPTIONAL_TEXT,
+    "scorer": _OPTIONAL_TEXT,
+    "pinned": _OPTIONAL_TEXT,
+    "popularity_delta": _INT,
+}
+_INJURY_TYPES: dict[str, tuple[type, ...]] = {
+    "kind": _TEXT,
+    "severity": _TEXT,
+    "season": _INT,
+    "week": _INT,
+    "weeks_out": _INT,
+}
+_HEAT_TYPES: dict[str, tuple[type, ...]] = {
+    "a": _TEXT,
+    "b": _TEXT,
+    "before": (int, type(None)),
+    "after": _INT,
+}
+
+
+def _typed(d: dict[str, Any], expected: dict[str, tuple[type, ...]]) -> bool:
+    return all(type(d[field]) in allowed for field, allowed in expected.items())
+
+
+def _match_types_ok(d: dict[str, Any]) -> bool:
+    """칸의 타입. 모양(`_match_in`)과 따로 보는 이유는 **어긋나는 지점이 달라서다.**
+
+    타입이 틀린 기록은 데이터클래스를 그대로 통과한다. 그러면 세계가 정상으로 읽혀
+    상세 화면이 200 이고, 쓰기가 손상을 다시 저장하고, 응답 스키마가 있는 `/matches`
+    에서만 500 이 난다(2026-11-06 실측). 여기서 거부해야 읽기와 쓰기가 같은 판정을 본다.
+    """
+    injury = d["injury"]
+    return (
+        _typed(d, _MATCH_TYPES)
+        and all(type(name) is str for team in d["teams"] for name in team)
+        and all(
+            type(p["name"]) is str
+            and type(p["side"]) is int
+            and all(type(v) in _NUMBER for v in p["power"])
+            and all(type(v) is int for v in (*p["before"], *p["after"]))
+            for p in d["participants"]
+        )
+        and all(_typed(h, _HEAT_TYPES) for h in d["heat"])
+        and (injury is None or _typed(injury, _INJURY_TYPES))
+    )
+
+
 def _match_out(m: MatchRecord) -> dict[str, Any]:
     """경기 기록 한 장. 전후 상태는 `STATE_FIELDS` 순서의 **배열**이다(크기 때문)."""
     return {
@@ -173,7 +240,8 @@ def _match_in(d: dict[str, Any]) -> MatchRecord:
     names = [p.name for p in participants]
     width = len(STATE_FIELDS)
     if not (
-        len(teams) == 2
+        _match_types_ok(d)
+        and len(teams) == 2
         and all(teams)
         and type(d["winner_side"]) is int
         and d["winner_side"] in (0, 1)
@@ -211,6 +279,20 @@ def _match_in(d: dict[str, Any]) -> MatchRecord:
         injury=None if injury is None else _injury_in(injury),
         popularity_delta=d["popularity_delta"],
     )
+
+
+def verify_matches(raw: dict[str, Any]) -> None:
+    """`dump` 결과의 경기 기록을 **읽기와 같은 규칙으로** 본다. 어긋나면 `CorruptSaveError`.
+
+    세계 전체를 되살리지 않고 기록만 본다 — 저장마다 도는 경로이고, 나머지 칸의 타입은
+    이 함수의 책임이 아니다.
+    """
+    try:
+        for record in raw["matches"]:
+            _match_in(record)
+        _since_in(raw["match_records_since"])
+    except (KeyError, TypeError) as e:
+        raise CorruptSaveError("세이브를 되살릴 수 없습니다") from e
 
 
 def _since_in(value: Any) -> tuple[int, int] | None:

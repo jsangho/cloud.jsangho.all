@@ -77,7 +77,15 @@ class CorruptSaveError(ValueError):
     """
 
 
-class CareerV3WritesDisabledError(Exception):
+class CareerSaveRefusedError(Exception):
+    """저장 계층이 쓰기를 거부했다. **세션을 건드리기 전에 나므로 아무것도 안 썼다.**
+
+    `CorruptSaveError` 와 방향이 반대다 — 그쪽은 **이미 저장된 것**을 못 읽는 것이고
+    이쪽은 **지금 쓰려는 것**을 받지 않는 것이다. 복구 방법이 다르므로 이름을 가른다.
+    """
+
+
+class CareerV3WritesDisabledError(CareerSaveRefusedError):
     """v3 세이브 쓰기가 닫혀 있다(`CAREER_V3_WRITES_ENABLED`). **아무것도 안 썼다.**
 
     옛 판본 행을 옛 판본 그대로 저장할 길이 없다 — `load` 가 메모리에서 v3 로 올리고
@@ -87,6 +95,14 @@ class CareerV3WritesDisabledError(Exception):
     `ValueError`·`LookupError` 를 물려받지 않는다 — 라우터의 넓은 분기에 걸려
     "입력을 고쳐라"(422)나 "없다"(404)로 번역되면 원인이 가려진다. 라우터가 놓치면
     500 이 된다. 빈 성공으로 위장되는 것보다 낫다.
+    """
+
+
+class CareerSaveRejectedError(CareerSaveRefusedError):
+    """쓰려는 세계의 경기 기록이 코덱 규칙에 맞지 않는다. **서버 결함이다.**
+
+    읽기 검사만 두면 도메인 버그가 만든 손상이 일단 저장되고, 그 커리어는 다음 조회부터
+    못 읽게 된다. 커밋 전에 막아 **마지막으로 정상이던 세이브를 남긴다.**
     """
 
 
@@ -141,7 +157,8 @@ class SandboxCareerRepository(ABC):
     ) -> int:
         """새 커리어를 만들고 id 를 돌려준다.
 
-        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError` — 행이 생기지 않는다.
+        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError`, 경기 기록이 코덱 규칙에
+        어긋나면 `CareerSaveRejectedError` — 어느 쪽이든 행이 생기지 않는다.
         """
         ...
 
@@ -201,7 +218,7 @@ class SandboxCareerRepository(ABC):
         최신 `RECEIPT_KEEP` 개로 자른다. 같은 (user, career, request) 가 이미
         있으면 `DuplicateRequestError` — 호출자는 되돌리고 저장된 응답을 읽어야 한다.
 
-        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError` — 세이브도 영수증도
-        쓰이지 않는다.
+        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError`, 경기 기록이 코덱 규칙에
+        어긋나면 `CareerSaveRejectedError` — 세이브도 영수증도 쓰이지 않는다.
         """
         ...

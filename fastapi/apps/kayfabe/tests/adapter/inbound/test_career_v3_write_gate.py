@@ -18,6 +18,7 @@ import re
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -39,7 +40,10 @@ from kayfabe.adapter.outbound.pg.sandbox_career_pg_repository import (
     SandboxCareerPgRepository,
 )
 from kayfabe.app.ports.output.sandbox_career_repository import (
+    CareerSaveRefusedError,
+    CareerSaveRejectedError,
     CareerV3WritesDisabledError,
+    CorruptSaveError,
 )
 from kayfabe.dependencies.career_sandbox_provider import (
     CAREER_V3_WRITES_ENV,
@@ -585,3 +589,69 @@ def test_the_adapter_encodes_in_one_gated_place() -> None:
         assert isinstance(first.value, ast.Call)
         assert isinstance(first.value.func, ast.Attribute)
         assert first.value.func.attr == "_encode", method
+
+
+# ── 저장 거부: 규칙에 어긋난 경기 기록은 커밋 전에 막는다 ─────────
+
+
+def _world_with_bad_record() -> Any:
+    """도메인 버그를 흉내 낸다. 기록은 있는데 `rating` 이 글자다."""
+    world = engine.advance_week(_fresh_world(), balance=Balance()).state
+    assert world.matches
+    bad = replace(world.matches[0], rating="high")  # type: ignore[arg-type]
+    return replace(world, matches=(bad,))
+
+
+@pytest.mark.asyncio
+async def test_the_adapter_rejects_a_bad_record_before_touching_the_session() -> None:
+    session = RecordingSession(_row(_fresh()))
+    repository = SandboxCareerPgRepository(
+        session,  # type: ignore[arg-type]
+        v3_writes_enabled=True,
+    )
+    world = _world_with_bad_record()
+
+    with pytest.raises(CareerSaveRejectedError):
+        await repository.save(user_id=1, career_id=1, state=world)
+    with pytest.raises(CareerSaveRejectedError):
+        await repository.create(user_id=1, player_name="Ho", seed=7, state=world)
+
+    assert session.writes == [] and len(session.rows) == 1
+
+
+def test_a_rejected_save_is_reported_and_leaves_the_last_good_save(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(CAREER_V3_WRITES_ENV, "true")
+    world = _world_with_bad_record()
+    monkeypatch.setattr(
+        engine,
+        "advance_week",
+        lambda state, *, balance: SimpleNamespace(state=world, report=None),
+    )
+    original = _fresh()
+    session = RecordingSession(_row(copy.deepcopy(original)))
+
+    response = _client(session).post(f"{_BASE}/1/advance", headers=_key())
+
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "career_save_rejected"
+    assert isinstance(response.json()["detail"], str)
+    assert session.rows[0].world == original
+    assert session.writes == [] and session.receipts == []
+
+
+def test_the_closed_gate_answers_before_record_rules() -> None:
+    """닫힘이 먼저다 — 쓰기가 닫혔는데 규칙 오류로 보고되면 원인이 흐려진다."""
+    session = RecordingSession()
+    repository = SandboxCareerPgRepository(session)  # type: ignore[arg-type]
+
+    with pytest.raises(CareerV3WritesDisabledError):
+        repository._encode(_world_with_bad_record())
+
+
+def test_save_errors_are_not_read_errors() -> None:
+    assert not issubclass(CareerSaveRejectedError, CorruptSaveError)
+    assert not issubclass(CareerV3WritesDisabledError, CorruptSaveError)
+    assert issubclass(CareerSaveRejectedError, CareerSaveRefusedError)
+    assert issubclass(CareerV3WritesDisabledError, CareerSaveRefusedError)

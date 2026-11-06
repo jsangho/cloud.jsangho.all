@@ -24,7 +24,7 @@ id 의 존재가 새어 나간다.
 `dump` 는 항상 v3 를 쓴다. 그래서 `dump` 호출을 `_encode` 하나로 모으고 거기서 v3 쓰기
 게이트를 본다 — `create` 와 `save` 가 같은 문을 지나므로 정책이 한 벌이고, 게이트를
 빼먹은 쓰기 경로를 만들 수 없다. **기본이 닫힘이라** 값을 주입하지 않은 어댑터는
-쓰지 못한다. 여는 값은 `career_sandbox_provider` 가 서버 환경변수에서만 읽는다.
+쓰지 못한다. 경기 기록도 여기서 읽기와 같은 규칙으로 본다. 여는 값은 `career_sandbox_provider` 가 서버 환경변수에서만 읽는다.
 """
 
 from __future__ import annotations
@@ -40,11 +40,17 @@ from kayfabe.adapter.outbound.orm.career_sandbox_orm import (
     SandboxCareerModel,
     SandboxCareerRequestModel,
 )
-from kayfabe.adapter.outbound.pg.career_world_codec import dump, load
+from kayfabe.adapter.outbound.pg.career_world_codec import (
+    dump,
+    load,
+    verify_matches,
+)
 from kayfabe.app.ports.output.sandbox_career_repository import (
     RECEIPT_KEEP,
     CareerRow,
+    CareerSaveRejectedError,
     CareerV3WritesDisabledError,
+    CorruptSaveError,
     DuplicateRequestError,
     RequestReceipt,
     SandboxCareerRepository,
@@ -63,7 +69,12 @@ class SandboxCareerPgRepository(SandboxCareerRepository):
         """저장할 JSON 을 만든다. **세션을 건드리기 전에 불러야 한다.**"""
         if not self._v3_writes_enabled:
             raise CareerV3WritesDisabledError("v3 세이브 쓰기가 닫혀 있습니다")
-        return dump(state)
+        payload = dump(state)
+        try:
+            verify_matches(payload)
+        except CorruptSaveError as e:
+            raise CareerSaveRejectedError("경기 기록이 규칙에 맞지 않습니다") from e
+        return payload
 
     async def create(
         self, *, user_id: int, player_name: str, seed: int, state: WorldState

@@ -17,6 +17,8 @@
     409  단계가 맞지 않다 (52주를 다 썼는데 주차 진행, 결산 전에 다음 시즌 등)
          **또는** 요청 키를 다른 요청에 다시 썼다
     422  입력이 틀리다 (없는 행동·선택지, 포인트 소진, 요청 키 형식 오류)
+    500  저장된 세이브를 못 읽는다(칸 누락·타입 손상 포함) — 조회와 쓰기 모두.
+         **또는** 쓰려는 경기 기록이 규칙에 어긋난다 — `code="career_save_rejected"`
     503  v3 세이브 쓰기가 닫혀 있다 — `code="career_v3_writes_disabled"`.
          저장 직전에 막히므로 입력·단계 오류가 있는 요청은 위 코드가 먼저 나온다.
 
@@ -83,6 +85,7 @@ from kayfabe.app.ports.input.career_sandbox_use_case import (
     RequestKeyConflictError,
 )
 from kayfabe.app.ports.output.sandbox_career_repository import (
+    CareerSaveRefusedError,
     CareerV3WritesDisabledError,
     CorruptSaveError,
 )
@@ -121,24 +124,29 @@ def _user_id(claims: TokenPayload) -> int:
         ) from e
 
 
-#: 쓰기가 닫혔을 때의 기계용 코드. `detail` 은 화면용 문구다(`parseApiError` 가 읽는다).
-_WRITES_DISABLED_CODE = "career_v3_writes_disabled"
-
-
-def _writes_disabled() -> JSONResponse:
-    """닫힌 쓰기를 503 으로. **본문에 코드를 실으려고 `HTTPException` 을 쓰지 않는다.**
+def _refused(exc: CareerSaveRefusedError) -> JSONResponse:
+    """거부된 쓰기를 응답으로. **본문에 코드를 실으려고 `HTTPException` 을 쓰지 않는다.**
 
     `HTTPException` 은 `detail` 만 내보내는데, `detail` 을 dict 로 바꾸면 프론트가
     문구를 읽지 못한다. 예외가 세션을 건드리기 전에 났으므로 `get_db` 가 커밋해도 쓰일
     것이 없다.
     """
-    logger.warning("[CareerRouter] v3 쓰기 차단")
+    if isinstance(exc, CareerV3WritesDisabledError):
+        logger.warning("[CareerRouter] v3 쓰기 차단")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "커리어 저장이 잠시 중단됐습니다. "
+                "진행 상황은 그대로 남아 있습니다.",
+                "code": "career_v3_writes_disabled",
+            },
+        )
+    logger.error("[CareerRouter] 저장 거부: %s", exc, exc_info=exc)
     return JSONResponse(
-        status_code=503,
+        status_code=500,
         content={
-            "detail": "커리어 저장이 잠시 중단됐습니다. "
-            "진행 상황은 그대로 남아 있습니다.",
-            "code": _WRITES_DISABLED_CODE,
+            "detail": "경기 기록을 저장할 수 없습니다. 진행 상황은 그대로 남아 있습니다.",
+            "code": "career_save_rejected",
         },
     )
 
@@ -206,8 +214,8 @@ async def create_career(
             seed=body.seed,
             division=body.division,
         )
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (LookupError, ValueError) as e:
         raise _error(e) from e
 
@@ -271,8 +279,8 @@ async def perform_action(
             target=body.target,
             request_id=request_key,
         )
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (RequestKeyConflictError, LookupError, ValueError) as e:
         raise _error(e) from e
     return outcome.body
@@ -300,8 +308,8 @@ async def advance_week(
         outcome = await use_case.advance(
             user_id=_user_id(claims), career_id=career_id, request_id=request_key
         )
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (RequestKeyConflictError, LookupError, ValueError) as e:
         raise _error(e) from e
     return outcome.body
@@ -345,8 +353,8 @@ async def resolve_event(
         raise HTTPException(
             status_code=404, detail=f"없는 사건입니다: {event_id}"
         ) from e
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (RequestKeyConflictError, LookupError, ValueError) as e:
         raise _error(e) from e
     return outcome.body
@@ -366,8 +374,8 @@ async def settle_season(
         outcome = await use_case.settle(
             user_id=_user_id(claims), career_id=career_id, request_id=request_key
         )
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (RequestKeyConflictError, LookupError, ValueError) as e:
         raise _error(e) from e
     return outcome.body
@@ -389,8 +397,8 @@ async def start_next_season(
         outcome = await use_case.next_season(
             user_id=_user_id(claims), career_id=career_id, request_id=request_key
         )
-    except CareerV3WritesDisabledError:
-        return _writes_disabled()
+    except CareerSaveRefusedError as e:
+        return _refused(e)
     except (RequestKeyConflictError, LookupError, ValueError) as e:
         raise _error(e) from e
     return outcome.body
