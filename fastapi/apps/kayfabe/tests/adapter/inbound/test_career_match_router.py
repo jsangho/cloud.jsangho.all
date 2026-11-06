@@ -347,7 +347,7 @@ def test_tag_match_has_four_participants_in_order(golden: WorldState) -> None:
     assert len(body["participants"]) == 4
     assert [p["side"] for p in body["participants"]] == [0, 0, 1, 1]
     assert body["teams"] == [list(m.teams[0]), list(m.teams[1])]
-    # 엔진이 적용한 값 그대로 — 태그전 전적 결함을 보정하지 않는다.
+    # 엔진이 적용한 값 그대로다.
     _assert_participants(body, m)
 
 

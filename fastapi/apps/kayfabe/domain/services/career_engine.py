@@ -362,6 +362,43 @@ def _strip_title(state: WorldState, *, belt: str, former: str) -> WorldState:
     return _put(state, replace(champ, held=tuple(b for b in champ.held if b != belt)))
 
 
+def _other_results(
+    outcome: MatchOutcome, *, me: str, won: bool
+) -> tuple[tuple[str, bool], ...]:
+    """플레이어를 뺀 참가자와 그 승패. **태그는 팀 전원이 팀 결과를 받는다.**
+
+    `outcome.winner`·`loser` 는 핀을 따고 당한 **개인**이다. 태그에서 이 둘로 상대를
+    고르면 `winner` 가 같은 편 파트너일 때 파트너가 패배를 받고, 경기를 뛴 나머지
+    선수는 아무 기록도 받지 않는다 — 플레이어는 이미 팀 단위로 세므로 전적이 어긋난다.
+    """
+    if outcome.kind != MATCH_TAG:
+        return ((outcome.loser if outcome.winner == me else outcome.winner, not won),)
+    mine, theirs = (
+        (outcome.team_a, outcome.team_b)
+        if me in outcome.team_a
+        else (outcome.team_b, outcome.team_a)
+    )
+    return (
+        *((name, won) for name in mine if name != me),
+        *((name, not won) for name in theirs),
+    )
+
+
+def _with_result(w: Wrestler, *, won: bool, tired: bool) -> Wrestler:
+    """NPC 한 명의 경기 결과. 플레이어와 달리 인기도·벨트는 여기서 움직이지 않는다."""
+    streak, best = tally.step(current=w.win_streak, best=w.best_win_streak, won=won)
+    return replace(
+        w,
+        wins=w.wins + (1 if won else 0),
+        losses=w.losses + (0 if won else 1),
+        losing_streak=0 if won else w.losing_streak + 1,
+        win_streak=streak,
+        best_win_streak=best,
+        condition=max(10, w.condition - 8) if tired else w.condition,
+        consecutive_matches=w.consecutive_matches + (1 if tired else 0),
+    )
+
+
 def _apply_outcome(
     state: WorldState, *, outcome: MatchOutcome, card: Card, balance: Balance
 ) -> tuple[WorldState, WeekReport]:
@@ -438,24 +475,16 @@ def _apply_outcome(
                 )
                 title_changed = True
 
-    # 상대 전적.
-    foe_name = outcome.loser if outcome.winner == me.name else outcome.winner
-    foe = state.find(foe_name)
-    if foe is not None and foe.name != me.name:
-        foe_streak, foe_best = tally.step(
-            current=foe.win_streak, best=foe.best_win_streak, won=not won
-        )
-        foe = replace(
-            foe,
-            wins=foe.wins + (0 if won else 1),
-            losses=foe.losses + (1 if won else 0),
-            losing_streak=0 if not won else foe.losing_streak + 1,
-            win_streak=foe_streak,
-            best_win_streak=foe_best,
-            condition=max(10, foe.condition - 8),
-            consecutive_matches=foe.consecutive_matches + 1,
-        )
-        state = _put(state, foe)
+    # 함께 뛴 나머지 선수의 전적.
+    #
+    # **피로는 지금까지처럼 한 명만 받는다.** 태그전 전원에게 주면 NPC 컨디션이 달라져
+    # 승률이 움직인다 — 200시드 실측에서 시즌 궤적 19개가 바뀌었다(2026-11-06). 전적을
+    # 바로잡는 일과 밸런스를 바꾸는 일을 섞지 않는다.
+    tired = outcome.loser if outcome.winner == me.name else outcome.winner
+    for name, other_won in _other_results(outcome, me=me.name, won=won):
+        other = state.find(name)
+        if other is not None and other.name != me.name:
+            state = _put(state, _with_result(other, won=other_won, tired=name == tired))
 
     # 관계.
     if card.opponent:

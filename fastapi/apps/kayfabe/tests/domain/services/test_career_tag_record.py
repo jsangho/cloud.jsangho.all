@@ -1,33 +1,26 @@
-"""태그전 전적. **플레이어 본인 전적은 맞고, 나머지 셋의 전적이 틀린다**(알려진 결함).
+"""태그전 전적. **팀 전원이 팀 결과대로 1승 또는 1패를 받는다.**
 
-## 결함의 실제 경로 (Phase 0.5 · 2026-11-03 추적)
+## 있던 결함 (2026-11-06 수정)
 
-`simulate_tag` 는 `winner` = 이긴 팀에서 핀을 딴 선수, `loser` = 진 팀에서 핀을
-당한 선수를 돌려준다. `_apply_outcome` 는
+`simulate_tag` 의 `winner`·`loser` 는 핀을 따고 당한 **개인**이다. `_apply_outcome` 는
+이 둘로 상대 한 명을 골라 싱글처럼 처리했다.
 
-    won       = 플레이어 팀이 이겼나     ← 팀 단위로 맞게 센다
-    foe_name  = loser if winner == 플레이어 else winner
+    파트너가 핀을 땄다(팀 승)  → 파트너에게 **패배** · 핀을 당한 상대는 기록 없음
+    그 밖의 경우                → 네 명 중 두 명만 기록
 
-로 **상대 한 명**을 고르고, 그 선수에게 `won` 의 반대를 적는다. 싱글 경기에서는
-맞는 식이지만 태그에서는 `winner` 가 **같은 편 파트너**일 수 있다:
+플레이어 본인은 처음부터 팀 단위로 셌으므로 네 명의 전적이 서로 맞지 않았다.
 
-    파트너가 핀을 땄다(팀 승)  → foe_name = 파트너 → **파트너에게 패배**
-                                 핀을 당한 상대는 기록 없음
-    상대가 플레이어를 핀했다    → 상대 득점자에게 승리 (맞음) · 파트너 기록 없음
-    상대가 파트너를 핀했다      → 상대 득점자에게 승리 (맞음) · 파트너 기록 없음
-    플레이어가 핀을 땄다        → 핀당한 상대에게 패배 (맞음) · 파트너 기록 없음
+## 전적만 고쳤다
 
-골든 시즌(시드 11) 태그 18경기 중 첫째 줄이 1번(w33) 나왔다. 연승 카운터
-(`career_tally.step`)도 같은 `foe` 에 붙어 있어 같은 오류를 따른다.
-
-## 이 파일이 하는 일
-
-**동작을 바꾸지 않는다.** 올바른 기대값을 `xfail(strict=True)` 로 적어 둔다 —
-지금은 실패가 정상이고, 고치는 순간 XPASS 로 깨져 표시를 떼라고 알린다.
-골든 기준값은 이 결함을 포함한 채 그대로다. 고치면 골든이 **의도적으로** 바뀐다.
+피로(`condition`·`consecutive_matches`)는 예전처럼 한 명만 받는다. 전원에게 주면 NPC
+경기력이 달라져 200시드 중 19개의 시즌 궤적이 바뀐다 — 그것은 밸런스 판단이다. 전적만
+고치면 200시드 전부 플레이어의 주차별 결과가 그대로였다. 그래서 골든의 주차 보고가
+기준값으로 남는다(`test_career_golden`).
 """
 
 from __future__ import annotations
+
+from dataclasses import replace
 
 import pytest
 
@@ -72,52 +65,124 @@ def _record(world: WorldState, name: str) -> tuple[int, int]:
     return w.wins, w.losses
 
 
-# ── 지금도 맞는 것 — Phase 2 에서 깨지면 안 된다 ──────────────────
+_WIN = (1, 0)
+_LOSS = (0, 1)
+_RESULTS = [
+    pytest.param(ME, FOE_1, True, id="player-scores"),
+    pytest.param(PARTNER, FOE_2, True, id="partner-scores"),
+    pytest.param(FOE_1, ME, False, id="player-pinned"),
+    pytest.param(FOE_2, PARTNER, False, id="partner-pinned"),
+]
+
+
+@pytest.mark.parametrize(("scorer", "pinned", "team_won"), _RESULTS)
+def test_all_four_get_the_team_result(scorer: str, pinned: str, team_won: bool) -> None:
+    after = _tag(_world(), scorer=scorer, pinned=pinned)
+
+    mine, theirs = (_WIN, _LOSS) if team_won else (_LOSS, _WIN)
+    assert [_record(after, name) for name in (ME, PARTNER)] == [mine, mine]
+    assert [_record(after, name) for name in (FOE_1, FOE_2)] == [theirs, theirs]
+
+
+@pytest.mark.parametrize(("scorer", "pinned", "team_won"), _RESULTS)
+def test_streaks_follow_the_team_result(
+    scorer: str, pinned: str, team_won: bool
+) -> None:
+    after = _tag(_world(), scorer=scorer, pinned=pinned)
+
+    for name in (PARTNER, FOE_1, FOE_2):
+        w = after.require(name)
+        won = (name == PARTNER) == team_won
+        assert w.win_streak == (1 if won else 0), name
+        assert w.best_win_streak == (1 if won else 0), name
+        assert w.losing_streak == (0 if won else 1), name
+
+
+@pytest.mark.parametrize(("scorer", "pinned", "team_won"), _RESULTS)
+def test_wins_and_losses_stay_balanced(
+    scorer: str, pinned: str, team_won: bool
+) -> None:
+    after = _tag(_world(), scorer=scorer, pinned=pinned)
+
+    assert sum(w.wins for w in after.roster) == sum(w.losses for w in after.roster)
 
 
 @pytest.mark.parametrize(
-    ("scorer", "pinned", "team_won"),
+    ("scorer", "pinned", "tired"),
     [
-        (ME, FOE_1, True),
-        (PARTNER, FOE_2, True),
-        (FOE_1, ME, False),
-        (FOE_2, PARTNER, False),
+        (ME, FOE_1, FOE_1),
+        (PARTNER, FOE_2, PARTNER),
+        (FOE_1, ME, FOE_1),
+        (FOE_2, PARTNER, FOE_2),
     ],
 )
-def test_player_record_is_team_level(scorer: str, pinned: str, team_won: bool) -> None:
-    """플레이어 본인은 **누가 핀을 땄든** 팀 결과대로 1승 또는 1패."""
-    after = _tag(_world(), scorer=scorer, pinned=pinned)
+def test_only_one_npc_gets_tired(scorer: str, pinned: str, tired: str) -> None:
+    """**밸런스를 움직이지 않는다는 고정.** 전원에게 주면 궤적이 바뀐다."""
+    world = _world()
+    after = _tag(world, scorer=scorer, pinned=pinned)
 
-    assert _record(after, ME) == ((1, 0) if team_won else (0, 1))
-
-
-def test_reproduces_partner_loss_on_partner_pin() -> None:
-    """**현재 동작 재현.** 파트너가 핀을 따 팀이 이겼는데 파트너에게 패배가 붙는다."""
-    after = _tag(_world(), scorer=PARTNER, pinned=FOE_2)
-
-    assert _record(after, PARTNER) == (0, 1)
-    assert _record(after, FOE_2) == (0, 0)
-    assert after.require(PARTNER).losing_streak == 1
-
-
-# ── 올바른 기대값 — 지금은 실패가 정상이다 ────────────────────────
+    for name in (PARTNER, FOE_1, FOE_2):
+        before, now = world.require(name), after.require(name)
+        if name == tired:
+            assert now.condition == max(10, before.condition - 8)
+            assert now.consecutive_matches == before.consecutive_matches + 1
+        else:
+            assert now.condition == before.condition
+            assert now.consecutive_matches == before.consecutive_matches
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="알려진 결함: 태그전 foe_name 이 같은 편 득점자를 가리킨다 (Phase 2 수정 예정)",
-)
-def test_partner_who_scores_gets_a_win() -> None:
-    after = _tag(_world(), scorer=PARTNER, pinned=FOE_2)
+def test_a_lost_streak_is_broken_by_a_partner_pin() -> None:
+    """예전에는 이 경기가 파트너의 연패를 **늘렸다.**"""
+    world = _world()
+    roster = tuple(
+        replace(w, losing_streak=3, win_streak=0) if w.name == PARTNER else w
+        for w in world.roster
+    )
+    after = _tag(replace(world, roster=roster), scorer=PARTNER, pinned=FOE_2)
 
-    assert _record(after, PARTNER) == (1, 0)
+    assert after.require(PARTNER).losing_streak == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="알려진 결함: 태그전에서 핀을 당한 상대가 기록되지 않는다 (Phase 2 수정 예정)",
-)
-def test_pinned_opponent_gets_a_loss_when_partner_scores() -> None:
-    after = _tag(_world(), scorer=PARTNER, pinned=FOE_2)
+def test_a_participant_missing_from_the_roster_is_skipped() -> None:
+    world = _world()
+    roster = tuple(w for w in world.roster if w.name != FOE_2)
 
-    assert _record(after, FOE_2) == (0, 1)
+    after = _tag(replace(world, roster=roster), scorer=PARTNER, pinned=FOE_1)
+
+    assert after.find(FOE_2) is None
+    assert _record(after, PARTNER) == _WIN
+    assert _record(after, FOE_1) == _LOSS
+
+
+def test_player_listed_on_the_second_team_keeps_sides_straight() -> None:
+    outcome = MatchOutcome(
+        kind=MATCH_TAG,
+        winner=FOE_1,
+        loser=PARTNER,
+        probability=0.5,
+        roll=0.1,
+        finish="핀폴",
+        rating=50,
+        team_a=(FOE_1, FOE_2),
+        team_b=(ME, PARTNER),
+    )
+
+    results = dict(engine._other_results(outcome, me=ME, won=False))
+
+    assert results == {PARTNER: False, FOE_1: True, FOE_2: True}
+
+
+def test_a_single_match_still_touches_exactly_one_opponent() -> None:
+    outcome = MatchOutcome(
+        kind="single",
+        winner=ME,
+        loser=FOE_1,
+        probability=0.5,
+        roll=0.1,
+        finish="핀폴",
+        rating=50,
+        team_a=(ME,),
+        team_b=(FOE_1,),
+    )
+
+    assert engine._other_results(outcome, me=ME, won=True) == ((FOE_1, False),)

@@ -305,32 +305,29 @@ def test_power_is_what_the_simulation_used(golden_run) -> None:
     assert checked
 
 
-def test_tag_records_keep_the_known_record_defect_visible(golden_run) -> None:
-    """**알려진 결함을 기록이 보정하지 않는다.**
+def test_every_participant_record_matches_the_winning_side(golden_run) -> None:
+    """참가자 전원의 `after` 전적이 `winner_side` 와 맞는다 — 싱글도, 태그도.
 
-    파트너가 득점해 팀이 이긴 태그전(골든 w33)에서 `winner_side` 는 0(플레이어 팀
-    승리)인데, 엔진은 파트너에게 패배를 붙이고 핀당한 상대의 전적은 그대로 둔다.
-    기록의 `after` 는 그 **실제 적용값**이다. 결함이 고쳐지면 이 테스트가 깨진다 —
-    그때 기대값을 올바른 쪽으로 바꾼다(`test_career_tag_record` 의 xfail 과 함께).
+    파트너가 득점해 이긴 태그전(골든 w33)이 있어야 의미가 있다. 예전에는 그 경기에서
+    파트너가 패배를 받고 상대 팀은 기록이 없었다.
     """
     _, world = golden_run
-    hits = [
-        m
+    assert any(
+        m.kind == "tag" and m.winner_side == 0 and m.finisher != world.player
         for m in world.matches
-        if m.kind == "tag" and m.winner_side == 0 and m.finisher != world.player
-    ]
-    assert hits, "파트너 득점 승리 태그전이 골든에 있어야 한다(w33)"
-    m = hits[0]
-    partner = next(p for p in m.participants if p.side == 0 and p.name != world.player)
-    loser_team = [p for p in m.participants if p.side == 1]
+    ), "파트너 득점 승리 태그전이 골든에 있어야 한다(w33)"
 
-    assert partner.after[IDX["losses"]] == partner.before[IDX["losses"]] + 1
-    assert partner.after[IDX["wins"]] == partner.before[IDX["wins"]]
-    assert all(
-        p.after[IDX["wins"]] == p.before[IDX["wins"]]
-        and p.after[IDX["losses"]] == p.before[IDX["losses"]]
-        for p in loser_team
-    )
+    for m in world.matches:
+        for p in m.participants:
+            won = p.side == m.winner_side
+            assert p.after[IDX["wins"]] - p.before[IDX["wins"]] == (1 if won else 0)
+            assert p.after[IDX["losses"]] - p.before[IDX["losses"]] == (0 if won else 1)
+            assert p.after[IDX["win_streak"]] == (
+                p.before[IDX["win_streak"]] + 1 if won else 0
+            )
+            assert p.after[IDX["losing_streak"]] == (
+                0 if won else p.before[IDX["losing_streak"]] + 1
+            )
 
 
 def test_heat_changes_are_only_real_changes(golden_run) -> None:

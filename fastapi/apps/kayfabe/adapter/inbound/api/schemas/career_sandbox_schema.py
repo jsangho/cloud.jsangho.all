@@ -195,9 +195,8 @@ class MatchSummarySchema(_Camel):
 class MatchDetailSchema(_Camel):
     """경기 기록 한 장. **저장된 값 그대로** — 다시 계산하지 않는다.
 
-    `scorer`·`pinned` 는 핀폴이 아니면 `null` 이다. 태그전 참가자의 `after` 는
-    엔진이 실제로 적용한 전적이라 알려진 결함(파트너에 패배가 붙는 경우)을 그대로
-    보인다 — 팀 결과의 정본은 `winnerSide` 다.
+    `scorer`·`pinned` 는 핀폴이 아니면 `null` 이다. 태그전은 참가자 전원의 `after`
+    전적이 `winnerSide` 와 맞는다.
     """
 
     id: str

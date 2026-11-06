@@ -16,6 +16,13 @@
 **기대값을 갱신하지 않는다.** 이 테스트가 깨지면 바뀐 것은 기준값이 아니라 게임
 결과다. 규칙을 일부러 바꾼 경우에만, 무엇이 왜 바뀌는지 적고 다시 뽑는다.
 
+## 태그 전적 수정으로 달라진 칸도 뺀다
+
+2026-11-06 태그전에서 NPC 세 명 모두 전적을 받게 했다(`test_career_tag_record`).
+기준값은 그 전 코드의 출력이고 **다시 뽑지 않았다** — 그래야 "주차 보고와 나머지 세계가
+한 칸도 안 움직였다" 를 이 파일이 계속 증명한다. 그래서 `NPC_RECORD_KEYS` 만 비교에서
+빼고, 달라진 값 자체는 `test_career_match_record` 가 경기마다 검산한다.
+
 ## 뒤 판본에서 더해진 칸은 비교에서 뺀다
 
 `V2_WRESTLER_KEYS`(v2 · 선수 칸)와 `V3_WORLD_KEYS`(v3 · 세계 칸)는 v1 세이브에 없던
@@ -51,6 +58,9 @@ ALLY = "Rio Castellan"
 V2_WRESTLER_KEYS = ("win_streak", "best_win_streak", "streaks_since")
 #: v2 세이브에 없던 세계 칸(v3 · 경기 기록).
 V3_WORLD_KEYS = ("matches", "match_records_since")
+
+#: 태그 전적 수정으로 NPC 만 달라지는 칸. 플레이어의 값은 그대로 비교한다.
+NPC_RECORD_KEYS = ("wins", "losses", "losing_streak")
 
 #: 주마다 하나씩 돌아가며 쓰는 행동. 행동 다섯 종류를 전부 지나가게 한다.
 _ACTION_CYCLE = ("훈련", "프로모", "관계", "휴식", "협상")
@@ -144,7 +154,19 @@ def test_final_world_matches_golden() -> None:
     _, world = run_trajectory()
     golden = load_fixture()
 
-    assert strip_v2(_json(dump(world))) == strip_v2(golden["final_v1"])
+    def without_npc_records(raw: dict[str, Any]) -> dict[str, Any]:
+        out = strip_v2(raw)
+        out["roster"] = [
+            w
+            if w["name"] == PLAYER
+            else {k: v for k, v in w.items() if k not in NPC_RECORD_KEYS}
+            for w in out["roster"]
+        ]
+        return out
+
+    assert without_npc_records(_json(dump(world))) == without_npc_records(
+        golden["final_v1"]
+    )
 
 
 def test_trajectory_is_not_trivial() -> None:
