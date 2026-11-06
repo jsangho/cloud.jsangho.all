@@ -20,6 +20,14 @@
 적용**되고, 영수증만 있으면 하지 않은 일을 했다고 답한다. 포트를 둘로 쪼개지 않고
 `save` 를 넓힌 이유가 이것이다(메서드 두 개면 트랜잭션 경계를 호출자가 지켜야
 한다).
+
+## v3 쓰기는 기본이 닫힘이다
+
+`create`·`save` 는 세이브를 항상 현재 판본(v3)으로 쓴다 — 옛 판본 행도 그 한 번으로
+v3 가 된다. 그래서 이 둘이 곧 "첫 v3 쓰기" 이고, 어댑터는 **명시적으로 열리지 않으면
+이 둘을 거부한다**(`CareerV3WritesDisabledError`). 게이트를 유스케이스가 아니라 저장
+계층에 두는 이유는 DB 에 닿는 길이 여기 하나뿐이어서다 — 새 유스케이스가 생겨도
+우회하지 못한다.
 """
 
 from __future__ import annotations
@@ -66,6 +74,19 @@ class CorruptSaveError(ValueError):
     내는 쪽은 아웃바운드 어댑터(`career_world_codec`)고 받는 쪽은 인바운드
     라우터다. 어댑터끼리 import 하면 방향이 어긋나므로, 포트 경계에 두고 양쪽이
     그것을 본다 — 같은 파일의 `DuplicateRequestError` 와 같은 자리다.
+    """
+
+
+class CareerV3WritesDisabledError(Exception):
+    """v3 세이브 쓰기가 닫혀 있다(`CAREER_V3_WRITES_ENABLED`). **아무것도 안 썼다.**
+
+    옛 판본 행을 옛 판본 그대로 저장할 길이 없다 — `load` 가 메모리에서 v3 로 올리고
+    `dump` 는 v3 만 쓴다. 그래서 v1·v2 커리어의 쓰기도 함께 막힌다. 막지 않으면 행동
+    한 번에 행이 조용히 v3 로 바뀐다.
+
+    `ValueError`·`LookupError` 를 물려받지 않는다 — 라우터의 넓은 분기에 걸려
+    "입력을 고쳐라"(422)나 "없다"(404)로 번역되면 원인이 가려진다. 라우터가 놓치면
+    500 이 된다. 빈 성공으로 위장되는 것보다 낫다.
     """
 
 
@@ -118,7 +139,10 @@ class SandboxCareerRepository(ABC):
     async def create(
         self, *, user_id: int, player_name: str, seed: int, state: WorldState
     ) -> int:
-        """새 커리어를 만들고 id 를 돌려준다."""
+        """새 커리어를 만들고 id 를 돌려준다.
+
+        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError` — 행이 생기지 않는다.
+        """
         ...
 
     @abstractmethod
@@ -176,5 +200,8 @@ class SandboxCareerRepository(ABC):
         `receipt` 를 주면 **같은 트랜잭션에서** 함께 쓰고, 그 커리어의 영수증을
         최신 `RECEIPT_KEEP` 개로 자른다. 같은 (user, career, request) 가 이미
         있으면 `DuplicateRequestError` — 호출자는 되돌리고 저장된 응답을 읽어야 한다.
+
+        v3 쓰기가 닫혀 있으면 `CareerV3WritesDisabledError` — 세이브도 영수증도
+        쓰이지 않는다.
         """
         ...

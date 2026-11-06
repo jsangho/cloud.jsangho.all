@@ -124,7 +124,7 @@ class Harness:
     @asynccontextmanager
     async def repo(self) -> AsyncIterator[SandboxCareerPgRepository]:
         async with self.session() as session:
-            yield SandboxCareerPgRepository(session)
+            yield SandboxCareerPgRepository(session, v3_writes_enabled=True)
 
 
 @asynccontextmanager
@@ -266,16 +266,16 @@ async def test_a_second_locked_read_waits_for_the_first_transaction() -> None:
         career_id = await _career(h)
 
         async with h.session() as first:
-            held = SandboxCareerPgRepository(first)
+            held = SandboxCareerPgRepository(first, v3_writes_enabled=True)
             assert (
                 await held.load_for_update(user_id=h.user_id, career_id=career_id)
             ) is not None
 
             async def second_read() -> WorldState | None:
                 async with h.session() as other:
-                    return await SandboxCareerPgRepository(other).load_for_update(
-                        user_id=h.user_id, career_id=career_id
-                    )
+                    return await SandboxCareerPgRepository(
+                        other, v3_writes_enabled=True
+                    ).load_for_update(user_id=h.user_id, career_id=career_id)
 
             waiting = asyncio.create_task(second_read())
             # 첫 트랜잭션이 열려 있는 동안에는 끝나지 못한다.
@@ -294,13 +294,13 @@ async def test_a_plain_read_does_not_wait() -> None:
         career_id = await _career(h)
 
         async with h.session() as first:
-            await SandboxCareerPgRepository(first).load_for_update(
-                user_id=h.user_id, career_id=career_id
-            )
+            await SandboxCareerPgRepository(
+                first, v3_writes_enabled=True
+            ).load_for_update(user_id=h.user_id, career_id=career_id)
 
             async with h.session() as other:
                 plain = await asyncio.wait_for(
-                    SandboxCareerPgRepository(other).load(
+                    SandboxCareerPgRepository(other, v3_writes_enabled=True).load(
                         user_id=h.user_id, career_id=career_id
                     ),
                     timeout=_BLOCK_WAIT,

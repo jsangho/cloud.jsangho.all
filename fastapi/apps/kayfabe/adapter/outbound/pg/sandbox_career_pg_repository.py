@@ -18,9 +18,18 @@ id 의 존재가 새어 나간다.
 `save` 가 세이브와 영수증을 **같은 커밋**에 넣는다. 둘로 쪼개면 그 틈에 프로세스가
 죽었을 때 상태가 갈린다 — 세이브만 넘어갔으면 재시도가 또 적용되고, 영수증만
 남았으면 하지 않은 일을 했다고 답한다.
+
+## 세이브 JSON 은 `_encode` 한 곳에서만 만든다
+
+`dump` 는 항상 v3 를 쓴다. 그래서 `dump` 호출을 `_encode` 하나로 모으고 거기서 v3 쓰기
+게이트를 본다 — `create` 와 `save` 가 같은 문을 지나므로 정책이 한 벌이고, 게이트를
+빼먹은 쓰기 경로를 만들 수 없다. **기본이 닫힘이라** 값을 주입하지 않은 어댑터는
+쓰지 못한다. 여는 값은 `career_sandbox_provider` 가 서버 환경변수에서만 읽는다.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
@@ -35,6 +44,7 @@ from kayfabe.adapter.outbound.pg.career_world_codec import dump, load
 from kayfabe.app.ports.output.sandbox_career_repository import (
     RECEIPT_KEEP,
     CareerRow,
+    CareerV3WritesDisabledError,
     DuplicateRequestError,
     RequestReceipt,
     SandboxCareerRepository,
@@ -45,12 +55,20 @@ logger = LAYER_LOG
 
 
 class SandboxCareerPgRepository(SandboxCareerRepository):
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, *, v3_writes_enabled: bool = False) -> None:
         self.db = db
+        self._v3_writes_enabled = v3_writes_enabled
+
+    def _encode(self, state: WorldState) -> dict[str, Any]:
+        """저장할 JSON 을 만든다. **세션을 건드리기 전에 불러야 한다.**"""
+        if not self._v3_writes_enabled:
+            raise CareerV3WritesDisabledError("v3 세이브 쓰기가 닫혀 있습니다")
+        return dump(state)
 
     async def create(
         self, *, user_id: int, player_name: str, seed: int, state: WorldState
     ) -> int:
+        world = self._encode(state)
         row = SandboxCareerModel(
             user_id=user_id,
             player_name=player_name,
@@ -58,7 +76,7 @@ class SandboxCareerPgRepository(SandboxCareerRepository):
             season=state.season,
             week=state.week,
             phase=str(state.phase),
-            world=dump(state),
+            world=world,
         )
         self.db.add(row)
         await self.db.flush()
@@ -127,10 +145,11 @@ class SandboxCareerPgRepository(SandboxCareerRepository):
         state: WorldState,
         receipt: RequestReceipt | None = None,
     ) -> None:
+        world = self._encode(state)
         row = await self._row(user_id=user_id, career_id=career_id, lock=False)
         if row is None:
             raise LookupError("커리어를 찾을 수 없습니다")
-        row.world = dump(state)
+        row.world = world
         # 목록용 거울 칼럼. **정본은 JSON 이고 여기서만 복사한다.**
         row.season = state.season
         row.week = state.week
