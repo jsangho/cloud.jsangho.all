@@ -830,45 +830,34 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
   ],
 
   "survivor-series": [
+    // 위키 `Survivor Series: WarGames (2026)` rev 1385032283 (2026-11-11 발표분 3경기).
+    // 이전의 ss26-women-wg·ss26-ic·ss26-women-world·ss26-men-wg 넷은 발표 전 추측
+    // 카드였다 — id 를 재사용하지 않는다. 그 id 에 붙은 AI 예측이 새 경기에 달라붙기
+    // 때문이다(옛 예측은 withdrawn_match 로 남는다). 배당은 지어내지 않는다.
     m2(
-      "ss26-women-wg",
-      "Women's WarGames Match",
-      "sideA",
-      {
-        name: "Team Ripley — Charlotte, Rhea, IYO SKY, Bliss, AJ Lee",
-      },
-      {
-        name: "Team Lynch — Becky, Asuka, Kairi, Nia Jax, Lash Legend",
-      },
-      { left: 1.85, right: 1.95 },
-    ),
-    m2(
-      "ss26-ic",
-      "Intercontinental Championship",
-      "sideB",
-      { name: "Dominik Mysterio" },
-      { name: "John Cena", isChampion: true },
-      { left: 2.4, right: 1.58 },
-    ),
-    m2(
-      "ss26-women-world",
-      "Women's World Championship",
-      "sideA",
-      { name: "Stephanie Vaquer", isChampion: true },
-      { name: "Nikki Bella" },
-      { left: 1.55, right: 2.45 },
-    ),
-    m2(
-      "ss26-men-wg",
+      "ss26-bloodline-946",
       "Men's WarGames Match",
+      "sideA",
+      {
+        name: "The Bloodline — Roman Reigns, Jacob Fatu, Jey Uso, Jimmy Uso, Solo Sikoa",
+      },
+      {
+        name: "The 946 — Royce Keys, Bronco Nima, Carmelo Hayes, Cruz Montana, Lucien Price",
+      },
+    ),
+    m2(
+      "ss26-liv-becky",
+      "Women's World Championship",
       "sideB",
-      {
-        name: "The Vision — Lesnar, McIntyre, Logan Paul, Breakker, Reed",
-      },
-      {
-        name: "Team Rhodes — Punk, Cody, Roman, Jey Uso, Jimmy Uso",
-      },
-      { left: 2.2, right: 1.75 },
+      { name: "Liv Morgan", isChampion: true },
+      { name: "Becky Lynch" },
+    ),
+    m2(
+      "ss26-usa-mexico",
+      "5-on-5 Survivor Series Match",
+      "sideA",
+      { name: "Team USA — Cody Rhodes, CM Punk, Je'Von Evans + 미정 2" },
+      { name: "Team Mexico — Rey Mysterio, Penta + 미정 3" },
     ),
   ],
 

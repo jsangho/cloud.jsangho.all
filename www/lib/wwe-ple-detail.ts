@@ -494,11 +494,11 @@ export const PLE_EVENT_DETAILS: Record<PleSlug, PleEventDetail> = {
       glow: "shadow-[0_0_80px_-20px_rgba(59,130,246,0.3)]",
     },
     highlights: [
-      { title: "5 vs 5", detail: "태그 제거 방식 서바이버 매치" },
-      { title: "브랜드 대전", detail: "Raw·SmackDown 우위가 갈림" },
-      { title: "시즌 마무리", detail: "연말 스토리와 WM 시드" },
+      { title: "WarGames", detail: "블러드라인 vs The 946" },
+      { title: "USA vs 멕시코", detail: "5대5 서바이버 시리즈 매치" },
+      { title: "여자 월드 타이틀", detail: "Liv Morgan(c) vs Becky Lynch" },
     ],
-    predictionFocus: ["서바이버 승리 팀", "최후 1인", "브랜드 우위", "챔피언 방어"],
+    predictionFocus: ["워게임스 승리 팀", "서바이버 매치 승리 팀", "챔피언 방어"],
   },
 };
 
