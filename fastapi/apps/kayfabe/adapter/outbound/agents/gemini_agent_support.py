@@ -25,6 +25,7 @@ import json
 import logging
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from kayfabe.app.dtos.agent_prediction_dto import KnowledgeChunk, MatchContext
@@ -105,6 +106,18 @@ class RateGate:
 
 #: 두 LLM 에이전트가 공유한다 — 한도는 모델 단위이지 에이전트 단위가 아니다.
 shared_rate_gate = RateGate(MAX_CALLS_PER_MINUTE)
+
+
+@dataclass(frozen=True)
+class BackupGeneration:
+    """주 엔진(Gemini)의 시도가 전부 실패한 뒤 **한 번** 물어볼 다른 회사 엔진.
+
+    예비 모델(`fallback_model`)은 같은 회사 안에서 한도를 나눌 뿐이라, 하루 한도가
+    둘 다 바닥난 날(2026-11-11 실측)에는 함께 죽는다. 이쪽은 한도가 따로다.
+    """
+
+    use_case: GeminiGenerationUseCase
+    model: str
 
 
 def describe_match(context: MatchContext) -> str:
@@ -203,10 +216,11 @@ async def ask_for_report(
     gate: RateGate,
     model: str | None = None,
     fallback_model: str | None = None,
+    backup: BackupGeneration | None = None,
 ) -> AgentReport:
     """모델에 묻고 리포트로 옮긴다. 엔진이 죽었으면 `AgentUnavailableError`."""
     raw, model_used = await _generate(
-        use_case, agent, prompt, gate, model, fallback_model
+        use_case, agent, prompt, gate, model, fallback_model, backup
     )
     runtime = AgentRuntime(
         agent_version=agent_version,
@@ -227,6 +241,7 @@ async def _generate(
     gate: RateGate,
     model: str | None,
     fallback_model: str | None = None,
+    backup: BackupGeneration | None = None,
 ) -> tuple[str, str | None]:
     """일시 장애면 다시 묻고, 그래도 안 되면 예비 모델로 한 번 더 묻는다.
 
@@ -257,6 +272,19 @@ async def _generate(
                 await asyncio.sleep(
                     RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                 )
+
+    if backup is not None:
+        # 게이트를 거치지 않는다 — 게이트는 Gemini 한도용이고 이쪽 한도는 따로다.
+        try:
+            command = GeminiGenerationCommand(prompt=prompt, model=backup.model)
+            pieces = [piece async for piece in backup.use_case.stream_generate(command)]
+            logger.warning("[kayfabe.agent] 다른 회사 예비로 응답 | agent=%s", agent)
+            return "".join(pieces), backup.model
+        except Exception as exc:
+            logger.warning(
+                "[kayfabe.agent] 예비 엔진도 실패 | agent=%s | %r", agent, exc
+            )
+            last = exc
 
     raise AgentUnavailableError("AI 분석을 잠시 사용할 수 없습니다.") from last
 

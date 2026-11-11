@@ -30,6 +30,7 @@ from kayfabe.adapter.outbound.agents import gemini_agent_support
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
     MAX_ATTEMPTS,
     MAX_SUMMARY_CHARS,
+    BackupGeneration,
     RateGate,
 )
 from kayfabe.adapter.outbound.agents.rumor_scout_agent import GeminiRumorScout
@@ -343,6 +344,54 @@ async def test_gives_up_after_max_attempts() -> None:
         await _storyline(generation).analyze(_CONTEXT, _CHUNKS)
 
     assert len(generation.prompts) == MAX_ATTEMPTS
+
+
+@pytest.mark.asyncio
+async def test_other_vendor_backup_answers_when_gemini_is_exhausted() -> None:
+    """하루 한도가 주·예비 모델 둘 다 바닥난 날(2026-11-11)에도 리포트가 나온다."""
+    gemini = FakeGeneration(_reply("left"), fail_times=99)
+    groq = FakeGeneration(_reply("right"))
+
+    report = await GeminiStorylineAnalyst(
+        gemini,  # type: ignore[arg-type]
+        model="model-heavy",
+        fallback_model="model-spare",
+        backup=BackupGeneration(groq, "vendor-b"),  # type: ignore[arg-type]
+        rate_gate=_open_gate(),
+    ).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "right"
+    assert len(gemini.prompts) == MAX_ATTEMPTS
+    assert groq.models == ["vendor-b"]
+    # 기록에는 **실제로 답한** 모델이 남는다.
+    assert report.runtime is not None and report.runtime.model == "vendor-b"
+
+
+@pytest.mark.asyncio
+async def test_backup_is_not_called_when_gemini_answers() -> None:
+    groq = FakeGeneration(_reply("right"))
+
+    report = await GeminiRumorScout(
+        FakeGeneration(_reply("left")),  # type: ignore[arg-type]
+        backup=BackupGeneration(groq, "vendor-b"),  # type: ignore[arg-type]
+        rate_gate=_open_gate(),
+    ).analyze(_CONTEXT, _CHUNKS)
+
+    assert report.pick == "left"
+    assert groq.prompts == []
+
+
+@pytest.mark.asyncio
+async def test_backup_failure_is_still_agent_unavailable() -> None:
+    """예비까지 죽으면 감추지 않는다 — 임의 값을 만들지 않는다."""
+    with pytest.raises(AgentUnavailableError):
+        await GeminiStorylineAnalyst(
+            FakeGeneration(_reply("left"), fail_times=99),  # type: ignore[arg-type]
+            backup=BackupGeneration(  # type: ignore[arg-type]
+                FakeGeneration(_reply("left"), fail_times=1), "vendor-b"
+            ),
+            rate_gate=_open_gate(),
+        ).analyze(_CONTEXT, _CHUNKS)
 
 
 @pytest.mark.asyncio
