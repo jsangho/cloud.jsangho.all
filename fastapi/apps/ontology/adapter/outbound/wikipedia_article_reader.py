@@ -29,7 +29,9 @@ from ontology.app.ports.output.wiki_article_port import (
 logger = logging.getLogger("uvicorn.error")
 
 _API = "https://en.wikipedia.org/w/api.php"
-_USER_AGENT = "jsangho-ontology-crawler/1.0"
+# 위키미디어는 연락처 없는 봇 UA를 403으로 막는다(2026-11-11 실측 — httpx + 이 문자열만
+# 보내면 "Please respect our robot policy"). 정책은 URL 또는 이메일 연락처를 요구한다.
+_USER_AGENT = "jsangho-ontology-crawler/1.0 (https://jsangho.cloud)"
 _TIMEOUT_SECONDS = 20.0
 
 #: 429를 맞았을 때 다시 묻는 횟수의 상한(최초 요청 포함).
