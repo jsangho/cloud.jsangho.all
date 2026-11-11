@@ -1130,6 +1130,17 @@ export const PLE_MATCH_CARDS: Record<PleSlug, PleMatchCard[]> = {
         },
       ],
     ),
+    // **사전 카드에 없던 경기다** — 쇼 도중 Tiffany Stratton 이 MITB 가방을 캐시인했다
+    // (위키 `Crown Jewel (2026)` rev 1384999908 match4 · 0:03). 결과 기록용으로
+    // 대회가 끝난 뒤(2026-11-11) 넣었다. 예측 채우기는 끝난 대회를 보지 않으므로
+    // 사후 예측이 생기지 않는다. 호가도 없다.
+    m2(
+      "cj26-women",
+      "WWE Women's Championship — Money in the Bank Cash-in",
+      "sideB",
+      { name: "Chelsea Green", isChampion: true },
+      { name: "Tiffany Stratton" },
+    ),
   ],
 
   // `Wrestlepalooza (2026)` · 2026-12-12 퍼스 RAC Arena · **대진 미발표**.
