@@ -1,7 +1,7 @@
 ---
 name: deploy
 description: |
-  jsangho.cloud 백엔드를 AWS EC2에 배포합니다.
+  jsangho.cloud 백엔드를 Oracle Cloud(A1, 오사카) 서버에 배포합니다.
   aws 브랜치를 갱신하고 backend·auth 컨테이너를 재빌드·재기동합니다.
   "배포해줘" · "서버에 반영해줘" · "deploy" 요청 시 사용합니다.
 allowed-tools:
@@ -9,13 +9,22 @@ allowed-tools:
   - Read
 ---
 
-## 배포 대상 (2026-07-29 실측)
+## 배포 대상 (2026-11-11 Oracle 이전)
+
+> **운영 서버가 EC2에서 Oracle Cloud로 옮겨졌다** (2026-11-11). EC2 컨테이너는 멈춰 두었고
+> (`~/stopped-containers-20261111.txt` 목록으로 되살린다) 인스턴스는 아직 남아 있다.
+> 아래 본문의 "EC2"는 역사적 표기이고, 명령은 전부 Oracle 기준으로 고쳤다.
+>
+> Oracle에서 달라진 점: **ARM(aarch64)** · 기동은 `redis neo4j backend auth cloudflared` 만
+> (nginx·certbot·pgvector 없음) · 터널은 `jsangho-oci` 이고 **자격·config 는 저장소 밖
+> `/opt/cloudflared`** 를 git 미추적 `docker-compose.override.yml` 이 마운트한다 ·
+> systemd 유닛은 `deploy/systemd/` 를 `ec2-user`→`ubuntu` 로 바꿔 설치했다.
 
 | 항목 | 값 |
 |------|-----|
-| 호스트 | AWS EC2, `ssh aws-ec2` (Windows·WSL 공용 alias) |
-| 계정 | `ec2-user` (`ho`가 아니다) |
-| 배포 디렉터리 | `/home/ec2-user/cloud.jsangho.all` |
+| 호스트 | Oracle Cloud `jsangho-api` (A1.Flex 2 OCPU/12GB, ap-osaka-1), `ssh oracle` (WSL alias, 키 `~/.ssh/oracle_oci`) |
+| 계정 | `ubuntu` (docker 그룹) |
+| 배포 디렉터리 | `/home/ubuntu/cloud.jsangho.all` |
 | 체크아웃 브랜치 | **`aws`** (`main`이 아니다) |
 | compose 파일 | 같은 디렉터리의 `docker-compose.yaml` — 로컬 파일과 **다르다** |
 | 공개 진입점 | `https://api.jsangho.cloud` → cloudflared 터널 → `backend:8000` |
@@ -33,7 +42,7 @@ allowed-tools:
 모두 `./fastapi/.env` 를 `env_file` 로 읽으므로, 키가 없으면 빈 값으로 기동해 인증이 깨진다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES_PASSWORD|NEO4J_AUTH|PGADMIN_DEFAULT_EMAIL|PGADMIN_DEFAULT_PASSWORD)=" .env'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES_PASSWORD|NEO4J_AUTH|PGADMIN_DEFAULT_EMAIL|PGADMIN_DEFAULT_PASSWORD)=" .env'
 ```
 
 `4` 가 나와야 한다. (예전에는 `N8N_ENCRYPTION_KEY` 까지 다섯이었다 — n8n 을 내리면서 뺐다.) 그보다 적으면 배포를 멈추고 사용자에게 알린다 — `.env` 는 git 제외라
@@ -49,7 +58,7 @@ ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all/fastapi && grep -cE "^(POSTGRES
 `git status`도 깨끗하다. 그래도 매번 확인한다 — 드리프트는 또 생길 수 있다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && git status --short'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && git status --short'
 ```
 
 `M docker-compose.yaml`이 보이면 **`git checkout -- .` · `git reset --hard` · `git stash`를 쓰지 않는다.** 오타가 되살아나면 유효하지 않은 restart 정책으로 기동에 실패한다. 근본 해결은 오타 수정을 `aws` 브랜치에 커밋하는 것이고, 그 전까지는 `git pull`이 이 파일을 건드리지 않게 한다.
@@ -111,7 +120,7 @@ git add docker-compose.yaml
 ```bash
 cat > /tmp/deploy.sh <<'EOF'
 set -euo pipefail
-cd /home/ec2-user/cloud.jsangho.all
+cd /home/ubuntu/cloud.jsangho.all
 git fetch origin </dev/null
 git merge --ff-only origin/aws </dev/null   # 서버 로컬 수정을 보존한다
 docker compose exec -T backend sh -c 'cd /app/fastapi && alembic upgrade head' </dev/null
@@ -119,7 +128,7 @@ docker compose up -d backend auth </dev/null
 docker compose restart backend auth </dev/null   # ← 이게 실제 반영이다. 아래를 읽을 것
 echo "STEP=done"                                 # ← 이 줄이 안 보이면 배포가 중간에 끊긴 것이다
 EOF
-ssh aws-ec2 bash -s < /tmp/deploy.sh
+ssh oracle bash -s < /tmp/deploy.sh
 ```
 
 #### `</dev/null`을 빼면 스크립트가 중간에 증발한다 (2026-08-12 실측)
@@ -160,7 +169,7 @@ hours`가 그대로 뜨는 것이 그 증거다.
 새 코드가 없는 칼럼을 읽으면 즉시 500이다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && \
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && \
   docker compose exec -T backend sh -c "cd /app/fastapi && alembic current"'
 ```
 
@@ -179,8 +188,8 @@ ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && \
 `Status`의 **가동 시간**을 본다 — 방금 배포했는데 `Up 7 hours`면 재기동이 안 된 것이다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose ps --format "{{.Service}} | {{.Status}}"'
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose logs --tail 40 backend'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && docker compose ps --format "{{.Service}} | {{.Status}}"'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && docker compose logs --tail 40 backend'
 curl -sS -o /dev/null -w 'api root: %{http_code}\n' https://api.jsangho.cloud/
 ```
 
@@ -195,7 +204,7 @@ curl -sS -L -o /dev/null -w 'docs(리다이렉트 후): %{http_code}  %{url_effe
 **새 코드가 실제로 떴는지는 라우트로 확인한다.** 200 응답은 옛 코드도 낸다.
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose exec -T backend python -c "
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && docker compose exec -T backend python -c "
 from main import app
 print(sorted({r.path for r in app.routes})[-5:])
 "'
@@ -207,7 +216,7 @@ print(sorted({r.path for r in app.routes})[-5:])
 컨테이너 내부에서 직접 확인하는 방법(터널·인증 우회):
 
 ```bash
-ssh aws-ec2 "cd /home/ec2-user/cloud.jsangho.all && docker compose exec -T backend python -c \"import urllib.request;print(urllib.request.urlopen('http://localhost:8000/docs',timeout=10).status)\""
+ssh oracle "cd /home/ubuntu/cloud.jsangho.all && docker compose exec -T backend python -c \"import urllib.request;print(urllib.request.urlopen('http://localhost:8000/docs',timeout=10).status)\""
 ```
 
 > `curl -I`(HEAD)는 쓰지 않는다. FastAPI가 이 라우트에서 HEAD를 허용하지 않아 **405**가 돌아오고, 상태를 오판하게 만든다.
@@ -216,18 +225,18 @@ ssh aws-ec2 "cd /home/ec2-user/cloud.jsangho.all && docker compose exec -T backe
 
 ```bash
 # 머지 이전 SHA를 미리 기록해 둔다
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && git log --oneline -5'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && git log --oneline -5'
 ```
 
 ```bash
 cat > /tmp/rollback.sh <<'EOF'
 set -euo pipefail
-cd /home/ec2-user/cloud.jsangho.all
+cd /home/ubuntu/cloud.jsangho.all
 git switch --detach <이전SHA>
 docker compose build backend
 docker compose up -d backend auth
 EOF
-ssh aws-ec2 bash -s < /tmp/rollback.sh
+ssh oracle bash -s < /tmp/rollback.sh
 ```
 
 DB 마이그레이션을 포함한 배포라면 코드 롤백만으로 복구되지 않는다. 스키마 변경이 있었는지 먼저 확인한다.
