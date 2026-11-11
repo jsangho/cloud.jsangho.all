@@ -6,6 +6,9 @@
 > 문서 검증: `apps/kayfabe/tests/scripts/test_career_recovery_runbook.py`.
 > 2026-11-03 작성 · 2026-11-06 운영 기준 갱신. **복구 도구는 격리 PostgreSQL 16.2·17.6에서만
 > 검증했다. 운영(Supabase 17.6)에서는 한 번도 실행하지 않았다.**
+>
+> **2026-11-11: 운영 서버가 EC2 → Oracle Cloud(`ssh oracle` · `/home/ubuntu`)로 옮겨졌다.**
+> 아래 명령은 그 기준으로 고쳤다. 감사 기록 표의 "EC2"는 그때의 사실이라 그대로 둔다.
 
 > 🛑 **`8c965da` 로 되돌리지 않는다.** Manager API 인증(`72437d6`)이 사라져
 > `/api/manager/*` — 연락처 조회, 전체 삭제, 텔레그램 발송 — 가 인터넷에 **인증 없이**
@@ -42,7 +45,7 @@
 🔴 **이 표는 쓰는 순간부터 낡는다.** 운영 작업 전에는 아래를 읽어서 다시 맞춘다(읽기 전용).
 
 ```bash
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && git rev-parse --short HEAD && git status --short | wc -l'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && git rev-parse --short HEAD && git status --short | wc -l'
 curl -s https://api.jsangho.cloud/healthz
 curl -s -o /dev/null -w '%{http_code}\n' https://api.jsangho.cloud/api/manager/receiver/list   # 401 이어야 한다
 ```
@@ -95,9 +98,9 @@ curl -s -o /dev/null -w '%{http_code}\n' https://api.jsangho.cloud/api/manager/r
 닫기(`.env` 만 바꾼다 · 재시작 필요 · 이미지 재빌드 없음):
 
 ```bash
-ssh aws-ec2 bash -s <<'EOF'
+ssh oracle bash -s <<'EOF'
 set -euo pipefail
-cd /home/ec2-user/cloud.jsangho.all
+cd /home/ubuntu/cloud.jsangho.all
 if grep -q '^CAREER_V3_WRITES_ENABLED=' fastapi/.env; then
   sed -i 's/^CAREER_V3_WRITES_ENABLED=.*/CAREER_V3_WRITES_ENABLED=false/' fastapi/.env
 else
@@ -112,8 +115,8 @@ EOF
 열려 있으면 그 시험이 첫 v3 쓰기가 된다.
 
 ```bash
-ssh aws-ec2 bash -s <<'EOF'
-cd /home/ec2-user/cloud.jsangho.all
+ssh oracle bash -s <<'EOF'
+cd /home/ubuntu/cloud.jsangho.all
 docker compose exec -T backend sh -c 'cd /app/fastapi && PYTHONPATH=apps:. python -c "
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
 get_keymaker().load_env()
@@ -162,7 +165,7 @@ v3 행 수는 추측하지 말고 읽는다.
 umask 077
 B=~/.local/share/kayfabe-production-backups
 TS=$(date +%Y%m%d_%H%M)
-ssh aws-ec2 'docker exec -i -w /app/fastapi -e PYTHONPATH=/app/fastapi/apps:/app/fastapi cloudjsanghoall-backend-1 python -' \
+ssh oracle 'docker exec -i -w /app/fastapi -e PYTHONPATH=/app/fastapi/apps:/app/fastapi cloudjsanghoall-backend-1 python -' \
   < $B/extract_backup_phase1c_20261105_2153.py > $B/envelope_$TS.json 2> $B/envelope_$TS.err
 cat $B/envelope_$TS.err       # read only · xid=None->None 이어야 한다
 python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print([(r['id'],r['schema_version']) for r in d['careers']['rows']])" $B/envelope_$TS.json
@@ -173,9 +176,9 @@ python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print([(r['id'],r['sc
 **절차** — 가드가 인증 커밋 없는 대상을 거부한다. **가드를 빼고 실행하지 않는다.**
 
 ```bash
-ssh aws-ec2 "TARGET=<승인된_SHA> bash -s" <<'EOF'
+ssh oracle "TARGET=<승인된_SHA> bash -s" <<'EOF'
 set -euo pipefail
-cd /home/ec2-user/cloud.jsangho.all
+cd /home/ubuntu/cloud.jsangho.all
 git fetch origin </dev/null
 # >>> rollback-guard
 MANAGER_AUTH_COMMIT=72437d6
@@ -240,7 +243,7 @@ cd $B && sha256sum envelope_$TS.json > SHA256SUMS.envelope_$TS && chmod 600 SHA2
 ```bash
 cd fastapi
 PYTHONPATH=apps:. uv run python apps/kayfabe/tests/scripts/career_save_audit.py ~/.local/share/kayfabe-production-backups/envelope_$TS.json
-ssh aws-ec2 'cd /home/ec2-user/cloud.jsangho.all && docker compose logs --tail 500 backend </dev/null' | grep -E 'CorruptSave|되살릴|저장 거부|ResponseValidationError'
+ssh oracle 'cd /home/ubuntu/cloud.jsangho.all && docker compose logs --tail 500 backend </dev/null' | grep -E 'CorruptSave|되살릴|저장 거부|ResponseValidationError'
 ```
 
 감사기는 파일만 읽고 DB 드라이버를 import하지 않는다. 종료 코드 `0` 정상 · `1` 손상 · `2` 못 읽음.

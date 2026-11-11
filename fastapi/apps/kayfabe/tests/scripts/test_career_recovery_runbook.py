@@ -267,8 +267,10 @@ def test_the_audit_command_matches_the_repository_layout() -> None:
 
 def test_server_paths_match_the_deploy_skill() -> None:
     skill = (_ROOT / ".claude/skills/deploy/SKILL.md").read_text(encoding="utf-8")
-    assert "/home/ec2-user/cloud.jsangho.all" in skill
-    assert "/home/ec2-user/cloud.jsangho.all" in _text()
+    # 운영 서버를 2026-11-11 에 EC2 → Oracle(ubuntu) 로 옮겼다.
+    assert "/home/ubuntu/cloud.jsangho.all" in skill
+    assert "/home/ubuntu/cloud.jsangho.all" in _text()
+    assert "/home/ec2-user/cloud.jsangho.all" not in skill
 
 
 def test_no_production_project_ref_is_published() -> None:
