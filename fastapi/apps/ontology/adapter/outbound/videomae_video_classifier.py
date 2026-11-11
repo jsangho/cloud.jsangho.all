@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import io
+import tempfile
 from typing import Any, ClassVar
 
+import cv2
 import numpy as np
 import torch
-from decord import VideoReader, cpu
 from transformers import VideoMAEForVideoClassification, VideoMAEImageProcessor
 
 from core.matrix.vault_keymaker_secret_manager import get_keymaker
@@ -54,20 +54,45 @@ class VideoMaeVideoClassifier(VideoLabelClassifier):
         VideoMaeVideoClassifier._processor = processor
 
     def _sample_frames(self, video_bytes: bytes) -> list[np.ndarray]:
-        try:
-            reader = VideoReader(io.BytesIO(video_bytes), ctx=cpu(0))
-        except Exception as e:
-            raise ValueError(
-                "비디오를 읽을 수 없습니다. 손상되었거나 지원하지 않는 형식입니다."
-            ) from e
+        # decord 대신 OpenCV로 읽는다 — decord는 x86_64·Windows 휠만 있어 ARM
+        # (Oracle A1) 이미지가 빌드되지 않았다 (2026-11-11). OpenCV는 파일 경로만
+        # 받으므로 임시 파일을 거친다. decord와 같이 RGB로 돌려준다.
+        with tempfile.NamedTemporaryFile(suffix=".video") as tmp:
+            tmp.write(video_bytes)
+            tmp.flush()
+            capture = cv2.VideoCapture(tmp.name)
+            try:
+                if not capture.isOpened():
+                    raise ValueError(
+                        "비디오를 읽을 수 없습니다. "
+                        "손상되었거나 지원하지 않는 형식입니다."
+                    )
+                total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+                if total_frames <= 0:
+                    raise ValueError("비디오에 프레임이 없습니다.")
 
-        total_frames = len(reader)
-        if total_frames == 0:
+                indices = np.linspace(
+                    0, total_frames - 1, num=min(_NUM_FRAMES, total_frames)
+                ).astype(int)
+                wanted = set(indices.tolist())
+                picked: dict[int, np.ndarray] = {}
+                # 앞에서부터 순서대로 넘긴다. 필요한 프레임만 디코딩해 메모리를
+                # 프레임 수(_NUM_FRAMES)에 묶는다.
+                for position in range(int(indices[-1]) + 1):
+                    if not capture.grab():
+                        break  # 메타데이터 프레임 수가 실제보다 클 때
+                    if position in wanted:
+                        ok, frame = capture.retrieve()
+                        if ok:
+                            picked[position] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            finally:
+                capture.release()
+
+        if not picked:
             raise ValueError("비디오에 프레임이 없습니다.")
-
-        indices = np.linspace(0, total_frames - 1, num=min(_NUM_FRAMES, total_frames))
-        indices = np.clip(indices, 0, total_frames - 1).astype(int)
-        return list(reader.get_batch(indices).asnumpy())
+        # 끝쪽이 잘렸으면 마지막으로 읽은 프레임으로 채워 길이를 맞춘다.
+        last = picked[max(picked)]
+        return [picked.get(int(i), last) for i in indices]
 
     def _classify_sync(self, video_bytes: bytes) -> VideoClassificationDto:
         self._ensure_loaded()
