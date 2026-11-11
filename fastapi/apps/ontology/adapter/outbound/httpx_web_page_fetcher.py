@@ -10,7 +10,9 @@ from ontology.app.ports.output.web_page_fetcher_port import WebPageFetcherPort
 
 logger = logging.getLogger("uvicorn.error")
 
-_USER_AGENT = "jsangho-ontology-crawler/1.0"
+# 위키미디어는 연락처 없는 봇 UA를 403으로 막는다(2026-11-11 실측 — httpx + 이 문자열만
+# 보내면 "Please respect our robot policy"). 정책은 URL 또는 이메일 연락처를 요구한다.
+_USER_AGENT = "jsangho-ontology-crawler/1.0 (https://jsangho.cloud)"
 _TIMEOUT_SECONDS = 30.0
 
 
