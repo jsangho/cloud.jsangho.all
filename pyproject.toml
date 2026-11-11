@@ -31,7 +31,6 @@ dependencies = [
     # `opencv-python`·`polars`·`polars-runtime-32`) — 특히 opencv가 headless와
     # **중복 설치**되고 있었다.
     "timm==1.0.28",
-    "decord==0.6.0",
     "pillow==12.3.0",
     "numpy==2.5.1",
     "pandas==3.0.3",
