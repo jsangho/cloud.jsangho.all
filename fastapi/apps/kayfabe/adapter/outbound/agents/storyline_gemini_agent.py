@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from kayfabe.adapter.outbound.agents.gemini_agent_support import (
+    BackupGeneration,
     RateGate,
     ask_for_report,
     build_prompt,
@@ -56,6 +57,7 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
         *,
         model: str | None = None,
         fallback_model: str | None = None,
+        backup: BackupGeneration | None = None,
         rate_gate: RateGate | None = None,
     ) -> None:
         self._generation_use_case = generation_use_case
@@ -63,6 +65,8 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
         self._model = model
         # 주 모델이 혼잡할 때 마지막 시도를 넘길 곳.
         self._fallback_model = fallback_model
+        # Gemini 쪽 시도가 전부 실패하면 마지막으로 물을 다른 회사 엔진.
+        self._backup = backup
         # 기본값은 두 에이전트가 공유하는 게이트다 — 한도는 모델 단위이기 때문이다.
         self._rate_gate = rate_gate or shared_rate_gate
 
@@ -91,4 +95,5 @@ class GeminiStorylineAnalyst(StorylineAnalystPort):
             gate=self._rate_gate,
             model=self._model,
             fallback_model=self._fallback_model,
+            backup=self._backup,
         )

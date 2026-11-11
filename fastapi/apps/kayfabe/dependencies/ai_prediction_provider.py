@@ -13,6 +13,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.matrix.grid_oracle_database_manager import get_db
+from kayfabe.adapter.outbound.agents.gemini_agent_support import BackupGeneration
 from kayfabe.adapter.outbound.agents.odds_scout_agent import BookmakerOddsScout
 from kayfabe.adapter.outbound.agents.rumor_scout_agent import GeminiRumorScout
 from kayfabe.adapter.outbound.agents.storyline_gemini_agent import (
@@ -34,6 +35,9 @@ from ontology.app.ports.input.gemini_generation_use_case import GeminiGeneration
 from ontology.dependencies.gemini_generation_provider import (
     get_gemini_generation_use_case,
 )
+from ontology.dependencies.groq_generation_provider import (
+    get_groq_generation_use_case,
+)
 
 #: 서사 추론은 판단이 어렵다 — 좋은 모델을 준다.
 DEFAULT_STORYLINE_MODEL = "gemini-3.6-flash"
@@ -44,6 +48,10 @@ DEFAULT_RUMOR_MODEL = "gemini-3.5-flash-lite"
 #: 주 모델이 혼잡할 때(503) 마지막 시도를 넘길 곳. 서로의 예비가 되면 한 모델이
 #: 죽어도 리포트가 통째로 사라지지 않는다 — 한도도 모델 단위라 서로 침범하지 않는다.
 DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash"
+
+#: Gemini 하루 한도가 바닥난 날 넘길 **다른 회사** 모델. `GROQ_API_KEY` 가 없으면 예비 없이 돈다.
+#: 2026-11-12 끝난 9경기 실측에서 Gemini와 판단 방향이 3/3 일치했다.
+DEFAULT_BACKUP_MODEL = "openai/gpt-oss-120b"
 
 
 def _model(env_key: str, default: str) -> str:
@@ -73,6 +81,12 @@ def get_ai_prediction_use_case(
     자료를 못 받으면 모델을 부르지 않고 의견 없음을 낸다. 그래서 적재 전에는 오즈
     한 표로만 예측이 만들어지고, 비용도 들지 않는다.
     """
+    backup_engine = get_groq_generation_use_case()
+    backup = (
+        BackupGeneration(backup_engine, _model("GROQ_MODEL", DEFAULT_BACKUP_MODEL))
+        if backup_engine is not None
+        else None
+    )
     return AiPredictionInteractor(
         repository,
         knowledge,
@@ -80,11 +94,13 @@ def get_ai_prediction_use_case(
             generation,
             model=_model("GEMINI_MODEL_STORYLINE", DEFAULT_STORYLINE_MODEL),
             fallback_model=_model("GEMINI_MODEL_FALLBACK", DEFAULT_FALLBACK_MODEL),
+            backup=backup,
         ),
         BookmakerOddsScout(),
         GeminiRumorScout(
             generation,
             model=_model("GEMINI_MODEL_RUMOR", DEFAULT_RUMOR_MODEL),
             fallback_model=_model("GEMINI_MODEL_FALLBACK", DEFAULT_FALLBACK_MODEL),
+            backup=backup,
         ),
     )
