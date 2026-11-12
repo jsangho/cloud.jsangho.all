@@ -4,7 +4,9 @@ export const BRACKET_LABELS = {
   siteVote: "사이트 투표",
   bookmaker: "북메이커 승률",
   myPick: "내 예측",
-  bookNote: "북메이커: Betfair·William Hill 십진 배당 정규화 (참고용, 투표와 별도)",
+  bookNote: "북메이커: 십진 배당에서 마진을 걷어낸 승률 (참고용, 투표와 별도)",
+  /** 관측일·출처가 없는 옛 배당 칸 — 백엔드가 예측 근거에서 뺀다(`pre_event_quotes`) */
+  bookUnsourced: "출처·관측일이 없는 배당이라 AI 예측에는 쓰지 않습니다",
   percentSep: "·",
   noVotesYet: "아직 투표 없음",
   participants: "참가자",

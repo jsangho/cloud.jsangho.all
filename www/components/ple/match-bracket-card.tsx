@@ -460,6 +460,7 @@ function BookmakerMulti({
           </li>
         ))}
       </ul>
+      {!consensus && <p className="text-xs text-stone-500">{BRACKET_LABELS.bookUnsourced}</p>}
     </div>
   );
 }
@@ -607,6 +608,9 @@ export function MatchBracketCard({
             />
           )}
           {consensus && <BookmakerSources consensus={consensus} />}
+          {!consensus && book && (
+            <p className="text-center text-xs text-stone-500">{BRACKET_LABELS.bookUnsourced}</p>
+          )}
           <p className="text-center text-xs text-stone-600">{BRACKET_LABELS.bookNote}</p>
         </EvidenceDisclosure>
       </div>
