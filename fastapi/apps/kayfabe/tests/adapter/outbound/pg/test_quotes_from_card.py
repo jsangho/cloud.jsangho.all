@@ -85,3 +85,48 @@ class TestTolerance:
     def test_quotes_field_of_the_wrong_type_is_ignored(self) -> None:
         assert quotes_from_card(card({"book": "A"}), 2) == ()
         assert quotes_from_card(card("BetOnline 1.5/2.5"), 2) == ()
+
+
+class TestContextUsesPreEventQuotesOnly:
+    """예측 컨텍스트에는 **대회 전 관측이 증명된 호가만** 배당으로 들어간다."""
+
+    @staticmethod
+    def context(card_body: dict[str, Any]):  # noqa: ANN205 — 비공개 함수의 반환형
+        import json
+
+        from kayfabe.adapter.outbound.orm.ple_orm import PleEventModel, PleMatchModel
+        from kayfabe.adapter.outbound.pg.agent_prediction_pg_repository import (
+            _to_context,
+        )
+
+        event = PleEventModel(slug="ss", label="SS", start_date=date(2026, 8, 1))
+        row = PleMatchModel(
+            match_key="m1",
+            title="t",
+            format="singles",
+            card_json=json.dumps(
+                {"format": "singles", "left": {"name": "A"}, "right": {"name": "B"}}
+                | card_body
+            ),
+        )
+        return _to_context(row, event)
+
+    def test_undated_bookmaker_decimal_is_not_odds(self) -> None:
+        """관측일 없는 옛 배당 칸은 언제 적혔는지 몰라 근거가 될 수 없다."""
+        ctx = self.context({"bookmakerDecimal": {"left": 1.5, "right": 2.6}})
+        assert ctx is not None
+        assert ctx.bookmaker_decimal is None
+        assert ctx.bookmaker_quotes == ()
+
+    def test_quote_observed_after_the_event_is_dropped(self) -> None:
+        ctx = self.context(
+            {
+                "bookmakerQuotes": [
+                    {"book": "A", "decimals": [1.5, 2.6], "observedAt": "2026-07-30"},
+                    {"book": "B", "decimals": [1.1, 8.0], "observedAt": "2026-08-04"},
+                ]
+            }
+        )
+        assert ctx is not None
+        assert [q.book for q in ctx.bookmaker_quotes] == ["A"]
+        assert ctx.bookmaker_decimal is not None

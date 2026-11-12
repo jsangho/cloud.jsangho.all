@@ -93,6 +93,29 @@ def latest_per_book(
     return tuple(newest[book] for book in sorted(newest))
 
 
+def pre_event_quotes(
+    quotes: tuple[BookmakerQuote, ...], event_date: date | None
+) -> tuple[BookmakerQuote, ...]:
+    """**대회 전에 관측했다고 증명된 호가만** 남긴다.
+
+    배당은 대회 뒤에도 카드에 적힐 수 있다. 결과를 안 뒤 적은 숫자가 예측 근거로
+    들어가면 적중률이 거짓으로 오른다(2026-11-12 실측: SummerSlam 2026 배당 10경기가
+    대회 사흘 뒤 커밋으로 들어왔다).
+
+    - **관측일이 없으면 버린다.** 언제 본 값인지 모르면 대회 전 값이라고 말할 수 없다.
+    - **관측일이 대회일과 같아도 버린다.** 날짜만 적으니 방송 전인지 후인지 가릴 수
+      없고, 미국 저녁 방송은 한국 날짜로 다음 날이라 같은 날 관측도 결과 뒤일 수 있다.
+    - 대회일을 모르면 관측일이 있는 호가는 남긴다 — 비교할 기준이 없을 뿐 증거가
+      없는 것은 아니다.
+    """
+    return tuple(
+        quote
+        for quote in quotes
+        if quote.observed_at is not None
+        and (event_date is None or quote.observed_at < event_date)
+    )
+
+
 def consensus(
     quotes: tuple[BookmakerQuote, ...], option_count: int
 ) -> OddsConsensus | None:

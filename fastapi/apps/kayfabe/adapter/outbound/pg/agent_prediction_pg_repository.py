@@ -39,6 +39,7 @@ from kayfabe.domain.services.odds_consensus import (
     BookmakerQuote,
     OddsConsensus,
     consensus,
+    pre_event_quotes,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -242,7 +243,9 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
     if not options:
         return None
 
-    quotes = quotes_from_card(card, len(options))
+    # 대회 전 관측이 증명된 호가만 근거로 쓴다. 관측일 없는 `bookmakerDecimal`은
+    # 더 읽지 않는다 — 언제 적힌 값인지 모른다(`pre_event_quotes` 참조).
+    quotes = pre_event_quotes(quotes_from_card(card, len(options)), event.start_date)
     merged = consensus(quotes, len(options)) if quotes else None
     return MatchContext(
         event_slug=event.slug,
@@ -253,9 +256,7 @@ def _to_context(row: PleMatchModel, event: PleEventModel) -> MatchContext | None
         options=options,
         # 호가가 있으면 그 합의가 이 경기의 배당이다. 폴백 경로와 옛 코드가
         # 읽는 칸이라 **합의를 다시 배당으로 되돌려** 채운다.
-        bookmaker_decimal=(
-            _decimals_from(merged) if merged else _odds_from_card(card, len(options))
-        ),
+        bookmaker_decimal=_decimals_from(merged) if merged else None,
         bookmaker_quotes=quotes,
     )
 
@@ -293,13 +294,6 @@ def options_from_card(card: dict[str, Any]) -> tuple[MatchOption, ...]:
     )
 
 
-def _odds_from_card(
-    card: dict[str, Any], option_count: int
-) -> tuple[float, ...] | None:
-    """배당이 없거나 선택지 수와 어긋나면 `None` — 오즈 에이전트가 의견 없음을 낸다."""
-    return _decimals_of(card.get("bookmakerDecimal"), option_count)
-
-
 def quotes_from_card(
     card: dict[str, Any], option_count: int
 ) -> tuple[BookmakerQuote, ...]:
@@ -308,8 +302,7 @@ def quotes_from_card(
 
     **읽히지 않는 항목은 조용히 버린다.** 호가 목록은 사람이 손으로 적는 자리라
     오타가 섞이고, 한 줄 때문에 경기 전체의 배당을 잃는 것보다 그 줄만 빠지는 편이
-    낫다. 전부 버려지면 빈 튜플이고 오즈 에이전트는 카드의 `bookmakerDecimal`로
-    돌아간다.
+    낫다. 전부 버려지면 빈 튜플이고 오즈 에이전트는 의견 없음을 낸다.
     """
     raw = card.get("bookmakerQuotes")
     if not isinstance(raw, list):

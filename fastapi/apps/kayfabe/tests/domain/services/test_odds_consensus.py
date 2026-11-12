@@ -12,6 +12,7 @@ from kayfabe.domain.services.odds_consensus import (
     consensus,
     implied_probabilities,
     latest_per_book,
+    pre_event_quotes,
 )
 
 
@@ -116,6 +117,31 @@ class TestLatestPerBook:
         quotes = (quote("Zed", 1.5, 2.5), quote("Ace", 1.6, 2.4))
 
         assert [q.book for q in latest_per_book(quotes)] == ["Ace", "Zed"]
+
+
+class TestPreEventQuotes:
+    """대회 전에 관측했다고 **증명된** 호가만 예측 근거가 된다."""
+
+    EVENT = date(2026, 8, 1)
+
+    def test_keeps_quotes_observed_before_the_event(self) -> None:
+        before = quote("A", 1.5, 2.5, observed=date(2026, 7, 30))
+        assert pre_event_quotes((before,), self.EVENT) == (before,)
+
+    def test_drops_quotes_observed_on_or_after_the_event_day(self) -> None:
+        """날짜만으로는 방송 전후를 못 가린다 — 대회 당일 관측도 버린다."""
+        same_day = quote("A", 1.5, 2.5, observed=self.EVENT)
+        after = quote("B", 1.5, 2.5, observed=date(2026, 8, 4))
+        assert pre_event_quotes((same_day, after), self.EVENT) == ()
+
+    def test_drops_quotes_without_an_observed_date(self) -> None:
+        """언제 본 값인지 모르면 대회 전 값이라고 말할 수 없다."""
+        assert pre_event_quotes((quote("A", 1.5, 2.5),), self.EVENT) == ()
+
+    def test_unknown_event_date_keeps_dated_quotes_only(self) -> None:
+        dated = quote("A", 1.5, 2.5, observed=date(2026, 7, 30))
+        undated = quote("B", 1.5, 2.5)
+        assert pre_event_quotes((dated, undated), None) == (dated,)
 
 
 class TestImpliedProbabilities:
